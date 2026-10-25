@@ -238,12 +238,12 @@ struct CyberAgentQuotaHUD: View {
                     Spacer()
                 }
             } else if claudeQuota == nil {
-                // Clean Connected Status (No confusing generic '1 ops' text!)
+                // Clean Connected Status
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.shield.fill")
                         .font(.system(size: 6.5))
                         .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
-                    Text("ACTIVE TERMINAL HOOK CONNECTED")
+                    Text("AGENT READY & MONITORED")
                         .font(.system(size: 6.5, weight: .semibold, design: .monospaced))
                         .foregroundStyle(Color(white: 0.65))
                     Spacer()
@@ -290,39 +290,21 @@ struct CyberWorkspaceHUDView: View {
                     .truncationMode(.middle)
                     .padding(.horizontal, 16)
 
-                HStack(spacing: 8) {
-                    Button(action: {
-                        manager.chooseWorkspaceFolder()
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "folder.fill")
-                                .font(.system(size: 8))
-                            Text("SELECT FOLDER")
-                                .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        }
-                        .foregroundStyle(Color.black)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3.5)
-                        .background(RoundedRectangle(cornerRadius: 3.5).fill(Color(red: 0.0, green: 0.90, blue: 0.46)))
+                Button(action: {
+                    manager.chooseWorkspaceFolder()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "folder.fill")
+                            .font(.system(size: 8))
+                        Text("SELECT WORKSPACE FOLDER")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
                     }
-                    .buttonStyle(.plain)
-
-                    Button(action: {
-                        manager.resolveAndRefreshWorkspace(appState: appState)
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                                .font(.system(size: 8))
-                            Text("DETECT TERMINAL")
-                                .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        }
-                        .foregroundStyle(Color.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3.5)
-                        .background(RoundedRectangle(cornerRadius: 3.5).fill(Color(white: 0.14)))
-                    }
-                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.black)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 3.5)
+                    .background(RoundedRectangle(cornerRadius: 3.5).fill(Color(red: 0.0, green: 0.90, blue: 0.46)))
                 }
+                .buttonStyle(.plain)
             }
             .frame(maxWidth: .infinity, minHeight: 92, maxHeight: 92)
             .padding(.horizontal, 8)

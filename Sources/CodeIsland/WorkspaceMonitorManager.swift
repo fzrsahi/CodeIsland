@@ -55,13 +55,6 @@ public enum WorkspaceDetailTab: String, CaseIterable, Sendable {
     case graph = "GIT GRAPH"
 }
 
-public enum TestRunnerStatus: Equatable {
-    case idle
-    case running
-    case passed(Int)
-    case failed(Int, String)
-}
-
 // MARK: - Workspace Monitor Manager
 
 @MainActor
@@ -84,9 +77,6 @@ public final class WorkspaceMonitorManager: ObservableObject {
     @Published public var isExpandedDetail: Bool = false
     @Published public var detailTab: WorkspaceDetailTab = .diff
     @Published public var isRefreshing: Bool = false
-    @Published public var detectedTestFramework: String? = nil
-    @Published public var testStatus: TestRunnerStatus = .idle
-    @Published public var testOutput: String = ""
 
     @Published public var isUserPinned: Bool = UserDefaults.standard.bool(forKey: "workspaceIsUserPinned")
     private var lastRefreshTime: Date = .distantPast
@@ -97,7 +87,6 @@ public final class WorkspaceMonitorManager: ObservableObject {
            !saved.isEmpty, FileManager.default.fileExists(atPath: saved) {
             self.currentCwd = saved
             self.projectName = (saved as NSString).lastPathComponent
-            detectTestFramework(cwd: saved)
             refresh(force: true)
         }
     }
@@ -116,62 +105,62 @@ public final class WorkspaceMonitorManager: ObservableObject {
             currentCwd = cwd
             projectName = (cwd as NSString).lastPathComponent
             UserDefaults.standard.set(cwd, forKey: "lastWorkspaceCwd")
-            detectTestFramework(cwd: cwd)
             refresh(force: true)
         }
     }
 
+    /// Ultra-fast, zero-lag workspace resolution (strictly 0ms in-memory priority, zero main-thread blocking)
     func resolveAndRefreshWorkspace(appState: AppState) {
         // If user pinned a workspace, always respect it
         if isUserPinned && !currentCwd.isEmpty && FileManager.default.fileExists(atPath: currentCwd) {
-            refresh(force: true)
+            refresh(force: false)
             return
         }
 
-        // 1. Check frontmost terminal window via TTY / CWD
-        if let detected = detectFrontmostTerminalCwd(), !detected.isEmpty,
-           FileManager.default.fileExists(atPath: detected) {
-            updateCwdIfNeeded(detected)
-            return
-        }
-
-        // 2. Active agent session cwd (filter out internal plugin configs like ~/.gemini/config)
         let isConfigDir = { (path: String) -> Bool in
             path.hasSuffix("/.gemini/config") || path.hasSuffix("/.config") || path.contains("/.gemini/")
         }
 
+        // 1. Instant In-Memory: Active agent session cwd
         if let sid = appState.activeSessionId, let cwd = appState.sessions[sid]?.cwd,
-           !cwd.isEmpty, !isConfigDir(cwd) {
+           !cwd.isEmpty, !isConfigDir(cwd), FileManager.default.fileExists(atPath: cwd) {
             updateCwdIfNeeded(cwd)
             return
         }
 
+        // 2. Instant In-Memory: Any running session cwd
         for session in appState.sessions.values {
-            if let cwd = session.cwd, !cwd.isEmpty, !isConfigDir(cwd) {
+            if let cwd = session.cwd, !cwd.isEmpty, !isConfigDir(cwd), FileManager.default.fileExists(atPath: cwd) {
                 updateCwdIfNeeded(cwd)
                 return
             }
         }
 
-        // 3. Saved workspace in UserDefaults
+        // 3. Current active workspace if already set
+        if !currentCwd.isEmpty && FileManager.default.fileExists(atPath: currentCwd) {
+            refresh(force: false)
+            return
+        }
+
+        // 4. Saved workspace in UserDefaults
         if let saved = UserDefaults.standard.string(forKey: "lastWorkspaceCwd"),
            !saved.isEmpty, !isConfigDir(saved), FileManager.default.fileExists(atPath: saved) {
             updateCwdIfNeeded(saved)
             return
         }
 
-        // 4. Any session cwd even if config
-        if let sid = appState.activeSessionId, let cwd = appState.sessions[sid]?.cwd, !cwd.isEmpty {
-            updateCwdIfNeeded(cwd)
-            return
-        }
-
-        if !currentCwd.isEmpty {
-            refresh(force: true)
+        // 5. Asynchronous fallback only: detect terminal in background without blocking UI
+        Task.detached(priority: .background) {
+            if let detected = Self.detectFrontmostTerminalCwdAsync(), !detected.isEmpty,
+               FileManager.default.fileExists(atPath: detected) {
+                await MainActor.run {
+                    self.updateCwdIfNeeded(detected)
+                }
+            }
         }
     }
 
-    private func detectFrontmostTerminalCwd() -> String? {
+    nonisolated private static func detectFrontmostTerminalCwdAsync() -> String? {
         // Method A: Check active tab tty in Terminal.app, then resolve shell process cwd
         let termTtyScript = """
         tell application "System Events"
@@ -185,14 +174,14 @@ public final class WorkspaceMonitorManager: ObservableObject {
         end tell
         return ""
         """
-        if let ttyFull = AppleScriptRunner.osascript.evaluate(termTtyScript, 1.5)?
+        if let ttyFull = AppleScriptRunner.osascript.evaluate(termTtyScript, 1.2)?
             .trimmingCharacters(in: .whitespacesAndNewlines), !ttyFull.isEmpty {
             let ttyName = ttyFull.replacingOccurrences(of: "/dev/", with: "").replacingOccurrences(of: "tty", with: "")
-            let psData = ProcessRunner.run(path: "/bin/ps", args: ["-t", ttyName, "-o", "pid="], timeout: 1.5)
+            let psData = ProcessRunner.run(path: "/bin/ps", args: ["-t", ttyName, "-o", "pid="], timeout: 1.0)
             if let psText = psData.flatMap({ String(data: $0, encoding: .utf8) }) {
                 let pids = psText.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
                 for pidStr in pids.reversed() {
-                    if let lsofData = ProcessRunner.run(path: "/usr/sbin/lsof", args: ["-a", "-p", pidStr, "-d", "cwd", "-Fn"], timeout: 1.5),
+                    if let lsofData = ProcessRunner.run(path: "/usr/sbin/lsof", args: ["-a", "-p", pidStr, "-d", "cwd", "-Fn"], timeout: 1.0),
                        let lsofText = String(data: lsofData, encoding: .utf8) {
                         for line in lsofText.components(separatedBy: "\n") {
                             if line.hasPrefix("n/") {
@@ -220,7 +209,7 @@ public final class WorkspaceMonitorManager: ObservableObject {
         end tell
         return ""
         """
-        if let itermDir = AppleScriptRunner.osascript.evaluate(itermScript, 1.5)?
+        if let itermDir = AppleScriptRunner.osascript.evaluate(itermScript, 1.2)?
             .trimmingCharacters(in: .whitespacesAndNewlines), !itermDir.isEmpty,
            FileManager.default.fileExists(atPath: itermDir) {
             return itermDir
@@ -244,11 +233,11 @@ public final class WorkspaceMonitorManager: ObservableObject {
         }
     }
 
-    public func resetToAutoDetect() {
+    func resetToAutoDetect(appState: AppState? = nil) {
         isUserPinned = false
         UserDefaults.standard.set(false, forKey: "workspaceIsUserPinned")
-        if let detected = detectFrontmostTerminalCwd() {
-            updateCwdIfNeeded(detected)
+        if let appState = appState {
+            resolveAndRefreshWorkspace(appState: appState)
         } else {
             refresh(force: true)
         }
@@ -426,87 +415,6 @@ public final class WorkspaceMonitorManager: ObservableObject {
                 self.selectedFileDiff = finalDiff
                 self.isDiffLoading = false
             }
-        }
-    }
-
-    private func detectTestFramework(cwd: String) {
-        let fm = FileManager.default
-        if fm.fileExists(atPath: cwd + "/Package.swift") {
-            detectedTestFramework = "swift test"
-        } else if fm.fileExists(atPath: cwd + "/package.json") {
-            if fm.fileExists(atPath: cwd + "/bun.lockb") {
-                detectedTestFramework = "bun test"
-            } else if fm.fileExists(atPath: cwd + "/pnpm-lock.yaml") {
-                detectedTestFramework = "pnpm test"
-            } else {
-                detectedTestFramework = "npm test"
-            }
-        } else if fm.fileExists(atPath: cwd + "/Cargo.toml") {
-            detectedTestFramework = "cargo test"
-        } else if fm.fileExists(atPath: cwd + "/go.mod") {
-            detectedTestFramework = "go test ./..."
-        } else if fm.fileExists(atPath: cwd + "/pytest.ini") || fm.fileExists(atPath: cwd + "/pyproject.toml") {
-            detectedTestFramework = "pytest"
-        } else {
-            detectedTestFramework = nil
-        }
-    }
-
-    public func runTests() {
-        guard let runnerCmd = detectedTestFramework, !currentCwd.isEmpty else { return }
-        self.testStatus = .running
-        self.testOutput = "Executing \(runnerCmd)...\n"
-        let cwd = self.currentCwd
-
-        Task.detached(priority: .userInitiated) {
-            let resultData = ProcessRunner.run(
-                path: "/bin/sh",
-                args: ["-c", "cd '\(cwd)' && \(runnerCmd)"],
-                env: ["PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin"],
-                timeout: 30
-            )
-
-            let output = resultData.flatMap { String(data: $0, encoding: .utf8) } ?? "Test run completed with no output."
-            let isPassed = !output.lowercased().contains("failed") && !output.lowercased().contains("error:")
-
-            await MainActor.run {
-                self.testOutput = output
-                if isPassed {
-                    self.testStatus = .passed(1)
-                } else {
-                    self.testStatus = .failed(1, "Tests failed")
-                }
-                NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
-            }
-        }
-    }
-
-    // MARK: - Quick Actions
-
-    public func openInEditor() {
-        guard !currentCwd.isEmpty else { return }
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-        let cwd = currentCwd
-
-        // Try VS Code or Cursor
-        DispatchQueue.global(qos: .userInitiated).async {
-            if let _ = ProcessRunner.run(path: "/usr/local/bin/code", args: [cwd], timeout: 2) { return }
-            if let _ = ProcessRunner.run(path: "/usr/local/bin/cursor", args: [cwd], timeout: 2) { return }
-            NSWorkspace.shared.open(URL(fileURLWithPath: cwd))
-        }
-    }
-
-    public func openInTerminal() {
-        guard !currentCwd.isEmpty else { return }
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-        let script = """
-        tell application "Terminal"
-            do script "cd \(currentCwd)"
-            activate
-        end tell
-        """
-        DispatchQueue.global(qos: .userInitiated).async {
-            AppleScriptRunner.osascript.launch(script)
         }
     }
 }
