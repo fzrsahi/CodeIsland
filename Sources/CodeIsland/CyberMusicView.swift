@@ -214,8 +214,13 @@ struct SubNotchFloatingLyricCapsuleView: View {
     @ObservedObject var nowPlaying: NowPlayingManager
     var onOpenFull: () -> Void
 
+    @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
     @State private var isHovered = false
     @State private var capsuleWidth: CGFloat = 180
+
+    private var activePreset: FloatingLyricPreset {
+        FloatingLyricPreset(rawValue: floatingLyricPreset) ?? .pureText
+    }
 
     private var isRealLyric: Bool {
         !nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -249,33 +254,90 @@ struct SubNotchFloatingLyricCapsuleView: View {
         return "music.note"
     }
 
-    /// Computes pixel-perfect dynamic capsule width based on text length:
+    /// Computes pixel-perfect dynamic capsule width based on text length and active layout preset:
     /// Auto-expands smoothly with spring physics for long lyrics, contracts for short lines.
-    private func calculateTargetWidth(for text: String) -> CGFloat {
-        let font = NSFont.monospacedSystemFont(ofSize: 9.2, weight: .bold)
+    private func calculateTargetWidth(for text: String, preset: FloatingLyricPreset) -> CGFloat {
+        let font: NSFont
+        let chromeWidth: CGFloat
+        let minWidth: CGFloat
+
+        switch preset {
+        case .pureText:
+            font = NSFont.systemFont(ofSize: 10.0, weight: .bold)
+            chromeWidth = 62
+            minWidth = 110
+        case .capsule:
+            font = NSFont.monospacedSystemFont(ofSize: 9.2, weight: .bold)
+            chromeWidth = 72
+            minWidth = 130
+        case .frostedGlass:
+            font = NSFont.systemFont(ofSize: 9.5, weight: .semibold)
+            chromeWidth = 68
+            minWidth = 125
+        case .neonHud:
+            font = NSFont.monospacedSystemFont(ofSize: 9.2, weight: .bold)
+            chromeWidth = 84
+            minWidth = 140
+        }
+
         let textWidth = (text as NSString).size(withAttributes: [.font: font]).width
-        // Chrome budget: padding horizontal (13 * 2 = 26) + icon (12) + spacing (7 * 2 = 14) + spectrum (16) = 68pt
-        let chromeWidth: CGFloat = 72
         let target = ceil(textWidth + chromeWidth)
-        // Clamp: minimum 130pt, maximum 680pt
-        return min(max(130, target), 680)
+        return min(max(minWidth, target), 680)
     }
 
-    var body: some View {
-        Button(action: {
-            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-            onOpenFull()
-        }) {
+    @ViewBuilder
+    private var presetContent: some View {
+        switch activePreset {
+        case .pureText:
+            // Preset 1: Minimalist floating subtitle (No solid background)
+            // Crisp pure-white text with layered drop shadow highlight & cyan neon accent
+            HStack(spacing: 6) {
+                Image(systemName: iconName)
+                    .font(.system(size: 8.5, weight: .bold))
+                    .foregroundStyle(isHovered ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .shadow(color: Color.black.opacity(0.85), radius: 2, x: 0, y: 1)
+                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.75), radius: 4, x: 0, y: 0)
+                    .frame(width: 12)
+
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: 10.0, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.white)
+                        // Layered text highlight shadow for crystal-clear readability against any wallpaper
+                        .shadow(color: Color.black.opacity(0.95), radius: 3, x: 0, y: 1.2)
+                        .shadow(color: Color.black.opacity(0.80), radius: 6, x: 0, y: 2.5)
+                        .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.70 : 0.30), radius: 4, x: 0, y: 0)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id(activeDisplayText)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 4)),
+                            removal: .opacity.combined(with: .offset(y: -4))
+                        ))
+                }
+                .frame(maxWidth: .infinity)
+
+                CyberAudioSpectrumView(
+                    barCount: 3,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: 1.8,
+                    segmentHeight: 1.4,
+                    segmentSpacing: 0.6
+                )
+                .shadow(color: Color.black.opacity(0.8), radius: 2)
+                .frame(width: 14)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+
+        case .capsule:
+            // Preset 2: Original cyber capsule: solid black Dynamic Island pill with neon gradient border
             HStack(spacing: 7) {
-                // Mini glowing lyric/music indicator icon
                 Image(systemName: iconName)
                     .font(.system(size: 8.5, weight: .bold))
                     .foregroundStyle(isHovered ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color(red: 0.0, green: 0.96, blue: 0.83))
                     .frame(width: 12)
 
-                // High-contrast live synced lyric text:
-                // Contained in ZStack so old and new lines transition vertically on top of each other.
-                // STRICTLY ZERO HORIZONTAL SCROLL: the whole notch capsule auto-expands to fit the line!
                 ZStack {
                     Text(activeDisplayText)
                         .font(.system(size: 9.2, weight: .bold, design: .monospaced))
@@ -290,7 +352,6 @@ struct SubNotchFloatingLyricCapsuleView: View {
                 }
                 .frame(maxWidth: .infinity)
 
-                // Mini dancing cyber equalizer (3 bars)
                 CyberAudioSpectrumView(
                     barCount: 3,
                     isPlaying: nowPlaying.isPlaying,
@@ -302,44 +363,185 @@ struct SubNotchFloatingLyricCapsuleView: View {
             }
             .padding(.horizontal, 13)
             .padding(.vertical, 5)
-            .frame(width: capsuleWidth, height: 26)
-            .background(
-                Capsule()
-                    .fill(Color.black.opacity(0.96))
-                    .overlay(
-                        Capsule()
-                            .stroke(
-                                LinearGradient(
-                                    colors: [
-                                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.95 : 0.50),
-                                        Color(red: 1.0, green: 0.16, blue: 0.53).opacity(isHovered ? 0.90 : 0.35)
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ),
-                                lineWidth: 1.0
-                            )
-                    )
-                    .shadow(color: Color.black.opacity(0.92), radius: 8, x: 0, y: 4)
-                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.35 : 0.12), radius: 6, x: 0, y: 1)
-            )
-            .scaleEffect(isHovered ? 1.02 : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isHovered)
+
+        case .frostedGlass:
+            // Preset 3: Apple-style translucent frosted blur pill with hairline border
+            HStack(spacing: 7) {
+                Image(systemName: iconName)
+                    .font(.system(size: 8.5, weight: .medium))
+                    .foregroundStyle(isHovered ? Color.white : Color.white.opacity(0.8))
+                    .frame(width: 12)
+
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: 9.5, weight: .semibold, design: .default))
+                        .foregroundStyle(Color.white)
+                        .shadow(color: Color.black.opacity(0.5), radius: 2, x: 0, y: 1)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id(activeDisplayText)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 4)),
+                            removal: .opacity.combined(with: .offset(y: -4))
+                        ))
+                }
+                .frame(maxWidth: .infinity)
+
+                CyberAudioSpectrumView(
+                    barCount: 3,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: 1.8,
+                    segmentHeight: 1.4,
+                    segmentSpacing: 0.6
+                )
+                .frame(width: 14)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+
+        case .neonHud:
+            // Preset 4: Cyberpunk HUD with technical bracket telemetry styling
+            HStack(spacing: 6) {
+                Text("[")
+                    .font(.system(size: 9.5, weight: .black, design: .monospaced))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.9))
+
+                Image(systemName: iconName)
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .frame(width: 11)
+
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: 9.2, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white)
+                        .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.4), radius: 3)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id(activeDisplayText)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 4)),
+                            removal: .opacity.combined(with: .offset(y: -4))
+                        ))
+                }
+                .frame(maxWidth: .infinity)
+
+                CyberAudioSpectrumView(
+                    barCount: 3,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: 1.8,
+                    segmentHeight: 1.4,
+                    segmentSpacing: 0.6
+                )
+                .frame(width: 14)
+
+                Text("]")
+                    .font(.system(size: 9.5, weight: .black, design: .monospaced))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.9))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4.5)
+        }
+    }
+
+    @ViewBuilder
+    private var presetBackground: some View {
+        switch activePreset {
+        case .pureText:
+            // Feather-soft ambient blur shadow for 100% legibility without visible container box
+            Capsule()
+                .fill(Color.black.opacity(isHovered ? 0.28 : 0.08))
+                .blur(radius: isHovered ? 8 : 4)
+                .background(Capsule().fill(Color.clear))
+
+        case .capsule:
+            // Solid black pill with neon gradient border
+            Capsule()
+                .fill(Color.black.opacity(0.96))
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.95 : 0.50),
+                                    Color(red: 1.0, green: 0.16, blue: 0.53).opacity(isHovered ? 0.90 : 0.35)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ),
+                            lineWidth: 1.0
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.92), radius: 8, x: 0, y: 4)
+                .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.35 : 0.12), radius: 6, x: 0, y: 1)
+
+        case .frostedGlass:
+            // Apple-style translucent pill with hairline light border
+            Capsule()
+                .fill(Color.black.opacity(0.55))
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(isHovered ? 0.38 : 0.22),
+                                    Color.white.opacity(0.08)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 0.75
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.65), radius: 6, x: 0, y: 3)
+
+        case .neonHud:
+            // Cyberpunk HUD dark slate with neon teal border & glow
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color(red: 0.04, green: 0.05, blue: 0.07).opacity(0.94))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(
+                            Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.85 : 0.45),
+                            lineWidth: 0.75
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.9), radius: 6, x: 0, y: 3)
+                .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.30 : 0.10), radius: 4, x: 0, y: 0)
+        }
+    }
+
+    var body: some View {
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            onOpenFull()
+        }) {
+            presetContent
+                .frame(width: capsuleWidth, height: 26)
+                .background(presetBackground)
+                .scaleEffect(isHovered ? 1.02 : 1.0)
+                .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isHovered)
         }
         .buttonStyle(.plain)
         .onHover { hovering in
             isHovered = hovering
         }
         .onAppear {
-            capsuleWidth = calculateTargetWidth(for: activeDisplayText)
+            capsuleWidth = calculateTargetWidth(for: activeDisplayText, preset: activePreset)
         }
         .onChange(of: activeDisplayText) { _, newText in
-            let target = calculateTargetWidth(for: newText)
+            let target = calculateTargetWidth(for: newText, preset: activePreset)
             withAnimation(.spring(response: 0.38, dampingFraction: 0.76)) {
                 capsuleWidth = target
             }
         }
-        .help("♫ Live Synced Lyrics (Click to open Music HUD)")
+        .onChange(of: floatingLyricPreset) { _, _ in
+            let target = calculateTargetWidth(for: activeDisplayText, preset: activePreset)
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.76)) {
+                capsuleWidth = target
+            }
+        }
+        .help("♫ Live Synced Lyrics [Style: \(activePreset.title)] (Click to open Music HUD)")
     }
 }
 
@@ -353,6 +555,7 @@ struct CyberMusicHUDView: View {
     @ObservedObject var nowPlaying: NowPlayingManager
     var appState: AppState
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
+    @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
     @AppStorage(SettingsKey.lyricSyncOffset) private var lyricSyncOffset = SettingsDefaults.lyricSyncOffset
 
     init(nowPlaying: NowPlayingManager, appState: AppState) {
@@ -573,6 +776,39 @@ struct CyberMusicHUDView: View {
                             .font(.system(size: 7, design: .monospaced))
                             .foregroundStyle(Color(white: 0.45))
                     }
+                }
+
+                if showCompactLyrics {
+                    HStack(spacing: 3) {
+                        Text("STYLE:")
+                            .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.45))
+
+                        ForEach(FloatingLyricPreset.allCases) { preset in
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    floatingLyricPreset = preset.rawValue
+                                }
+                            }) {
+                                Text(preset.shortLabel)
+                                    .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(floatingLyricPreset == preset.rawValue ? Color.black : Color.white.opacity(0.7))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1.5)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 2.5)
+                                            .fill(floatingLyricPreset == preset.rawValue ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.12))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 2.5)
+                                                    .stroke(floatingLyricPreset == preset.rawValue ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.20), lineWidth: 0.5)
+                                            )
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .help(preset.title)
+                        }
+                    }
+                    .padding(.top, 1)
                 }
 
                 if nowPlaying.lyrics.isEmpty {

@@ -1327,6 +1327,7 @@ private struct AppearancePage: View {
     @AppStorage(SettingsKey.showModelLabel) private var showModelLabel = SettingsDefaults.showModelLabel
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
+    @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
     @AppStorage(SettingsKey.lyricSyncOffset) private var lyricSyncOffset = SettingsDefaults.lyricSyncOffset
     @AppStorage(SettingsKey.showUsageStats) private var showUsageStats = SettingsDefaults.showUsageStats
     @AppStorage(SettingsKey.showClaudeQuota) private var showClaudeQuota = SettingsDefaults.showClaudeQuota
@@ -1503,7 +1504,19 @@ private struct AppearancePage: View {
                         .foregroundStyle(.tertiary)
                 }
                 if showCompactLyrics {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Picker("Floating Lyric Style", selection: $floatingLyricPreset) {
+                            ForEach(FloatingLyricPreset.allCases) { preset in
+                                Text(preset.title).tag(preset.rawValue)
+                            }
+                        }
+                        .pickerStyle(.menu)
+
+                        Text(FloatingLyricPreset(rawValue: floatingLyricPreset)?.description ?? "")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                            .padding(.bottom, 2)
+
                         HStack {
                             Text("Lyric Timing Offset")
                             Spacer()

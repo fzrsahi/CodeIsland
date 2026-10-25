@@ -17,6 +17,42 @@ enum NotchHeightMode: String, CaseIterable {
     case custom = "custom"
 }
 
+public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
+    case pureText = "pureText"
+    case capsule = "capsule"
+    case frostedGlass = "frostedGlass"
+    case neonHud = "neonHud"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .pureText: return "Highlight Subtitle (No BG)"
+        case .capsule: return "Cyber Capsule (Black Pill)"
+        case .frostedGlass: return "Frosted Glass (Blur Pill)"
+        case .neonHud: return "Cyberpunk HUD (Brackets)"
+        }
+    }
+
+    public var shortLabel: String {
+        switch self {
+        case .pureText: return "TEXT"
+        case .capsule: return "CAPSULE"
+        case .frostedGlass: return "GLASS"
+        case .neonHud: return "HUD"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .pureText: return "Pure floating text with high-contrast white highlight and no heavy background."
+        case .capsule: return "Solid black capsule with glowing cyber gradient border and equalizer."
+        case .frostedGlass: return "Apple-style translucent frosted blur pill."
+        case .neonHud: return "Futuristic HUD with bracket accents and monospace telemetry."
+        }
+    }
+}
+
 enum SettingsKey {
     // Language
     static let appLanguage = "appLanguage"                 // "system", "en", "zh", "zh-Hant", "de", "ja", "ko", "tr"
@@ -55,6 +91,7 @@ enum SettingsKey {
     static let aiMessageLines = "aiMessageLines"
     static let showAgentDetails = "showAgentDetails"
     static let showCompactLyrics = "showCompactLyrics"
+    static let floatingLyricPreset = "floatingLyricPreset"
     static let lyricSyncOffset = "lyricSyncOffset"
     static let notchHeightMode = "notchHeightMode"
     static let customNotchHeight = "customNotchHeight"
@@ -197,6 +234,7 @@ struct SettingsDefaults {
     static let aiMessageLines = 1
     static let showAgentDetails = false
     static let showCompactLyrics = true
+    static let floatingLyricPreset = FloatingLyricPreset.pureText.rawValue
     static let lyricSyncOffset = 0.0
     static let notchHeightMode = NotchHeightMode.matchNotch.rawValue
     static let customNotchHeight = 37.0
@@ -304,6 +342,7 @@ class SettingsManager {
             SettingsKey.aiMessageLines: SettingsDefaults.aiMessageLines,
             SettingsKey.showAgentDetails: SettingsDefaults.showAgentDetails,
             SettingsKey.showCompactLyrics: SettingsDefaults.showCompactLyrics,
+            SettingsKey.floatingLyricPreset: SettingsDefaults.floatingLyricPreset,
             SettingsKey.lyricSyncOffset: SettingsDefaults.lyricSyncOffset,
             SettingsKey.notchHeightMode: SettingsDefaults.notchHeightMode,
             SettingsKey.customNotchHeight: SettingsDefaults.customNotchHeight,
