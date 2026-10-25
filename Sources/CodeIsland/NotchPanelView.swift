@@ -185,10 +185,12 @@ struct NotchPanelView: View {
               nowPlaying.isPlaying,
               !shouldShowExpanded,
               !appState.surface.isExpanded,
-              !nowPlaying.title.isEmpty,
-              !nowPlaying.lyrics.isEmpty,
-              !nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+              !nowPlaying.title.isEmpty
         else { return false }
+        // If not currently fetching and no lyrics found for this track, hide capsule
+        if !nowPlaying.lyricsLoading && nowPlaying.lyrics.isEmpty {
+            return false
+        }
         return true
     }
 
@@ -938,7 +940,7 @@ struct NotchPanelView: View {
                         appState.surface = .sessionList
                     }
                 }
-                .padding(.top, 6.0) // Floating freely without touching the notch!
+                .padding(.top, 7.0) // Space between physical notch and floating lyric notch!
                 .transition(.asymmetric(
                     insertion: .move(edge: .top).combined(with: .opacity),
                     removal: .move(edge: .top).combined(with: .opacity)
@@ -1846,61 +1848,71 @@ private struct IdleIndicatorBar: View {
     @StateObject private var quit = QuitConfirmation()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private var leftWingWidth: CGFloat {
+        hovered ? (compactWingWidth + 12) : compactWingWidth
+    }
+
+    private var rightWingWidth: CGFloat {
+        hovered ? (compactWingWidth + 68) : compactWingWidth
+    }
+
     var body: some View {
         HStack(spacing: 0) {
-            // Left: mascot
-            HStack(spacing: 6) {
+            // Left Wing: mascot with precise positioning
+            HStack {
                 MascotView(source: defaultSource, status: .idle, size: mascotSize)
                     .opacity(hovered ? 0.9 : 0.6)
+                    .padding(.leading, hovered ? 12 : 5)
+                Spacer(minLength: 0)
             }
-            .padding(.leading, 6)
+            .frame(width: leftWingWidth, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture { onExpand?() }
             .help("Click to expand tabs (Agents / Workspace / Music)")
 
+            // Center: precisely locked under the hardware notch
             Spacer(minLength: hasNotch ? notchW : 0)
                 .frame(width: hasNotch ? notchW : nil)
                 .contentShape(Rectangle())
                 .onTapGesture { onExpand?() }
 
-            // Right: expanded shows text + buttons, collapsed shows subtle balanced dot
-            if hovered {
-                HStack(spacing: 6) {
-                    // Gives way to the quit pill: the hovered bar is only a
-                    // little wider than its buttons.
-                    if !quit.isArmed {
-                        NotchIconButton(icon: "chevron.down", tooltip: "Expand to Tabs (Agents / Workspace / Music)") {
-                            onExpand?()
+            // Right Wing: expanded buttons or subtle balanced status dot
+            HStack {
+                Spacer(minLength: 0)
+                if hovered {
+                    HStack(spacing: 6) {
+                        if !quit.isArmed {
+                            NotchIconButton(icon: "chevron.down", tooltip: "Expand to Tabs (Agents / Workspace / Music)") {
+                                onExpand?()
+                            }
                         }
-                    }
 
-                    HStack(spacing: 4) {
-                        NotchIconButton(icon: soundEnabled ? "speaker.wave.2" : "speaker.slash", tooltip: soundEnabled ? l10n["mute"] : l10n["enable_sound_tooltip"]) {
-                            soundEnabled.toggle()
+                        HStack(spacing: 4) {
+                            NotchIconButton(icon: soundEnabled ? "speaker.wave.2" : "speaker.slash", tooltip: soundEnabled ? l10n["mute"] : l10n["enable_sound_tooltip"]) {
+                                soundEnabled.toggle()
+                            }
+                            NotchIconButton(icon: "gearshape", tooltip: l10n["settings"]) {
+                                SettingsWindowController.shared.show()
+                            }
+                            QuitConfirmButton(confirmation: quit)
                         }
-                        NotchIconButton(icon: "gearshape", tooltip: l10n["settings"]) {
-                            SettingsWindowController.shared.show()
-                        }
-                        QuitConfirmButton(confirmation: quit)
                     }
-                    .padding(.leading, hasNotch ? 10 : 0)
-                }
-                .padding(.trailing, 6)
-                .transition(.opacity)
-            } else {
-                Circle()
-                    .fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.4))
-                    .frame(width: 4, height: 4)
                     .padding(.trailing, 8)
                     .transition(.opacity)
-                    .contentShape(Rectangle())
-                    .onTapGesture { onExpand?() }
+                } else {
+                    Circle()
+                        .fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.4))
+                        .frame(width: 4, height: 4)
+                        .padding(.trailing, 8)
+                        .transition(.opacity)
+                }
             }
+            .frame(width: rightWingWidth, alignment: .trailing)
+            .contentShape(Rectangle())
+            .onTapGesture { onExpand?() }
         }
         .frame(height: notchHeight)
         .animation(NotchAnimation.micro, value: hovered)
-        // The buttons go with the hover, and an armed pill with them
-        // (QuitConfirmButton cancels when it disappears).
         .animation(reduceMotion ? nil : NotchAnimation.micro, value: quit.isArmed)
     }
 }

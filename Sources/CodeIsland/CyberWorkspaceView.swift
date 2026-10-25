@@ -550,118 +550,235 @@ struct CyberDiffLineView: View {
     }
 }
 
+// MARK: - Full Interactive Git Graph Detail View
+
+struct CyberGitGraphDetailView: View {
+    @ObservedObject var manager: WorkspaceMonitorManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("COMMIT GRAPH (\(manager.recentCommits.count))")
+                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(white: 0.5))
+
+                Spacer()
+
+                Text("Branch: \(manager.branch)")
+                    .font(.system(size: 7, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
+            }
+            .padding(.horizontal, 4)
+
+            ScrollView(.vertical, showsIndicators: true) {
+                LazyVStack(alignment: .leading, spacing: 3) {
+                    ForEach(Array(manager.recentCommits.enumerated()), id: \.element.id) { index, commit in
+                        HStack(alignment: .top, spacing: 6) {
+                            // Graph Spine node
+                            VStack(spacing: 0) {
+                                ZStack {
+                                    Circle()
+                                        .fill(index == 0 ? Color(red: 0.0, green: 0.90, blue: 0.46) : Color(white: 0.35))
+                                        .frame(width: 6, height: 6)
+                                        .shadow(color: index == 0 ? Color(red: 0.0, green: 0.90, blue: 0.46).opacity(0.8) : Color.clear, radius: 2)
+
+                                    if index == 0 {
+                                        Circle()
+                                            .stroke(Color(red: 0.0, green: 0.90, blue: 0.46).opacity(0.4), lineWidth: 1.5)
+                                            .frame(width: 10, height: 10)
+                                    }
+                                }
+                                .frame(width: 10, height: 10)
+
+                                if index < manager.recentCommits.count - 1 {
+                                    Rectangle()
+                                        .fill(Color(white: 0.22))
+                                        .frame(width: 1.2, height: 16)
+                                }
+                            }
+                            .frame(width: 10)
+
+                            // Commit metadata & message
+                            VStack(alignment: .leading, spacing: 1.5) {
+                                HStack(spacing: 4) {
+                                    Text(commit.hash)
+                                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
+
+                                    if !commit.refs.isEmpty {
+                                        Text(commit.refs)
+                                            .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(Color.black)
+                                            .padding(.horizontal, 3.5)
+                                            .padding(.vertical, 0.5)
+                                            .background(RoundedRectangle(cornerRadius: 2).fill(Color(red: 0.0, green: 0.96, blue: 0.83)))
+                                            .lineLimit(1)
+                                    }
+
+                                    Spacer()
+
+                                    Text(commit.author)
+                                        .font(.system(size: 6.5, design: .monospaced))
+                                        .foregroundStyle(Color(white: 0.5))
+
+                                    Text("• \(commit.timeAgo)")
+                                        .font(.system(size: 6.5, design: .monospaced))
+                                        .foregroundStyle(Color(white: 0.4))
+                                }
+
+                                Text(commit.message)
+                                    .font(.system(size: 8, design: .monospaced))
+                                    .foregroundStyle(Color.white.opacity(0.9))
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(RoundedRectangle(cornerRadius: 3).fill(index == 0 ? Color(white: 0.08) : Color.clear))
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .frame(height: 106)
+            .background(Color(red: 0.04, green: 0.04, blue: 0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+        }
+    }
+}
+
 // MARK: - Expanded Workspace Detail Inspector
 
 struct CyberWorkspaceDetailView: View {
     @ObservedObject var manager: WorkspaceMonitorManager
 
     var body: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 8) {
-                // LEFT PANE: Modified Files List (Width 135pt)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("CHANGED FILES (\(manager.changedFiles.count))")
-                        .font(.system(size: 7, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.5))
-
-                    ScrollView(.vertical, showsIndicators: false) {
-                        LazyVStack(spacing: 2) {
-                            ForEach(manager.changedFiles) { file in
-                                let isSelected = manager.selectedFilePath == file.path
-                                Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                                    manager.fetchDiff(for: file.path)
-                                }) {
-                                    HStack(spacing: 4) {
-                                        Text(file.status)
-                                            .font(.system(size: 7, weight: .bold, design: .monospaced))
-                                            .foregroundStyle(file.statusColor)
-                                            .frame(width: 10)
-
-                                        Text(file.filename)
-                                            .font(.system(size: 8, weight: isSelected ? .bold : .regular, design: .monospaced))
-                                            .foregroundStyle(isSelected ? Color.white : Color(white: 0.75))
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 2)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 3)
-                                            .fill(isSelected ? Color(red: 0.0, green: 0.90, blue: 0.46).opacity(0.18) : Color(white: 0.07))
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                            }
+        VStack(spacing: 5) {
+            // Sub-Tab Switcher: GIT DIFF vs GIT GRAPH
+            HStack(spacing: 4) {
+                ForEach(WorkspaceDetailTab.allCases, id: \.self) { tab in
+                    let isSelected = manager.detailTab == tab
+                    Button(action: {
+                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            manager.detailTab = tab
                         }
-                    }
-                    .frame(height: 100)
-                }
-                .frame(width: 135)
-
-                // Vertical Divider
-                Rectangle()
-                    .fill(Color(red: 0.16, green: 0.19, blue: 0.24))
-                    .frame(width: 1, height: 110)
-
-                // RIGHT PANE: Live Git Diff Preview
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack {
-                        Text(manager.selectedFilePath ?? "Select a file to inspect diff")
-                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-
-                        Spacer()
-
-                        if manager.isDiffLoading {
-                            ProgressView()
-                                .scaleEffect(0.4)
-                                .frame(width: 10, height: 10)
+                    }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: tab == .diff ? "doc.text.magnifyingglass" : "point.topleft.down.to.point.bottomright.curvepath")
+                                .font(.system(size: 6.5))
+                            Text(tab.rawValue)
+                                .font(.system(size: 7, weight: .bold, design: .monospaced))
                         }
+                        .foregroundStyle(isSelected ? Color.black : Color(white: 0.6))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(RoundedRectangle(cornerRadius: 2.5).fill(isSelected ? Color(red: 0.0, green: 0.90, blue: 0.46) : Color(white: 0.10)))
                     }
-
-                    ScrollView([.vertical, .horizontal], showsIndicators: false) {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            let lines = manager.selectedFileDiff.components(separatedBy: "\n")
-                            ForEach(Array(lines.prefix(120).enumerated()), id: \.offset) { _, line in
-                                CyberDiffLineView(line: line)
-                            }
-                        }
-                    }
-                    .frame(height: 100)
-                    .background(Color(red: 0.04, green: 0.04, blue: 0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                    .buttonStyle(.plain)
                 }
-                .frame(maxWidth: .infinity)
-            }
-
-            // Bottom Action Bar
-            HStack {
-                Button(action: { manager.refresh(force: true) }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 7))
-                        Text("REFRESH GIT")
-                            .font(.system(size: 7, weight: .bold, design: .monospaced))
-                    }
-                    .foregroundStyle(Color(white: 0.7))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(white: 0.10)))
-                }
-                .buttonStyle(.plain)
 
                 Spacer()
 
-                if !manager.testOutput.isEmpty {
-                    Text(manager.testStatus == .running ? "Running tests..." : (manager.testOutput.components(separatedBy: "\n").filter({ !$0.isEmpty }).last ?? ""))
-                        .font(.system(size: 7, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.5))
-                        .lineLimit(1)
+                Button(action: { manager.refresh(force: true) }) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 6.5))
+                        Text("REFRESH")
+                            .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                    }
+                    .foregroundStyle(Color(white: 0.6))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(white: 0.09)))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 2)
+
+            if manager.detailTab == .graph {
+                CyberGitGraphDetailView(manager: manager)
+            } else {
+                HStack(spacing: 8) {
+                    // LEFT PANE: Modified Files List (Width 135pt)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("CHANGED FILES (\(manager.changedFiles.count))")
+                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(white: 0.5))
+
+                        ScrollView(.vertical, showsIndicators: false) {
+                            LazyVStack(spacing: 2) {
+                                ForEach(manager.changedFiles) { file in
+                                    let isSelected = manager.selectedFilePath == file.path
+                                    Button(action: {
+                                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                                        manager.fetchDiff(for: file.path)
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Text(file.status)
+                                                .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                                .foregroundStyle(file.statusColor)
+                                                .frame(width: 10)
+
+                                            Text(file.filename)
+                                                .font(.system(size: 8, weight: isSelected ? .bold : .regular, design: .monospaced))
+                                                .foregroundStyle(isSelected ? Color.white : Color(white: 0.75))
+                                                .lineLimit(1)
+                                                .truncationMode(.middle)
+
+                                            Spacer()
+                                        }
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 2)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 3)
+                                                .fill(isSelected ? Color(red: 0.0, green: 0.90, blue: 0.46).opacity(0.18) : Color(white: 0.07))
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .frame(height: 100)
+                    }
+                    .frame(width: 135)
+
+                    // Vertical Divider
+                    Rectangle()
+                        .fill(Color(red: 0.16, green: 0.19, blue: 0.24))
+                        .frame(width: 1, height: 110)
+
+                    // RIGHT PANE: Live Git Diff Preview
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack {
+                            Text(manager.selectedFilePath ?? "Select a file to inspect diff")
+                                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+
+                            Spacer()
+
+                            if manager.isDiffLoading {
+                                ProgressView()
+                                    .scaleEffect(0.4)
+                                    .frame(width: 10, height: 10)
+                            }
+                        }
+
+                        ScrollView([.vertical, .horizontal], showsIndicators: false) {
+                            LazyVStack(alignment: .leading, spacing: 0) {
+                                let lines = manager.selectedFileDiff.components(separatedBy: "\n")
+                                ForEach(Array(lines.prefix(120).enumerated()), id: \.offset) { _, line in
+                                    CyberDiffLineView(line: line)
+                                }
+                            }
+                        }
+                        .frame(height: 100)
+                        .background(Color(red: 0.04, green: 0.04, blue: 0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
         }

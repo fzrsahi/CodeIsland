@@ -1461,8 +1461,9 @@ private func applyHookEvent(
             sessions[sessionId]?.status = .processing
         }
     case "TaskRoundComplete":
-        sessions[sessionId]?.interrupted = (event.eventName == "TaskCancel")
-        sessions[sessionId]?.status = .processing
+        let isTaskCancel = (event.eventName == "TaskCancel") || (event.rawJSON["interrupted"] as? Bool == true) || (event.rawJSON["cancelled"] as? Bool == true)
+        sessions[sessionId]?.interrupted = isTaskCancel
+        sessions[sessionId]?.status = isTaskCancel ? .idle : .processing
         sessions[sessionId]?.currentTool = nil
         sessions[sessionId]?.toolDescription = nil
         let assistantMsg = firstStringFromEvent(
@@ -1479,7 +1480,7 @@ private func applyHookEvent(
         }
         // Cline tasks are single-round — treat completion/cancellation as session end,
         // and latch a flag so out-of-order in-flight tool events don't revive it.
-        if sessions[sessionId]?.source == "cline" {
+        if sessions[sessionId]?.source == "cline" || isTaskCancel {
             sessions[sessionId]?.status = .idle
             sessions[sessionId]?.taskRoundEnded = true
         }
@@ -1494,8 +1495,10 @@ private func applyHookEvent(
             return effects
         }
         // Detect ESC/Ctrl+C interruption
-        let stopReason = event.rawJSON["stop_reason"] as? String ?? ""
-        let wasInterrupted = (stopReason == "user" || stopReason == "interrupted")
+        let stopReason = (event.rawJSON["stop_reason"] as? String ?? "").lowercased()
+        let wasInterrupted = (stopReason == "user" || stopReason == "interrupted" || stopReason == "cancel" || stopReason == "cancelled" || stopReason == "abort" || stopReason == "aborted" || stopReason.contains("interrupt") || stopReason.contains("cancel"))
+            || (event.rawJSON["interrupted"] as? Bool == true)
+            || (event.rawJSON["cancelled"] as? Bool == true)
             || HermesHookPayload.endsInterruptedTurn(event)
         let hasActiveSubagents = sessions[sessionId]?.subagents.values.contains {
             $0.status != .idle
@@ -1554,7 +1557,7 @@ private func applyHookEvent(
 
         // Parent chat Stop while folded Tasks are still working — keep the card
         // active and do not pop a premature completion (same as AfterAgentResponse).
-        if hasActiveSubagents {
+        if hasActiveSubagents && !wasInterrupted {
             if !isWaiting {
                 sessions[sessionId]?.status = .running
                 if sessions[sessionId]?.currentTool == nil {
@@ -1567,6 +1570,15 @@ private func applyHookEvent(
             sessions[sessionId]?.status = .idle
             sessions[sessionId]?.currentTool = nil
             sessions[sessionId]?.toolDescription = nil
+            if wasInterrupted {
+                // Interrupted turn: immediately terminate subagent status
+                if var subagents = sessions[sessionId]?.subagents {
+                    for key in subagents.keys {
+                        subagents[key]?.status = .idle
+                    }
+                    sessions[sessionId]?.subagents = subagents
+                }
+            }
             facts.endedTurn = true
             slots.completion = effects.count
         }
@@ -1681,7 +1693,19 @@ private func applyHookEvent(
             case "idle_prompt":
                 // "Waiting for your input after 60s idle" — the turn is over.
                 sessions[sessionId]?.status = .idle
+            case "interrupt", "interrupted", "user_interrupted", "cancelled", "aborted":
+                sessions[sessionId]?.interrupted = true
+                sessions[sessionId]?.status = .idle
+                sessions[sessionId]?.currentTool = nil
+                sessions[sessionId]?.toolDescription = nil
             default:
+                if let lower = notificationText?.lowercased(),
+                   lower.contains("interrupted") || lower.contains("request interrupted") || lower.contains("cancelled by user") || lower.contains("aborted") {
+                    sessions[sessionId]?.interrupted = true
+                    sessions[sessionId]?.status = .idle
+                    sessions[sessionId]?.currentTool = nil
+                    sessions[sessionId]?.toolDescription = nil
+                }
                 break
             }
         }

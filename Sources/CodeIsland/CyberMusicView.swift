@@ -208,7 +208,7 @@ struct CyberMusicMiniPeekBanner: View {
     }
 }
 
-// MARK: - Sub-Notch Floating Synced Lyric Capsule (Free-Floating Satellite Island)
+// MARK: - Sub-Notch Floating Synced Lyric Bar (Mini Dynamic Island for Lyrics)
 
 struct SubNotchFloatingLyricCapsuleView: View {
     @ObservedObject var nowPlaying: NowPlayingManager
@@ -216,66 +216,100 @@ struct SubNotchFloatingLyricCapsuleView: View {
 
     @State private var isHovered = false
 
-    private var activeLyricText: String {
-        nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+    private var isRealLyric: Bool {
+        !nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var activeDisplayText: String {
+        let lyric = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !lyric.isEmpty {
+            return lyric
+        }
+        if nowPlaying.lyricsLoading {
+            return "♫ Loading lyrics..."
+        }
+        if nowPlaying.currentLyricIndex > 0 {
+            return "♪ Instrumental Interlude ♪"
+        }
+        if !nowPlaying.title.isEmpty {
+            let artist = nowPlaying.artist.isEmpty ? "" : " • \(nowPlaying.artist)"
+            return "♪ Intro: \(nowPlaying.title)\(artist)"
+        }
+        return "♪ Music Playing..."
+    }
+
+    private var iconName: String {
+        if isRealLyric {
+            return "quote.bubble.fill"
+        }
+        if nowPlaying.lyricsLoading {
+            return "arrow.triangle.2.circlepath"
+        }
+        return "music.note"
     }
 
     var body: some View {
-        Button(action: onOpenFull) {
-            HStack(spacing: 6) {
-                // Mini glowing lyric indicator icon
-                Image(systemName: "quote.bubble.fill")
-                    .font(.system(size: 7.5, weight: .bold))
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            onOpenFull()
+        }) {
+            HStack(spacing: 7) {
+                // Mini glowing lyric/music indicator icon
+                Image(systemName: iconName)
+                    .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(isHovered ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color(red: 0.0, green: 0.96, blue: 0.83))
 
-                // High-contrast live synced lyric text (Dynamically auto-expanding with zero clipping)
-                Text(activeLyricText)
-                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.white)
+                // High-contrast live synced lyric text or intro: changes per lyric line, never scrolls
+                Text(activeDisplayText)
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isRealLyric ? Color.white : Color.white.opacity(0.85))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
-                    .id(activeLyricText)
-                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                    .id(activeDisplayText)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .offset(y: 4)),
+                        removal: .opacity.combined(with: .offset(y: -4))
+                    ))
 
                 // Mini dancing cyber equalizer (3 bars)
                 CyberAudioSpectrumView(
                     barCount: 3,
                     isPlaying: nowPlaying.isPlaying,
-                    barWidth: 1.6,
-                    segmentHeight: 1.3,
+                    barWidth: 1.8,
+                    segmentHeight: 1.4,
                     segmentSpacing: 0.6
                 )
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
             .background(
-                Capsule()
-                    .fill(Color.black.opacity(0.95))
+                RoundedRectangle(cornerRadius: 11)
+                    .fill(Color.black.opacity(0.96))
                     .overlay(
-                        Capsule()
+                        RoundedRectangle(cornerRadius: 11)
                             .stroke(
                                 LinearGradient(
                                     colors: [
-                                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.9 : 0.45),
-                                        Color(red: 1.0, green: 0.16, blue: 0.53).opacity(isHovered ? 0.8 : 0.3)
+                                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.95 : 0.45),
+                                        Color(red: 1.0, green: 0.16, blue: 0.53).opacity(isHovered ? 0.85 : 0.30)
                                     ],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 ),
-                                lineWidth: 0.8
+                                lineWidth: 0.9
                             )
                     )
-                    .shadow(color: Color.black.opacity(0.85), radius: 6, x: 0, y: 3)
-                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.25 : 0.08), radius: 4, x: 0, y: 1)
+                    .shadow(color: Color.black.opacity(0.9), radius: 6, x: 0, y: 3)
+                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.35 : 0.10), radius: 5, x: 0, y: 1)
             )
-            .frame(maxWidth: 520)
-            .animation(.spring(response: 0.35, dampingFraction: 0.82), value: activeLyricText)
+            .scaleEffect(isHovered ? 1.02 : 1.0)
+            .frame(minWidth: 80, maxWidth: 650)
+            .animation(.spring(response: 0.35, dampingFraction: 0.78), value: activeDisplayText)
+            .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isHovered)
         }
         .buttonStyle(.plain)
         .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovered = hovering
-            }
+            isHovered = hovering
         }
         .help("♫ Live Synced Lyrics (Click to open Music HUD)")
     }

@@ -39,6 +39,20 @@ public struct GitCommitItem: Identifiable, Equatable, Sendable {
     public let message: String
     public let author: String
     public let timeAgo: String
+    public let refs: String
+
+    public init(hash: String, message: String, author: String, timeAgo: String, refs: String = "") {
+        self.hash = hash
+        self.message = message
+        self.author = author
+        self.timeAgo = timeAgo
+        self.refs = refs.trimmingCharacters(in: CharacterSet(charactersIn: " ()"))
+    }
+}
+
+public enum WorkspaceDetailTab: String, CaseIterable, Sendable {
+    case diff = "GIT DIFF"
+    case graph = "GIT GRAPH"
 }
 
 public enum TestRunnerStatus: Equatable {
@@ -68,6 +82,7 @@ public final class WorkspaceMonitorManager: ObservableObject {
     @Published public var selectedFileDiff: String = ""
     @Published public var isDiffLoading: Bool = false
     @Published public var isExpandedDetail: Bool = false
+    @Published public var detailTab: WorkspaceDetailTab = .diff
     @Published public var isRefreshing: Bool = false
     @Published public var detectedTestFramework: String? = nil
     @Published public var testStatus: TestRunnerStatus = .idle
@@ -333,9 +348,9 @@ public final class WorkspaceMonitorManager: ObservableObject {
                 }
             }
 
-            // 4. Fetch recent commits (last 5)
+            // 4. Fetch recent commits (last 15 for git graph)
             var commits: [GitCommitItem] = []
-            if let logData = ProcessRunner.run(path: gitBinary, args: ["-C", cwd, "log", "-n", "5", "--pretty=format:%h|||%s|||%an|||%ar"], timeout: 4),
+            if let logData = ProcessRunner.run(path: gitBinary, args: ["-C", cwd, "log", "-n", "15", "--pretty=format:%h|||%s|||%an|||%ar|||%d"], timeout: 4),
                let logText = String(data: logData, encoding: .utf8) {
                 let lines = logText.components(separatedBy: "\n")
                 for line in lines where !line.isEmpty {
@@ -345,7 +360,8 @@ public final class WorkspaceMonitorManager: ObservableObject {
                             hash: parts[0],
                             message: parts[1],
                             author: parts[2],
-                            timeAgo: parts[3]
+                            timeAgo: parts[3],
+                            refs: parts.count >= 5 ? parts[4] : ""
                         ))
                     }
                 }

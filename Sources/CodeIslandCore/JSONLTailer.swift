@@ -563,6 +563,9 @@ public final class JSONLTailer: @unchecked Sendable {
         switch type {
         case "user", "USER_INPUT":
             if let text = extractText(from: message["content"]) {
+                if text.contains("[Request interrupted by user]") || text.contains("interrupted by user") || text.contains("Request was cancelled") {
+                    delta.turnStatus = .idle
+                }
                 switch claudeCommandEcho(text) {
                 case .local?:
                     // /model, /effort, /clear…: no turn, so no new prompt —
@@ -580,6 +583,10 @@ public final class JSONLTailer: @unchecked Sendable {
                 }
             }
         case "assistant", "PLANNER_RESPONSE":
+            if let stopReason = ((message["stop_reason"] as? String) ?? (json["stop_reason"] as? String))?.lowercased(),
+               stopReason.contains("interrupt") || stopReason.contains("cancel") || stopReason == "abort" {
+                delta.turnStatus = .idle
+            }
             if let text = extractText(from: message["content"]) {
                 delta.lastAssistantMessage = text
             } else if let thinking = message["thinking"] as? String {

@@ -576,13 +576,20 @@ final class AppState {
 
         // 2b. Some CLIs keep their parent process alive across requests, so a missed Stop hook
         // can leave the UI stuck in bare "thinking" forever after an interrupt. If we've had no
-        // follow-up hook activity for a long time and there isn't even a live tool/description,
+        // follow-up hook activity for a short window and there isn't even a live tool/description,
         // reset that silent processing state back to idle.
-        let monitoredThinkingTimeout: TimeInterval = 300
-        let nativeAppThinkingTimeout: TimeInterval = 30
+        let monitoredThinkingTimeout: TimeInterval = 25
+        let nativeAppThinkingTimeout: TimeInterval = 15
         let codexTerminalTurnSettleTime: TimeInterval = 3
+
+        for (key, session) in sessions where session.interrupted && session.status != .idle {
+            sessions[key]?.status = .idle
+            sessions[key]?.currentTool = nil
+            sessions[key]?.toolDescription = nil
+        }
+
         for (key, session) in sessions
-            where session.status == .processing
+            where (session.status == .processing || session.status == .running)
             && session.currentTool == nil
             && session.toolDescription == nil {
             let elapsed = -session.lastActivity.timeIntervalSinceNow
@@ -597,7 +604,7 @@ final class AppState {
             }
             guard processMonitor.isWatching(key) else { continue }
             // Native apps write transcripts synchronously — if the transcript check below
-            // didn't find a stop marker after 30s, the session is almost certainly idle.
+            // didn't find a stop marker after 15s, the session is almost certainly idle.
             if session.isNativeAppMode, elapsed > nativeAppThinkingTimeout {
                 sessions[key]?.status = .idle
                 continue
