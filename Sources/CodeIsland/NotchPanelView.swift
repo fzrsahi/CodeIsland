@@ -1362,11 +1362,10 @@ private struct CompactRightWing: View {
                                 HStack(spacing: 2) {
                                     Image(systemName: "cpu")
                                         .font(.system(size: 6.5, weight: .bold))
-                                    Text(agentDisplayLabel)
+                                    Text("agents")
                                         .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                                         .foregroundStyle(Color.white.opacity(0.85))
                                         .lineLimit(1)
-                                        .frame(maxWidth: 58, alignment: .leading)
                                 }
                             }
 
@@ -4435,10 +4434,31 @@ private struct SessionIdentityLine: View {
 
     private var displaySessionId: String { session.displaySessionId(sessionId: sessionId) }
 
+    /// Human-friendly headline: Prioritizes the user's actual question / prompt,
+    /// falls back to meaningful project name or agent title — never generic 'config' (#screenshot).
+    private var displayTitle: String {
+        // Priority 1: User question / prompt (as requested: "misal user question gitu ya")
+        if let prompt = session.lastUserPrompt?.trimmingCharacters(in: .whitespacesAndNewlines), !prompt.isEmpty {
+            return prompt
+        }
+        if let title = session.sessionLabel {
+            return title
+        }
+        // Priority 2: Project folder (skip generic unhelpful names like "config", "tmp")
+        let proj = session.projectDisplayName
+        let genericFolders: Set<String> = ["config", "tmp", "temp", "desktop", "workspace", "session", "root"]
+        if !proj.isEmpty && !genericFolders.contains(proj.lowercased()) {
+            return proj
+        }
+        // Priority 3: Agent display name
+        let src = session.sourceLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !src.isEmpty && src.lowercased() != "unknown" {
+            return "\(src) Task"
+        }
+        return "User Task"
+    }
+
     var body: some View {
-        // With the status chip beside it the row can run out of room at large
-        // text sizes. The short id goes first then: a name read whole beats an
-        // id. A name too long either way keeps the id and truncates, as before.
         ViewThatFits(in: .horizontal) {
             line(showsShortId: true)
             line(showsShortId: false)
@@ -4447,29 +4467,18 @@ private struct SessionIdentityLine: View {
     }
 
     private func line(showsShortId: Bool) -> some View {
-        let headline = session.headline(showProjectName: showProjectName)
-        return HStack(spacing: 4) {
-            if headline.kind == .project {
-                ProjectNameLink(
-                    name: headline.text,
-                    cwd: session.cwd,
-                    isInteractive: !session.isRemote,
-                    fontSize: projectFontSize,
-                    color: projectColor
-                )
+        HStack(spacing: 5) {
+            // Prominent user question / task title
+            Text(displayTitle)
+                .font(.system(size: projectFontSize, weight: .bold, design: .rounded))
+                .foregroundStyle(projectColor)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .help(displayTitle)
                 .layoutPriority(2)
-            } else {
-                // Project name hidden: no folder link and no path tooltip either,
-                // or hovering the card would still reveal it.
-                Text(headline.text)
-                    .font(.system(size: projectFontSize, weight: .bold, design: .monospaced))
-                    .foregroundStyle(projectColor)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .layoutPriority(2)
-            }
 
-            if showGitBranch, let branch = session.gitBranch {
+            // Git Branch badge (if present)
+            if showGitBranch, let branch = session.gitBranch, !branch.isEmpty {
                 let label = session.gitIsWorktree ? "\(branch) ⧉" : branch
                 HStack(spacing: 2) {
                     Image(systemName: "arrow.triangle.branch")
@@ -4481,32 +4490,19 @@ private struct SessionIdentityLine: View {
                         .frame(minWidth: BranchLabelMetrics.minimumWidth(for: label, fontSize: sessionFontSize))
                 }
                 .help(label)
-                .foregroundStyle(sessionColor.opacity(0.85))
+                .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.85))
                 .layoutPriority(1)
             }
 
-            if let sessionLabel = headline.trailingSessionLabel {
-                Text("#\(sessionLabel)")
-                    .font(.system(size: sessionFontSize, weight: .medium, design: .monospaced))
-                    .foregroundStyle(sessionColor)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .layoutPriority(1)
-
-                if showsShortId {
-                    Text("·")
-                        .font(.system(size: sessionFontSize, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(dividerColor)
-
-                    Text("#\(shortSessionId(displaySessionId))")
-                        .font(.system(size: sessionFontSize, weight: .medium, design: .monospaced))
-                        .foregroundStyle(sessionColor.opacity(0.6))
-                        .fixedSize()
-                }
-            } else if showsShortId {
+            // Clean Session ID micro-badge (neat rounded pill instead of plain text)
+            if showsShortId {
                 Text("#\(shortSessionId(displaySessionId))")
-                    .font(.system(size: sessionFontSize, weight: .medium, design: .monospaced))
-                    .foregroundStyle(sessionColor.opacity(0.6))
+                    .font(.system(size: max(8, sessionFontSize - 2), weight: .semibold, design: .monospaced))
+                    .foregroundStyle(sessionColor.opacity(0.55))
+                    .padding(.horizontal, 3.5)
+                    .padding(.vertical, 1)
+                    .background(RoundedRectangle(cornerRadius: 2.5).fill(Color.white.opacity(0.08)))
+                    .help("Session: \(displaySessionId)")
                     .fixedSize()
             }
         }
