@@ -1328,6 +1328,10 @@ private struct AppearancePage: View {
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
     @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
+    @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
+    @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
+    @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
+    @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
     @AppStorage(SettingsKey.lyricSyncOffset) private var lyricSyncOffset = SettingsDefaults.lyricSyncOffset
     @AppStorage(SettingsKey.showUsageStats) private var showUsageStats = SettingsDefaults.showUsageStats
     @AppStorage(SettingsKey.showClaudeQuota) private var showClaudeQuota = SettingsDefaults.showClaudeQuota
@@ -1504,7 +1508,8 @@ private struct AppearancePage: View {
                         .foregroundStyle(.tertiary)
                 }
                 if showCompactLyrics {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Preset Layout Selector
                         Picker("Floating Lyric Style", selection: $floatingLyricPreset) {
                             ForEach(FloatingLyricPreset.allCases) { preset in
                                 Text(preset.title).tag(preset.rawValue)
@@ -1515,25 +1520,104 @@ private struct AppearancePage: View {
                         Text(FloatingLyricPreset(rawValue: floatingLyricPreset)?.description ?? "")
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
-                            .padding(.bottom, 2)
 
-                        HStack {
-                            Text("Lyric Timing Offset")
-                            Spacer()
-                            Text(String(format: "%+.2f s", lyricSyncOffset))
-                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                                .foregroundStyle(abs(lyricSyncOffset) > 0.01 ? Color(red: 0.0, green: 0.96, blue: 0.83) : .secondary)
+                        // Font Typography Style
+                        Picker("Font Typography", selection: $floatingLyricFontDesign) {
+                            ForEach(FloatingLyricFontDesign.allCases) { style in
+                                Text(style.title).tag(style.rawValue)
+                            }
                         }
-                        Slider(value: $lyricSyncOffset, in: -3.0...3.0, step: 0.05) {
-                            Text("Lyric Timing Offset")
-                        } minimumValueLabel: {
-                            Text("-3s").font(.system(size: 9))
-                        } maximumValueLabel: {
-                            Text("+3s").font(.system(size: 9))
+                        .pickerStyle(.menu)
+
+                        // Text Highlight Color
+                        Picker("Highlight Color", selection: $floatingLyricTextColor) {
+                            ForEach(FloatingLyricTextColor.allCases) { col in
+                                Text(col.title).tag(col.rawValue)
+                            }
                         }
-                        Text("Fine-tune lyric sync: drag left (negative) if lyrics appear too early; drag right (positive) if lyrics appear late.")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.tertiary)
+                        .pickerStyle(.menu)
+
+                        // Font Size Slider & Quick Presets
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack {
+                                Text("Lyric Font Size")
+                                Spacer()
+                                Text(String(format: "%.1f pt", floatingLyricFontSize))
+                                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                            }
+                            HStack(spacing: 6) {
+                                ForEach([("Compact", 9.0), ("Medium", 10.5), ("Large", 12.0)], id: \.0) { label, sz in
+                                    Button(action: {
+                                        floatingLyricFontSize = sz
+                                    }) {
+                                        Text("\(label) (\(Int(sz))pt)")
+                                            .font(.system(size: 10, weight: abs(floatingLyricFontSize - sz) < 0.2 ? .bold : .regular))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 3)
+                                                    .fill(abs(floatingLyricFontSize - sz) < 0.2 ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.2) : Color.white.opacity(0.08))
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            Slider(value: $floatingLyricFontSize, in: 8.0...14.0, step: 0.5)
+                        }
+
+                        // Vertical Gap (Distance from Notch)
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack {
+                                Text("Distance from Notch")
+                                Spacer()
+                                Text(String(format: "%.1f pt (~%.2f cm)", floatingLyricVerticalGap, floatingLyricVerticalGap * 0.035))
+                                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                            }
+                            HStack(spacing: 6) {
+                                ForEach([("Razor (0.1cm)", 2.5), ("Slim (0.2cm)", 5.5), ("Spacious (0.3cm)", 8.5)], id: \.0) { label, gap in
+                                    Button(action: {
+                                        floatingLyricVerticalGap = gap
+                                    }) {
+                                        Text(label)
+                                            .font(.system(size: 10, weight: abs(floatingLyricVerticalGap - gap) < 0.3 ? .bold : .regular))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 3)
+                                                    .fill(abs(floatingLyricVerticalGap - gap) < 0.3 ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.2) : Color.white.opacity(0.08))
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            Slider(value: $floatingLyricVerticalGap, in: 0.0...12.0, step: 0.5)
+                            Text("Adjust the vertical clearance between the physical Mac notch and the floating lyrics bar.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                        }
+
+                        // Timing Offset
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack {
+                                Text("Lyric Timing Offset")
+                                Spacer()
+                                Text(String(format: "%+.2f s", lyricSyncOffset))
+                                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(abs(lyricSyncOffset) > 0.01 ? Color(red: 0.0, green: 0.96, blue: 0.83) : .secondary)
+                            }
+                            Slider(value: $lyricSyncOffset, in: -3.0...3.0, step: 0.05) {
+                                Text("Lyric Timing Offset")
+                            } minimumValueLabel: {
+                                Text("-3s").font(.system(size: 9))
+                            } maximumValueLabel: {
+                                Text("+3s").font(.system(size: 9))
+                            }
+                            Text("Fine-tune lyric sync: drag left (negative) if lyrics appear too early; drag right (positive) if lyrics appear late.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                     .padding(.leading, 12)
                 }

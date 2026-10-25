@@ -131,6 +131,7 @@ struct NotchPanelView: View {
     @AppStorage(SettingsKey.hoverExpandDelay) private var hoverExpandDelay = SettingsDefaults.hoverExpandDelay
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
+    @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @ObservedObject private var workspaceManager = WorkspaceMonitorManager.shared
 
@@ -942,7 +943,7 @@ struct NotchPanelView: View {
                         appState.surface = .sessionList
                     }
                 }
-                .padding(.top, 2.5) // Razor-thin gap between physical notch and floating lyric notch (~0.1cm or smaller)
+                .padding(.top, CGFloat(floatingLyricVerticalGap)) // Configurable distance from physical notch
                 .transition(.asymmetric(
                     insertion: .move(edge: .top).combined(with: .opacity),
                     removal: .move(edge: .top).combined(with: .opacity)
@@ -1274,6 +1275,15 @@ private struct CompactRightWing: View {
         guard let sid = displaySessionId, let cwd = appState.sessions[sid]?.cwd, !cwd.isEmpty else { return nil }
         return (cwd as NSString).lastPathComponent
     }
+    private var agentDisplayLabel: String {
+        if let sid = displaySessionId, let session = appState.sessions[sid] {
+            let src = session.mascotSource.isEmpty ? session.source : session.mascotSource
+            if !src.isEmpty && src.lowercased() != "unknown" {
+                return src.uppercased()
+            }
+        }
+        return "AGENT"
+    }
     private var gitBranch: String? {
         guard let sid = displaySessionId else { return nil }
         return appState.sessions[sid]?.gitBranch
@@ -1348,12 +1358,16 @@ private struct CompactRightWing: View {
                                         .frame(maxWidth: 58, alignment: .leading)
                                 }
                                 .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                            } else if let proj = projectName {
-                                Text(proj)
-                                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color(white: 0.85))
-                                    .lineLimit(1)
-                                    .frame(maxWidth: 58, alignment: .leading)
+                            } else {
+                                HStack(spacing: 2) {
+                                    Image(systemName: "cpu")
+                                        .font(.system(size: 6.5, weight: .bold))
+                                    Text(agentDisplayLabel)
+                                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(Color.white.opacity(0.85))
+                                        .lineLimit(1)
+                                        .frame(maxWidth: 58, alignment: .leading)
+                                }
                             }
 
                             // Session badge

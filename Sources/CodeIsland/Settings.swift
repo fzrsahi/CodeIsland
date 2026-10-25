@@ -53,6 +53,42 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+public enum FloatingLyricFontDesign: String, CaseIterable, Identifiable, Sendable {
+    case rounded = "rounded"
+    case monospaced = "monospaced"
+    case system = "system"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .rounded: return "Modern Rounded"
+        case .monospaced: return "Monospaced Cyber"
+        case .system: return "System Clean"
+        }
+    }
+}
+
+public enum FloatingLyricTextColor: String, CaseIterable, Identifiable, Sendable {
+    case white = "white"
+    case cyan = "cyan"
+    case pink = "pink"
+    case green = "green"
+    case amber = "amber"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .white: return "Pure White (Default)"
+        case .cyan: return "Cyber Cyan (#00F5D4)"
+        case .pink: return "Neon Pink (#FF2987)"
+        case .green: return "Matrix Green (#00E676)"
+        case .amber: return "Sunset Amber (#FF9E00)"
+        }
+    }
+}
+
 enum SettingsKey {
     // Language
     static let appLanguage = "appLanguage"                 // "system", "en", "zh", "zh-Hant", "de", "ja", "ko", "tr"
@@ -92,6 +128,10 @@ enum SettingsKey {
     static let showAgentDetails = "showAgentDetails"
     static let showCompactLyrics = "showCompactLyrics"
     static let floatingLyricPreset = "floatingLyricPreset"
+    static let floatingLyricFontSize = "floatingLyricFontSize"
+    static let floatingLyricFontDesign = "floatingLyricFontDesign"
+    static let floatingLyricTextColor = "floatingLyricTextColor"
+    static let floatingLyricVerticalGap = "floatingLyricVerticalGap"
     static let lyricSyncOffset = "lyricSyncOffset"
     static let notchHeightMode = "notchHeightMode"
     static let customNotchHeight = "customNotchHeight"
@@ -235,6 +275,10 @@ struct SettingsDefaults {
     static let showAgentDetails = false
     static let showCompactLyrics = true
     static let floatingLyricPreset = FloatingLyricPreset.pureText.rawValue
+    static let floatingLyricFontSize: Double = 10.0
+    static let floatingLyricFontDesign = FloatingLyricFontDesign.rounded.rawValue
+    static let floatingLyricTextColor = FloatingLyricTextColor.white.rawValue
+    static let floatingLyricVerticalGap: Double = 2.5
     static let lyricSyncOffset = 0.0
     static let notchHeightMode = NotchHeightMode.matchNotch.rawValue
     static let customNotchHeight = 37.0
@@ -343,6 +387,10 @@ class SettingsManager {
             SettingsKey.showAgentDetails: SettingsDefaults.showAgentDetails,
             SettingsKey.showCompactLyrics: SettingsDefaults.showCompactLyrics,
             SettingsKey.floatingLyricPreset: SettingsDefaults.floatingLyricPreset,
+            SettingsKey.floatingLyricFontSize: SettingsDefaults.floatingLyricFontSize,
+            SettingsKey.floatingLyricFontDesign: SettingsDefaults.floatingLyricFontDesign,
+            SettingsKey.floatingLyricTextColor: SettingsDefaults.floatingLyricTextColor,
+            SettingsKey.floatingLyricVerticalGap: SettingsDefaults.floatingLyricVerticalGap,
             SettingsKey.lyricSyncOffset: SettingsDefaults.lyricSyncOffset,
             SettingsKey.notchHeightMode: SettingsDefaults.notchHeightMode,
             SettingsKey.customNotchHeight: SettingsDefaults.customNotchHeight,

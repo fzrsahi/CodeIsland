@@ -212,6 +212,18 @@ struct CyberMusicMiniPeekBanner: View {
     }
 }
 
+extension FloatingLyricTextColor {
+    var color: Color {
+        switch self {
+        case .white: return Color.white
+        case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
+        case .green: return Color(red: 0.0, green: 0.90, blue: 0.46)
+        case .amber: return Color(red: 1.0, green: 0.62, blue: 0.0)
+        }
+    }
+}
+
 // MARK: - Sub-Notch Floating Synced Lyric Bar (Mini Dynamic Island for Lyrics)
 
 struct SubNotchFloatingLyricCapsuleView: View {
@@ -219,11 +231,41 @@ struct SubNotchFloatingLyricCapsuleView: View {
     var onOpenFull: () -> Void
 
     @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
+    @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
+    @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
+    @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
     @State private var isHovered = false
     @State private var capsuleWidth: CGFloat = 180
 
     private var activePreset: FloatingLyricPreset {
         FloatingLyricPreset(rawValue: floatingLyricPreset) ?? .pureText
+    }
+
+    private var activeTextColor: Color {
+        FloatingLyricTextColor(rawValue: floatingLyricTextColor)?.color ?? .white
+    }
+
+    private var activeFontDesign: Font.Design {
+        switch FloatingLyricFontDesign(rawValue: floatingLyricFontDesign) ?? .rounded {
+        case .rounded: return .rounded
+        case .monospaced: return .monospaced
+        case .system: return .default
+        }
+    }
+
+    private var activeNSFont: NSFont {
+        let size = CGFloat(floatingLyricFontSize)
+        switch FloatingLyricFontDesign(rawValue: floatingLyricFontDesign) ?? .rounded {
+        case .rounded:
+            if let desc = NSFont.systemFont(ofSize: size, weight: .bold).fontDescriptor.withDesign(.rounded) {
+                return NSFont(descriptor: desc, size: size) ?? NSFont.boldSystemFont(ofSize: size)
+            }
+            return NSFont.boldSystemFont(ofSize: size)
+        case .monospaced:
+            return NSFont.monospacedSystemFont(ofSize: size, weight: .bold)
+        case .system:
+            return NSFont.boldSystemFont(ofSize: size)
+        }
     }
 
     private var isRealLyric: Bool {
@@ -261,25 +303,21 @@ struct SubNotchFloatingLyricCapsuleView: View {
     /// Computes pixel-perfect dynamic capsule width based on text length and active layout preset:
     /// Auto-expands smoothly with spring physics for long lyrics, contracts for short lines.
     private func calculateTargetWidth(for text: String, preset: FloatingLyricPreset) -> CGFloat {
-        let font: NSFont
+        let font = activeNSFont
         let chromeWidth: CGFloat
         let minWidth: CGFloat
 
         switch preset {
         case .pureText:
-            font = NSFont.systemFont(ofSize: 10.0, weight: .bold)
             chromeWidth = 62
             minWidth = 110
         case .capsule:
-            font = NSFont.monospacedSystemFont(ofSize: 9.2, weight: .bold)
             chromeWidth = 72
             minWidth = 130
         case .frostedGlass:
-            font = NSFont.systemFont(ofSize: 9.5, weight: .semibold)
             chromeWidth = 68
             minWidth = 125
         case .neonHud:
-            font = NSFont.monospacedSystemFont(ofSize: 9.2, weight: .bold)
             chromeWidth = 84
             minWidth = 140
         }
@@ -305,12 +343,12 @@ struct SubNotchFloatingLyricCapsuleView: View {
 
                 ZStack {
                     Text(activeDisplayText)
-                        .font(.system(size: 10.0, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.white)
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .bold, design: activeFontDesign))
+                        .foregroundStyle(activeTextColor)
                         // Layered text highlight shadow for crystal-clear readability against any wallpaper
                         .shadow(color: Color.black.opacity(0.95), radius: 3, x: 0, y: 1.2)
                         .shadow(color: Color.black.opacity(0.80), radius: 6, x: 0, y: 2.5)
-                        .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.70 : 0.30), radius: 4, x: 0, y: 0)
+                        .shadow(color: activeTextColor.opacity(isHovered ? 0.70 : 0.30), radius: 4, x: 0, y: 0)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .id(activeDisplayText)
@@ -344,8 +382,8 @@ struct SubNotchFloatingLyricCapsuleView: View {
 
                 ZStack {
                     Text(activeDisplayText)
-                        .font(.system(size: 9.2, weight: .bold, design: .monospaced))
-                        .foregroundStyle(isRealLyric ? Color.white : Color.white.opacity(0.85))
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .bold, design: activeFontDesign))
+                        .foregroundStyle(isRealLyric ? activeTextColor : activeTextColor.opacity(0.85))
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .id(activeDisplayText)
@@ -378,8 +416,8 @@ struct SubNotchFloatingLyricCapsuleView: View {
 
                 ZStack {
                     Text(activeDisplayText)
-                        .font(.system(size: 9.5, weight: .semibold, design: .default))
-                        .foregroundStyle(Color.white)
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .semibold, design: activeFontDesign))
+                        .foregroundStyle(activeTextColor)
                         .shadow(color: Color.black.opacity(0.5), radius: 2, x: 0, y: 1)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -407,7 +445,7 @@ struct SubNotchFloatingLyricCapsuleView: View {
             // Preset 4: Cyberpunk HUD with technical bracket telemetry styling
             HStack(spacing: 6) {
                 Text("[")
-                    .font(.system(size: 9.5, weight: .black, design: .monospaced))
+                    .font(.system(size: CGFloat(floatingLyricFontSize), weight: .black, design: .monospaced))
                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.9))
 
                 Image(systemName: iconName)
@@ -417,9 +455,9 @@ struct SubNotchFloatingLyricCapsuleView: View {
 
                 ZStack {
                     Text(activeDisplayText)
-                        .font(.system(size: 9.2, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white)
-                        .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.4), radius: 3)
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .bold, design: activeFontDesign))
+                        .foregroundStyle(activeTextColor)
+                        .shadow(color: activeTextColor.opacity(0.4), radius: 3)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .id(activeDisplayText)
@@ -440,7 +478,7 @@ struct SubNotchFloatingLyricCapsuleView: View {
                 .frame(width: 14)
 
                 Text("]")
-                    .font(.system(size: 9.5, weight: .black, design: .monospaced))
+                    .font(.system(size: CGFloat(floatingLyricFontSize), weight: .black, design: .monospaced))
                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.9))
             }
             .padding(.horizontal, 10)
@@ -540,6 +578,18 @@ struct SubNotchFloatingLyricCapsuleView: View {
             }
         }
         .onChange(of: floatingLyricPreset) { _, _ in
+            let target = calculateTargetWidth(for: activeDisplayText, preset: activePreset)
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.76)) {
+                capsuleWidth = target
+            }
+        }
+        .onChange(of: floatingLyricFontSize) { _, _ in
+            let target = calculateTargetWidth(for: activeDisplayText, preset: activePreset)
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.76)) {
+                capsuleWidth = target
+            }
+        }
+        .onChange(of: floatingLyricFontDesign) { _, _ in
             let target = calculateTargetWidth(for: activeDisplayText, preset: activePreset)
             withAnimation(.spring(response: 0.38, dampingFraction: 0.76)) {
                 capsuleWidth = target

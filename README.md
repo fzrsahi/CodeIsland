@@ -4,32 +4,66 @@
 </h1>
 
 <p align="center">
-  <b>Your AI coding agents, live in the MacBook notch.</b><br>
-  See what every agent is doing, approve tool calls and answer its questions — without leaving the window you're in.
+  <b>Your AI coding agents, interactive Git graph, and floating music lyrics — live in the MacBook notch.</b><br>
+  See what every agent is doing, browse commit graphs, and sing along with synced lyrics without leaving your flow.
 </p>
 
 <p align="center">
-  <a href="https://github.com/wxtsky/CodeIsland/releases/latest"><img src="https://img.shields.io/github/v/release/wxtsky/CodeIsland?style=flat-square&color=4c8bf5&label=release" alt="Latest release"></a>
-  <a href="https://github.com/wxtsky/CodeIsland/releases"><img src="https://img.shields.io/github/downloads/wxtsky/CodeIsland/total?style=flat-square&color=2ea44f" alt="Downloads"></a>
+  <a href="https://github.com/fzrsahi/CodeIsland/releases/latest"><img src="https://img.shields.io/github/v/release/fzrsahi/CodeIsland?style=flat-square&color=4c8bf5&label=release" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-111111?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+">
-  <a href="https://apps.apple.com/us/app/code-island-buddy/id6773881129"><img src="https://img.shields.io/badge/iPhone%20%26%20Watch-Buddy-0d96f6?style=flat-square&logo=appstore&logoColor=white" alt="Code Island Buddy on the App Store"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/wxtsky/CodeIsland?style=flat-square&color=8250df" alt="MIT license"></a>
-  <a href="https://github.com/wxtsky/CodeIsland/stargazers"><img src="https://img.shields.io/github/stars/wxtsky/CodeIsland?style=flat-square&color=e3b341" alt="GitHub stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/fzrsahi/CodeIsland?style=flat-square&color=8250df" alt="MIT license"></a>
+  <a href="https://github.com/fzrsahi/CodeIsland/stargazers"><img src="https://img.shields.io/github/stars/fzrsahi/CodeIsland?style=flat-square&color=e3b341" alt="GitHub stars"></a>
 </p>
 
 <p align="center">
   <a href="#installation">Install</a> •
   <a href="#highlights">Highlights</a> •
+  <a href="#new-features">New Features</a> •
   <a href="#supported-tools">Supported tools</a> •
-  <a href="#how-it-works">How it works</a> •
-  <a href="#build-from-source">Build</a>
-  <br>
-  <b>English</b> | <a href="README.zh-CN.md">简体中文</a>
+  <a href="#build-from-source">Build</a> •
+  <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 <p align="center">
   <img src="docs/images/readme-hero.png" width="760" alt="CodeIsland expanded from the MacBook notch, showing Claude Code, Codex, Cursor and Gemini CLI sessions">
 </p>
+
+## New Features in this Edition
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🎵 Sub-Notch Floating Synced Lyrics
+- **True Floating Notch**: Independent sub-notch bar positioned slightly beneath the physical cutout (~0.1cm clearance).
+- **Zero Horizontal Marquee**: Uses spring-based physics to smoothly auto-expand width line-by-line.
+- **4 Customizable Layout Presets**:
+  - `pureText`: Minimalist floating subtitle without heavy background card & glowing drop-shadow highlight.
+  - `capsule`: Solid black Dynamic Island pill with neon cyan/magenta border.
+  - `frostedGlass`: Apple-style translucent blur pill with hairline border.
+  - `neonHud`: Cyberpunk telemetry with cyan brackets `[ ♫ Lyric ]`.
+- **Fully Configurable in Settings**: Customize preset, font size (Compact, Medium, Large), font typography (Rounded, Cyber Monospace, System Clean), highlight color, vertical gap, and sync timing offset.
+- **Intro & Instrumental States**: Displays song intro and instrumental solo indicators.
+
+</td>
+<td width="50%" valign="top">
+
+### 🎛️ Cyber Music HUD & Visualizer
+- **Third Notch Tab**: Dedicated Music tab with live album artwork, track information, scrubber, and playback controls for Spotify & Apple Music.
+- **Real-Time Spectrum Visualizer**: Dancing audio equalizer responding to active playback.
+- **Quick Preset Switcher**: Toggle styles live with one click (`[TEXT] [CAPSULE] [GLASS] [HUD]`).
+
+### 🌲 Interactive Git Graph & Workspace
+- **Commit Spine Visualizer**: Visual branch spine with commit hashes, author tags, relative timestamps, and branch ref badges (`HEAD -> main`).
+- **Live Git Diff**: Clean inspector for modified, staged, and untracked files.
+- **Zero-Lag Async Engine**: Asynchronous non-blocking workspace discovery that eliminates main-thread UI freezes.
+
+### 🛡️ Privacy & Anti-Camera Collision Fix
+- Replaced the idle green dot with a sleek `chevron.down` affordance and `terminal` badge, completely avoiding confusion with macOS hardware camera privacy indicators.
+
+</td>
+</tr>
+</table>
 
 ## Why CodeIsland?
 
@@ -358,10 +392,10 @@ Every shortcut can be rebound in **Settings → Shortcuts**, where you can also 
 Requires **macOS 14+** and **Swift 5.9+**.
 
 ```bash
-git clone https://github.com/wxtsky/CodeIsland.git
+git clone git@github.com:fzrsahi/CodeIsland.git
 cd CodeIsland
 
-# Development: debug build + launch (Buddy Bluetooth needs the .app below)
+# Development: debug build + launch
 swift build && ./.build/debug/CodeIsland
 
 # Release: universal binary (Apple Silicon + Intel)
@@ -372,6 +406,10 @@ open .build/release/CodeIsland.app
 swift test
 ```
 
+## Contributing
+
+We welcome contributions from everyone! Please check out [CONTRIBUTING.md](CONTRIBUTING.md) for architecture maps, development tips, and pull request guidelines.
+
 ## Requirements
 
 - macOS 14 Sonoma or later
@@ -379,7 +417,8 @@ swift test
 
 ## Acknowledgments
 
-Inspired by [claude-island](https://github.com/farouqaldori/claude-island) by [@farouqaldori](https://github.com/farouqaldori) — thanks for the original idea of putting AI agent status in the macOS notch. And thanks to everyone who has contributed integrations, fixes and bug reports.
+- Upstream original project: [wxtsky/CodeIsland](https://github.com/wxtsky/CodeIsland) by [@wxtsky](https://github.com/wxtsky) — thanks for creating the foundational notch agent tracker.
+- Inspired by [claude-island](https://github.com/farouqaldori/claude-island) by [@farouqaldori](https://github.com/farouqaldori).
 
 ## Star history
 
