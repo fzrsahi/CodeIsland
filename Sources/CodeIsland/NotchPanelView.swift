@@ -942,7 +942,7 @@ struct NotchPanelView: View {
                         appState.surface = .sessionList
                     }
                 }
-                .padding(.top, 18.0) // Space between physical notch and floating lyric notch!
+                .padding(.top, 6.0) // Space between physical notch and floating lyric notch (~0.2cm)
                 .transition(.asymmetric(
                     insertion: .move(edge: .top).combined(with: .opacity),
                     removal: .move(edge: .top).combined(with: .opacity)
