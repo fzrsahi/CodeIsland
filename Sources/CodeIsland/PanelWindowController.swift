@@ -294,6 +294,8 @@ class PanelWindowController: NSObject, NSWindowDelegate {
                 self.refreshCurrentScreen()
                 if self.isActiveSpaceFullscreen() {
                     self.fullscreenLatch = true
+                    self.appState.isFullscreenMode = true
+                    self.updatePosition()
                     self.updateVisibility()
                     self.startFullscreenExitPoller()
                 } else {
@@ -301,6 +303,8 @@ class PanelWindowController: NSObject, NSWindowDelegate {
                     // doesn't stay hidden for up to 1.5s while the exit poller catches up (#104).
                     if self.fullscreenLatch {
                         self.fullscreenLatch = false
+                        self.appState.isFullscreenMode = false
+                        self.updatePosition()
                         self.fullscreenPoller?.invalidate()
                         self.fullscreenPoller = nil
                     }
@@ -543,7 +547,8 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         }
 
         let x = clampedX(desiredX, panelWidth: size.width, on: screen)
-        let y = screenFrame.maxY - size.height
+        let floatingYOffset: CGFloat = appState.isFullscreenMode ? 10 : 0
+        let y = screenFrame.maxY - size.height - floatingYOffset
         return NSRect(x: x, y: y, width: size.width, height: size.height)
     }
 
@@ -624,6 +629,8 @@ class PanelWindowController: NSObject, NSWindowDelegate {
                 guard let self = self else { timer.invalidate(); return }
                 if !self.isActiveSpaceFullscreen() {
                     self.fullscreenLatch = false
+                    self.appState.isFullscreenMode = false
+                    self.updatePosition()
                     self.updateVisibility()
                     timer.invalidate()
                     self.fullscreenPoller = nil
@@ -711,7 +718,7 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         // top edge therefore means the system re-placed the panel — e.g. a display
         // reconfigure clamping it below the menu bar (#263) — so snap it back.
         guard !isDraggingPanel, !isAnimatingScreenHop, let panel = panel else { return }
-        let expectedY = chosenScreen().frame.maxY - panel.frame.height
+        let expectedY = chosenScreen().frame.maxY - panel.frame.height - (appState.isFullscreenMode ? 10 : 0)
         guard abs(panel.frame.origin.y - expectedY) > 0.5 else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self, !self.isDraggingPanel, !self.isAnimatingScreenHop else { return }

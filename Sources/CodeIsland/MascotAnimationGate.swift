@@ -67,7 +67,7 @@ final class MascotAnimationGate: ObservableObject {
     /// looping forever next to whatever the user is reading.
     static func shouldAnimate(isVisible: Bool, isAwake: Bool, isIdleSettled: Bool = false,
                               reduceMotion: Bool = false) -> Bool {
-        isVisible && isAwake && !isIdleSettled && !reduceMotion
+        isVisible && isAwake && !reduceMotion
     }
 
     /// Begin observing system sleep/wake and the Reduce Motion setting. Idempotent.

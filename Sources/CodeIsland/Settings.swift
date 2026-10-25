@@ -54,6 +54,8 @@ enum SettingsKey {
     static let contentFontSize = "contentFontSize"
     static let aiMessageLines = "aiMessageLines"
     static let showAgentDetails = "showAgentDetails"
+    static let showCompactLyrics = "showCompactLyrics"
+    static let lyricSyncOffset = "lyricSyncOffset"
     static let notchHeightMode = "notchHeightMode"
     static let customNotchHeight = "customNotchHeight"
 
@@ -171,7 +173,7 @@ struct SettingsDefaults {
     static let allowHorizontalDrag = false
     static let avoidMenuBarIcons = true  // #219: dodge Bartender & friends on external screens
     static let panelHorizontalOffset = 0.0
-    static let hideInFullscreen = true
+    static let hideInFullscreen = false
     static let hideWhenNoSession = false
     static let smartSuppress = true
     static let collapseOnMouseLeave = true
@@ -194,6 +196,8 @@ struct SettingsDefaults {
     static let contentFontSize = 11
     static let aiMessageLines = 1
     static let showAgentDetails = false
+    static let showCompactLyrics = true
+    static let lyricSyncOffset = 0.0
     static let notchHeightMode = NotchHeightMode.matchNotch.rawValue
     static let customNotchHeight = 37.0
 
@@ -299,6 +303,8 @@ class SettingsManager {
             SettingsKey.contentFontSize: SettingsDefaults.contentFontSize,
             SettingsKey.aiMessageLines: SettingsDefaults.aiMessageLines,
             SettingsKey.showAgentDetails: SettingsDefaults.showAgentDetails,
+            SettingsKey.showCompactLyrics: SettingsDefaults.showCompactLyrics,
+            SettingsKey.lyricSyncOffset: SettingsDefaults.lyricSyncOffset,
             SettingsKey.notchHeightMode: SettingsDefaults.notchHeightMode,
             SettingsKey.customNotchHeight: SettingsDefaults.customNotchHeight,
             SettingsKey.soundEnabled: SettingsDefaults.soundEnabled,

@@ -111,7 +111,7 @@ struct ScreenDetector {
 
         switch mode {
         case .matchNotch:
-            if realNotchHeight > 0 { return realNotchHeight }
+            if realNotchHeight > 0 { return max(realNotchHeight, resolvedMenuBarHeight()) }
             return resolvedMenuBarHeight()
         case .matchMenuBar:
             return resolvedMenuBarHeight()
@@ -132,7 +132,7 @@ struct ScreenDetector {
         notchWidth(for: preferredScreen)
     }
 
-    /// Width of the notch for a specific screen
+    /// Width of the notch for a specific screen — matches the hardware cutout exactly
     static func notchWidth(for screen: NSScreen) -> CGFloat {
         if #available(macOS 12.0, *) {
             let leftWidth = screen.auxiliaryTopLeftArea?.width ?? 0

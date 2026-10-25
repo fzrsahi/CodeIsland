@@ -224,6 +224,8 @@ final class AppState {
     }
     /// Preview-only: mock question payload for DebugHarness (no continuation needed)
     var previewQuestionPayload: QuestionPayload?
+    /// Whether the active space is fullscreen — undocks the notch into a Machined Floating Deck
+    var isFullscreenMode: Bool = false
     var surface: IslandSurface = .collapsed {
         didSet {
             // Any expansion counts as "seen" for the glance completion dot.

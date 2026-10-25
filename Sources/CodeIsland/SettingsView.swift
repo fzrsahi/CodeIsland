@@ -1326,6 +1326,8 @@ private struct AppearancePage: View {
     @AppStorage(SettingsKey.showSessionRecap) private var showSessionRecap = SettingsDefaults.showSessionRecap
     @AppStorage(SettingsKey.showModelLabel) private var showModelLabel = SettingsDefaults.showModelLabel
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
+    @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
+    @AppStorage(SettingsKey.lyricSyncOffset) private var lyricSyncOffset = SettingsDefaults.lyricSyncOffset
     @AppStorage(SettingsKey.showUsageStats) private var showUsageStats = SettingsDefaults.showUsageStats
     @AppStorage(SettingsKey.showClaudeQuota) private var showClaudeQuota = SettingsDefaults.showClaudeQuota
     @AppStorage(SettingsKey.claudeQuotaChip) private var claudeQuotaChip = SettingsDefaults.claudeQuotaChip
@@ -1493,6 +1495,34 @@ private struct AppearancePage: View {
                     Text(l10n["show_model_label_desc"])
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Toggle("Show Synced Lyrics Below Notch", isOn: $showCompactLyrics)
+                    Text("Display a floating lyric ticker directly beneath the notch cutout during playback.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+                if showCompactLyrics {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Lyric Timing Offset")
+                            Spacer()
+                            Text(String(format: "%+.2f s", lyricSyncOffset))
+                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(abs(lyricSyncOffset) > 0.01 ? Color(red: 0.0, green: 0.96, blue: 0.83) : .secondary)
+                        }
+                        Slider(value: $lyricSyncOffset, in: -3.0...3.0, step: 0.05) {
+                            Text("Lyric Timing Offset")
+                        } minimumValueLabel: {
+                            Text("-3s").font(.system(size: 9))
+                        } maximumValueLabel: {
+                            Text("+3s").font(.system(size: 9))
+                        }
+                        Text("Fine-tune lyric sync: drag left (negative) if lyrics appear too early; drag right (positive) if lyrics appear late.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.leading, 12)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Toggle(l10n["show_usage_stats"], isOn: $showUsageStats)
