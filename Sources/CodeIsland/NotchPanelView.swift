@@ -1176,89 +1176,11 @@ private struct CompactRightWing: View {
     var body: some View {
         HStack(spacing: 5) {
             if expanded {
-                HStack(spacing: 5) {
-                    // WORKSPACE TAB BUTTON
-                    Button(action: {
-                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                        workspaceManager.resolveAndRefreshWorkspace(appState: appState)
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            expandedTab = (expandedTab == .workspace) ? .agents : .workspace
-                        }
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "folder.fill")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(expandedTab == .workspace ? Color(red: 0.0, green: 0.90, blue: 0.46) : Color.white.opacity(0.55))
-                            Text("WORKSPACE")
-                                .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                .foregroundStyle(expandedTab == .workspace ? Color.white : Color.white.opacity(0.65))
-                            if !workspaceManager.projectName.isEmpty && workspaceManager.projectName.lowercased() != "workspace" {
-                                Text("• \(workspaceManager.projectName.uppercased())")
-                                    .font(.system(size: 7.5, weight: .semibold, design: .monospaced))
-                                    .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46).opacity(0.9))
-                                    .lineLimit(1)
-                                    .frame(maxWidth: 80, alignment: .leading)
-                            }
-                            if workspaceManager.changedFiles.count > 0 {
-                                Text("\(workspaceManager.changedFiles.count)")
-                                    .font(.system(size: 7, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color.black)
-                                    .padding(.horizontal, 3)
-                                    .padding(.vertical, 0.5)
-                                    .background(RoundedRectangle(cornerRadius: 2).fill(Color(red: 0.0, green: 0.90, blue: 0.46)))
-                            }
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 3.5)
-                                .fill(expandedTab == .workspace ? Color(red: 0.04, green: 0.16, blue: 0.08) : Color(white: 0.08))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 3.5)
-                                        .stroke(expandedTab == .workspace ? Color(red: 0.0, green: 0.90, blue: 0.46) : Color(white: 0.16), lineWidth: expandedTab == .workspace ? 1.0 : 0.6)
-                                )
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    // NOW PLAYING TAB BUTTON
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            expandedTab = (expandedTab == .music) ? .agents : .music
-                        }
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "music.note")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(expandedTab == .music ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color.white.opacity(0.55))
-                            Text("NOW PLAYING")
-                                .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                .foregroundStyle(expandedTab == .music ? Color.white : Color.white.opacity(0.65))
-                            if nowPlaying.isPlaying {
-                                Circle()
-                                    .fill(Color(red: 1.0, green: 0.16, blue: 0.53))
-                                    .frame(width: 4, height: 4)
-                            }
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 3.5)
-                                .fill(expandedTab == .music ? Color(red: 0.18, green: 0.05, blue: 0.12) : Color(white: 0.08))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 3.5)
-                                        .stroke(expandedTab == .music ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color(white: 0.16), lineWidth: expandedTab == .music ? 1.0 : 0.6)
-                                )
-                        )
-                    }
-                    .buttonStyle(.plain)
+                HStack(spacing: 8) {
+                    // Matching pixel tabs on the right: [ WORKSPACE | MUSIC ]
+                    RightWingPixelTabs(appState: appState, expandedTab: $expandedTab, workspaceManager: workspaceManager)
 
                     Spacer(minLength: 4)
-
-                    // Machined token usage badge in Agents tab
-                    if expandedTab == .agents {
-                        MachinedTokenBadge(appState: appState)
-                    }
 
                     // System controls (Mute, Settings, Quit)
                     ExpandedHeaderControls(soundEnabled: $soundEnabled)
@@ -1761,6 +1683,88 @@ struct QuitConfirmButton: View {
         }
         .help(armed ? l10n["quit_confirm_hint"] : l10n["quit"])
         .accessibilityLabel(armed ? l10n["quit_confirm_hint"] : l10n["quit"])
+    }
+}
+
+/// Right-wing tabs in the matching 5×7 pixel font (WORKSPACE · MUSIC),
+/// identical in height, border, padding, and font to SessionGroupingTabs on the left.
+private struct RightWingPixelTabs: View {
+    var appState: AppState
+    @Binding var expandedTab: ExpandedContentTab
+    @ObservedObject var workspaceManager: WorkspaceMonitorManager
+    @ObservedObject private var nowPlaying = NowPlayingManager.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hoveredTab: String?
+
+    static let activeWorkspaceColor = Color(red: 0.0, green: 0.90, blue: 0.46)
+    static let activeMusicColor = Color(red: 1.0, green: 0.16, blue: 0.53)
+    static let inactiveColor = Color.white.opacity(0.62)
+
+    var body: some View {
+        let layout = SessionGroupingTabsLayout.self
+        HStack(spacing: layout.spacing) {
+            // WORKSPACE TAB
+            let isWorkspaceSelected = expandedTab == .workspace
+            Button {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                workspaceManager.resolveAndRefreshWorkspace(appState: appState)
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
+                    expandedTab = isWorkspaceSelected ? .agents : .workspace
+                }
+            } label: {
+                PixelText(
+                    text: "WORKSPACE",
+                    color: isWorkspaceSelected ? Self.activeWorkspaceColor
+                        : (hoveredTab == "workspace" ? .white.opacity(0.9) : Self.inactiveColor),
+                    pixelSize: layout.pixelSize
+                )
+                .padding(.horizontal, layout.horizontalPadding)
+                .frame(height: layout.stripHeight)
+                .background(Rectangle().fill(isWorkspaceSelected ? .white.opacity(0.1) : .clear))
+                .frame(height: layout.hitHeight)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { hoveredTab = $0 ? "workspace" : (hoveredTab == "workspace" ? nil : hoveredTab) }
+            .help(workspaceManager.projectName.isEmpty ? "Workspace View" : "Workspace: \(workspaceManager.projectName)")
+            .accessibilityLabel("Workspace")
+            .accessibilityAddTraits(isWorkspaceSelected ? .isSelected : [])
+
+            // MUSIC TAB
+            let isMusicSelected = expandedTab == .music
+            Button {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
+                    expandedTab = isMusicSelected ? .agents : .music
+                }
+            } label: {
+                PixelText(
+                    text: "MUSIC",
+                    color: isMusicSelected ? Self.activeMusicColor
+                        : (nowPlaying.isPlaying ? Self.activeMusicColor.opacity(0.85) : (hoveredTab == "music" ? .white.opacity(0.9) : Self.inactiveColor)),
+                    pixelSize: layout.pixelSize
+                )
+                .padding(.horizontal, layout.horizontalPadding)
+                .frame(height: layout.stripHeight)
+                .background(Rectangle().fill(isMusicSelected ? .white.opacity(0.1) : .clear))
+                .frame(height: layout.hitHeight)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { hoveredTab = $0 ? "music" : (hoveredTab == "music" ? nil : hoveredTab) }
+            .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist)" : "Music HUD")
+            .accessibilityLabel("Music")
+            .accessibilityAddTraits(isMusicSelected ? .isSelected : [])
+        }
+        .background(Rectangle().fill(.white.opacity(0.05)).frame(height: layout.stripHeight))
+        .overlay(
+            Rectangle()
+                .stroke(
+                    expandedTab == .workspace ? Self.activeWorkspaceColor.opacity(0.4)
+                        : (expandedTab == .music ? Self.activeMusicColor.opacity(0.4) : .white.opacity(0.1)),
+                    lineWidth: 1
+                )
+                .frame(height: layout.stripHeight)
+        )
     }
 }
 
@@ -5890,17 +5894,24 @@ struct PixelText: View {
         "G": [0,1,1,1,0, 1,0,0,0,0, 1,0,0,1,1, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
         "H": [1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
         "I": [0,1,1,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
+        "J": [0,0,0,0,1, 0,0,0,0,1, 0,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
         "K": [1,0,0,1,0, 1,0,1,0,0, 1,1,0,0,0, 1,0,1,0,0, 1,0,0,1,0, 0,0,0,0,0, 0,0,0,0,0],
         "L": [1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0],
+        "M": [1,0,0,0,1, 1,1,0,1,1, 1,0,1,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
         "N": [1,0,0,0,1, 1,1,0,0,1, 1,0,1,0,1, 1,0,0,1,1, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
         "O": [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
         "P": [1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+        "Q": [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,1,0, 0,1,1,0,1, 0,0,0,0,0, 0,0,0,0,0],
         "R": [1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0, 1,0,0,1,0, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
         "S": [0,1,1,1,1, 1,0,0,0,0, 0,1,1,1,0, 0,0,0,0,1, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
         "T": [1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
         "U": [1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
+        "V": [1,0,0,0,1, 1,0,0,0,1, 0,1,0,1,0, 0,1,0,1,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
         "W": [1,0,0,0,1, 1,0,0,0,1, 1,0,1,0,1, 1,0,1,0,1, 0,1,0,1,0, 0,0,0,0,0, 0,0,0,0,0],
         "X": [1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0, 0,1,0,1,0, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
+        "Y": [1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
+        "Z": [1,1,1,1,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0],
+        "•": [0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
         "/": [0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
         "-": [0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
         " ": [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
