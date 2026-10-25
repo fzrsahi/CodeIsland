@@ -118,10 +118,14 @@ struct CyberMusicWingView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 2.5))
                     .overlay(RoundedRectangle(cornerRadius: 2.5).stroke(Color(white: 0.3), lineWidth: 0.5))
             } else {
-                Circle()
+                RoundedRectangle(cornerRadius: 2.5)
                     .fill(Color(red: 0.08, green: 0.09, blue: 0.12))
-                    .frame(width: 12, height: 12)
-                    .overlay(Circle().stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), lineWidth: 0.8))
+                    .frame(width: 13, height: 13)
+                    .overlay(
+                        Image(systemName: "music.note")
+                            .font(.system(size: 7))
+                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8))
+                    )
             }
 
             // Real-Time Dancing Equalizer

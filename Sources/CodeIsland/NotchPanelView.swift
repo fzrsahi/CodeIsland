@@ -1359,10 +1359,16 @@ private struct CompactRightWing: View {
                             // Session badge
                             let active = appState.activeSessionCount
                             let total = appState.totalSessionCount
-                            HStack(spacing: 1.5) {
-                                Circle()
-                                    .fill(active > 0 ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.4))
-                                    .frame(width: 3.5, height: 3.5)
+                            HStack(spacing: 2) {
+                                if active > 0 {
+                                    Circle()
+                                        .fill(Color(red: 0.96, green: 0.62, blue: 0.04))
+                                        .frame(width: 3.5, height: 3.5)
+                                } else {
+                                    Image(systemName: "terminal")
+                                        .font(.system(size: 6.5, weight: .bold))
+                                        .foregroundStyle(Color.white.opacity(0.55))
+                                }
                                 Text("\(active)/\(total)")
                                     .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                                     .foregroundStyle(Color.white.opacity(0.85))
@@ -1384,12 +1390,17 @@ private struct CompactRightWing: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     } else {
                         // "KECIL AWAL" - Agent Mode: Minimal Machined Pill (Ultra-Compact)
-                        HStack(spacing: 2.5) {
-                            // Pulsing jade/cyan LED dot
-                            Circle()
-                                .fill(appState.status == .idle ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 0.96, green: 0.62, blue: 0.04))
-                                .frame(width: 3.5, height: 3.5)
-                                .shadow(color: (appState.status == .idle ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 0.96, green: 0.62, blue: 0.04)).opacity(0.6), radius: 1.5)
+                        HStack(spacing: 3) {
+                            if appState.status == .idle {
+                                Image(systemName: "terminal")
+                                    .font(.system(size: 7, weight: .bold))
+                                    .foregroundStyle(Color.white.opacity(0.65))
+                            } else {
+                                Circle()
+                                    .fill(Color(red: 0.96, green: 0.62, blue: 0.04))
+                                    .frame(width: 3.5, height: 3.5)
+                                    .shadow(color: Color(red: 0.96, green: 0.62, blue: 0.04).opacity(0.6), radius: 1.5)
+                            }
 
                             // Session count pill
                             let active = appState.activeSessionCount
@@ -1416,12 +1427,12 @@ private struct CompactRightWing: View {
                         .help(l10n["quiet_hours"])
                 }
 
-                // Glance completion dot
+                // Glance completion badge
                 if appState.glanceCompletionActive {
-                    Circle()
-                        .fill(Color(red: 0.4, green: 1.0, blue: 0.5))
-                        .frame(width: 6, height: 6)
-                        .shadow(color: Color(red: 0.4, green: 1.0, blue: 0.5).opacity(0.7), radius: 2)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                        .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), radius: 2)
                 }
 
                 // Question / Approval badges
@@ -1902,9 +1913,9 @@ private struct IdleIndicatorBar: View {
                     .padding(.trailing, 8)
                     .transition(.opacity)
                 } else {
-                    Circle()
-                        .fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.4))
-                        .frame(width: 4, height: 4)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 7.5, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.45))
                         .padding(.trailing, 8)
                         .transition(.opacity)
                 }
