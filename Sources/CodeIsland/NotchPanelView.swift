@@ -110,6 +110,12 @@ enum ToolNameDisplay {
     }
 }
 
+enum ExpandedContentTab: String, CaseIterable {
+    case agents
+    case workspace
+    case music
+}
+
 struct NotchPanelView: View {
     var appState: AppState
     let hasNotch: Bool
@@ -153,12 +159,6 @@ struct NotchPanelView: View {
     /// Measured width of the collapsed right wing (0 until first laid out).
     @State private var rightWingWidth: CGFloat = 0
     @State private var isHoveringRightWing = false
-
-    enum ExpandedContentTab: String, CaseIterable {
-        case agents
-        case workspace
-        case music
-    }
     @State private var expandedTab: ExpandedContentTab = .agents
 
     private var isActive: Bool { !appState.sessions.isEmpty || nowPlaying.isPlaying }
@@ -266,12 +266,12 @@ struct NotchPanelView: View {
         let nw = effectiveNotchW
         if shouldShowExpanded {
             if expandedTab == .music {
-                return min(450, maxPanelWidth)
+                return min(max(nw + 380, 560), maxPanelWidth)
             }
             if expandedTab == .workspace {
-                return min(workspaceManager.isExpandedDetail ? 540 : 490, maxPanelWidth)
+                return min(max(nw + 400, workspaceManager.isExpandedDetail ? 620 : 560), maxPanelWidth)
             }
-            return min(max(nw + 240, 600), maxPanelWidth)
+            return min(max(nw + 420, 640), maxPanelWidth)
         }
         if showIdleIndicator { return idleHovered ? nw + compactWingWidth * 2 + 80 : nw + compactWingWidth * 2 }
         if !isActive { return nw }
@@ -296,7 +296,7 @@ struct NotchPanelView: View {
     }
 
     /// The panel window's width (PanelWindowController.panelSize).
-    private var maxPanelWidth: CGFloat { min(620, screenWidth - 40) }
+    private var maxPanelWidth: CGFloat { min(720, screenWidth - 40) }
 
     /// The collapsed active bar, before any room for the plan-limit chip.
     private var collapsedBarWidth: CGFloat {
@@ -349,17 +349,23 @@ struct NotchPanelView: View {
                     // Active: compact bar — wider version when expanded
                     HStack(spacing: 0) {
                         // Left Wing: Strictly isolated to Agents & Terminal status (aligned snug against notch)
-                        CompactLeftWing(appState: appState, expanded: shouldShowExpanded, mascotSize: mascotSize, hasNotch: hasNotch, showToolStatus: showToolStatus)
+                        CompactLeftWing(
+                            appState: appState,
+                            expanded: shouldShowExpanded,
+                            mascotSize: mascotSize,
+                            hasNotch: hasNotch,
+                            showToolStatus: showToolStatus,
+                            expandedTab: $expandedTab
+                        )
                             .padding(.leading, (isThinking && !shouldShowExpanded) ? 8 : 0)
                             .frame(width: shouldShowExpanded ? nil : symmetricWingWidth, alignment: shouldShowExpanded ? .center : (isThinking ? .leading : .center))
                             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
                             .contentShape(Rectangle())
                             .onTapGesture {
+                                guard !shouldShowExpanded else { return }
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                     expandedTab = .agents
-                                    if !shouldShowExpanded {
-                                        appState.surface = .sessionList
-                                    }
+                                    appState.surface = .sessionList
                                 }
                             }
                             .help("Agents & Terminal Sessions (Click to view)")
@@ -375,7 +381,14 @@ struct NotchPanelView: View {
                         }
 
                         // Right Wing: Strictly isolated to Music Player & Token HUD (aligned snug against notch)
-                        CompactRightWing(appState: appState, expanded: shouldShowExpanded, hasNotch: hasNotch, isHovered: $isHoveringRightWing)
+                        CompactRightWing(
+                            appState: appState,
+                            expanded: shouldShowExpanded,
+                            hasNotch: hasNotch,
+                            isHovered: $isHoveringRightWing,
+                            expandedTab: $expandedTab,
+                            workspaceManager: workspaceManager
+                        )
                             .padding(.trailing, ((isThinking || isHoveringRightWing) && !shouldShowExpanded) ? 8 : 0)
                             .frame(width: shouldShowExpanded ? nil : symmetricWingWidth, alignment: shouldShowExpanded ? .trailing : ((isThinking || isHoveringRightWing) ? .trailing : .center))
                             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
@@ -386,15 +399,14 @@ struct NotchPanelView: View {
                                 }
                             }
                             .onTapGesture {
+                                guard !shouldShowExpanded else { return }
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                     if nowPlaying.isPlaying || !nowPlaying.title.isEmpty {
                                         expandedTab = .music
                                     } else {
                                         expandedTab = .agents
                                     }
-                                    if !shouldShowExpanded {
-                                        appState.surface = .sessionList
-                                    }
+                                    appState.surface = .sessionList
                                 }
                             }
                             .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist) (Click for Music HUD)" : "Session & Token Usage")
@@ -461,156 +473,7 @@ struct NotchPanelView: View {
                             removal: .move(edge: .top).combined(with: .opacity)
                         ))
                     } else {
-                        Line()
-                            .stroke(.white.opacity(0.15), style: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
-                            .frame(height: 0.5)
-                            .padding(.horizontal, 12)
-
-                        // 3-Tab Switcher: [ AGENTS ] [ WORKSPACE ] [ NOW PLAYING ]
-                    HStack(spacing: 6) {
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.2)) { expandedTab = .agents }
-                        }) {
-                            HStack(spacing: 5) {
-                                Image(systemName: "cpu")
-                                    .font(.system(size: 8.5, weight: .bold))
-                                    .foregroundStyle(expandedTab == .agents ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color.white.opacity(0.5))
-                                Text("AGENTS")
-                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(expandedTab == .agents ? Color.white : Color.white.opacity(0.6))
-                                if appState.activeSessionCount > 0 {
-                                    Text("\(appState.activeSessionCount)")
-                                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color.black)
-                                        .padding(.horizontal, 3.5)
-                                        .padding(.vertical, 0.5)
-                                        .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(red: 0.0, green: 0.96, blue: 0.83)))
-                                }
-                            }
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3.5)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(expandedTab == .agents ? Color(red: 0.05, green: 0.16, blue: 0.16) : Color(white: 0.08))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .stroke(expandedTab == .agents ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.16), lineWidth: expandedTab == .agents ? 1.0 : 0.75)
-                                    )
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        // WORKSPACE TAB
-                        Button(action: {
-                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                            workspaceManager.resolveAndRefreshWorkspace(appState: appState)
-                            withAnimation(.easeInOut(duration: 0.2)) { expandedTab = .workspace }
-                        }) {
-                            HStack(spacing: 5) {
-                                Image(systemName: "folder.fill")
-                                    .font(.system(size: 8.5, weight: .bold))
-                                    .foregroundStyle(expandedTab == .workspace ? Color(red: 0.0, green: 0.90, blue: 0.46) : Color.white.opacity(0.5))
-                                Text("WORKSPACE")
-                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(expandedTab == .workspace ? Color.white : Color.white.opacity(0.6))
-                                if !workspaceManager.projectName.isEmpty && workspaceManager.projectName.lowercased() != "workspace" {
-                                    Text("• \(workspaceManager.projectName.uppercased())")
-                                        .font(.system(size: 7.5, weight: .semibold, design: .monospaced))
-                                        .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46).opacity(0.9))
-                                        .lineLimit(1)
-                                }
-                                if workspaceManager.changedFiles.count > 0 {
-                                    Text("\(workspaceManager.changedFiles.count)")
-                                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color.black)
-                                        .padding(.horizontal, 3.5)
-                                        .padding(.vertical, 0.5)
-                                        .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(red: 0.0, green: 0.90, blue: 0.46)))
-                                }
-                            }
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3.5)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(expandedTab == .workspace ? Color(red: 0.04, green: 0.16, blue: 0.08) : Color(white: 0.08))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .stroke(expandedTab == .workspace ? Color(red: 0.0, green: 0.90, blue: 0.46) : Color(white: 0.16), lineWidth: expandedTab == .workspace ? 1.0 : 0.75)
-                                    )
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.2)) { expandedTab = .music }
-                        }) {
-                            HStack(spacing: 5) {
-                                Image(systemName: "music.note")
-                                    .font(.system(size: 8.5, weight: .bold))
-                                    .foregroundStyle(expandedTab == .music ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color.white.opacity(0.5))
-                                Text("NOW PLAYING")
-                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(expandedTab == .music ? Color.white : Color.white.opacity(0.6))
-                                if nowPlaying.isPlaying {
-                                    Circle()
-                                        .fill(Color(red: 1.0, green: 0.16, blue: 0.53))
-                                        .frame(width: 4.5, height: 4.5)
-                                }
-                            }
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3.5)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(expandedTab == .music ? Color(red: 0.18, green: 0.05, blue: 0.12) : Color(white: 0.08))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .stroke(expandedTab == .music ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color(white: 0.16), lineWidth: expandedTab == .music ? 1.0 : 0.75)
-                                    )
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        Spacer()
-
-                        // Context badges: Only Agents info in Agents tab; Workspace info in Workspace tab; Audio in Music tab
-                        if expandedTab == .agents {
-                            MachinedTokenBadge(appState: appState)
-                        } else if expandedTab == .workspace {
-                            HStack(spacing: 3) {
-                                Image(systemName: "arrow.triangle.branch")
-                                    .font(.system(size: 7))
-                                Text(workspaceManager.branch)
-                                    .font(.system(size: 7.5, weight: .semibold, design: .monospaced))
-                            }
-                            .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1.5)
-                            .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(red: 0.04, green: 0.12, blue: 0.08)))
-                        } else {
-                            if !nowPlaying.player.isEmpty {
-                                HStack(spacing: 4) {
-                                    Circle()
-                                        .fill(nowPlaying.isPlaying ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.4))
-                                        .frame(width: 4, height: 4)
-                                    Text(nowPlaying.player.uppercased())
-                                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color(white: 0.7))
-                                }
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 3)
-                                        .fill(Color(white: 0.08))
-                                        .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color(white: 0.16), lineWidth: 0.5))
-                                )
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.top, 5)
-                    .padding(.bottom, 2)
-
-                    if expandedTab == .music {
+                        if expandedTab == .music {
                         CyberMusicHUDView(nowPlaying: nowPlaying, appState: appState)
                             .transition(.opacity.combined(with: .scale(scale: 0.98)))
                     } else if expandedTab == .workspace {
@@ -981,6 +844,7 @@ private struct CompactLeftWing: View {
     let mascotSize: CGFloat
     let hasNotch: Bool
     let showToolStatus: Bool
+    @Binding var expandedTab: ExpandedContentTab
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
     // Bound via @AppStorage so flipping the default mascot in Settings rerenders this view
@@ -1027,9 +891,13 @@ private struct CompactLeftWing: View {
         HStack(spacing: 6) {
             if expanded {
                 AppLogoView(size: 36, showBackground: false)
-                if appState.sessions.count > 1 {
-                    SessionGroupingTabs(mode: $groupingMode)
-                }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            expandedTab = .agents
+                        }
+                    }
+                SessionGroupingTabs(mode: $groupingMode, expandedTab: $expandedTab)
             } else {
                 ZStack {
                     if nowPlaying.isPlaying && displayStatus == .idle {
@@ -1244,6 +1112,8 @@ private struct CompactRightWing: View {
     let expanded: Bool
     let hasNotch: Bool
     @Binding var isHovered: Bool
+    @Binding var expandedTab: ExpandedContentTab
+    @ObservedObject var workspaceManager: WorkspaceMonitorManager
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @AppStorage(SettingsKey.soundEnabled) private var soundEnabled = SettingsDefaults.soundEnabled
@@ -1306,9 +1176,95 @@ private struct CompactRightWing: View {
     var body: some View {
         HStack(spacing: 5) {
             if expanded {
-                ExpandedHeaderControls(soundEnabled: $soundEnabled)
-                    .padding(.leading, hasNotch ? 16 : 4)
-                    .padding(.trailing, 4)
+                HStack(spacing: 5) {
+                    // WORKSPACE TAB BUTTON
+                    Button(action: {
+                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                        workspaceManager.resolveAndRefreshWorkspace(appState: appState)
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            expandedTab = (expandedTab == .workspace) ? .agents : .workspace
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "folder.fill")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(expandedTab == .workspace ? Color(red: 0.0, green: 0.90, blue: 0.46) : Color.white.opacity(0.55))
+                            Text("WORKSPACE")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .foregroundStyle(expandedTab == .workspace ? Color.white : Color.white.opacity(0.65))
+                            if !workspaceManager.projectName.isEmpty && workspaceManager.projectName.lowercased() != "workspace" {
+                                Text("• \(workspaceManager.projectName.uppercased())")
+                                    .font(.system(size: 7.5, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46).opacity(0.9))
+                                    .lineLimit(1)
+                                    .frame(maxWidth: 80, alignment: .leading)
+                            }
+                            if workspaceManager.changedFiles.count > 0 {
+                                Text("\(workspaceManager.changedFiles.count)")
+                                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color.black)
+                                    .padding(.horizontal, 3)
+                                    .padding(.vertical, 0.5)
+                                    .background(RoundedRectangle(cornerRadius: 2).fill(Color(red: 0.0, green: 0.90, blue: 0.46)))
+                            }
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            RoundedRectangle(cornerRadius: 3.5)
+                                .fill(expandedTab == .workspace ? Color(red: 0.04, green: 0.16, blue: 0.08) : Color(white: 0.08))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 3.5)
+                                        .stroke(expandedTab == .workspace ? Color(red: 0.0, green: 0.90, blue: 0.46) : Color(white: 0.16), lineWidth: expandedTab == .workspace ? 1.0 : 0.6)
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    // NOW PLAYING TAB BUTTON
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            expandedTab = (expandedTab == .music) ? .agents : .music
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "music.note")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(expandedTab == .music ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color.white.opacity(0.55))
+                            Text("NOW PLAYING")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .foregroundStyle(expandedTab == .music ? Color.white : Color.white.opacity(0.65))
+                            if nowPlaying.isPlaying {
+                                Circle()
+                                    .fill(Color(red: 1.0, green: 0.16, blue: 0.53))
+                                    .frame(width: 4, height: 4)
+                            }
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            RoundedRectangle(cornerRadius: 3.5)
+                                .fill(expandedTab == .music ? Color(red: 0.18, green: 0.05, blue: 0.12) : Color(white: 0.08))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 3.5)
+                                        .stroke(expandedTab == .music ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color(white: 0.16), lineWidth: expandedTab == .music ? 1.0 : 0.6)
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer(minLength: 4)
+
+                    // Machined token usage badge in Agents tab
+                    if expandedTab == .agents {
+                        MachinedTokenBadge(appState: appState)
+                    }
+
+                    // System controls (Mute, Settings, Quit)
+                    ExpandedHeaderControls(soundEnabled: $soundEnabled)
+                }
+                .padding(.leading, hasNotch ? 12 : 4)
+                .padding(.trailing, 4)
             } else {
                 // Cyberpunk Music Visualizer or Machined Cyber Activity Pill
                 if nowPlaying.isPlaying {
@@ -1812,6 +1768,7 @@ struct QuitConfirmButton: View {
 /// AGENT) where the header has room for them.
 private struct SessionGroupingTabs: View {
     @Binding var mode: String
+    @Binding var expandedTab: ExpandedContentTab
     @Environment(\.sessionGroupingTabsRoom) private var room
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var l10n = L10n.shared
@@ -1826,9 +1783,12 @@ private struct SessionGroupingTabs: View {
         let short = layout.usesShortLabels(room: room)
         HStack(spacing: layout.spacing) {
             ForEach(SessionGroupingTab.all, id: \.tag) { tab in
-                let selected = mode == tab.tag
+                let selected = (expandedTab == .agents) && (mode == tab.tag)
                 Button {
-                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) { mode = tab.tag }
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
+                        expandedTab = .agents
+                        mode = tab.tag
+                    }
                 } label: {
                     PixelText(
                         text: short ? tab.shortPixelLabel : tab.pixelLabel,
@@ -1853,7 +1813,7 @@ private struct SessionGroupingTabs: View {
             }
         }
         .background(Rectangle().fill(.white.opacity(0.05)).frame(height: layout.stripHeight))
-        .overlay(Rectangle().stroke(.white.opacity(0.1), lineWidth: 1).frame(height: layout.stripHeight))
+        .overlay(Rectangle().stroke(expandedTab == .agents ? Self.selectedColor.opacity(0.4) : .white.opacity(0.1), lineWidth: 1).frame(height: layout.stripHeight))
     }
 }
 
