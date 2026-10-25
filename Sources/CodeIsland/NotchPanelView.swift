@@ -4434,28 +4434,29 @@ private struct SessionIdentityLine: View {
 
     private var displaySessionId: String { session.displaySessionId(sessionId: sessionId) }
 
-    /// Human-friendly headline: Prioritizes the user's actual question / prompt,
-    /// falls back to meaningful project name or agent title — never generic 'config' (#screenshot).
-    private var displayTitle: String {
-        // Priority 1: Clean user question / prompt (stripping pasted image paths / var folders)
-        if let cleanPrompt = PromptTextCleaner.cleanPrompt(session.lastUserPrompt) {
-            return cleanPrompt
+    /// Human-friendly agent name (e.g. "AntiGravity", "Claude", "Gemini", "Cursor")
+    private var agentName: String {
+        let label = session.sourceLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (!label.isEmpty && label.lowercased() != "unknown") ? label : "Agent"
+    }
+
+    /// Meaningful project or topic title, avoiding generic terms like "config" or "tmp"
+    private var resolvedProjectTitle: String? {
+        if let label = session.sessionLabel?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty {
+            return label
         }
-        if let title = session.sessionLabel {
-            return title
-        }
-        // Priority 2: Project folder (skip generic unhelpful names like "config", "tmp")
-        let proj = session.projectDisplayName
-        let genericFolders: Set<String> = ["config", "tmp", "temp", "desktop", "workspace", "session", "root"]
-        if !proj.isEmpty && !genericFolders.contains(proj.lowercased()) {
+        let unhelpful: Set<String> = ["config", "tmp", "temp", "session", "root", "workspace", "desktop"]
+        let proj = session.projectDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !proj.isEmpty && !unhelpful.contains(proj.lowercased()) {
             return proj
         }
-        // Priority 3: Agent display name
-        let src = session.sourceLabel.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !src.isEmpty && src.lowercased() != "unknown" {
-            return "\(src) Task"
+        if let cwd = session.cwd {
+            let parent = ((cwd as NSString).deletingLastPathComponent as NSString).lastPathComponent
+            if !parent.isEmpty && parent != "/" && !unhelpful.contains(parent.lowercased()) && !parent.hasPrefix(".") {
+                return parent
+            }
         }
-        return "User Task"
+        return nil
     }
 
     var body: some View {
@@ -4468,14 +4469,27 @@ private struct SessionIdentityLine: View {
 
     private func line(showsShortId: Bool) -> some View {
         HStack(spacing: 5) {
-            // Prominent user question / task title
-            Text(displayTitle)
+            // Agent identity lead
+            Text(agentName)
                 .font(.system(size: projectFontSize, weight: .bold, design: .rounded))
                 .foregroundStyle(projectColor)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .help(displayTitle)
                 .layoutPriority(2)
+
+            // Optional Project / Workspace context (clickable to open in Finder)
+            if showProjectName, let projectTitle = resolvedProjectTitle {
+                Text("•")
+                    .font(.system(size: sessionFontSize, weight: .bold))
+                    .foregroundStyle(dividerColor)
+
+                ProjectNameLink(
+                    name: projectTitle,
+                    cwd: session.cwd,
+                    isInteractive: !session.isRemote,
+                    fontSize: projectFontSize,
+                    color: projectColor.opacity(0.92)
+                )
+                .layoutPriority(2)
+            }
 
             // Git Branch badge (if present)
             if showGitBranch, let branch = session.gitBranch, !branch.isEmpty {

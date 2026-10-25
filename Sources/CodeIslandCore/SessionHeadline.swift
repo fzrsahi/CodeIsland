@@ -44,11 +44,25 @@ public struct SessionHeadline: Equatable, Sendable {
 extension SessionSnapshot {
     public func headline(showProjectName: Bool) -> SessionHeadline {
         if showProjectName {
-            return SessionHeadline(
-                text: projectDisplayName,
-                kind: .project,
-                trailingSessionLabel: sessionLabel
-            )
+            let unhelpful: Set<String> = ["config", "tmp", "temp", "session", "root", "workspace", "desktop"]
+            let proj = projectDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !proj.isEmpty && !unhelpful.contains(proj.lowercased()) {
+                return SessionHeadline(
+                    text: proj,
+                    kind: .project,
+                    trailingSessionLabel: sessionLabel
+                )
+            }
+            if let cwd {
+                let parent = ((cwd as NSString).deletingLastPathComponent as NSString).lastPathComponent
+                if !parent.isEmpty && parent != "/" && !unhelpful.contains(parent.lowercased()) && !parent.hasPrefix(".") {
+                    return SessionHeadline(
+                        text: parent,
+                        kind: .project,
+                        trailingSessionLabel: sessionLabel
+                    )
+                }
+            }
         }
         if let sessionLabel {
             return SessionHeadline(text: sessionLabel, kind: .sessionTitle, trailingSessionLabel: nil)
