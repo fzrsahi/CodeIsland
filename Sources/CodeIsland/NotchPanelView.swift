@@ -172,7 +172,9 @@ struct NotchPanelView: View {
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
-        (showBar || appState.surface.isExpanded) && (appState.surface.isExpanded || nowPlaying.showToast)
+        if appState.surface.isExpanded { return true }
+        if nowPlaying.showToast && !showCompactLyrics { return showBar }
+        return false
     }
     /// Prehover acknowledgement is only rendered on the collapsed active bar —
     /// once the surface expands (from hover or any other path) it disappears.
@@ -940,7 +942,7 @@ struct NotchPanelView: View {
                         appState.surface = .sessionList
                     }
                 }
-                .padding(.top, 7.0) // Space between physical notch and floating lyric notch!
+                .padding(.top, 18.0) // Space between physical notch and floating lyric notch!
                 .transition(.asymmetric(
                     insertion: .move(edge: .top).combined(with: .opacity),
                     removal: .move(edge: .top).combined(with: .opacity)

@@ -168,7 +168,7 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         // window never needs to be taller than the visible screen.
         let maxH = min(desiredH, screen.visibleFrame.height)
         let screenW = screen.frame.width
-        let width = min(620, screenW - 40)
+        let width = min(760, screenW - 40)
         return NSSize(width: width, height: maxH)
     }
 

@@ -215,6 +215,7 @@ struct SubNotchFloatingLyricCapsuleView: View {
     var onOpenFull: () -> Void
 
     @State private var isHovered = false
+    @State private var capsuleWidth: CGFloat = 180
 
     private var isRealLyric: Bool {
         !nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -248,6 +249,18 @@ struct SubNotchFloatingLyricCapsuleView: View {
         return "music.note"
     }
 
+    /// Computes pixel-perfect dynamic capsule width based on text length:
+    /// Auto-expands smoothly with spring physics for long lyrics, contracts for short lines.
+    private func calculateTargetWidth(for text: String) -> CGFloat {
+        let font = NSFont.monospacedSystemFont(ofSize: 9.2, weight: .bold)
+        let textWidth = (text as NSString).size(withAttributes: [.font: font]).width
+        // Chrome budget: padding horizontal (13 * 2 = 26) + icon (12) + spacing (7 * 2 = 14) + spectrum (16) = 68pt
+        let chromeWidth: CGFloat = 72
+        let target = ceil(textWidth + chromeWidth)
+        // Clamp: minimum 130pt, maximum 680pt
+        return min(max(130, target), 680)
+    }
+
     var body: some View {
         Button(action: {
             NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
@@ -256,20 +269,26 @@ struct SubNotchFloatingLyricCapsuleView: View {
             HStack(spacing: 7) {
                 // Mini glowing lyric/music indicator icon
                 Image(systemName: iconName)
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.system(size: 8.5, weight: .bold))
                     .foregroundStyle(isHovered ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .frame(width: 12)
 
-                // High-contrast live synced lyric text or intro: changes per lyric line, never scrolls
-                Text(activeDisplayText)
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(isRealLyric ? Color.white : Color.white.opacity(0.85))
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .id(activeDisplayText)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .offset(y: 4)),
-                        removal: .opacity.combined(with: .offset(y: -4))
-                    ))
+                // High-contrast live synced lyric text:
+                // Contained in ZStack so old and new lines transition vertically on top of each other.
+                // STRICTLY ZERO HORIZONTAL SCROLL: the whole notch capsule auto-expands to fit the line!
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: 9.2, weight: .bold, design: .monospaced))
+                        .foregroundStyle(isRealLyric ? Color.white : Color.white.opacity(0.85))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id(activeDisplayText)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 5)),
+                            removal: .opacity.combined(with: .offset(y: -5))
+                        ))
+                }
+                .frame(maxWidth: .infinity)
 
                 // Mini dancing cyber equalizer (3 bars)
                 CyberAudioSpectrumView(
@@ -279,37 +298,46 @@ struct SubNotchFloatingLyricCapsuleView: View {
                     segmentHeight: 1.4,
                     segmentSpacing: 0.6
                 )
+                .frame(width: 14)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 13)
             .padding(.vertical, 5)
+            .frame(width: capsuleWidth, height: 26)
             .background(
-                RoundedRectangle(cornerRadius: 11)
+                Capsule()
                     .fill(Color.black.opacity(0.96))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 11)
+                        Capsule()
                             .stroke(
                                 LinearGradient(
                                     colors: [
-                                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.95 : 0.45),
-                                        Color(red: 1.0, green: 0.16, blue: 0.53).opacity(isHovered ? 0.85 : 0.30)
+                                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.95 : 0.50),
+                                        Color(red: 1.0, green: 0.16, blue: 0.53).opacity(isHovered ? 0.90 : 0.35)
                                     ],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 ),
-                                lineWidth: 0.9
+                                lineWidth: 1.0
                             )
                     )
-                    .shadow(color: Color.black.opacity(0.9), radius: 6, x: 0, y: 3)
-                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.35 : 0.10), radius: 5, x: 0, y: 1)
+                    .shadow(color: Color.black.opacity(0.92), radius: 8, x: 0, y: 4)
+                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.35 : 0.12), radius: 6, x: 0, y: 1)
             )
             .scaleEffect(isHovered ? 1.02 : 1.0)
-            .frame(minWidth: 80, maxWidth: 650)
-            .animation(.spring(response: 0.35, dampingFraction: 0.78), value: activeDisplayText)
             .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isHovered)
         }
         .buttonStyle(.plain)
         .onHover { hovering in
             isHovered = hovering
+        }
+        .onAppear {
+            capsuleWidth = calculateTargetWidth(for: activeDisplayText)
+        }
+        .onChange(of: activeDisplayText) { _, newText in
+            let target = calculateTargetWidth(for: newText)
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.76)) {
+                capsuleWidth = target
+            }
         }
         .help("♫ Live Synced Lyrics (Click to open Music HUD)")
     }
