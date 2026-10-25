@@ -4437,9 +4437,9 @@ private struct SessionIdentityLine: View {
     /// Human-friendly headline: Prioritizes the user's actual question / prompt,
     /// falls back to meaningful project name or agent title — never generic 'config' (#screenshot).
     private var displayTitle: String {
-        // Priority 1: User question / prompt (as requested: "misal user question gitu ya")
-        if let prompt = session.lastUserPrompt?.trimmingCharacters(in: .whitespacesAndNewlines), !prompt.isEmpty {
-            return prompt
+        // Priority 1: Clean user question / prompt (stripping pasted image paths / var folders)
+        if let cleanPrompt = PromptTextCleaner.cleanPrompt(session.lastUserPrompt) {
+            return cleanPrompt
         }
         if let title = session.sessionLabel {
             return title
@@ -5456,7 +5456,8 @@ private struct SessionGlyphLine: View {
             glyph
             switch kind {
             case .prompt:
-                Text(ChatMessageTextFormatter.literalText(text))
+                let displayText = PromptTextCleaner.cleanPrompt(text) ?? text
+                Text(ChatMessageTextFormatter.literalText(displayText))
                     .font(.system(size: fontSize, design: .monospaced))
                     .foregroundStyle(SessionGlyph.promptTextColor)
                     .lineLimit(1)
