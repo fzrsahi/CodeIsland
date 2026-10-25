@@ -746,14 +746,14 @@ struct CyberMusicHUDView: View {
                     CyberDiscoVisualizer(isPlaying: nowPlaying.isPlaying, barCount: 6, maxHeight: 16)
                 }
             }
-            .frame(width: 170)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             // Divider Rule (fixed height, never expands!)
             Rectangle()
                 .fill(Color(red: 0.16, green: 0.19, blue: 0.24))
                 .frame(width: 1, height: 92)
 
-            // RIGHT COLUMN: Synced Real-Time Lyrics View (fixed height, compact!)
+            // RIGHT COLUMN: Synced Real-Time Lyrics View (balanced 50% width)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 4) {
                     Text("LYRICS")

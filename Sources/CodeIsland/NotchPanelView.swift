@@ -261,17 +261,37 @@ struct NotchPanelView: View {
         return nowPlaying.isPlaying ? 54 : 48
     }
 
+    /// Notch cutout reserved in the center of the expanded header.
+    /// Uses the physical hardware notch width (notchW) with a dedicated 12pt cushion
+    /// on each side to guarantee content never touches the notch or its rounded corners.
+    private var expandedNotchCutoutWidth: CGFloat {
+        if hasNotch {
+            return max(notchW, effectiveNotchW) + 24
+        } else {
+            return 24
+        }
+    }
+
+    /// Symmetrical wing width when expanded: exactly halves the remaining panel width
+    /// on each side of the physical notch cutout, preventing any element from drifting
+    /// into or under the hardware notch.
+    private var expandedWingWidth: CGFloat {
+        max(0, (panelWidth - expandedNotchCutoutWidth) / 2)
+    }
+
+    /// The panel window's width (PanelWindowController.panelSize).
+    private var maxPanelWidth: CGFloat { min(740, screenWidth - 40) }
+
     /// Total panel width — adapts based on state and screen geometry
     private var panelWidth: CGFloat {
         let nw = effectiveNotchW
         if shouldShowExpanded {
-            if expandedTab == .music {
-                return min(max(nw + 380, 560), maxPanelWidth)
+            let baseWidth = nw + 500
+            let minWidth: CGFloat = 680
+            if expandedTab == .workspace && workspaceManager.isExpandedDetail {
+                return min(max(baseWidth, 720), maxPanelWidth)
             }
-            if expandedTab == .workspace {
-                return min(max(nw + 400, workspaceManager.isExpandedDetail ? 620 : 560), maxPanelWidth)
-            }
-            return min(max(nw + 420, 640), maxPanelWidth)
+            return min(max(baseWidth, minWidth), maxPanelWidth)
         }
         if showIdleIndicator { return idleHovered ? nw + compactWingWidth * 2 + 80 : nw + compactWingWidth * 2 }
         if !isActive { return nw }
@@ -294,9 +314,6 @@ struct NotchPanelView: View {
             hasNotch: hasNotch
         )
     }
-
-    /// The panel window's width (PanelWindowController.panelSize).
-    private var maxPanelWidth: CGFloat { min(720, screenWidth - 40) }
 
     /// The collapsed active bar, before any room for the plan-limit chip.
     private var collapsedBarWidth: CGFloat {
@@ -357,8 +374,11 @@ struct NotchPanelView: View {
                             showToolStatus: showToolStatus,
                             expandedTab: $expandedTab
                         )
-                            .padding(.leading, (isThinking && !shouldShowExpanded) ? 8 : 0)
-                            .frame(width: shouldShowExpanded ? nil : symmetricWingWidth, alignment: shouldShowExpanded ? .center : (isThinking ? .leading : .center))
+                            .padding(.leading, (isThinking && !shouldShowExpanded) ? 8 : (shouldShowExpanded ? 8 : 0))
+                            .frame(
+                                width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
+                                alignment: shouldShowExpanded ? .leading : (isThinking ? .leading : .center)
+                            )
                             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -370,10 +390,10 @@ struct NotchPanelView: View {
                             }
                             .help("Agents & Terminal Sessions (Click to view)")
 
-                        if hasNotch {
-                            Spacer(minLength: effectiveNotchW + (shouldShowExpanded ? 24 : 0))
-                                .frame(width: shouldShowExpanded ? nil : effectiveNotchW)
-                        } else if !shouldShowExpanded && showToolStatus {
+                        if hasNotch || shouldShowExpanded {
+                            Spacer(minLength: 0)
+                                .frame(width: shouldShowExpanded ? expandedNotchCutoutWidth : effectiveNotchW)
+                        } else if showToolStatus {
                             CompactToolStatus(appState: appState)
                             Spacer(minLength: 0)
                         } else {
@@ -387,10 +407,14 @@ struct NotchPanelView: View {
                             hasNotch: hasNotch,
                             isHovered: $isHoveringRightWing,
                             expandedTab: $expandedTab,
-                            workspaceManager: workspaceManager
+                            workspaceManager: workspaceManager,
+                            expandedWingWidth: expandedWingWidth
                         )
-                            .padding(.trailing, ((isThinking || isHoveringRightWing) && !shouldShowExpanded) ? 8 : 0)
-                            .frame(width: shouldShowExpanded ? nil : symmetricWingWidth, alignment: shouldShowExpanded ? .trailing : ((isThinking || isHoveringRightWing) ? .trailing : .center))
+                            .padding(.trailing, ((isThinking || isHoveringRightWing) && !shouldShowExpanded) ? 8 : (shouldShowExpanded ? 8 : 0))
+                            .frame(
+                                width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
+                                alignment: shouldShowExpanded ? .trailing : ((isThinking || isHoveringRightWing) ? .trailing : .center)
+                            )
                             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
                             .contentShape(Rectangle())
                             .onHover { hovering in
@@ -1114,6 +1138,7 @@ private struct CompactRightWing: View {
     @Binding var isHovered: Bool
     @Binding var expandedTab: ExpandedContentTab
     @ObservedObject var workspaceManager: WorkspaceMonitorManager
+    var expandedWingWidth: CGFloat = 240
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @AppStorage(SettingsKey.soundEnabled) private var soundEnabled = SettingsDefaults.soundEnabled
@@ -1178,15 +1203,19 @@ private struct CompactRightWing: View {
             if expanded {
                 HStack(spacing: 8) {
                     // Matching pixel tabs on the right: [ WORKSPACE | MUSIC ]
-                    RightWingPixelTabs(appState: appState, expandedTab: $expandedTab, workspaceManager: workspaceManager)
+                    RightWingPixelTabs(
+                        appState: appState,
+                        expandedTab: $expandedTab,
+                        workspaceManager: workspaceManager,
+                        availableWidth: expandedWingWidth
+                    )
 
                     Spacer(minLength: 4)
 
                     // System controls (Mute, Settings, Quit)
                     ExpandedHeaderControls(soundEnabled: $soundEnabled)
                 }
-                .padding(.leading, hasNotch ? 12 : 4)
-                .padding(.trailing, 4)
+                .padding(.horizontal, 4)
             } else {
                 // Cyberpunk Music Visualizer or Machined Cyber Activity Pill
                 if nowPlaying.isPlaying {
@@ -1692,6 +1721,7 @@ private struct RightWingPixelTabs: View {
     var appState: AppState
     @Binding var expandedTab: ExpandedContentTab
     @ObservedObject var workspaceManager: WorkspaceMonitorManager
+    var availableWidth: CGFloat = 240
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hoveredTab: String?
@@ -1699,6 +1729,10 @@ private struct RightWingPixelTabs: View {
     static let activeWorkspaceColor = Color(red: 0.0, green: 0.90, blue: 0.46)
     static let activeMusicColor = Color(red: 1.0, green: 0.16, blue: 0.53)
     static let inactiveColor = Color.white.opacity(0.62)
+
+    private var useShortLabels: Bool {
+        availableWidth < 225
+    }
 
     var body: some View {
         let layout = SessionGroupingTabsLayout.self
@@ -1713,7 +1747,7 @@ private struct RightWingPixelTabs: View {
                 }
             } label: {
                 PixelText(
-                    text: "WORKSPACE",
+                    text: useShortLabels ? "WORK" : "WORKSPACE",
                     color: isWorkspaceSelected ? Self.activeWorkspaceColor
                         : (hoveredTab == "workspace" ? .white.opacity(0.9) : Self.inactiveColor),
                     pixelSize: layout.pixelSize
@@ -1738,7 +1772,7 @@ private struct RightWingPixelTabs: View {
                 }
             } label: {
                 PixelText(
-                    text: "MUSIC",
+                    text: useShortLabels ? "MUS" : "MUSIC",
                     color: isMusicSelected ? Self.activeMusicColor
                         : (nowPlaying.isPlaying ? Self.activeMusicColor.opacity(0.85) : (hoveredTab == "music" ? .white.opacity(0.9) : Self.inactiveColor)),
                     pixelSize: layout.pixelSize
