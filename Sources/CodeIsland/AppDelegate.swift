@@ -111,6 +111,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         panelController?.showPanel()
 
         if !isolated {
+            CustomAgentCommandManager.shared.syncAll()
             appState.startSessionDiscovery()
             appState.startCodexAppServerWatcher()
             appState.startAiWorkWatcher()

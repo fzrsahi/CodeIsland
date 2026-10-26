@@ -419,6 +419,9 @@ public struct SessionSnapshot: Sendable {
             "xiaomi mimo": "mimo",
             "xiaomi-mimo-ai": "mimo",
         ]
+        if let customAgent = CustomAgentCommandStore.canonicalAgent(forCommand: normalized) {
+            return customAgent
+        }
         let canonical = aliases[normalized] ?? normalized
         let dynamicSupportedSources = supportedSources.union(loadCustomSources())
 

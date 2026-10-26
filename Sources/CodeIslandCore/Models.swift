@@ -76,12 +76,16 @@ public enum CLIProcessResolver {
                 || lowercasedPath.contains("/coco ")
                 || lowercasedPath.contains("/traecli ")
         case "codex":
-            return lowercasedPath.hasSuffix("/codex") || lowercasedPath.contains("/codex ")
+            if lowercasedPath.hasSuffix("/codex") || lowercasedPath.contains("/codex ") { return true }
+            return CustomAgentCommandStore.matchesCustomCommand(path: lowercasedPath, agentType: "codex")
         case "claude":
             // The native installer (Claude Code's default) runs the binary
             // named by its version: ~/.local/share/claude/versions/2.1.294.
-            return lowercasedPath.hasSuffix("/claude") || lowercasedPath.contains("/claude ")
-                || lowercasedPath.contains("/.local/share/claude/versions/")
+            if lowercasedPath.hasSuffix("/claude") || lowercasedPath.contains("/claude ")
+                || lowercasedPath.contains("/.local/share/claude/versions/") {
+                return true
+            }
+            return CustomAgentCommandStore.matchesCustomCommand(path: lowercasedPath, agentType: "claude")
         case "dsh":
             // DeepSeek Harness CLI ships a `dsh` binary. It has no shell hooks —
             // the dsh-island plugin forwards events over the socket directly.

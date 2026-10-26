@@ -100,7 +100,9 @@ public enum ClaudeConfigPaths {
     /// look *for* a session or its usage go through this; the hook installer
     /// and the Settings "currently using" line keep using `configDir()`.
     public static func allConfigDirs() -> [String] {
-        ExtraConfigDirs.roots(primary: configDir(), extras: ExtraConfigDirs.enabledPaths(for: .claude))
+        let customDirs = CustomAgentCommandStore.activeConfigDirs(forAgent: "claude")
+        let extras = ExtraConfigDirs.enabledPaths(for: .claude) + customDirs
+        return ExtraConfigDirs.roots(primary: configDir(), extras: extras)
     }
 
     /// The dir a Claude Code process with no `$CLAUDE_CONFIG_DIR` of its own

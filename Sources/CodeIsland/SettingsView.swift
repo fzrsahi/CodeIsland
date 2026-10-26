@@ -721,6 +721,33 @@ private struct HooksPage: View {
     @State private var newExtraDirPath = ""
     @State private var extraDirMessage = ""
     @State private var extraDirMessageIsError = false
+    @ObservedObject private var customCmdManager = CustomAgentCommandManager.shared
+    @State private var newCmdCommand = ""
+    @State private var newCmdDisplayName = ""
+    @State private var newCmdAgentType = "claude"
+    @State private var newCmdConfigDir = ""
+    @State private var customCmdMessage = ""
+    @State private var customCmdMessageIsError = false
+
+    private func chooseCustomDir() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.showsHiddenFiles = true
+        panel.prompt = "Select Config Directory"
+        if panel.runModal() == .OK, let url = panel.url {
+            let path = url.path
+            let home = NSHomeDirectory()
+            if path == home {
+                newCmdConfigDir = "~"
+            } else if path.hasPrefix(home + "/") {
+                newCmdConfigDir = "~/" + String(path.dropFirst(home.count + 1))
+            } else {
+                newCmdConfigDir = path
+            }
+        }
+    }
 
     private func refreshCLIStatuses() {
         for cli in ConfigInstaller.allCLIs {
@@ -932,68 +959,199 @@ private struct HooksPage: View {
                 }
             }
 
-            Section("Custom CLIs") {
-                let customItems = ConfigInstaller.customCLIConfigs()
-                if customItems.isEmpty {
-                    Text("No custom CLI configured")
+            Section("Custom Agent Commands & Aliases") {
+                Text("Configure custom CLI commands, wrappers, or environment aliases (such as claude-govtech, claude-mantiq, or enterprise agent wrappers) so CodeIsland tracks them in the Notch Island with automatic hooks and session detection.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // Discovered profiles banner
+                let unconfigured = customCmdManager.discoverUnconfiguredProfiles()
+                if !unconfigured.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                                .foregroundStyle(.orange)
+                            Text("Discovered Local Agent Profiles")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.orange)
+                        }
+                        ForEach(unconfigured) { candidate in
+                            HStack {
+                                Text("\(candidate.command) (\(candidate.configDirectory))")
+                                    .font(.system(size: 11, design: .monospaced))
+                                Spacer()
+                                Button("Quick Add") {
+                                    _ = customCmdManager.addCommand(
+                                        command: candidate.command,
+                                        displayName: candidate.displayName,
+                                        agentType: candidate.agentType,
+                                        configDirectory: candidate.configDirectory
+                                    )
+                                    appState?.discovery.restartProjectsWatcher()
+                                    appState?.discovery.requestScan()
+                                    refreshCLIStatuses()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.mini)
+                            }
+                        }
+                    }
+                    .padding(8)
+                    .background(Color.orange.opacity(0.12))
+                    .cornerRadius(6)
+                }
+
+                // Configured list
+                if customCmdManager.commands.isEmpty {
+                    Text("No custom agent commands configured yet.")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(customItems) { item in
-                        HStack(alignment: .top, spacing: 8) {
+                    ForEach(customCmdManager.commands) { cmd in
+                        HStack(alignment: .center, spacing: 10) {
+                            // Agent badge
+                            Text(cmd.agentType.uppercased())
+                                .font(.system(size: 9, weight: .bold))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.accentColor.opacity(0.2))
+                                .foregroundStyle(Color.accentColor)
+                                .cornerRadius(4)
+
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(item.name)
-                                Text("\(item.source) · \(item.configPath)")
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundStyle(.secondary)
+                                HStack(spacing: 6) {
+                                    Text(cmd.command)
+                                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                    if !cmd.displayName.isEmpty && cmd.displayName != cmd.command {
+                                        Text("(\(cmd.displayName))")
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+
+                                if !cmd.configDirectory.isEmpty {
+                                    Text(cmd.configDirectory)
+                                        .font(.system(size: 10, design: .monospaced))
+                                        .foregroundStyle(.secondary)
+                                }
                             }
+
                             Spacer()
+
+                            // Hook status indicator
+                            let isHooksOk = customCmdManager.isHooksActive(for: cmd)
+                            if isHooksOk {
+                                Text("● Hooks Active")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(.green)
+                            } else {
+                                Button("Install Hooks") {
+                                    _ = customCmdManager.reinstallHooks(for: cmd)
+                                    refreshCLIStatuses()
+                                }
+                                .font(.system(size: 10))
+                                .buttonStyle(.bordered)
+                                .controlSize(.mini)
+                            }
+
+                            // Toggle
+                            Toggle("", isOn: Binding(
+                                get: { cmd.isEnabled },
+                                set: { enabled in
+                                    customCmdManager.toggleCommand(id: cmd.id, enabled: enabled)
+                                    appState?.discovery.restartProjectsWatcher()
+                                    appState?.discovery.requestScan()
+                                    refreshCLIStatuses()
+                                }
+                            ))
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .controlSize(.mini)
+
+                            // Delete button
                             Button(role: .destructive) {
-                                _ = ConfigInstaller.setEnabled(source: item.source, enabled: false)
-                                _ = ConfigInstaller.removeCustomCLI(source: item.source)
+                                customCmdManager.removeCommand(id: cmd.id)
+                                appState?.discovery.restartProjectsWatcher()
+                                appState?.discovery.requestScan()
                                 refreshCLIStatuses()
-                                refreshKey += 1
                             } label: {
                                 Image(systemName: "trash")
                             }
                             .buttonStyle(.borderless)
                         }
+                        .padding(.vertical, 3)
                     }
                 }
 
-                TextField("Name (e.g. MyTool)", text: $customName)
-                TextField("Source (e.g. mytool)", text: $customSource)
-                TextField("Config path (e.g. .mytool/settings.json)", text: $customConfigPath)
-                TextField("Config key", text: $customConfigKey)
-                Picker("Template", selection: $customFormat) {
-                    Text("Claude").tag(HookFormat.claude)
-                    Text("Codex/Gemini").tag(HookFormat.nested)
-                    Text("Cursor").tag(HookFormat.flat)
-                    Text("Copilot").tag(HookFormat.copilot)
-                }
+                Divider().padding(.vertical, 4)
 
-                Button("Add Custom CLI") {
-                    let result = ConfigInstaller.addCustomCLI(
-                        name: customName,
-                        source: customSource,
-                        configPath: customConfigPath,
-                        format: customFormat,
-                        configKey: customConfigKey
-                    )
-                    statusMessage = result.message
-                    statusIsError = !result.ok
-                    guard result.ok else { return }
+                // Add form
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Add Custom Command / Alias")
+                        .font(.system(size: 12, weight: .semibold))
 
-                    let normalizedSource = customSource
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
-                        .lowercased()
-                    _ = ConfigInstaller.setEnabled(source: normalizedSource, enabled: true)
-                    customName = ""
-                    customSource = ""
-                    customConfigPath = ""
-                    customConfigKey = "hooks"
-                    customFormat = .claude
-                    refreshCLIStatuses()
-                    refreshKey += 1
+                    HStack(spacing: 8) {
+                        TextField("Command (e.g. claude-govtech)", text: $newCmdCommand)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 12, design: .monospaced))
+
+                        TextField("Display Name (optional)", text: $newCmdDisplayName)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 12))
+
+                        Picker("", selection: $newCmdAgentType) {
+                            Text("Claude Code").tag("claude")
+                            Text("Codex").tag("codex")
+                            Text("Gemini").tag("gemini")
+                            Text("Cursor CLI").tag("cursor-cli")
+                            Text("Grok").tag("grok")
+                            Text("Custom").tag("custom")
+                        }
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+
+                    HStack(spacing: 8) {
+                        TextField("Config directory (e.g. ~/.claude-govtech)", text: $newCmdConfigDir)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 12, design: .monospaced))
+
+                        Button("Choose...") {
+                            chooseCustomDir()
+                        }
+
+                        Button("Register & Install") {
+                            let res = customCmdManager.addCommand(
+                                command: newCmdCommand,
+                                displayName: newCmdDisplayName,
+                                agentType: newCmdAgentType,
+                                configDirectory: newCmdConfigDir
+                            )
+                            customCmdMessage = res.message
+                            customCmdMessageIsError = !res.ok
+                            if res.ok {
+                                newCmdCommand = ""
+                                newCmdDisplayName = ""
+                                newCmdConfigDir = ""
+                                appState?.discovery.restartProjectsWatcher()
+                                appState?.discovery.requestScan()
+                                refreshCLIStatuses()
+                            }
+                        }
+                        .disabled(newCmdCommand.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .buttonStyle(.borderedProminent)
+                    }
+
+                    if !customCmdMessage.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: customCmdMessageIsError ? "xmark.circle.fill" : "checkmark.circle.fill")
+                                .foregroundStyle(customCmdMessageIsError ? .red : .green)
+                            Text(customCmdMessage)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
 

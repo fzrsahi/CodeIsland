@@ -194,7 +194,7 @@ enum SessionDiscovery {
             ("kimi", "\(home)/.kimi-code/sessions"),
             ("kimi", "\(home)/.kimi/sessions"),
             ("grok", "\(ConfigInstaller.grokHome())/sessions"),
-        ]
+        ] + CustomAgentCommandStore.activeConfigDirs(forAgent: "claude").map { ("claude", "\($0)/projects") }
         let fm = FileManager.default
         // By identity: an extra dir that is a primary one under another
         // spelling (symlink, case) must not be watched twice.

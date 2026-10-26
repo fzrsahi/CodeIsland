@@ -57,6 +57,16 @@ extension SessionDiscovery {
         case .codex: defaultRoot = defaultCodexRoot
         case .grok: defaultRoot = defaultGrokRoot
         }
+        var registered = ExtraConfigDirs.load()
+        if cli == .claude {
+            let existingPaths = Set(registered.filter { $0.cli == .claude }.map { ExtraConfigDirs.identity(of: $0.path) })
+            for customPath in CustomAgentCommandStore.activeConfigDirs(forAgent: "claude") {
+                if !existingPaths.contains(ExtraConfigDirs.identity(of: customPath)) {
+                    registered.append(ExtraConfigDir(cli: .claude, path: customPath))
+                }
+            }
+        }
+
         return ConfigRootScan(
             cli: cli,
             defaultRoot: defaultRoot,
@@ -64,7 +74,7 @@ extension SessionDiscovery {
                 cli: cli,
                 primary: ConfigInstaller.primaryConfigRoot(for: cli),
                 defaultRoot: defaultRoot,
-                registered: ExtraConfigDirs.load()
+                registered: registered
             )
         )
     }

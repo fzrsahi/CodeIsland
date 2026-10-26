@@ -173,13 +173,39 @@ enum AgentProcessFinder {
         let claudeVersionsDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".local/share/claude/versions").path
 
+        let customCommands = CustomAgentCommandStore.activeCommandNames(forAgent: "claude")
+        let customDirs = Set(CustomAgentCommandStore.activeConfigDirs(forAgent: "claude").map { ExtraConfigDirs.identity(of: $0) })
+
         var claudePids: [pid_t] = []
 
         for pid in candidatePids ?? ProcessTable.allProcessIds() {
             guard let path = executablePath(pid) else { continue }
-            // Match processes whose executable is under claude's versions directory
-            guard path.hasPrefix(claudeVersionsDir) else { continue }
-            if let args = arguments(pid), !isClaudeCodeCLIInvocation(arguments: args) { continue }
+            let lowerPath = path.lowercased()
+            let args = arguments(pid) ?? []
+            let lowerArgs = args.map { $0.lowercased() }
+
+            var isMatch = false
+            if path.hasPrefix(claudeVersionsDir) {
+                isMatch = true
+            } else if lowerPath.hasSuffix("/claude") || lowerPath.contains("/claude ") {
+                isMatch = true
+            } else if customCommands.contains(where: { cmd in
+                lowerPath.hasSuffix("/\(cmd)") || lowerPath.contains("/\(cmd) ") || lowerArgs.contains(where: { $0.contains(cmd) })
+            }) {
+                isMatch = true
+            }
+
+            // Also match if process environment CLAUDE_CONFIG_DIR matches one of our custom dirs
+            if !isMatch && !customDirs.isEmpty {
+                if let env = SessionDiscovery.configRootEnvironment(for: pid),
+                   let rawDir = env["CLAUDE_CONFIG_DIR"],
+                   customDirs.contains(ExtraConfigDirs.identity(of: rawDir)) {
+                    isMatch = true
+                }
+            }
+
+            guard isMatch else { continue }
+            if !args.isEmpty, !isClaudeCodeCLIInvocation(arguments: args) { continue }
             claudePids.append(pid)
         }
         return claudePids
