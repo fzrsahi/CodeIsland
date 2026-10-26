@@ -184,7 +184,7 @@ final class FollowUpReminderController {
             hintedKeys.remove(Key(.approval, sid))
         case .questionCard(let sid):
             hintedKeys.remove(Key(.question, sid))
-        case .completionCard, .collapsed:
+        case .completionCard, .collapsed, .quickPrompt:
             break
         }
     }
@@ -378,7 +378,7 @@ final class FollowUpReminderController {
             return key.kind == .question && sid == key.sessionId
         case .completionCard(let sid):
             return key.kind == .completion && sid == key.sessionId
-        case .collapsed:
+        case .collapsed, .quickPrompt:
             return false
         }
     }

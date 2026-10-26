@@ -1315,6 +1315,7 @@ enum ContentFontSize {
 
 private struct AppearancePage: View {
     @ObservedObject private var l10n = L10n.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
     @AppStorage(SettingsKey.maxVisibleSessions) private var maxVisibleSessions = SettingsDefaults.maxVisibleSessions
     @AppStorage(SettingsKey.sessionListDensity) private var sessionListDensityRaw = SettingsDefaults.sessionListDensity
     @AppStorage(SettingsKey.contentFontSize) private var contentFontSize = SettingsDefaults.contentFontSize
@@ -1371,6 +1372,33 @@ private struct AppearancePage: View {
                     showDetails: showAgentDetails,
                     density: sessionListDensityBinding.wrappedValue
                 )
+            }
+
+            Section("Cyber Theme Engine") {
+                Picker("Theme Preset", selection: $themeManager.currentPresetRaw) {
+                    ForEach(ThemePreset.allCases) { preset in
+                        Text(preset.title).tag(preset.rawValue)
+                    }
+                }
+                HStack(spacing: 6) {
+                    ForEach(ThemePreset.allCases) { preset in
+                        let isSel = themeManager.currentPresetRaw == preset.rawValue
+                        Button(action: {
+                            themeManager.currentPresetRaw = preset.rawValue
+                        }) {
+                            HStack(spacing: 3) {
+                                Circle().fill(preset.primaryAccent).frame(width: 5, height: 5)
+                                Text(preset.shortTag)
+                                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(RoundedRectangle(cornerRadius: 3).fill(isSel ? preset.primaryAccent.opacity(0.18) : Color(white: 0.12)))
+                            .overlay(RoundedRectangle(cornerRadius: 3).stroke(isSel ? preset.primaryAccent : Color.clear, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
 
             Section(l10n["panel"]) {
@@ -1827,6 +1855,9 @@ private struct MascotsPage: View {
         ("Gemini", "google-antigravity", "Google Antigravity", Color(red: 0.278, green: 0.588, blue: 0.894)),
         ("AiWorkBot", "aiwork", "AiWork", Color(red: 0.12, green: 0.72, blue: 0.28)),
         ("AiWorkBot", "aiwork-cli", "AiWork CLI", Color(red: 0.12, green: 0.55, blue: 0.90)),
+        ("Neko", "neko", "Pixel Cyber Cat", Color(red: 1.0, green: 0.45, blue: 0.70)),
+        ("Mecha", "mecha", "Cyber Titan Mecha", Color(red: 0.0, green: 0.96, blue: 0.83)),
+        ("Ghost", "ghost", "8-Bit Pacman Ghost", Color(red: 0.85, green: 0.85, blue: 0.98)),
     ]
 
     var body: some View {
@@ -1923,6 +1954,7 @@ private struct MascotRow: View {
 
 private struct SoundPage: View {
     @ObservedObject private var l10n = L10n.shared
+    @ObservedObject private var soundPackManager = SoundPackManager.shared
     @AppStorage(SettingsKey.soundEnabled) private var soundEnabled = SettingsDefaults.soundEnabled
     @AppStorage(SettingsKey.soundVolume) private var soundVolume = SettingsDefaults.soundVolume
     @AppStorage(SettingsKey.soundSessionStart) private var soundSessionStart = SettingsDefaults.soundSessionStart
@@ -1986,6 +2018,25 @@ private struct SoundPage: View {
             }
 
             if soundEnabled {
+                Section("Retro Sound Pack") {
+                    Picker("Sound Pack", selection: $soundPackManager.currentPackRaw) {
+                        ForEach(SoundPack.allCases) { pack in
+                            Text(pack.title).tag(pack.rawValue)
+                        }
+                    }
+                    HStack {
+                        Text(soundPackManager.currentPack.description)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Audition") {
+                            soundPackManager.preview(pack: soundPackManager.currentPack)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+
                 Section(l10n["sessions"]) {
                     SoundEventRow(title: l10n["session_start"], subtitle: l10n["new_claude_session"], soundName: "8bit_start", isOn: $soundSessionStart)
                     SoundEventRow(title: l10n["task_complete"], subtitle: l10n["ai_completed_reply"], soundName: "8bit_complete", isOn: $soundTaskComplete)

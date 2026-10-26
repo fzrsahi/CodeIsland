@@ -441,6 +441,9 @@ struct CyberWorkspaceHUDView: View {
                 // Universal Coding Agent Quota & Token Usage Card
                 CyberAgentQuotaHUD(appState: appState)
 
+                // Real-Time Mac System Telemetry (CPU, RAM, Net, Battery)
+                CyberSystemGaugeBar()
+
                 Spacer(minLength: 0)
 
                 // Expand / Collapse Full Details Button
@@ -662,6 +665,31 @@ struct CyberWorkspaceDetailView: View {
 
                 Spacer()
 
+                // AI Commit Trigger Button
+                Button(action: {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        if manager.proposedCommitMessage.isEmpty {
+                            manager.generateAICommitMessage()
+                        } else {
+                            manager.proposedCommitMessage = ""
+                        }
+                    }
+                }) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 6.5))
+                        Text(manager.proposedCommitMessage.isEmpty ? "AI COMMIT" : "CANCEL")
+                            .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                    }
+                    .foregroundStyle(Color.black)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(red: 0.0, green: 0.96, blue: 0.83)))
+                }
+                .buttonStyle(.plain)
+                .help("Analyze workspace changes and generate a semantic Git commit message")
+
                 Button(action: { manager.refresh(force: true) }) {
                     HStack(spacing: 3) {
                         Image(systemName: "arrow.clockwise")
@@ -677,6 +705,58 @@ struct CyberWorkspaceDetailView: View {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 2)
+
+            // AI Commit Interactive Bar
+            if !manager.proposedCommitMessage.isEmpty {
+                HStack(spacing: 6) {
+                    TextField("Commit message", text: $manager.proposedCommitMessage)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(RoundedRectangle(cornerRadius: 3).fill(Color(white: 0.12)))
+
+                    Button(action: {
+                        manager.executeCommit(message: manager.proposedCommitMessage, push: false)
+                    }) {
+                        Text(manager.isCommitting ? "..." : "COMMIT")
+                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.black)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(RoundedRectangle(cornerRadius: 3).fill(Color(red: 0.0, green: 0.90, blue: 0.46)))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(manager.isCommitting)
+
+                    Button(action: {
+                        manager.executeCommit(message: manager.proposedCommitMessage, push: true)
+                    }) {
+                        HStack(spacing: 2) {
+                            Text(manager.isCommitting ? "..." : "COMMIT & PUSH")
+                                .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 6, weight: .bold))
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(RoundedRectangle(cornerRadius: 3).fill(Color(red: 0.0, green: 0.4, blue: 0.8)))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(manager.isCommitting)
+                }
+                .padding(.horizontal, 2)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            if let status = manager.commitStatusMessage {
+                Text(status)
+                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
+                    .padding(.horizontal, 2)
+            }
 
             if manager.detailTab == .graph {
                 CyberGitGraphDetailView(manager: manager)

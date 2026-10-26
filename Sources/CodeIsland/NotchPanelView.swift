@@ -140,6 +140,7 @@ struct NotchPanelView: View {
     @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @ObservedObject private var workspaceManager = WorkspaceMonitorManager.shared
+    @ObservedObject private var sys = SystemMonitorManager.shared
 
     /// Delayed hover: prevents accidental expansion when mouse passes through
     @State private var hoverTimer: Timer?
@@ -295,6 +296,9 @@ struct NotchPanelView: View {
         }
         if showIdleIndicator { return idleHovered ? nw + compactWingWidth * 2 + 80 : nw + compactWingWidth * 2 }
         if !isActive { return nw }
+        if sys.showChargingBanner && !appState.surface.isExpanded {
+            return min(320, maxPanelWidth)
+        }
         // Mini peek banner width: sleek ~330pt when toast is showing while collapsed
         if nowPlaying.showToast && !appState.surface.isExpanded {
             return min(330, maxPanelWidth)
@@ -483,8 +487,15 @@ struct NotchPanelView: View {
                 }
 
                 // Below-notch expanded content
-                if shouldShowExpanded {
-                    if nowPlaying.showToast && !appState.surface.isExpanded {
+                if shouldShowExpanded || sys.showChargingBanner {
+                    if sys.showChargingBanner && !appState.surface.isExpanded {
+                        // MagSafe Dynamic Island Charging Notification
+                        MagSafeChargingBanner(batteryLevel: sys.metrics.batteryLevel)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .top).combined(with: .opacity),
+                                removal: .move(edge: .top).combined(with: .opacity)
+                            ))
+                    } else if nowPlaying.showToast && !appState.surface.isExpanded {
                         // MINI PEEK BANNER: Buka tipis-tipis saat lagu berganti / play
                         CyberMusicMiniPeekBanner(nowPlaying: nowPlaying) {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
@@ -578,6 +589,9 @@ struct NotchPanelView: View {
                     case .completionCard:
                         SessionListView(appState: appState, onlySessionId: appState.justCompletedSessionId)
                             .transition(.blurFade.combined(with: .move(edge: .top)))
+                    case .quickPrompt:
+                        CyberQuickPromptView(appState: appState)
+                            .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
                     case .sessionList:
                         SessionListView(appState: appState, onlySessionId: nil)
                             .transition(.blurFade.combined(with: .move(edge: .top)))

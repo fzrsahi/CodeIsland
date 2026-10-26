@@ -667,6 +667,7 @@ struct ShortcutBinding {
 
 enum ShortcutAction: String, CaseIterable, Identifiable {
     case togglePanel
+    case quickPrompt
     case approve
     case approveAlways
     case deny
@@ -678,6 +679,7 @@ enum ShortcutAction: String, CaseIterable, Identifiable {
     var defaultBinding: ShortcutBinding? {
         switch self {
         case .togglePanel:    return ShortcutBinding(keyCode: 34, modifiers: [.command, .shift]) // ⌘⇧I
+        case .quickPrompt:    return ShortcutBinding(keyCode: 49, modifiers: [.command, .option]) // ⌘⌥Space
         case .approve:        return ShortcutBinding(keyCode: 0,  modifiers: [.command, .shift]) // ⌘⇧A
         case .deny:           return ShortcutBinding(keyCode: 2,  modifiers: [.command, .shift]) // ⌘⇧D
         case .approveAlways:  return nil
@@ -688,7 +690,7 @@ enum ShortcutAction: String, CaseIterable, Identifiable {
 
     var defaultEnabled: Bool {
         switch self {
-        case .togglePanel: return true
+        case .togglePanel, .quickPrompt: return true
         default: return false
         }
     }

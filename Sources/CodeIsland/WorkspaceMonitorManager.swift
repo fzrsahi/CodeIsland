@@ -77,6 +77,9 @@ public final class WorkspaceMonitorManager: ObservableObject {
     @Published public var isExpandedDetail: Bool = false
     @Published public var detailTab: WorkspaceDetailTab = .diff
     @Published public var isRefreshing: Bool = false
+    @Published public var proposedCommitMessage: String = ""
+    @Published public var isCommitting: Bool = false
+    @Published public var commitStatusMessage: String? = nil
 
     @Published public var isUserPinned: Bool = UserDefaults.standard.bool(forKey: "workspaceIsUserPinned")
     private var lastRefreshTime: Date = .distantPast
@@ -414,6 +417,100 @@ public final class WorkspaceMonitorManager: ObservableObject {
             await MainActor.run {
                 self.selectedFileDiff = finalDiff
                 self.isDiffLoading = false
+            }
+        }
+    }
+
+    // MARK: - AI Smart Git Commit
+
+    public func generateAICommitMessage() {
+        guard !changedFiles.isEmpty else {
+            proposedCommitMessage = "chore: clean up workspace"
+            return
+        }
+
+        let paths = changedFiles.map(\.path)
+        let statuses = changedFiles.map(\.status)
+
+        // Detect primary type
+        let isFix = statuses.contains("M") && paths.contains { $0.lowercased().contains("fix") || $0.lowercased().contains("bug") }
+        let isDocs = paths.allSatisfy { $0.hasSuffix(".md") || $0.hasSuffix(".txt") }
+        let isTest = paths.allSatisfy { $0.contains("Test") || $0.contains("test") }
+
+        let type: String
+        if isDocs {
+            type = "docs"
+        } else if isTest {
+            type = "test"
+        } else if isFix {
+            type = "fix"
+        } else if statuses.contains("A") || statuses.contains("??") {
+            type = "feat"
+        } else {
+            type = "feat"
+        }
+
+        // Detect primary scope
+        var scope = "core"
+        if paths.contains(where: { $0.contains("Music") || $0.contains("Lyric") }) {
+            scope = "music"
+        } else if paths.contains(where: { $0.contains("Workspace") || $0.contains("Git") }) {
+            scope = "workspace"
+        } else if paths.contains(where: { $0.contains("Notch") || $0.contains("Panel") }) {
+            scope = "notch"
+        } else if paths.contains(where: { $0.contains("Theme") || $0.contains("Style") }) {
+            scope = "theme"
+        } else if paths.contains(where: { $0.contains("Settings") }) {
+            scope = "settings"
+        } else if let first = paths.first {
+            let base = (first as NSString).lastPathComponent.components(separatedBy: ".").first ?? "core"
+            scope = base.prefix(12).lowercased()
+        }
+
+        // Summary subject
+        let count = changedFiles.count
+        let subject: String
+        if count == 1, let file = changedFiles.first {
+            subject = "\(file.status == "A" ? "add" : "update") \(file.filename)"
+        } else {
+            subject = "update \(count) files across \(scope)"
+        }
+
+        proposedCommitMessage = "\(type)(\(scope)): \(subject)"
+    }
+
+    public func executeCommit(message: String, push: Bool = false) {
+        guard !message.isEmpty, isGitRepo, !currentCwd.isEmpty else { return }
+        isCommitting = true
+        commitStatusMessage = "Staging & committing..."
+        let cwd = currentCwd
+
+        Task.detached(priority: .userInitiated) {
+            let gitBinary = "/usr/bin/git"
+            // 1. git add -A
+            _ = ProcessRunner.run(path: gitBinary, args: ["-C", cwd, "add", "-A"], timeout: 6)
+
+            // 2. git commit -m message
+            _ = ProcessRunner.run(path: gitBinary, args: ["-C", cwd, "commit", "-m", message], timeout: 8)
+
+            // 3. Optional push
+            if push {
+                await MainActor.run {
+                    self.commitStatusMessage = "Pushing to remote..."
+                }
+                _ = ProcessRunner.run(path: gitBinary, args: ["-C", cwd, "push"], timeout: 15)
+            }
+
+            await MainActor.run {
+                self.isCommitting = false
+                self.commitStatusMessage = "Committed successfully!"
+                self.proposedCommitMessage = ""
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                self.refresh(force: true)
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                    self.commitStatusMessage = nil
+                }
             }
         }
     }

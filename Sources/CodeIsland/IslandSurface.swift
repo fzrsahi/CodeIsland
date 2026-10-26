@@ -10,13 +10,15 @@ enum IslandSurface: Equatable {
     case questionCard(sessionId: String)
     /// 自动展开显示完成通知
     case completionCard(sessionId: String)
+    /// Quick prompt input bar directly under notch
+    case quickPrompt
 
     var isExpanded: Bool { self != .collapsed }
 
     /// 当前 surface 关联的 session ID（如有）
     var sessionId: String? {
         switch self {
-        case .collapsed, .sessionList: return nil
+        case .collapsed, .sessionList, .quickPrompt: return nil
         case .approvalCard(let id), .questionCard(let id), .completionCard(let id): return id
         }
     }

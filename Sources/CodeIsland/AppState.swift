@@ -245,7 +245,7 @@ final class AppState {
             switch surface {
             case .approvalCard(let sid): cardRequestId = pendingPermission(forSession: sid)?.id
             case .questionCard(let sid): cardRequestId = pendingQuestion(forSession: sid)?.id
-            case .collapsed, .sessionList, .completionCard: cardRequestId = nil
+            case .collapsed, .sessionList, .completionCard, .quickPrompt: cardRequestId = nil
             }
         }
     }
@@ -3062,9 +3062,8 @@ final class AppState {
             // An approval or question took the island meanwhile: the card
             // waits behind it again, first in line.
             if sessions[sessionId] != nil { completionQueue.insert(sessionId, at: 0) }
-        case .sessionList:
-            // The user opened the session list, which shows this finished
-            // turn as well: no card over it.
+        case .sessionList, .quickPrompt:
+            // The user opened the session list or quick prompt: no card over it.
             break
         case .collapsed, .completionCard:
             if sessions[sessionId] != nil, !tabVisible {

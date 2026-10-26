@@ -115,6 +115,8 @@ final class L10n: ObservableObject {
         "shortcut_none": "Not Set",
         "shortcut_togglePanel": "Toggle Panel",
         "shortcut_togglePanel_desc": "Open or close the CodeIsland panel",
+        "shortcut_quickPrompt": "Quick Prompt Bar",
+        "shortcut_quickPrompt_desc": "Dispatch instruction directly to active AI agent (⌘⌥Space)",
         "shortcut_approve": "Approve",
         "shortcut_approve_desc": "Approve current permission request",
         "shortcut_approveAlways": "Approve Always",

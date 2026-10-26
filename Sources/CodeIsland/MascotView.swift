@@ -75,6 +75,12 @@ struct MascotView: View {
                 AiWorkView(status: status, size: size)
             case "minimax":
                 MinimaxView(status: status, size: size)
+            case "neko", "cat":
+                NekoMascotView(status: status, size: size)
+            case "mecha", "robot":
+                MechaMascotView(status: status, size: size)
+            case "ghost", "pacman":
+                GhostMascotView(status: status, size: size)
             default:
                 ClawdView(status: status, size: size)
             }

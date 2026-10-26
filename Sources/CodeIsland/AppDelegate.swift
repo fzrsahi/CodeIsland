@@ -312,6 +312,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                 }
             }
+        case .quickPrompt:
+            if appState.surface == .quickPrompt {
+                withAnimation(NotchAnimation.close) { appState.surface = .collapsed }
+            } else {
+                withAnimation(NotchAnimation.open) {
+                    appState.surface = .quickPrompt
+                }
+            }
         // Card shortcuts act only on the card on screen (#308); with the
         // request hidden they open its card instead of acting unseen.
         case .approve, .approveAlways, .deny, .skipQuestion:

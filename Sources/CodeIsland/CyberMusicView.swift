@@ -603,6 +603,39 @@ struct SubNotchFloatingLyricCapsuleView: View {
 typealias SubNotchIntegratedLyricChinView = SubNotchFloatingLyricCapsuleView
 typealias SubNotchLyricCapsuleView = SubNotchFloatingLyricCapsuleView
 
+// MARK: - Karaoke Word-by-Word Glow View
+
+struct KaraokeLyricLineView: View {
+    let text: String
+    let isCurrent: Bool
+    let currentFraction: Double // 0.0 ... 1.0
+    let primaryColor: Color
+    var fontSize: CGFloat = 10.0
+
+    var body: some View {
+        let words = text.components(separatedBy: " ").filter { !$0.isEmpty }
+        if isCurrent && words.count > 1 {
+            let activeIdx = min(words.count - 1, max(0, Int(currentFraction * Double(words.count))))
+            HStack(spacing: 3) {
+                ForEach(Array(words.enumerated()), id: \.offset) { idx, word in
+                    let isSinging = idx == activeIdx
+                    let isPast = idx < activeIdx
+                    Text(word)
+                        .font(.system(size: fontSize, weight: isSinging ? .bold : (isPast ? .semibold : .regular), design: .monospaced))
+                        .foregroundStyle(isSinging ? primaryColor : (isPast ? Color.white.opacity(0.95) : Color.white.opacity(0.42)))
+                        .shadow(color: isSinging ? primaryColor.opacity(0.9) : Color.clear, radius: isSinging ? 4 : 0)
+                        .scaleEffect(isSinging ? 1.06 : 1.0)
+                }
+            }
+        } else {
+            Text(text)
+                .font(.system(size: fontSize, weight: isCurrent ? .bold : .regular, design: .monospaced))
+                .foregroundStyle(isCurrent ? primaryColor : Color(white: 0.45))
+                .shadow(color: isCurrent ? primaryColor.opacity(0.6) : Color.clear, radius: isCurrent ? 3 : 0)
+        }
+    }
+}
+
 // MARK: - Redesigned High-Taste Compact Music HUD View with Synced Lyrics
 
 struct CyberMusicHUDView: View {
@@ -881,16 +914,26 @@ struct CyberMusicHUDView: View {
                             LazyVStack(alignment: .leading, spacing: 3.5) {
                                 ForEach(nowPlaying.lyrics) { line in
                                     let isCurrent = (line.id == nowPlaying.currentLyricIndex)
+                                    let currentLine = nowPlaying.lyrics.first(where: { $0.id == nowPlaying.currentLyricIndex })
+                                    let nextLine = nowPlaying.lyrics.first(where: { $0.id == (nowPlaying.currentLyricIndex + 1) })
+                                    let duration = max(1.0, (nextLine?.timestamp ?? ((currentLine?.timestamp ?? 0) + 3.8)) - (currentLine?.timestamp ?? 0))
+                                    let elapsed = max(0.0, nowPlaying.playerPosition - (currentLine?.timestamp ?? 0))
+                                    let fraction = min(1.0, elapsed / duration)
+
                                     HStack(spacing: 4) {
                                         if isCurrent {
                                             Circle()
                                                 .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
                                                 .frame(width: 3, height: 3)
                                         }
-                                        Text(line.text)
-                                            .font(.system(size: isCurrent ? 10 : 8.5, weight: isCurrent ? .bold : .regular, design: .monospaced))
-                                            .foregroundStyle(isCurrent ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.45))
-                                            .lineLimit(2)
+                                        KaraokeLyricLineView(
+                                            text: line.text,
+                                            isCurrent: isCurrent,
+                                            currentFraction: fraction,
+                                            primaryColor: Color(red: 0.0, green: 0.96, blue: 0.83),
+                                            fontSize: isCurrent ? 9.5 : 8.0
+                                        )
+                                        .lineLimit(2)
                                     }
                                     .contentShape(Rectangle())
                                     .onTapGesture {

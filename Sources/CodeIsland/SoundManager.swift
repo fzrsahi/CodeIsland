@@ -91,6 +91,10 @@ class SoundManager {
            !turnFailureDebouncer.shouldPlay(key: sessionId ?? "", now: now) {
             return
         }
+        if SoundPackManager.shared.currentPack != .retro8Bit {
+            SoundPackManager.shared.play(event: cue)
+            return
+        }
         emit(sound)
     }
 
