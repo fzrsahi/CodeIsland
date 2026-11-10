@@ -2,11 +2,12 @@ import SwiftUI
 import AppKit
 import CodeIslandCore
 
-// MARK: - Minimal Git Diff Bar
+// MARK: - Minimal Git Diff Proportion Bar
 
 struct CyberDiffBarView: View {
     let insertions: Int
     let deletions: Int
+    let accentColor: Color
 
     var body: some View {
         let total = max(1, insertions + deletions)
@@ -17,7 +18,7 @@ struct CyberDiffBarView: View {
             HStack(spacing: 4) {
                 Text("+\(insertions)")
                     .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
+                    .foregroundStyle(accentColor)
 
                 Text("-\(deletions)")
                     .font(.system(size: 7.5, weight: .bold, design: .monospaced))
@@ -35,7 +36,7 @@ struct CyberDiffBarView: View {
                 HStack(spacing: 1.5) {
                     if insertions > 0 {
                         RoundedRectangle(cornerRadius: 1.5)
-                            .fill(Color(red: 0.0, green: 0.90, blue: 0.46))
+                            .fill(accentColor)
                             .frame(width: max(3, w * insFraction - 1), height: 3)
                     }
                     if deletions > 0 {
@@ -55,11 +56,12 @@ struct CyberDiffBarView: View {
     }
 }
 
-// MARK: - Minimal Git Commit Row
+// MARK: - Minimal Git Commit Timeline Row
 
 private struct MinimalCommitRow: View {
     let commit: GitCommitItem
     let isLatest: Bool
+    let accentColor: Color
 
     @State private var isHovered = false
 
@@ -71,16 +73,22 @@ private struct MinimalCommitRow: View {
         }) {
             HStack(alignment: .center, spacing: 4.5) {
                 Circle()
-                    .fill(isLatest ? Color(red: 0.0, green: 0.90, blue: 0.46) : Color(white: 0.35))
+                    .fill(isLatest ? accentColor : Color(white: 0.35))
                     .frame(width: 4, height: 4)
 
                 Text(commit.hash)
                     .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
+                    .foregroundStyle(isLatest ? accentColor : Color(white: 0.75))
 
                 Text("• \(commit.timeAgo)")
                     .font(.system(size: 6.5, design: .monospaced))
                     .foregroundStyle(Color(white: 0.45))
+
+                if !commit.author.isEmpty {
+                    Text("(\(commit.author))")
+                        .font(.system(size: 6.5, design: .monospaced))
+                        .foregroundStyle(Color(white: 0.35))
+                }
 
                 Text("•")
                     .font(.system(size: 6.5, design: .monospaced))
@@ -158,13 +166,17 @@ private struct MinimalFileRow: View {
     }
 }
 
-// MARK: - Clean Taste-Skill Workspace HUD View (Fixed Height 98pt)
+// MARK: - Taste-Skill Workspace HUD View (Fixed Height 98pt)
 
 struct CyberWorkspaceHUDView: View {
     @ObservedObject var manager: WorkspaceMonitorManager
     var appState: AppState
 
-    @State private var hoveredButton: String? = nil
+    @AppStorage(SettingsKey.workspaceAccentColor) private var workspaceAccentColorRaw = SettingsDefaults.workspaceAccentColor
+
+    private var accentColor: Color {
+        WorkspaceAccentColor(rawValue: workspaceAccentColorRaw)?.color ?? Color(red: 0.0, green: 0.90, blue: 0.46)
+    }
 
     var body: some View {
         if !manager.isGitRepo {
@@ -202,7 +214,7 @@ struct CyberWorkspaceHUDView: View {
                         .foregroundStyle(Color.black)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(RoundedRectangle(cornerRadius: 3).fill(Color(red: 0.0, green: 0.90, blue: 0.46)))
+                        .background(RoundedRectangle(cornerRadius: 3).fill(accentColor))
                     }
                     .buttonStyle(.plain)
                 }
@@ -216,7 +228,7 @@ struct CyberWorkspaceHUDView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("WORKSPACE MONITOR")
                         .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                        .foregroundStyle(accentColor)
 
                     Text("CodeIsland automatically monitors Git branch, uncommitted diffs, and commit history for your active workspace.")
                         .font(.system(size: 7.5, design: .monospaced))
@@ -267,13 +279,13 @@ struct CyberWorkspaceHUDView: View {
         } else {
             // Active Git Repository State
             HStack(alignment: .center, spacing: 10) {
-                // LEFT COLUMN: Repo, Branch, Tree Status, Diff Bar (maxWidth: .infinity)
+                // LEFT COLUMN: Repository, Branch, Tree Status, Diff Bar (maxWidth: .infinity)
                 VStack(alignment: .leading, spacing: 4.5) {
                     // Row 1: Project Name, Branch Pill, and Action Icons
                     HStack(spacing: 5) {
                         Image(systemName: "folder.fill")
                             .font(.system(size: 8.5))
-                            .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
+                            .foregroundStyle(accentColor)
 
                         Text(manager.projectName.uppercased())
                             .font(.system(size: 9.5, weight: .bold, design: .monospaced))
@@ -285,7 +297,7 @@ struct CyberWorkspaceHUDView: View {
                         HStack(spacing: 3) {
                             Image(systemName: "arrow.triangle.branch")
                                 .font(.system(size: 6.5, weight: .bold))
-                                .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
+                                .foregroundStyle(accentColor)
 
                             Text(manager.branch.isEmpty ? "main" : manager.branch)
                                 .font(.system(size: 7.5, weight: .bold, design: .monospaced))
@@ -306,7 +318,7 @@ struct CyberWorkspaceHUDView: View {
                             }) {
                                 Image(systemName: "arrow.clockwise")
                                     .font(.system(size: 7.5, weight: .semibold))
-                                    .foregroundStyle(manager.isRefreshing ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.6))
+                                    .foregroundStyle(manager.isRefreshing ? accentColor : Color(white: 0.6))
                                     .frame(width: 16, height: 16)
                                     .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(white: 0.10)))
                             }
@@ -354,16 +366,24 @@ struct CyberWorkspaceHUDView: View {
                         }
                     }
 
-                    // Row 2: Working Tree Status & Remote Sync Badges
+                    // Row 2: Working Tree Status (Staged/Unstaged or Clean) & Remote Sync Badges
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(manager.changedFiles.isEmpty ? Color(red: 0.0, green: 0.90, blue: 0.46) : Color(red: 0.96, green: 0.62, blue: 0.04))
+                            .fill(manager.changedFiles.isEmpty ? accentColor : Color(red: 0.96, green: 0.62, blue: 0.04))
                             .frame(width: 4, height: 4)
 
-                        Text(manager.changedFiles.isEmpty ? "Clean Working Tree" : "\(manager.changedFiles.count) files modified")
-                            .font(.system(size: 8, weight: .medium, design: .monospaced))
-                            .foregroundStyle(manager.changedFiles.isEmpty ? Color.white.opacity(0.85) : Color.white)
-                            .lineLimit(1)
+                        if manager.changedFiles.isEmpty {
+                            Text("Clean Working Tree")
+                                .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.85))
+                        } else {
+                            let staged = manager.stagedCount
+                            let unstaged = manager.unstagedCount
+                            let label = staged > 0 ? "\(staged) staged • \(unstaged) unstaged" : "\(unstaged) unstaged changes"
+                            Text(label)
+                                .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color.white)
+                        }
 
                         Spacer(minLength: 0)
 
@@ -373,7 +393,7 @@ struct CyberWorkspaceHUDView: View {
                                 if manager.aheadCount > 0 {
                                     Text("↑\(manager.aheadCount)")
                                         .font(.system(size: 7, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
+                                        .foregroundStyle(accentColor)
                                 }
                                 if manager.behindCount > 0 {
                                     Text("↓\(manager.behindCount)")
@@ -391,27 +411,28 @@ struct CyberWorkspaceHUDView: View {
                         }
                     }
 
-                    // Row 3: Diff Summary Bar
-                    CyberDiffBarView(insertions: manager.insertions, deletions: manager.deletions)
+                    // Row 3: Diff Summary Proportion Bar
+                    if manager.changedFiles.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.seal")
+                                .font(.system(size: 7))
+                                .foregroundStyle(accentColor.opacity(0.8))
+                            Text("Working tree clean • No pending changes")
+                                .font(.system(size: 7, design: .monospaced))
+                                .foregroundStyle(Color(white: 0.45))
+                            Spacer()
+                        }
+                    } else {
+                        CyberDiffBarView(insertions: manager.insertions, deletions: manager.deletions, accentColor: accentColor)
+                    }
 
                     Spacer(minLength: 0)
 
-                    // Row 4: Head Commit Reference or CWD Path
-                    if let latest = manager.recentCommits.first {
-                        HStack(spacing: 3) {
-                            Image(systemName: "circle.circle")
-                                .font(.system(size: 6.5))
-                                .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
-                            Text("\(latest.hash) • \(latest.timeAgo)")
-                                .font(.system(size: 6.5, design: .monospaced))
-                                .foregroundStyle(Color(white: 0.5))
-                            Text("• \(latest.message)")
-                                .font(.system(size: 6.5, design: .monospaced))
-                                .foregroundStyle(Color(white: 0.65))
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        }
-                    } else {
+                    // Row 4: Path Breadcrumb (Zero commit message duplication!)
+                    HStack(spacing: 3) {
+                        Image(systemName: "terminal")
+                            .font(.system(size: 6))
+                            .foregroundStyle(Color(white: 0.35))
                         Text(manager.currentCwd)
                             .font(.system(size: 6.5, design: .monospaced))
                             .foregroundStyle(Color(white: 0.4))
@@ -438,7 +459,7 @@ struct CyberWorkspaceHUDView: View {
                         }) {
                             Text("COMMITS (\(manager.recentCommits.count))")
                                 .font(.system(size: 7, weight: .bold, design: .monospaced))
-                                .foregroundStyle(manager.rightPaneTab == .commits ? Color(red: 0.0, green: 0.90, blue: 0.46) : Color(white: 0.5))
+                                .foregroundStyle(manager.rightPaneTab == .commits ? accentColor : Color(white: 0.5))
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1.5)
                                 .background(RoundedRectangle(cornerRadius: 2).fill(manager.rightPaneTab == .commits ? Color.white.opacity(0.08) : Color.clear))
@@ -451,7 +472,7 @@ struct CyberWorkspaceHUDView: View {
                                 manager.rightPaneTab = .changes
                             }
                         }) {
-                            Text("CHANGES (\(manager.changedFiles.count))")
+                            Text("FILES (\(manager.changedFiles.count))")
                                 .font(.system(size: 7, weight: .bold, design: .monospaced))
                                 .foregroundStyle(manager.rightPaneTab == .changes ? Color(red: 0.96, green: 0.62, blue: 0.04) : Color(white: 0.5))
                                 .padding(.horizontal, 4)
@@ -476,7 +497,7 @@ struct CyberWorkspaceHUDView: View {
                                 Image(systemName: "clock.arrow.circlepath")
                                     .font(.system(size: 11))
                                     .foregroundStyle(Color(white: 0.35))
-                                Text("No recent commits found")
+                                Text("No recent commits recorded")
                                     .font(.system(size: 7, design: .monospaced))
                                     .foregroundStyle(Color(white: 0.45))
                             }
@@ -484,7 +505,7 @@ struct CyberWorkspaceHUDView: View {
                         } else {
                             VStack(alignment: .leading, spacing: 2) {
                                 ForEach(Array(manager.recentCommits.prefix(3).enumerated()), id: \.element.id) { index, commit in
-                                    MinimalCommitRow(commit: commit, isLatest: index == 0)
+                                    MinimalCommitRow(commit: commit, isLatest: index == 0, accentColor: accentColor)
                                 }
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -494,7 +515,7 @@ struct CyberWorkspaceHUDView: View {
                             VStack(spacing: 3) {
                                 Image(systemName: "checkmark.seal.fill")
                                     .font(.system(size: 11))
-                                    .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46).opacity(0.8))
+                                    .foregroundStyle(accentColor.opacity(0.8))
                                 Text("Working tree is completely clean")
                                     .font(.system(size: 7, design: .monospaced))
                                     .foregroundStyle(Color(white: 0.45))

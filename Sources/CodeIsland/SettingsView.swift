@@ -1483,6 +1483,7 @@ private struct AppearancePage: View {
     @AppStorage(SettingsKey.showGitBranch) private var showGitBranch = SettingsDefaults.showGitBranch
     @AppStorage(SettingsKey.workspaceAutoDetect) private var workspaceAutoDetect = SettingsDefaults.workspaceAutoDetect
     @AppStorage(SettingsKey.workspaceShowRecentCommits) private var workspaceShowRecentCommits = SettingsDefaults.workspaceShowRecentCommits
+    @AppStorage(SettingsKey.workspaceAccentColor) private var workspaceAccentColor = SettingsDefaults.workspaceAccentColor
     @AppStorage(SettingsKey.showTaskProgress) private var showTaskProgress = SettingsDefaults.showTaskProgress
     @AppStorage(SettingsKey.showSessionRecap) private var showSessionRecap = SettingsDefaults.showSessionRecap
     @AppStorage(SettingsKey.showModelLabel) private var showModelLabel = SettingsDefaults.showModelLabel
@@ -1888,6 +1889,41 @@ private struct AppearancePage: View {
             }
 
             Section("Workspace & Git Monitor") {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Workspace Accent Color")
+                        Spacer()
+                        HStack(spacing: 8) {
+                            ForEach(WorkspaceAccentColor.allCases) { item in
+                                let isSelected = (workspaceAccentColor == item.rawValue)
+                                Button(action: {
+                                    workspaceAccentColor = item.rawValue
+                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                                }) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(item.color)
+                                            .frame(width: 14, height: 14)
+                                            .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+
+                                        if isSelected {
+                                            Circle()
+                                                .stroke(Color.white, lineWidth: 2)
+                                                .frame(width: 20, height: 20)
+                                        }
+                                    }
+                                    .frame(width: 22, height: 22)
+                                }
+                                .buttonStyle(.plain)
+                                .help(item.title)
+                            }
+                        }
+                    }
+                    Text("Custom illumination accent for branch tags, diff bars, and commit nodes in the Workspace tab.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+
                 VStack(alignment: .leading, spacing: 2) {
                     Toggle("Auto-Detect Active Project Workspace", isOn: $workspaceAutoDetect)
                     Text("Automatically sync the workspace tab with your active AI agent or terminal session.")

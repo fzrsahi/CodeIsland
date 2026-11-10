@@ -1739,8 +1739,11 @@ private struct RightWingPixelTabs: View {
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hoveredTab: String?
+    @AppStorage(SettingsKey.workspaceAccentColor) private var workspaceAccentColorRaw = SettingsDefaults.workspaceAccentColor
 
-    static let activeWorkspaceColor = Color(red: 0.0, green: 0.90, blue: 0.46)
+    private var activeWorkspaceColor: Color {
+        WorkspaceAccentColor(rawValue: workspaceAccentColorRaw)?.color ?? Color(red: 0.0, green: 0.90, blue: 0.46)
+    }
     static let activeMusicColor = Color(red: 1.0, green: 0.16, blue: 0.53)
     static let inactiveColor = Color.white.opacity(0.62)
 
@@ -1762,7 +1765,7 @@ private struct RightWingPixelTabs: View {
             } label: {
                 PixelText(
                     text: useShortLabels ? "WORK" : "WORKSPACE",
-                    color: isWorkspaceSelected ? Self.activeWorkspaceColor
+                    color: isWorkspaceSelected ? activeWorkspaceColor
                         : (hoveredTab == "workspace" ? .white.opacity(0.9) : Self.inactiveColor),
                     pixelSize: layout.pixelSize
                 )
@@ -1807,7 +1810,7 @@ private struct RightWingPixelTabs: View {
         .overlay(
             Rectangle()
                 .stroke(
-                    expandedTab == .workspace ? Self.activeWorkspaceColor.opacity(0.4)
+                    expandedTab == .workspace ? activeWorkspaceColor.opacity(0.4)
                         : (expandedTab == .music ? Self.activeMusicColor.opacity(0.4) : .white.opacity(0.1)),
                     lineWidth: 1
                 )

@@ -75,6 +75,8 @@ public final class WorkspaceMonitorManager: ObservableObject {
     @Published public var insertions: Int = 0
     @Published public var deletions: Int = 0
     @Published public var changedFiles: [GitFileChange] = []
+    public var stagedCount: Int { changedFiles.filter { $0.isStaged }.count }
+    public var unstagedCount: Int { changedFiles.filter { !$0.isStaged }.count }
     @Published public var recentCommits: [GitCommitItem] = []
     @Published public var selectedFilePath: String? = nil
     @Published public var selectedFileDiff: String = ""
@@ -340,7 +342,7 @@ public final class WorkspaceMonitorManager: ObservableObject {
                                 path: path,
                                 filename: filename,
                                 status: code.isEmpty ? "M" : code,
-                                isStaged: line.hasPrefix("M ") || line.hasPrefix("A ")
+                                isStaged: line.first != " " && line.first != "?"
                             ))
                         }
                     }

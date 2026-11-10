@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import ServiceManagement
 import CodeIslandCore
 
@@ -93,6 +94,50 @@ public enum FloatingLyricTextColor: String, CaseIterable, Identifiable, Sendable
     }
 }
 
+public enum WorkspaceAccentColor: String, CaseIterable, Identifiable, Sendable {
+    case theme = "theme"
+    case emerald = "emerald"
+    case cyan = "cyan"
+    case amber = "amber"
+    case pink = "pink"
+    case violet = "violet"
+    case white = "white"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .theme: return "Sync with Cyber Theme"
+        case .emerald: return "Matrix Emerald"
+        case .cyan: return "Electric Cyan"
+        case .amber: return "Retro Amber"
+        case .pink: return "Neon Pink"
+        case .violet: return "Midnight Violet"
+        case .white: return "Crisp Monochrome"
+        }
+    }
+
+    @MainActor
+    public var color: Color {
+        switch self {
+        case .theme:
+            return ThemeManager.shared.current.primaryAccent
+        case .emerald:
+            return Color(red: 0.0, green: 0.90, blue: 0.46)
+        case .cyan:
+            return Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .amber:
+            return Color(red: 1.0, green: 0.69, blue: 0.0)
+        case .pink:
+            return Color(red: 1.0, green: 0.16, blue: 0.53)
+        case .violet:
+            return Color(red: 0.69, green: 0.15, blue: 1.0)
+        case .white:
+            return Color.white
+        }
+    }
+}
+
 enum SettingsKey {
     // Language
     static let appLanguage = "appLanguage"                 // "system", "en", "zh", "zh-Hant", "de", "ja", "ko", "tr"
@@ -168,6 +213,7 @@ enum SettingsKey {
     // Workspace Monitor
     static let workspaceAutoDetect = "workspaceAutoDetect"
     static let workspaceShowRecentCommits = "workspaceShowRecentCommits"
+    static let workspaceAccentColor = "workspaceAccentColor"
 
     // Session cards
     static let showGitBranch = "showGitBranch"
@@ -314,6 +360,7 @@ struct SettingsDefaults {
     static let showGitBranch = true
     static let workspaceAutoDetect = true
     static let workspaceShowRecentCommits = true
+    static let workspaceAccentColor = WorkspaceAccentColor.emerald.rawValue
     static let showSessionRecap = true
     static let showModelLabel = false
     static let showUsageStats = true
@@ -428,6 +475,7 @@ class SettingsManager {
             SettingsKey.showGitBranch: SettingsDefaults.showGitBranch,
             SettingsKey.workspaceAutoDetect: SettingsDefaults.workspaceAutoDetect,
             SettingsKey.workspaceShowRecentCommits: SettingsDefaults.workspaceShowRecentCommits,
+            SettingsKey.workspaceAccentColor: SettingsDefaults.workspaceAccentColor,
             SettingsKey.showSessionRecap: SettingsDefaults.showSessionRecap,
             SettingsKey.showModelLabel: SettingsDefaults.showModelLabel,
             SettingsKey.showUsageStats: SettingsDefaults.showUsageStats,
