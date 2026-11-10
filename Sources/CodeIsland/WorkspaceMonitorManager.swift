@@ -55,6 +55,11 @@ public enum WorkspaceDetailTab: String, CaseIterable, Sendable {
     case graph = "GIT GRAPH"
 }
 
+public enum WorkspaceRightPaneTab: String, CaseIterable, Sendable {
+    case commits = "COMMITS"
+    case changes = "CHANGES"
+}
+
 // MARK: - Workspace Monitor Manager
 
 @MainActor
@@ -76,6 +81,7 @@ public final class WorkspaceMonitorManager: ObservableObject {
     @Published public var isDiffLoading: Bool = false
     @Published public var isExpandedDetail: Bool = false
     @Published public var detailTab: WorkspaceDetailTab = .diff
+    @Published public var rightPaneTab: WorkspaceRightPaneTab = .commits
     @Published public var isRefreshing: Bool = false
     @Published public var proposedCommitMessage: String = ""
     @Published public var isCommitting: Bool = false
@@ -118,6 +124,14 @@ public final class WorkspaceMonitorManager: ObservableObject {
         if isUserPinned && !currentCwd.isEmpty && FileManager.default.fileExists(atPath: currentCwd) {
             refresh(force: false)
             return
+        }
+
+        let autoDetect = UserDefaults.standard.object(forKey: SettingsKey.workspaceAutoDetect) as? Bool ?? SettingsDefaults.workspaceAutoDetect
+        if !autoDetect {
+            if !currentCwd.isEmpty && FileManager.default.fileExists(atPath: currentCwd) {
+                refresh(force: false)
+                return
+            }
         }
 
         let isConfigDir = { (path: String) -> Bool in
@@ -234,6 +248,17 @@ public final class WorkspaceMonitorManager: ObservableObject {
         if panel.runModal() == .OK, let url = panel.url {
             updateCwdIfNeeded(url.path, forceUserPinned: true)
         }
+    }
+
+    public func openInTerminal() {
+        guard !currentCwd.isEmpty else { return }
+        let script = "tell application \"Terminal\" to do script \"cd \(currentCwd.replacingOccurrences(of: "\"", with: "\\\""))\""
+        _ = AppleScriptRunner.osascript.evaluate(script, 1.0)
+    }
+
+    public func openInFinder() {
+        guard !currentCwd.isEmpty else { return }
+        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: currentCwd)
     }
 
     func resetToAutoDetect(appState: AppState? = nil) {

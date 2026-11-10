@@ -165,6 +165,10 @@ enum SettingsKey {
     // displays that only went to sleep do not count (see SceneMuteState)
     static let autoMuteWhenAway = "autoMuteWhenAway"
 
+    // Workspace Monitor
+    static let workspaceAutoDetect = "workspaceAutoDetect"
+    static let workspaceShowRecentCommits = "workspaceShowRecentCommits"
+
     // Session cards
     static let showGitBranch = "showGitBranch"
     static let showSessionRecap = "showSessionRecap"
@@ -308,6 +312,8 @@ struct SettingsDefaults {
     static let followUpReminderMinutes = 0
     static let autoMuteWhenAway = true
     static let showGitBranch = true
+    static let workspaceAutoDetect = true
+    static let workspaceShowRecentCommits = true
     static let showSessionRecap = true
     static let showModelLabel = false
     static let showUsageStats = true
@@ -420,6 +426,8 @@ class SettingsManager {
             SettingsKey.followUpReminderMinutes: SettingsDefaults.followUpReminderMinutes,
             SettingsKey.autoMuteWhenAway: SettingsDefaults.autoMuteWhenAway,
             SettingsKey.showGitBranch: SettingsDefaults.showGitBranch,
+            SettingsKey.workspaceAutoDetect: SettingsDefaults.workspaceAutoDetect,
+            SettingsKey.workspaceShowRecentCommits: SettingsDefaults.workspaceShowRecentCommits,
             SettingsKey.showSessionRecap: SettingsDefaults.showSessionRecap,
             SettingsKey.showModelLabel: SettingsDefaults.showModelLabel,
             SettingsKey.showUsageStats: SettingsDefaults.showUsageStats,

@@ -1481,6 +1481,8 @@ private struct AppearancePage: View {
     @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
     @AppStorage(SettingsKey.showToolStatus) private var showToolStatus = SettingsDefaults.showToolStatus
     @AppStorage(SettingsKey.showGitBranch) private var showGitBranch = SettingsDefaults.showGitBranch
+    @AppStorage(SettingsKey.workspaceAutoDetect) private var workspaceAutoDetect = SettingsDefaults.workspaceAutoDetect
+    @AppStorage(SettingsKey.workspaceShowRecentCommits) private var workspaceShowRecentCommits = SettingsDefaults.workspaceShowRecentCommits
     @AppStorage(SettingsKey.showTaskProgress) private var showTaskProgress = SettingsDefaults.showTaskProgress
     @AppStorage(SettingsKey.showSessionRecap) private var showSessionRecap = SettingsDefaults.showSessionRecap
     @AppStorage(SettingsKey.showModelLabel) private var showModelLabel = SettingsDefaults.showModelLabel
@@ -1880,6 +1882,21 @@ private struct AppearancePage: View {
                     }
 
                     Text("Fine-tune lyric sync: negative to delay lyrics, positive to advance. Applies to Notch HUD and floating lyrics.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            Section("Workspace & Git Monitor") {
+                VStack(alignment: .leading, spacing: 2) {
+                    Toggle("Auto-Detect Active Project Workspace", isOn: $workspaceAutoDetect)
+                    Text("Automatically sync the workspace tab with your active AI agent or terminal session.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Toggle("Show Recent Git Commits in Workspace Tab", isOn: $workspaceShowRecentCommits)
+                    Text("Display the latest Git commits stream inside the Dynamic Island Workspace view.")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                 }
