@@ -77,6 +77,11 @@ public final class WorkspaceMonitorManager: ObservableObject {
     @Published public var changedFiles: [GitFileChange] = []
     public var stagedCount: Int { changedFiles.filter { $0.isStaged }.count }
     public var unstagedCount: Int { changedFiles.filter { !$0.isStaged }.count }
+    public var modifiedCount: Int { changedFiles.filter { $0.status.contains("M") }.count }
+    public var untrackedCount: Int { changedFiles.filter { $0.status == "??" }.count }
+    public var deletedCount: Int { changedFiles.filter { $0.status.contains("D") }.count }
+    @Published public var stashCount: Int = 0
+    @Published public var projectType: String = ""
     @Published public var recentCommits: [GitCommitItem] = []
     @Published public var selectedFilePath: String? = nil
     @Published public var selectedFileDiff: String = ""
@@ -386,6 +391,23 @@ public final class WorkspaceMonitorManager: ObservableObject {
                 }
             }
 
+            // 5. Fetch stash count
+            var stashes = 0
+            if let stashData = ProcessRunner.run(path: gitBinary, args: ["-C", cwd, "stash", "list"], timeout: 3),
+               let stashText = String(data: stashData, encoding: .utf8) {
+                stashes = stashText.components(separatedBy: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.count
+            }
+
+            // 6. Detect project stack
+            let detectedType: String = {
+                if FileManager.default.fileExists(atPath: cwd + "/Package.swift") { return "Swift" }
+                if FileManager.default.fileExists(atPath: cwd + "/package.json") { return "Node.js" }
+                if FileManager.default.fileExists(atPath: cwd + "/Cargo.toml") { return "Rust" }
+                if FileManager.default.fileExists(atPath: cwd + "/pyproject.toml") || FileManager.default.fileExists(atPath: cwd + "/requirements.txt") { return "Python" }
+                if FileManager.default.fileExists(atPath: cwd + "/go.mod") { return "Go" }
+                return ""
+            }()
+
             let finalBranch = branchName
             let finalAhead = ahead
             let finalBehind = behind
@@ -393,6 +415,8 @@ public final class WorkspaceMonitorManager: ObservableObject {
             let finalDel = del
             let finalFiles = files
             let finalCommits = commits
+            let finalStashes = stashes
+            let finalType = detectedType
 
             await MainActor.run {
                 self.isGitRepo = true
@@ -403,6 +427,8 @@ public final class WorkspaceMonitorManager: ObservableObject {
                 self.deletions = finalDel
                 self.changedFiles = finalFiles
                 self.recentCommits = finalCommits
+                self.stashCount = finalStashes
+                self.projectType = finalType
                 self.isRefreshing = false
 
                 // If a file was selected, refresh its diff

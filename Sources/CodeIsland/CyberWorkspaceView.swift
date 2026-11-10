@@ -2,56 +2,134 @@ import SwiftUI
 import AppKit
 import CodeIslandCore
 
-// MARK: - Minimal Git Diff Proportion Bar
+// MARK: - Git Workspace Status Chips (Replaces the empty +0 lines diff bar)
 
-struct CyberDiffBarView: View {
-    let insertions: Int
-    let deletions: Int
+struct GitWorkspaceChipsView: View {
+    @ObservedObject var manager: WorkspaceMonitorManager
     let accentColor: Color
 
     var body: some View {
-        let total = max(1, insertions + deletions)
-        let insFraction = CGFloat(insertions) / CGFloat(total)
-        let delFraction = CGFloat(deletions) / CGFloat(total)
-
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
-                Text("+\(insertions)")
-                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(accentColor)
-
-                Text("-\(deletions)")
-                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color(red: 1.0, green: 0.16, blue: 0.53))
-
-                Spacer()
-
-                Text("\(insertions + deletions) lines")
-                    .font(.system(size: 7, design: .monospaced))
-                    .foregroundStyle(Color(white: 0.45))
-            }
-
-            GeometryReader { geo in
-                let w = geo.size.width
-                HStack(spacing: 1.5) {
-                    if insertions > 0 {
-                        RoundedRectangle(cornerRadius: 1.5)
-                            .fill(accentColor)
-                            .frame(width: max(3, w * insFraction - 1), height: 3)
+        HStack(spacing: 4.5) {
+            if manager.changedFiles.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.system(size: 7))
+                        .foregroundStyle(accentColor)
+                    Text("Working tree clean • No pending changes")
+                        .font(.system(size: 7, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color(white: 0.55))
+                }
+            } else {
+                // Modified chip
+                if manager.modifiedCount > 0 {
+                    HStack(spacing: 3) {
+                        Circle()
+                            .fill(Color(red: 0.96, green: 0.62, blue: 0.04))
+                            .frame(width: 3.5, height: 3.5)
+                        Text("\(manager.modifiedCount) mod")
+                            .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(red: 0.96, green: 0.62, blue: 0.04))
                     }
-                    if deletions > 0 {
-                        RoundedRectangle(cornerRadius: 1.5)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1.5)
+                    .background(RoundedRectangle(cornerRadius: 2).fill(Color(red: 0.96, green: 0.62, blue: 0.04).opacity(0.14)))
+                }
+
+                // Untracked / New chip
+                if manager.untrackedCount > 0 {
+                    HStack(spacing: 3) {
+                        Circle()
+                            .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
+                            .frame(width: 3.5, height: 3.5)
+                        Text("\(manager.untrackedCount) untracked")
+                            .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1.5)
+                    .background(RoundedRectangle(cornerRadius: 2).fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.14)))
+                }
+
+                // Deleted chip
+                if manager.deletedCount > 0 {
+                    HStack(spacing: 3) {
+                        Circle()
                             .fill(Color(red: 1.0, green: 0.16, blue: 0.53))
-                            .frame(width: max(3, w * delFraction - 1), height: 3)
+                            .frame(width: 3.5, height: 3.5)
+                        Text("\(manager.deletedCount) del")
+                            .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(red: 1.0, green: 0.16, blue: 0.53))
                     }
-                    if insertions == 0 && deletions == 0 {
-                        RoundedRectangle(cornerRadius: 1.5)
-                            .fill(Color(white: 0.15))
-                            .frame(height: 3)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1.5)
+                    .background(RoundedRectangle(cornerRadius: 2).fill(Color(red: 1.0, green: 0.16, blue: 0.53).opacity(0.14)))
+                }
+
+                // Staged chip (if any)
+                if manager.stagedCount > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 5.5, weight: .bold))
+                            .foregroundStyle(accentColor)
+                        Text("\(manager.stagedCount) staged")
+                            .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(accentColor)
                     }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1.5)
+                    .background(RoundedRectangle(cornerRadius: 2).fill(accentColor.opacity(0.14)))
+                }
+
+                // Line delta counts (ONLY when actual non-zero insertions or deletions exist!)
+                if manager.insertions > 0 || manager.deletions > 0 {
+                    HStack(spacing: 2.5) {
+                        if manager.insertions > 0 {
+                            Text("+\(manager.insertions)")
+                                .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(accentColor)
+                        }
+                        if manager.deletions > 0 {
+                            Text("-\(manager.deletions)")
+                                .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color(red: 1.0, green: 0.16, blue: 0.53))
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1.5)
+                    .background(RoundedRectangle(cornerRadius: 2).fill(Color(white: 0.10)))
                 }
             }
-            .frame(height: 3)
+
+            Spacer(minLength: 0)
+
+            // Stashes badge or Detected project stack badge
+            if manager.stashCount > 0 {
+                HStack(spacing: 3) {
+                    Image(systemName: "archivebox.fill")
+                        .font(.system(size: 6.5))
+                        .foregroundStyle(Color(red: 0.69, green: 0.15, blue: 1.0))
+                    Text("\(manager.stashCount) stash\(manager.stashCount > 1 ? "es" : "")")
+                        .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(red: 0.69, green: 0.15, blue: 1.0))
+                }
+                .padding(.horizontal, 4.5)
+                .padding(.vertical, 1.5)
+                .background(RoundedRectangle(cornerRadius: 2).fill(Color(red: 0.69, green: 0.15, blue: 1.0).opacity(0.14)))
+                .help("\(manager.stashCount) stashed changes in git")
+            } else if !manager.projectType.isEmpty {
+                HStack(spacing: 2.5) {
+                    Circle()
+                        .fill(accentColor.opacity(0.7))
+                        .frame(width: 3, height: 3)
+                    Text(manager.projectType.uppercased())
+                        .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(white: 0.5))
+                }
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1.5)
+                .background(RoundedRectangle(cornerRadius: 2).fill(Color(white: 0.09)))
+                .help("Detected project environment: \(manager.projectType)")
+            }
         }
     }
 }
@@ -366,7 +444,7 @@ struct CyberWorkspaceHUDView: View {
                         }
                     }
 
-                    // Row 2: Working Tree Status (Staged/Unstaged or Clean) & Remote Sync Badges
+                    // Row 2: Working Tree Status & Remote Sync Badges
                     HStack(spacing: 4) {
                         Circle()
                             .fill(manager.changedFiles.isEmpty ? accentColor : Color(red: 0.96, green: 0.62, blue: 0.04))
@@ -411,24 +489,12 @@ struct CyberWorkspaceHUDView: View {
                         }
                     }
 
-                    // Row 3: Diff Summary Proportion Bar
-                    if manager.changedFiles.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "checkmark.seal")
-                                .font(.system(size: 7))
-                                .foregroundStyle(accentColor.opacity(0.8))
-                            Text("Working tree clean • No pending changes")
-                                .font(.system(size: 7, design: .monospaced))
-                                .foregroundStyle(Color(white: 0.45))
-                            Spacer()
-                        }
-                    } else {
-                        CyberDiffBarView(insertions: manager.insertions, deletions: manager.deletions, accentColor: accentColor)
-                    }
+                    // Row 3: Git Status Chips (Replaced the empty +0 lines diff bar)
+                    GitWorkspaceChipsView(manager: manager, accentColor: accentColor)
 
                     Spacer(minLength: 0)
 
-                    // Row 4: Path Breadcrumb (Zero commit message duplication!)
+                    // Row 4: Path Breadcrumb
                     HStack(spacing: 3) {
                         Image(systemName: "terminal")
                             .font(.system(size: 6))
