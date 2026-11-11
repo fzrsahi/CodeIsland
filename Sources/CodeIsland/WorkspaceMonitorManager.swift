@@ -400,11 +400,28 @@ public final class WorkspaceMonitorManager: ObservableObject {
 
             // 6. Detect project stack
             let detectedType: String = {
-                if FileManager.default.fileExists(atPath: cwd + "/Package.swift") { return "Swift" }
-                if FileManager.default.fileExists(atPath: cwd + "/package.json") { return "Node.js" }
-                if FileManager.default.fileExists(atPath: cwd + "/Cargo.toml") { return "Rust" }
-                if FileManager.default.fileExists(atPath: cwd + "/pyproject.toml") || FileManager.default.fileExists(atPath: cwd + "/requirements.txt") { return "Python" }
-                if FileManager.default.fileExists(atPath: cwd + "/go.mod") { return "Go" }
+                if FileManager.default.fileExists(atPath: cwd + "/Package.swift") ||
+                   (try? FileManager.default.contentsOfDirectory(atPath: cwd).contains(where: { $0.hasSuffix(".xcodeproj") || $0.hasSuffix(".xcworkspace") })) == true {
+                    return "Swift"
+                }
+                if FileManager.default.fileExists(atPath: cwd + "/package.json") ||
+                   FileManager.default.fileExists(atPath: cwd + "/pnpm-lock.yaml") ||
+                   FileManager.default.fileExists(atPath: cwd + "/yarn.lock") ||
+                   FileManager.default.fileExists(atPath: cwd + "/bun.lockb") {
+                    return "Node.js"
+                }
+                if FileManager.default.fileExists(atPath: cwd + "/Cargo.toml") {
+                    return "Rust"
+                }
+                if FileManager.default.fileExists(atPath: cwd + "/pyproject.toml") ||
+                   FileManager.default.fileExists(atPath: cwd + "/requirements.txt") ||
+                   FileManager.default.fileExists(atPath: cwd + "/Pipfile") ||
+                   FileManager.default.fileExists(atPath: cwd + "/setup.py") {
+                    return "Python"
+                }
+                if FileManager.default.fileExists(atPath: cwd + "/go.mod") {
+                    return "Go"
+                }
                 return ""
             }()
 

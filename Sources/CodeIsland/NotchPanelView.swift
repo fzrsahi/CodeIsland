@@ -587,13 +587,13 @@ struct NotchPanelView: View {
                             .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
                         }
                     case .completionCard:
-                        SessionListView(appState: appState, onlySessionId: appState.justCompletedSessionId)
+                        SessionListView(appState: appState, onlySessionId: appState.justCompletedSessionId, expandedTab: $expandedTab)
                             .transition(.blurFade.combined(with: .move(edge: .top)))
                     case .quickPrompt:
                         CyberQuickPromptView(appState: appState)
                             .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
                     case .sessionList:
-                        SessionListView(appState: appState, onlySessionId: nil)
+                        SessionListView(appState: appState, onlySessionId: nil, expandedTab: $expandedTab)
                             .transition(.blurFade.combined(with: .move(edge: .top)))
                     case .collapsed:
                         EmptyView()
@@ -3508,6 +3508,7 @@ private struct SessionListView: View {
     var appState: AppState
     /// When set, only show this session (auto-expand on completion)
     var onlySessionId: String? = nil
+    var expandedTab: Binding<ExpandedContentTab>? = nil
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
     @AppStorage(SettingsKey.maxVisibleSessions) private var maxVisibleSessions = SettingsDefaults.maxVisibleSessions
     @AppStorage(SettingsKey.showUsageStats) private var showUsageStats = SettingsDefaults.showUsageStats
@@ -3732,26 +3733,36 @@ private struct SessionListView: View {
             }
         }
 
-        VStack(spacing: 0) {
-            if needsScroll {
-                ThinScrollView(maxHeight: SessionListMetrics.scrollHeight(maxVisibleSessions: maxVisibleSessions)) {
+        if onlySessionId == nil && groupingMode == "all", let tabBinding = expandedTab {
+            ExecutiveIslandOverviewView(
+                appState: appState,
+                workspaceManager: WorkspaceMonitorManager.shared,
+                nowPlaying: NowPlayingManager.shared,
+                expandedTab: tabBinding,
+                groupingMode: $groupingMode
+            )
+        } else {
+            VStack(spacing: 0) {
+                if needsScroll {
+                    ThinScrollView(maxHeight: SessionListMetrics.scrollHeight(maxVisibleSessions: maxVisibleSessions)) {
+                        content
+                    }
+                    .clipShape(
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: 0, bottomLeadingRadius: 20,
+                            bottomTrailingRadius: 20, topTrailingRadius: 0,
+                            style: .continuous
+                        )
+                    )
+                } else {
                     content
                 }
-                .clipShape(
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: 0, bottomLeadingRadius: 20,
-                        bottomTrailingRadius: 20, topTrailingRadius: 0,
-                        style: .continuous
-                    )
-                )
-            } else {
-                content
-            }
 
-            // Full session list only — the completion card stays focused on
-            // the finished session.
-            if onlySessionId == nil {
-                SessionListFooter(appState: appState, showUsageStats: showUsageStats, showClaudeQuota: showClaudeQuota)
+                // Full session list only — the completion card stays focused on
+                // the finished session.
+                if onlySessionId == nil {
+                    SessionListFooter(appState: appState, showUsageStats: showUsageStats, showClaudeQuota: showClaudeQuota)
+                }
             }
         }
     }
