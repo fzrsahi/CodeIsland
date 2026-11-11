@@ -1486,6 +1486,8 @@ private struct AppearancePage: View {
     @AppStorage(SettingsKey.workspaceAccentColor) private var workspaceAccentColor = SettingsDefaults.workspaceAccentColor
     @AppStorage(SettingsKey.islandTabStyle) private var islandTabStyle = SettingsDefaults.islandTabStyle
     @AppStorage(SettingsKey.islandTabLayoutMode) private var islandTabLayoutMode = SettingsDefaults.islandTabLayoutMode
+    @AppStorage(SettingsKey.agentFilterStyle) private var agentFilterStyle = SettingsDefaults.agentFilterStyle
+    @AppStorage(SettingsKey.showAgentFilterCounts) private var showAgentFilterCounts = SettingsDefaults.showAgentFilterCounts
     @AppStorage(SettingsKey.showTaskProgress) private var showTaskProgress = SettingsDefaults.showTaskProgress
     @AppStorage(SettingsKey.showSessionRecap) private var showSessionRecap = SettingsDefaults.showSessionRecap
     @AppStorage(SettingsKey.showModelLabel) private var showModelLabel = SettingsDefaults.showModelLabel
@@ -1890,32 +1892,49 @@ private struct AppearancePage: View {
                 }
             }
 
-            Section("Island Navigation Tabs") {
+            Section("Island Navigation Tabs (4 Tabs)") {
                 VStack(alignment: .leading, spacing: 10) {
-                    Picker("Dock Layout Mode", selection: $islandTabLayoutMode) {
+                    Picker("Tab Position & Layout", selection: $islandTabLayoutMode) {
                         ForEach(IslandTabLayoutMode.allCases) { mode in
                             Text(mode.title).tag(mode.rawValue)
                         }
                     }
 
-                    Text("Choose how the 4 tabs are arranged: Unified Center Dock puts all 4 tabs together without any notch gap, Left Wing groups all 4 tabs on the left, or Split Wings.")
+                    Text("Choose how the 4 Notch tabs (ALL · AGENTS · WORKSPACE · MUSIC) are placed:\n• Unified Center Dock: Tab bar bersatu di tengah di bawah notch.\n• Split Bilateral Wings: Layout sebelumnya, 2 tab di sayap kiri (ALL, AGENTS) dan 2 tab di sayap kanan (WORKSPACE, MUSIC).\n• Left Wing Dock: Semua 4 tab digabung di sisi kiri notch.")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
 
                     Divider()
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Picker("Tab Design Style", selection: $islandTabStyle) {
+                        Picker("Tab Aesthetic Style", selection: $islandTabStyle) {
                             ForEach(IslandTabStyle.allCases) { style in
                                 Text(style.title).tag(style.rawValue)
                             }
                         }
                         .pickerStyle(.segmented)
 
-                        Text("Customize the aesthetic style for the 4 Notch tabs (ALL · AGENTS · WORKSPACE · MUSIC).")
+                        Text("Pilih gaya visual untuk 4 tab: Minimal Blade (underline), Modern Capsule (pill), Cyber Pixel, atau Machined Console.")
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                     }
+                }
+            }
+
+            Section("Agents Tab Sub-Filter") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Picker("Filter Design Style", selection: $agentFilterStyle) {
+                        ForEach(AgentFilterStyle.allCases) { style in
+                            Text(style.title).tag(style.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Toggle("Show Session Count Badges", isOn: $showAgentFilterCounts)
+
+                    Text("Kustomisasi tampilan sub-filter di dalam tab AGENTS (ALL · RUNNING · WAITING · BY STATUS · BY AGENT). Anda juga dapat klik kanan langsung pada filter bar untuk mengganti style secara instan.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
                 }
             }
 

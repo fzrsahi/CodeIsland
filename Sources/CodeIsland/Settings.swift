@@ -158,16 +158,34 @@ public enum IslandTabStyle: String, CaseIterable, Identifiable, Sendable {
 
 public enum IslandTabLayoutMode: String, CaseIterable, Identifiable, Sendable {
     case unifiedTop = "unifiedTop"
-    case leftWing = "leftWing"
     case splitWings = "splitWings"
+    case leftWing = "leftWing"
 
     public var id: String { rawValue }
 
     public var title: String {
         switch self {
-        case .unifiedTop: return "Unified Center Dock (Together)"
-        case .leftWing: return "Left Wing (All 4 Tabs Left)"
-        case .splitWings: return "Split Bilateral Wings (2 Left · 2 Right)"
+        case .unifiedTop: return "🌟 Unified Center Dock (Baru - 4 Tab di Tengah)"
+        case .splitWings: return "⚔️ Split Bilateral Wings (Sebelumnya - 2 Kiri & 2 Kanan Notch)"
+        case .leftWing: return "👈 Left Wing Dock (Semua 4 Tab di Sayap Kiri)"
+        }
+    }
+}
+
+public enum AgentFilterStyle: String, CaseIterable, Identifiable, Sendable {
+    case capsule = "capsule"
+    case minimal = "minimal"
+    case segmented = "segmented"
+    case tag = "tag"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .capsule: return "Modern Capsule (Pill)"
+        case .minimal: return "Minimal Blade (Underline)"
+        case .segmented: return "Cyber Segmented (Track)"
+        case .tag: return "Machined Tag ([ TAG ])"
         }
     }
 }
@@ -250,6 +268,8 @@ enum SettingsKey {
     static let workspaceAccentColor = "workspaceAccentColor"
     static let islandTabStyle = "islandTabStyle"
     static let islandTabLayoutMode = "islandTabLayoutMode"
+    static let agentFilterStyle = "agentFilterStyle"
+    static let showAgentFilterCounts = "showAgentFilterCounts"
 
     // Session cards
     static let showGitBranch = "showGitBranch"
@@ -399,6 +419,8 @@ struct SettingsDefaults {
     static let workspaceAccentColor = WorkspaceAccentColor.emerald.rawValue
     static let islandTabStyle = IslandTabStyle.minimal.rawValue
     static let islandTabLayoutMode = IslandTabLayoutMode.unifiedTop.rawValue
+    static let agentFilterStyle = AgentFilterStyle.capsule.rawValue
+    static let showAgentFilterCounts = true
     static let showSessionRecap = true
     static let showModelLabel = false
     static let showUsageStats = true
@@ -516,6 +538,8 @@ class SettingsManager {
             SettingsKey.workspaceAccentColor: SettingsDefaults.workspaceAccentColor,
             SettingsKey.islandTabStyle: SettingsDefaults.islandTabStyle,
             SettingsKey.islandTabLayoutMode: SettingsDefaults.islandTabLayoutMode,
+            SettingsKey.agentFilterStyle: SettingsDefaults.agentFilterStyle,
+            SettingsKey.showAgentFilterCounts: SettingsDefaults.showAgentFilterCounts,
             SettingsKey.showSessionRecap: SettingsDefaults.showSessionRecap,
             SettingsKey.showModelLabel: SettingsDefaults.showModelLabel,
             SettingsKey.showUsageStats: SettingsDefaults.showUsageStats,
@@ -671,6 +695,19 @@ class SettingsManager {
     var sessionGroupingMode: String {
         get { defaults.string(forKey: SettingsKey.sessionGroupingMode) ?? SettingsDefaults.sessionGroupingMode }
         set { defaults.set(newValue, forKey: SettingsKey.sessionGroupingMode) }
+    }
+
+    var agentFilterStyle: AgentFilterStyle {
+        get {
+            let raw = defaults.string(forKey: SettingsKey.agentFilterStyle) ?? SettingsDefaults.agentFilterStyle
+            return AgentFilterStyle(rawValue: raw) ?? .capsule
+        }
+        set { defaults.set(newValue.rawValue, forKey: SettingsKey.agentFilterStyle) }
+    }
+
+    var showAgentFilterCounts: Bool {
+        get { defaults.bool(forKey: SettingsKey.showAgentFilterCounts) }
+        set { defaults.set(newValue, forKey: SettingsKey.showAgentFilterCounts) }
     }
 
     var defaultSource: String {

@@ -44,7 +44,7 @@ struct ProjectStackBadgeView: View {
     }
 }
 
-// MARK: - Git Workspace Status Chips (Replaces empty bars & duplicate info)
+// MARK: - Git Workspace Status Chips
 
 struct GitWorkspaceChipsView: View {
     @ObservedObject var manager: WorkspaceMonitorManager
@@ -53,13 +53,13 @@ struct GitWorkspaceChipsView: View {
     var body: some View {
         HStack(spacing: 4.5) {
             if manager.changedFiles.isEmpty {
-                HStack(spacing: 4) {
+                HStack(spacing: 4.5) {
                     Image(systemName: "checkmark.shield.fill")
-                        .font(.system(size: 9.5))
+                        .font(.system(size: 10))
                         .foregroundStyle(accentColor)
                     Text("Working tree clean • Up to date")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.85))
+                        .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.90))
                 }
             } else {
                 // Modified chip
@@ -131,7 +131,7 @@ struct GitWorkspaceChipsView: View {
                     .background(RoundedRectangle(cornerRadius: 3).fill(accentColor.opacity(0.18)))
                 }
 
-                // Line delta counts (ONLY when actual non-zero insertions or deletions exist!)
+                // Line delta counts
                 if manager.insertions > 0 || manager.deletions > 0 {
                     HStack(spacing: 3.5) {
                         if manager.insertions > 0 {
@@ -165,7 +165,7 @@ struct GitWorkspaceChipsView: View {
                 }
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2)
-                .background(RoundedRectangle(cornerRadius: 2).fill(Color(red: 0.69, green: 0.15, blue: 1.0).opacity(0.14)))
+                .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(red: 0.69, green: 0.15, blue: 1.0).opacity(0.18)))
                 .help("\(manager.stashCount) stashed changes in git")
             } else if !manager.projectType.isEmpty {
                 ProjectStackBadgeView(stack: manager.projectType, accentColor: accentColor)
@@ -190,66 +190,28 @@ private struct GitGraphCommitRow: View {
             NSPasteboard.general.setString(commit.hash, forType: .string)
             NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
         }) {
-            HStack(alignment: .top, spacing: 5.5) {
-                // Visual Git Graph Spine Track
-                ZStack(alignment: .top) {
-                    // Continuous vertical rail line
-                    VStack(spacing: 0) {
-                        if !isHead {
-                            Rectangle()
-                                .fill(Color(white: 0.22))
-                                .frame(width: 1.5, height: 4)
-                        } else {
-                            Spacer().frame(height: 4)
-                        }
-
-                        // Gap where the node circle sits
-                        Spacer().frame(height: 7)
-
-                        if !isLast {
-                            Rectangle()
-                                .fill(Color(white: 0.22))
-                                .frame(width: 1.5)
-                        }
-                    }
-
-                    // Node Dot / Ring
-                    Group {
-                        if isHead {
-                            ZStack {
-                                Circle()
-                                    .stroke(accentColor.opacity(0.4), lineWidth: 1.5)
-                                    .frame(width: 8.5, height: 8.5)
-                                Circle()
-                                    .fill(accentColor)
-                                    .frame(width: 4.5, height: 4.5)
-                            }
-                        } else {
-                            Circle()
-                                .fill(isHovered ? accentColor : Color(white: 0.40))
-                                .frame(width: 5, height: 5)
-                        }
-                    }
-                    .padding(.top, 2.5)
-                }
-                .frame(width: 10, height: 21)
+            HStack(spacing: 8) {
+                // Connected Node Dot
+                Circle()
+                    .fill(isHead ? accentColor : (isHovered ? Color.white : Color(white: 0.45)))
+                    .frame(width: isHead ? 6 : 5, height: isHead ? 6 : 5)
 
                 // Commit Details
                 VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 4.5) {
                         Text(commit.hash)
-                            .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundStyle(isHead ? accentColor : (isHovered ? Color.white : Color(white: 0.90)))
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
                             .background(
-                                RoundedRectangle(cornerRadius: 2)
+                                RoundedRectangle(cornerRadius: 2.5)
                                     .fill(isHead ? accentColor.opacity(0.18) : Color.white.opacity(0.08))
                             )
 
                         if isHead {
                             Text("HEAD")
-                                .font(.system(size: 8, weight: .black, design: .monospaced))
+                                .font(.system(size: 8.5, weight: .black, design: .monospaced))
                                 .foregroundStyle(Color.black)
                                 .padding(.horizontal, 3.5)
                                 .padding(.vertical, 1)
@@ -257,12 +219,12 @@ private struct GitGraphCommitRow: View {
                         }
 
                         Text(commit.timeAgo)
-                            .font(.system(size: 9, design: .monospaced))
+                            .font(.system(size: 9.5, design: .monospaced))
                             .foregroundStyle(Color(white: 0.55))
 
                         if !commit.author.isEmpty {
                             Text("• \(commit.author)")
-                                .font(.system(size: 9, design: .monospaced))
+                                .font(.system(size: 9.5, design: .monospaced))
                                 .foregroundStyle(Color(white: 0.45))
                                 .lineLimit(1)
                         }
@@ -271,17 +233,17 @@ private struct GitGraphCommitRow: View {
                     }
 
                     Text(commit.message)
-                        .font(.system(size: 10, weight: isHead ? .semibold : .regular, design: .monospaced))
+                        .font(.system(size: 10.5, weight: isHead ? .semibold : .regular, design: .monospaced))
                         .foregroundStyle(isHovered ? Color.white : (isHead ? Color.white.opacity(0.96) : Color(white: 0.78)))
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 1.5)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2.5)
             .background(
-                RoundedRectangle(cornerRadius: 2.5)
+                RoundedRectangle(cornerRadius: 4)
                     .fill(isHovered ? Color.white.opacity(0.08) : Color.clear)
             )
             .contentShape(Rectangle())
@@ -289,40 +251,6 @@ private struct GitGraphCommitRow: View {
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .help("Click to copy commit hash \(commit.hash)")
-    }
-}
-
-// MARK: - Git Graph Spine Container View
-
-private struct GitGraphSpineView: View {
-    let commits: [GitCommitItem]
-    let accentColor: Color
-
-    var body: some View {
-        if commits.isEmpty {
-            VStack(spacing: 3) {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color(white: 0.35))
-                Text("No recent commits recorded")
-                    .font(.system(size: 7, design: .monospaced))
-                    .foregroundStyle(Color(white: 0.45))
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            VStack(alignment: .leading, spacing: 0) {
-                let displayCommits = Array(commits.prefix(3))
-                ForEach(Array(displayCommits.enumerated()), id: \.element.id) { index, commit in
-                    GitGraphCommitRow(
-                        commit: commit,
-                        isHead: index == 0,
-                        isLast: index == displayCommits.count - 1,
-                        accentColor: accentColor
-                    )
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
     }
 }
 
@@ -342,14 +270,14 @@ private struct MinimalFileRow: View {
         }) {
             HStack(spacing: 5) {
                 Text(file.status)
-                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(file.statusColor)
-                    .frame(width: 16)
+                    .frame(width: 18)
                     .padding(.vertical, 1)
-                    .background(RoundedRectangle(cornerRadius: 2).fill(file.statusColor.opacity(0.14)))
+                    .background(RoundedRectangle(cornerRadius: 2.5).fill(file.statusColor.opacity(0.18)))
 
                 Text(file.filename)
-                    .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Color.white.opacity(isHovered ? 1.0 : 0.90))
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -357,16 +285,16 @@ private struct MinimalFileRow: View {
                 Spacer(minLength: 4)
 
                 Text(file.path)
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 9.5, design: .monospaced))
                     .foregroundStyle(Color(white: 0.45))
                     .lineLimit(1)
                     .truncationMode(.head)
             }
-            .padding(.horizontal, 5)
+            .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(
-                RoundedRectangle(cornerRadius: 2.5)
-                    .fill(isHovered ? Color(white: 0.12) : Color(white: 0.06))
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(isHovered ? Color.white.opacity(0.12) : Color.white.opacity(0.04))
             )
             .contentShape(Rectangle())
         }
@@ -393,9 +321,9 @@ private struct MachinedActionButton: View {
             action()
         }) {
             Image(systemName: icon)
-                .font(.system(size: 9.5, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(isAccent ? accentColor : (isHovered ? Color.white : Color(white: 0.70)))
-                .frame(width: 20, height: 20)
+                .frame(width: 22, height: 22)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
                         .fill(isHovered ? Color.white.opacity(0.16) : Color.white.opacity(0.06))
@@ -407,7 +335,7 @@ private struct MachinedActionButton: View {
     }
 }
 
-// MARK: - Taste-Skill Workspace HUD View (Fixed Height 86pt inside 98pt panel)
+// MARK: - Unified Taste-Skill Workspace HUD View
 
 struct CyberWorkspaceHUDView: View {
     @ObservedObject var manager: WorkspaceMonitorManager
@@ -422,21 +350,21 @@ struct CyberWorkspaceHUDView: View {
     var body: some View {
         if !manager.isGitRepo {
             // Empty / Non-Git Workspace State
-            HStack(alignment: .center, spacing: 10) {
+            HStack(alignment: .center, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 5) {
                         Image(systemName: "folder.badge.questionmark")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(Color(red: 0.96, green: 0.62, blue: 0.04))
 
                         Text("NO GIT REPOSITORY")
-                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.white)
                     }
 
                     Text(manager.currentCwd.isEmpty ? "No active workspace folder selected" : manager.currentCwd)
-                        .font(.system(size: 7.5, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.5))
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(Color(white: 0.55))
                         .lineLimit(1)
                         .truncationMode(.middle)
 
@@ -448,32 +376,27 @@ struct CyberWorkspaceHUDView: View {
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "folder.fill")
-                                .font(.system(size: 7.5))
+                                .font(.system(size: 8.5))
                             Text("CHOOSE FOLDER")
-                                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                         }
                         .foregroundStyle(Color.black)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(RoundedRectangle(cornerRadius: 3).fill(accentColor))
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3.5)
+                        .background(RoundedRectangle(cornerRadius: 3.5).fill(accentColor))
                     }
                     .buttonStyle(.plain)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Divider Rule
-                Rectangle()
-                    .fill(Color(white: 0.12))
-                    .frame(width: 1, height: 86)
-
                 VStack(alignment: .leading, spacing: 4) {
                     Text("WORKSPACE MONITOR")
-                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                         .foregroundStyle(accentColor)
 
                     Text("CodeIsland automatically monitors Git branch, uncommitted diffs, and commit history for your active workspace.")
-                        .font(.system(size: 7.5, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.5))
+                        .font(.system(size: 8.5, design: .monospaced))
+                        .foregroundStyle(Color(white: 0.55))
                         .lineSpacing(2)
 
                     Spacer(minLength: 0)
@@ -485,13 +408,13 @@ struct CyberWorkspaceHUDView: View {
                         }) {
                             HStack(spacing: 3) {
                                 Image(systemName: "terminal")
-                                    .font(.system(size: 7))
+                                    .font(.system(size: 8))
                                 Text("OPEN TERMINAL")
-                                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 8, weight: .bold, design: .monospaced))
                             }
                             .foregroundStyle(Color.white.opacity(0.85))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3.5)
                             .background(RoundedRectangle(cornerRadius: 3).fill(Color(white: 0.12)))
                         }
                         .buttonStyle(.plain)
@@ -502,13 +425,13 @@ struct CyberWorkspaceHUDView: View {
                         }) {
                             HStack(spacing: 3) {
                                 Image(systemName: "arrow.clockwise")
-                                    .font(.system(size: 7))
+                                    .font(.system(size: 8))
                                 Text("DETECT")
-                                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 8, weight: .bold, design: .monospaced))
                             }
                             .foregroundStyle(Color(white: 0.7))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3.5)
                             .background(RoundedRectangle(cornerRadius: 3).fill(Color(white: 0.08)))
                         }
                         .buttonStyle(.plain)
@@ -516,20 +439,20 @@ struct CyberWorkspaceHUDView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(height: 86)
+            .frame(height: 92)
         } else {
             // Active Git Repository State - Sculpted Borderless Cockpit
-            HStack(alignment: .top, spacing: 12) {
-                // LEFT PANEL: Repository & Working Tree Cockpit
+            HStack(alignment: .top, spacing: 14) {
+                // LEFT PANEL: Repository & Working Tree Cockpit (~52% width)
                 VStack(alignment: .leading, spacing: 6) {
                     // Row 1: Project Name, Branch Pill, Ahead/Behind, and In-Sync indicator
                     HStack(spacing: 5) {
                         Image(systemName: "folder.fill")
-                            .font(.system(size: 11.5))
+                            .font(.system(size: 12))
                             .foregroundStyle(accentColor)
 
                         Text(manager.projectName.uppercased())
-                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .font(.system(size: 13.5, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.white)
                             .lineLimit(1)
                             .truncationMode(.tail)
@@ -537,11 +460,11 @@ struct CyberWorkspaceHUDView: View {
                         // Branch Capsule
                         HStack(spacing: 3) {
                             Image(systemName: "arrow.triangle.branch")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.system(size: 8.5, weight: .bold))
                                 .foregroundStyle(accentColor)
 
                             Text(manager.branch.isEmpty ? "main" : manager.branch)
-                                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color.white.opacity(0.95))
                                 .lineLimit(1)
 
@@ -563,7 +486,7 @@ struct CyberWorkspaceHUDView: View {
                                 .background(RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.08)))
                             }
                         }
-                        .padding(.horizontal, 5.5)
+                        .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(
                             RoundedRectangle(cornerRadius: 3.5)
@@ -639,15 +562,9 @@ struct CyberWorkspaceHUDView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.white.opacity(0.03))
-                )
 
-                // RIGHT PANEL: Git Graph Spine / Changes Stream Inspector (Organic Flow, No Hard Divider Line)
+                // RIGHT PANEL: Git Graph Spine / Changes Stream Inspector (~48% width, Organic Flow)
                 VStack(alignment: .leading, spacing: 5) {
                     // Header Segmented Tab Switcher
                     HStack(spacing: 5) {
@@ -706,7 +623,30 @@ struct CyberWorkspaceHUDView: View {
 
                     // Content Area
                     if manager.rightPaneTab == .commits {
-                        GitGraphSpineView(commits: manager.recentCommits, accentColor: accentColor)
+                        if manager.recentCommits.isEmpty {
+                            VStack(spacing: 3) {
+                                Image(systemName: "clock.arrow.circlepath")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Color(white: 0.35))
+                                Text("No recent commits recorded")
+                                    .font(.system(size: 9.5, design: .monospaced))
+                                    .foregroundStyle(Color(white: 0.45))
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else {
+                            VStack(alignment: .leading, spacing: 2) {
+                                let displayCommits = Array(manager.recentCommits.prefix(3))
+                                ForEach(Array(displayCommits.enumerated()), id: \.element.id) { index, commit in
+                                    GitGraphCommitRow(
+                                        commit: commit,
+                                        isHead: index == 0,
+                                        isLast: index == displayCommits.count - 1,
+                                        accentColor: accentColor
+                                    )
+                                }
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        }
                     } else {
                         if manager.changedFiles.isEmpty {
                             VStack(spacing: 3) {
@@ -730,15 +670,9 @@ struct CyberWorkspaceHUDView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.white.opacity(0.03))
-                )
             }
-            .frame(height: 104)
+            .frame(height: 94)
         }
     }
 }
@@ -749,6 +683,13 @@ struct CyberWorkspaceView: View {
     @ObservedObject var manager: WorkspaceMonitorManager
     var appState: AppState
 
+    @AppStorage(SettingsKey.workspaceAccentColor) private var workspaceAccentColorRaw = SettingsDefaults.workspaceAccentColor
+    @State private var isCardHovered = false
+
+    private var accentColor: Color {
+        WorkspaceAccentColor(rawValue: workspaceAccentColorRaw)?.color ?? Color(red: 0.0, green: 0.90, blue: 0.46)
+    }
+
     init(manager: WorkspaceMonitorManager, appState: AppState) {
         self.manager = manager
         self.appState = appState
@@ -757,12 +698,21 @@ struct CyberWorkspaceView: View {
     var body: some View {
         CyberWorkspaceHUDView(manager: manager, appState: appState)
             .frame(height: 108)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.leading, 14)
+            .padding(.trailing, 10)
+            .padding(.vertical, 7)
             .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.white.opacity(0.05))
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(isCardHovered ? Color.white.opacity(0.08) : Color.white.opacity(0.05))
+                    Rectangle()
+                        .fill(accentColor)
+                        .frame(width: 3.5)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 10))
             )
+            .contentShape(Rectangle())
+            .onHover { isCardHovered = $0 }
             .padding(.horizontal, 6)
             .padding(.bottom, 6)
             .onAppear {

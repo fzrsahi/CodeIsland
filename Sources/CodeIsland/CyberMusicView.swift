@@ -657,6 +657,7 @@ struct KaraokeLyricLineView: View {
 struct CyberMusicHUDView: View {
     @ObservedObject var nowPlaying: NowPlayingManager
     var appState: AppState
+    @State private var isCardHovered = false
 
     init(nowPlaying: NowPlayingManager, appState: AppState) {
         self.nowPlaying = nowPlaying
@@ -888,21 +889,24 @@ struct CyberMusicHUDView: View {
                     }
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
             .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.white.opacity(0.03))
-            )
         }
         .frame(height: 108)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.leading, 14)
+        .padding(.trailing, 10)
+        .padding(.vertical, 7)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white.opacity(0.05))
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isCardHovered ? Color.white.opacity(0.08) : Color.white.opacity(0.05))
+                Rectangle()
+                    .fill(Color(red: 1.0, green: 0.16, blue: 0.53))
+                    .frame(width: 3.5)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         )
+        .contentShape(Rectangle())
+        .onHover { isCardHovered = $0 }
         .padding(.horizontal, 6)
         .padding(.bottom, 6)
     }

@@ -983,7 +983,7 @@ private struct CompactLeftWing: View {
                         isCompactInWing: true
                     )
                 } else if tabLayoutMode == .splitWings {
-                    LeftWingNavTabs(expandedTab: $expandedTab)
+                    LeftWingNavTabs(expandedTab: $expandedTab, appState: appState)
                 } else {
                     // .unifiedTop: Clean header status chip next to logo
                     HStack(spacing: 5) {
@@ -1857,9 +1857,14 @@ private struct UnifiedIslandTabBar: View {
     var isCompactInWing: Bool = false
 
     @AppStorage(SettingsKey.islandTabStyle) private var islandTabStyleRaw = SettingsDefaults.islandTabStyle
+    @AppStorage(SettingsKey.islandTabLayoutMode) private var islandTabLayoutModeRaw = SettingsDefaults.islandTabLayoutMode
     @AppStorage(SettingsKey.workspaceAccentColor) private var workspaceAccentColorRaw = SettingsDefaults.workspaceAccentColor
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hoveredTab: String?
+
+    private var tabLayoutMode: IslandTabLayoutMode {
+        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .unifiedTop
+    }
 
     private var tabStyle: IslandTabStyle {
         IslandTabStyle(rawValue: islandTabStyleRaw) ?? .pixel
@@ -1922,10 +1927,82 @@ private struct UnifiedIslandTabBar: View {
                 tag: "music",
                 isPlayingMusic: nowPlaying.isPlaying
             )
+
+            if !isCompactInWing {
+                Menu {
+                    Section("Island Tab Layout") {
+                        Button {
+                            withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedTop.rawValue }
+                        } label: {
+                            Label("🌟 Unified Center Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                        }
+                        Button {
+                            withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.splitWings.rawValue }
+                        } label: {
+                            Label("⚔️ Split Bilateral Wings (Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
+                        }
+                        Button {
+                            withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.leftWing.rawValue }
+                        } label: {
+                            Label("👈 Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
+                        }
+                    }
+
+                    Section("Tab Aesthetic Style") {
+                        ForEach(IslandTabStyle.allCases) { style in
+                            Button {
+                                withAnimation { islandTabStyleRaw = style.rawValue }
+                            } label: {
+                                Label(style.title, systemImage: tabStyle == style ? "checkmark" : "")
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "slider.horizontal.2.square")
+                        .font(.system(size: 8.5))
+                        .foregroundStyle(Color.white.opacity(0.40))
+                        .padding(.horizontal, 3)
+                        .padding(.vertical, 3)
+                        .contentShape(Rectangle())
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("Configure Tab Layout & Style (Unified vs Split Wings)")
+            }
         }
         .padding(.horizontal, isCompactInWing ? 2 : 6)
         .padding(.vertical, isCompactInWing ? 1 : 2)
         .background(dockBackground)
+        .contextMenu {
+            Section("Island Tab Layout") {
+                Button {
+                    withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedTop.rawValue }
+                } label: {
+                    Label("🌟 Unified Center Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                }
+                Button {
+                    withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.splitWings.rawValue }
+                } label: {
+                    Label("⚔️ Split Bilateral Wings (Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
+                }
+                Button {
+                    withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.leftWing.rawValue }
+                } label: {
+                    Label("👈 Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
+                }
+            }
+
+            Section("Tab Aesthetic Style") {
+                ForEach(IslandTabStyle.allCases) { style in
+                    Button {
+                        withAnimation { islandTabStyleRaw = style.rawValue }
+                    } label: {
+                        Label(style.title, systemImage: tabStyle == style ? "checkmark" : "")
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -1966,6 +2043,8 @@ private struct UnifiedIslandTabBar: View {
             NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
             if tab == .workspace {
                 workspaceManager.resolveAndRefreshWorkspace(appState: appState)
+            } else if tab == .agents {
+                appState.surface = .sessionList
             }
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
                 expandedTab = tab
@@ -2146,10 +2225,16 @@ private struct UnifiedIslandTabBar: View {
 /// Left-wing primary tabs: [ ALL | AGENTS ]
 private struct LeftWingNavTabs: View {
     @Binding var expandedTab: ExpandedContentTab
+    var appState: AppState? = nil
     var availableWidth: CGFloat = 200
     @AppStorage(SettingsKey.islandTabStyle) private var islandTabStyleRaw = SettingsDefaults.islandTabStyle
+    @AppStorage(SettingsKey.islandTabLayoutMode) private var islandTabLayoutModeRaw = SettingsDefaults.islandTabLayoutMode
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hoveredTab: String?
+
+    private var tabLayoutMode: IslandTabLayoutMode {
+        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .unifiedTop
+    }
 
     private var tabStyle: IslandTabStyle {
         IslandTabStyle(rawValue: islandTabStyleRaw) ?? .pixel
@@ -2192,6 +2277,7 @@ private struct LeftWingNavTabs: View {
             let isAgentsSelected = (expandedTab == .agents)
             Button {
                 NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                appState?.surface = .sessionList
                 withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
                     expandedTab = .agents
                 }
@@ -2213,6 +2299,35 @@ private struct LeftWingNavTabs: View {
         .background(
             tabStyle == .pixel ? RoundedRectangle(cornerRadius: 3).fill(.white.opacity(0.05)).frame(height: layout.stripHeight) : nil
         )
+        .contextMenu {
+            Section("Island Tab Layout") {
+                Button {
+                    withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedTop.rawValue }
+                } label: {
+                    Label("🌟 Unified Center Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                }
+                Button {
+                    withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.splitWings.rawValue }
+                } label: {
+                    Label("⚔️ Split Bilateral Wings (Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
+                }
+                Button {
+                    withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.leftWing.rawValue }
+                } label: {
+                    Label("👈 Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
+                }
+            }
+
+            Section("Tab Aesthetic Style") {
+                ForEach(IslandTabStyle.allCases) { style in
+                    Button {
+                        withAnimation { islandTabStyleRaw = style.rawValue }
+                    } label: {
+                        Label(style.title, systemImage: tabStyle == style ? "checkmark" : "")
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -2250,10 +2365,6 @@ private struct LeftWingNavTabs: View {
             .background(
                 Capsule()
                     .fill(isSelected ? activeColor.opacity(0.18) : (isHovered ? Color.white.opacity(0.08) : Color.white.opacity(0.04)))
-                    .overlay(
-                        Capsule()
-                            .stroke(isSelected ? activeColor.opacity(0.4) : Color.clear, lineWidth: 0.8)
-                    )
             )
 
         case .console:
@@ -2307,6 +2418,11 @@ private struct RightWingNavTabs: View {
     @State private var hoveredTab: String?
     @AppStorage(SettingsKey.workspaceAccentColor) private var workspaceAccentColorRaw = SettingsDefaults.workspaceAccentColor
     @AppStorage(SettingsKey.islandTabStyle) private var islandTabStyleRaw = SettingsDefaults.islandTabStyle
+    @AppStorage(SettingsKey.islandTabLayoutMode) private var islandTabLayoutModeRaw = SettingsDefaults.islandTabLayoutMode
+
+    private var tabLayoutMode: IslandTabLayoutMode {
+        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .unifiedTop
+    }
 
     private var tabStyle: IslandTabStyle {
         IslandTabStyle(rawValue: islandTabStyleRaw) ?? .pixel
@@ -2369,10 +2485,81 @@ private struct RightWingNavTabs: View {
             .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist)" : "Music HUD")
             .accessibilityLabel("Music")
             .accessibilityAddTraits(isMusicSelected ? .isSelected : [])
+
+            // Layout switcher button in Split Wings mode
+            Menu {
+                Section("Island Tab Layout") {
+                    Button {
+                        withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedTop.rawValue }
+                    } label: {
+                        Label("🌟 Unified Center Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                    }
+                    Button {
+                        withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.splitWings.rawValue }
+                    } label: {
+                        Label("⚔️ Split Bilateral Wings (Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
+                    }
+                    Button {
+                        withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.leftWing.rawValue }
+                    } label: {
+                        Label("👈 Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
+                    }
+                }
+
+                Section("Tab Aesthetic Style") {
+                    ForEach(IslandTabStyle.allCases) { style in
+                        Button {
+                            withAnimation { islandTabStyleRaw = style.rawValue }
+                        } label: {
+                            Label(style.title, systemImage: tabStyle == style ? "checkmark" : "")
+                        }
+                    }
+                }
+            } label: {
+                Image(systemName: "slider.horizontal.2.square")
+                    .font(.system(size: 8))
+                    .foregroundStyle(Color.white.opacity(0.40))
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 3)
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Configure Tab Layout & Style (Unified vs Split Wings)")
         }
         .background(
             tabStyle == .pixel ? RoundedRectangle(cornerRadius: 3).fill(.white.opacity(0.05)).frame(height: layout.stripHeight) : nil
         )
+        .contextMenu {
+            Section("Island Tab Layout") {
+                Button {
+                    withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedTop.rawValue }
+                } label: {
+                    Label("🌟 Unified Center Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                }
+                Button {
+                    withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.splitWings.rawValue }
+                } label: {
+                    Label("⚔️ Split Bilateral Wings (Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
+                }
+                Button {
+                    withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.leftWing.rawValue }
+                } label: {
+                    Label("👈 Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
+                }
+            }
+
+            Section("Tab Aesthetic Style") {
+                ForEach(IslandTabStyle.allCases) { style in
+                    Button {
+                        withAnimation { islandTabStyleRaw = style.rawValue }
+                    } label: {
+                        Label(style.title, systemImage: tabStyle == style ? "checkmark" : "")
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -2410,10 +2597,6 @@ private struct RightWingNavTabs: View {
             .background(
                 Capsule()
                     .fill(isSelected ? activeColor.opacity(0.18) : (isHovered ? Color.white.opacity(0.08) : Color.white.opacity(0.04)))
-                    .overlay(
-                        Capsule()
-                            .stroke(isSelected ? activeColor.opacity(0.4) : Color.clear, lineWidth: 0.8)
-                    )
             )
 
         case .console:
@@ -4088,6 +4271,247 @@ enum SessionListMetrics {
     }
 }
 
+/// Configurable & Tastefully Designed Sub-Filter Bar for AI Coding Agents Tab
+private struct AgentSessionFilterBar: View {
+    @Binding var groupingMode: String
+    let sessions: [String: SessionSnapshot]
+
+    @AppStorage(SettingsKey.agentFilterStyle) private var agentFilterStyleRaw = SettingsDefaults.agentFilterStyle
+    @AppStorage(SettingsKey.showAgentFilterCounts) private var showCounts = SettingsDefaults.showAgentFilterCounts
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hoveredTag: String?
+
+    private var filterStyle: AgentFilterStyle {
+        AgentFilterStyle(rawValue: agentFilterStyleRaw) ?? .capsule
+    }
+
+    private var totalCount: Int {
+        sessions.count
+    }
+
+    private var runningCount: Int {
+        sessions.values.filter { $0.status == .running || $0.status == .processing }.count
+    }
+
+    private var waitingCount: Int {
+        sessions.values.filter { $0.status == .waitingApproval || $0.status == .waitingQuestion }.count
+    }
+
+    private var cliCount: Int {
+        Set(sessions.values.map(\.source)).count
+    }
+
+    struct FilterItem: Identifiable {
+        let id: String
+        let title: String
+        let count: Int?
+        let activeColor: Color
+        let isAttention: Bool
+        let isRunning: Bool
+    }
+
+    private var items: [FilterItem] {
+        [
+            FilterItem(id: "all", title: "ALL", count: totalCount, activeColor: Color(red: 0.3, green: 0.85, blue: 0.4), isAttention: false, isRunning: false),
+            FilterItem(id: "running", title: "RUNNING", count: runningCount, activeColor: Color(red: 0.0, green: 0.96, blue: 0.83), isAttention: false, isRunning: runningCount > 0),
+            FilterItem(id: "waiting", title: "WAITING", count: waitingCount, activeColor: Color(red: 1.0, green: 0.69, blue: 0.0), isAttention: waitingCount > 0, isRunning: false),
+            FilterItem(id: "status", title: "STATUS", count: nil, activeColor: Color(red: 0.3, green: 0.85, blue: 0.4), isAttention: false, isRunning: false),
+            FilterItem(id: "cli", title: "AGENT", count: cliCount > 1 ? cliCount : nil, activeColor: Color(red: 0.69, green: 0.15, blue: 1.0), isAttention: false, isRunning: false)
+        ]
+    }
+
+    var body: some View {
+        HStack(spacing: filterStyle == .minimal ? 8 : 4) {
+            ForEach(items) { item in
+                let isSelected = (groupingMode == item.id)
+                let isHovered = (hoveredTag == item.id)
+
+                Button {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
+                        groupingMode = item.id
+                    }
+                } label: {
+                    filterChip(item: item, isSelected: isSelected, isHovered: isHovered)
+                }
+                .buttonStyle(.plain)
+                .onHover { hovered in
+                    hoveredTag = hovered ? item.id : (hoveredTag == item.id ? nil : hoveredTag)
+                }
+                .help("Filter: \(item.title) (\(item.count.map { "\($0) sessions" } ?? "grouped"))")
+            }
+
+            Spacer(minLength: 0)
+
+            // Settings & Style Customizer Popover Menu
+            Menu {
+                Section("Filter Bar Design Style") {
+                    ForEach(AgentFilterStyle.allCases) { style in
+                        Button {
+                            withAnimation { agentFilterStyleRaw = style.rawValue }
+                        } label: {
+                            Label(style.title, systemImage: filterStyle == style ? "checkmark" : "")
+                        }
+                    }
+                }
+
+                Section("Session Badges") {
+                    Button {
+                        showCounts.toggle()
+                    } label: {
+                        Label(showCounts ? "Hide Session Counts" : "Show Session Counts", systemImage: showCounts ? "checkmark.circle.fill" : "circle")
+                    }
+                }
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 8.5))
+                    .foregroundStyle(Color.white.opacity(0.40))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 3)
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Configure Agents Filter Style & Badges")
+        }
+        .padding(.horizontal, 2)
+        .padding(.vertical, 2)
+        .contextMenu {
+            Section("Filter Bar Design Style") {
+                ForEach(AgentFilterStyle.allCases) { style in
+                    Button {
+                        withAnimation { agentFilterStyleRaw = style.rawValue }
+                    } label: {
+                        Label(style.title, systemImage: filterStyle == style ? "checkmark" : "")
+                    }
+                }
+            }
+
+            Section("Session Badges") {
+                Button {
+                    showCounts.toggle()
+                } label: {
+                    Label(showCounts ? "Hide Session Counts" : "Show Session Counts", systemImage: showCounts ? "checkmark.circle.fill" : "circle")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func filterChip(item: FilterItem, isSelected: Bool, isHovered: Bool) -> some View {
+        switch filterStyle {
+        case .capsule:
+            HStack(spacing: 3.5) {
+                if item.isAttention {
+                    Circle()
+                        .fill(Color(red: 1.0, green: 0.69, blue: 0.0))
+                        .frame(width: 4, height: 4)
+                } else if item.isRunning {
+                    Circle()
+                        .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
+                        .frame(width: 4, height: 4)
+                }
+
+                Text(item.title)
+                    .font(.system(size: 8.5, weight: isSelected ? .bold : .semibold, design: .monospaced))
+                    .foregroundStyle(isSelected ? (item.isAttention ? Color(red: 1.0, green: 0.69, blue: 0.0) : item.activeColor) : (isHovered ? Color.white : Color(white: 0.55)))
+
+                if showCounts, let count = item.count {
+                    Text("\(count)")
+                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(isSelected ? (item.isAttention ? Color(red: 1.0, green: 0.69, blue: 0.0) : item.activeColor) : Color(white: 0.45))
+                        .padding(.horizontal, 3.5)
+                        .padding(.vertical, 0.5)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? item.activeColor.opacity(0.18) : Color.white.opacity(0.06))
+                        )
+                }
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill(isSelected ? item.activeColor.opacity(0.14) : (isHovered ? Color.white.opacity(0.08) : Color.white.opacity(0.03)))
+            )
+
+        case .minimal:
+            VStack(spacing: 2) {
+                HStack(spacing: 3) {
+                    if item.isAttention {
+                        Circle()
+                            .fill(Color(red: 1.0, green: 0.69, blue: 0.0))
+                            .frame(width: 3.5, height: 3.5)
+                    }
+                    Text(item.title)
+                        .font(.system(size: 8.5, weight: isSelected ? .bold : .medium, design: .monospaced))
+                        .foregroundStyle(isSelected ? Color.white : (isHovered ? Color.white.opacity(0.85) : Color(white: 0.50)))
+                    if showCounts, let count = item.count {
+                        Text("(\(count))")
+                            .font(.system(size: 7.5, design: .monospaced))
+                            .foregroundStyle(isSelected ? item.activeColor : Color(white: 0.40))
+                    }
+                }
+                .padding(.horizontal, 3)
+                .padding(.top, 1)
+
+                Rectangle()
+                    .fill(isSelected ? item.activeColor : Color.clear)
+                    .frame(height: 1.5)
+            }
+            .frame(height: 20)
+
+        case .segmented:
+            HStack(spacing: 3) {
+                Text(item.title)
+                    .font(.system(size: 8, weight: isSelected ? .bold : .semibold, design: .monospaced))
+                    .foregroundStyle(isSelected ? Color.white : (isHovered ? Color.white.opacity(0.85) : Color(white: 0.45)))
+                if showCounts, let count = item.count {
+                    Text("\(count)")
+                        .font(.system(size: 7, weight: .bold, design: .monospaced))
+                        .foregroundStyle(isSelected ? item.activeColor : Color(white: 0.40))
+                }
+            }
+            .padding(.horizontal, 5.5)
+            .padding(.vertical, 2.5)
+            .background(
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(isSelected ? Color.white.opacity(0.14) : (isHovered ? Color.white.opacity(0.06) : Color.clear))
+            )
+
+        case .tag:
+            HStack(spacing: 1.5) {
+                Text("[")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(white: 0.35))
+                if item.isAttention {
+                    Text("!")
+                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(red: 1.0, green: 0.69, blue: 0.0))
+                }
+                Text(item.title)
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? item.activeColor : (isHovered ? Color.white : Color(white: 0.50)))
+                if showCounts, let count = item.count {
+                    Text(":\(count)")
+                        .font(.system(size: 7.5, weight: .medium, design: .monospaced))
+                        .foregroundStyle(isSelected ? item.activeColor : Color(white: 0.40))
+                }
+                Text("]")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(white: 0.35))
+            }
+            .padding(.horizontal, 3)
+            .padding(.vertical, 2)
+            .background(
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(isSelected ? Color.white.opacity(0.10) : Color.clear)
+            )
+        }
+    }
+}
+
 private struct SessionListView: View {
     var appState: AppState
     /// When set, only show this session (auto-expand on completion)
@@ -4196,6 +4620,24 @@ private struct SessionListView: View {
             }
             return result
 
+        case "waiting":
+            let freeze = orderFreeze
+            let sessions = appState.sessions
+            let waitingIds = sorted.filter { id in
+                let st = freeze.status(of: id, live: sessions[id]?.status)
+                return st == .waitingApproval || st == .waitingQuestion
+            }
+            return waitingIds.isEmpty ? [] : [("NEEDS USER ATTENTION (\(waitingIds.count))", nil, waitingIds)]
+
+        case "running":
+            let freeze = orderFreeze
+            let sessions = appState.sessions
+            let runningIds = sorted.filter { id in
+                let st = freeze.status(of: id, live: sessions[id]?.status)
+                return st == .running || st == .processing
+            }
+            return runningIds.isEmpty ? [] : [("ACTIVE RUNNING (\(runningIds.count))", nil, runningIds)]
+
         default: // "all"
             return [("", nil, sorted)]
         }
@@ -4228,29 +4670,17 @@ private struct SessionListView: View {
             )
             : (0, 0)
         let content = VStack(spacing: density == .compact ? CompactSessionRowMetrics.spacing : 6) {
-            // Sub-filter tabs inside Agents view: [ ALL | BY STATUS | BY AGENT ]
-            if onlySessionId == nil && totalSessionCount > 0 {
-                HStack(spacing: 4) {
-                    ForEach([("all", "ALL SESSIONS"), ("status", "BY STATUS"), ("cli", "BY AGENT")], id: \.0) { item in
-                        Button(action: {
-                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                            groupingMode = item.0
-                        }) {
-                            Text(item.1)
-                                .font(.system(size: 7, weight: .bold, design: .monospaced))
-                                .foregroundStyle(groupingMode == item.0 ? Color(red: 0.3, green: 0.85, blue: 0.4) : Color(white: 0.45))
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(RoundedRectangle(cornerRadius: 2).fill(groupingMode == item.0 ? Color.white.opacity(0.10) : Color.clear))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 10)
+            // Configurable & Tastefully Designed Sub-Filter Bar
+            if onlySessionId == nil && !appState.sessions.isEmpty {
+                AgentSessionFilterBar(
+                    groupingMode: $groupingMode,
+                    sessions: appState.sessions
+                )
+                .padding(.horizontal, 8)
                 .padding(.bottom, 2)
             }
-            if totalSessionCount == 0 {
+
+            if appState.sessions.isEmpty {
                 VStack(spacing: 5) {
                     Image(systemName: "cpu")
                         .font(.system(size: 16))
@@ -4263,6 +4693,30 @@ private struct SessionListView: View {
                         .foregroundStyle(.white.opacity(0.45))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 20)
+                }
+                .frame(maxWidth: .infinity, minHeight: 65)
+                .padding(.vertical, 8)
+            } else if totalSessionCount == 0 {
+                VStack(spacing: 6) {
+                    Image(systemName: groupingMode == "waiting" ? "checkmark.circle.fill" : "pause.circle")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
+                    Text(groupingMode == "waiting" ? "ALL CAUGHT UP" : "NO SESSIONS RUNNING")
+                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.85))
+                    Text(groupingMode == "waiting" ? "No agent sessions are currently waiting for approval or questions." : "All agent sessions are currently resting or idle.")
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.50))
+                    Button("SHOW ALL SESSIONS (\(appState.sessions.count))") {
+                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                        withAnimation { groupingMode = "all" }
+                    }
+                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.10)))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
                 }
                 .frame(maxWidth: .infinity, minHeight: 65)
                 .padding(.vertical, 8)

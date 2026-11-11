@@ -12,9 +12,41 @@ struct ExecutiveIslandOverviewView: View {
 
     @AppStorage(SettingsKey.workspaceAccentColor) private var workspaceAccentColorRaw = SettingsDefaults.workspaceAccentColor
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isCardHovered = false
 
     private var activeWorkspaceColor: Color {
         WorkspaceAccentColor(rawValue: workspaceAccentColorRaw)?.color ?? Color(red: 0.0, green: 0.90, blue: 0.46)
+    }
+
+    private var sessions: [SessionSnapshot] {
+        Array(appState.sessions.values)
+    }
+
+    private var activeSession: (id: String, snapshot: SessionSnapshot)? {
+        if let needs = appState.sessions.first(where: { $0.value.status == .waitingApproval || $0.value.status == .waitingQuestion }) {
+            return (needs.key, needs.value)
+        }
+        if let work = appState.sessions.first(where: { $0.value.status == .running || $0.value.status == .processing }) {
+            return (work.key, work.value)
+        }
+        if let first = appState.sessions.first {
+            return (first.key, first.value)
+        }
+        return nil
+    }
+
+    private var cardStatus: SessionCardStatus {
+        if let s = activeSession?.snapshot {
+            return SessionCardStatus(s)
+        }
+        return .idle
+    }
+
+    private var railColor: Color {
+        if let s = activeSession?.snapshot {
+            return SessionCardStatus(s).railColor
+        }
+        return Color(red: 0.0, green: 0.96, blue: 0.83)
     }
 
     private var tokenSnapshot: ClaudeUsageTotals? {
@@ -38,12 +70,24 @@ struct ExecutiveIslandOverviewView: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: 14) {
             // HERO DECK (LEFT): Live Coding Agent Command Deck (~60% space)
             HeroAgentCommandDeck(
                 appState: appState,
+                activeSession: activeSession,
+                cardStatus: cardStatus,
                 tokenLabel: tokenLabel,
                 onSelect: {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    if let (sid, snap) = activeSession {
+                        TerminalActivator.activate(session: snap, sessionId: sid)
+                    } else {
+                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
+                            expandedTab = .agents
+                        }
+                    }
+                },
+                onInspectTab: {
                     NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                     withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
                         expandedTab = .agents
@@ -53,8 +97,8 @@ struct ExecutiveIslandOverviewView: View {
             .frame(maxWidth: .infinity)
 
             // TELEMETRY WINGS (RIGHT): Live Git HUD & Music Capsules (~40% space)
-            VStack(spacing: 6) {
-                // Top: Git & Workspace HUD Capsule
+            VStack(alignment: .leading, spacing: 6) {
+                // Top: Git & Workspace HUD
                 MiniWorkspaceCapsule(
                     manager: workspaceManager,
                     accentColor: activeWorkspaceColor,
@@ -66,7 +110,7 @@ struct ExecutiveIslandOverviewView: View {
                     }
                 )
 
-                // Bottom: Now Playing Music Capsule
+                // Bottom: Now Playing Music
                 MiniMusicCapsule(
                     nowPlaying: nowPlaying,
                     onSelect: {
@@ -77,41 +121,43 @@ struct ExecutiveIslandOverviewView: View {
                     }
                 )
             }
-            .frame(width: 270)
+            .frame(width: 275)
         }
         .frame(height: 108)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.leading, 14)
+        .padding(.trailing, 10)
+        .padding(.vertical, 7)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white.opacity(0.05))
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isCardHovered ? Color.white.opacity(0.08) : Color.white.opacity(0.05))
+                Rectangle()
+                    .fill(railColor)
+                    .frame(width: 3.5)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         )
+        .contentShape(Rectangle())
+        .onHover { isCardHovered = $0 }
         .padding(.horizontal, 6)
         .padding(.bottom, 6)
     }
 }
 
-// MARK: - Hero Agent Command Deck (Dominant Left Side, styled like SessionCard)
+// MARK: - Hero Agent Command Deck (Interactive, Styled Like SessionCard)
 
 private struct HeroAgentCommandDeck: View {
     var appState: AppState
+    let activeSession: (id: String, snapshot: SessionSnapshot)?
+    let cardStatus: SessionCardStatus
     let tokenLabel: String
     let onSelect: () -> Void
+    let onInspectTab: () -> Void
 
     @State private var isHovered = false
 
     private var sessions: [SessionSnapshot] {
         Array(appState.sessions.values)
-    }
-
-    private var activeSession: SessionSnapshot? {
-        if let needs = sessions.first(where: { $0.status == .waitingApproval || $0.status == .waitingQuestion }) {
-            return needs
-        }
-        if let work = sessions.first(where: { $0.status == .running || $0.status == .processing }) {
-            return work
-        }
-        return sessions.first
     }
 
     private func formatTimeAgo(_ date: Date) -> String {
@@ -126,11 +172,11 @@ private struct HeroAgentCommandDeck: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(alignment: .top, spacing: 9) {
-                // Left Mascot Column (matches SessionCard)
+            HStack(alignment: .top, spacing: 10) {
+                // Mascot Column with optional Subagent icons (Exact SessionCard DNA)
                 VStack(spacing: 3) {
-                    if let session = activeSession {
-                        MascotView(source: session.mascotSource, status: session.status, size: 32)
+                    if let (_, session) = activeSession {
+                        MascotView(source: session.mascotSource, status: session.status, size: 34)
                         if !session.subagents.isEmpty {
                             HStack(spacing: 1.5) {
                                 ForEach(Array(session.subagents.values.prefix(4)), id: \.agentId) { sub in
@@ -139,16 +185,15 @@ private struct HeroAgentCommandDeck: View {
                             }
                         }
                     } else {
-                        MascotView(source: "claude", status: .idle, size: 32)
+                        MascotView(source: "claude", status: .idle, size: 34)
                     }
                 }
                 .frame(width: 36)
                 .padding(.top, 1)
 
-                // Main Content Column
-                VStack(alignment: .leading, spacing: 4) {
-                    if let session = activeSession {
-                        let cardStatus = SessionCardStatus(session)
+                // Main Info Column
+                VStack(alignment: .leading, spacing: 4.5) {
+                    if let (_, session) = activeSession {
                         let headline = session.headline(showProjectName: true)
                         let projectTitle = headline.text.uppercased()
 
@@ -167,7 +212,7 @@ private struct HeroAgentCommandDeck: View {
                                     .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
                                     .foregroundStyle(Color(white: 0.65))
                                     .padding(.horizontal, 4)
-                                    .padding(.vertical, 1.5)
+                                    .padding(.vertical, 1)
                                     .background(RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.08)))
                             }
 
@@ -181,7 +226,7 @@ private struct HeroAgentCommandDeck: View {
                                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
                             }
                             .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
+                            .padding(.vertical, 1.5)
                             .background(RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.08)))
 
                             Image(systemName: "chevron.right")
@@ -189,12 +234,12 @@ private struct HeroAgentCommandDeck: View {
                                 .foregroundStyle(isHovered ? Color.white : Color(white: 0.35))
                         }
 
-                        // Live Activity Body: Thinking or Tool Running or Recap (matches SessionCard)
+                        // Live Activity Body: Thinking / Tool Running / Needs Input
                         liveActivityRow(session: session, cardStatus: cardStatus)
 
                         Spacer(minLength: 0)
 
-                        // Footer Row: Operation Count + Time Ago + Action Affordance
+                        // Footer Row: Ops Count + Time + Interactive Link
                         HStack(spacing: 6) {
                             if session.totalToolCallCount > 0 {
                                 Text("\(session.totalToolCallCount) ops")
@@ -214,7 +259,7 @@ private struct HeroAgentCommandDeck: View {
 
                             Spacer(minLength: 0)
 
-                            Text("INSPECT AGENTS →")
+                            Text("JUMP TO TERMINAL ↗")
                                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                                 .foregroundStyle(isHovered ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.45))
                         }
@@ -268,18 +313,14 @@ private struct HeroAgentCommandDeck: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, 9)
-            .padding(.vertical, 7)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.white.opacity(isHovered ? 0.08 : 0.03))
-            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
-        .help("Click to view full Agent Sessions list")
+        .help("Click to jump directly to this session's terminal")
     }
 
     @ViewBuilder
@@ -368,7 +409,7 @@ private struct HeroAgentCommandDeck: View {
                 .truncationMode(.tail)
         } else {
             Text("Session idle • Ready for turn")
-                .font(.system(size: 9.5, design: .monospaced))
+                .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(Color(white: 0.50))
         }
     }
@@ -485,12 +526,8 @@ private struct MiniWorkspaceCapsule: View {
                 }
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.vertical, 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.white.opacity(isHovered ? 0.08 : 0.03))
-            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -581,12 +618,8 @@ private struct MiniMusicCapsule: View {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.vertical, 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.white.opacity(isHovered ? 0.08 : 0.03))
-            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
