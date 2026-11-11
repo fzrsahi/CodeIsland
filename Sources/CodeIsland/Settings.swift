@@ -138,6 +138,24 @@ public enum WorkspaceAccentColor: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+public enum IslandTabStyle: String, CaseIterable, Identifiable, Sendable {
+    case pixel = "pixel"
+    case capsule = "capsule"
+    case console = "console"
+    case minimal = "minimal"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .pixel: return "Cyber Pixel (5×7 Matrix)"
+        case .capsule: return "Modern Capsule (Pill)"
+        case .console: return "Machined Console ([ TAB ])"
+        case .minimal: return "Minimal Blade (Underline)"
+        }
+    }
+}
+
 enum SettingsKey {
     // Language
     static let appLanguage = "appLanguage"                 // "system", "en", "zh", "zh-Hant", "de", "ja", "ko", "tr"
@@ -210,10 +228,11 @@ enum SettingsKey {
     // displays that only went to sleep do not count (see SceneMuteState)
     static let autoMuteWhenAway = "autoMuteWhenAway"
 
-    // Workspace Monitor
+    // Workspace Monitor & Navigation
     static let workspaceAutoDetect = "workspaceAutoDetect"
     static let workspaceShowRecentCommits = "workspaceShowRecentCommits"
     static let workspaceAccentColor = "workspaceAccentColor"
+    static let islandTabStyle = "islandTabStyle"
 
     // Session cards
     static let showGitBranch = "showGitBranch"
@@ -361,6 +380,7 @@ struct SettingsDefaults {
     static let workspaceAutoDetect = true
     static let workspaceShowRecentCommits = true
     static let workspaceAccentColor = WorkspaceAccentColor.emerald.rawValue
+    static let islandTabStyle = IslandTabStyle.pixel.rawValue
     static let showSessionRecap = true
     static let showModelLabel = false
     static let showUsageStats = true
@@ -476,6 +496,7 @@ class SettingsManager {
             SettingsKey.workspaceAutoDetect: SettingsDefaults.workspaceAutoDetect,
             SettingsKey.workspaceShowRecentCommits: SettingsDefaults.workspaceShowRecentCommits,
             SettingsKey.workspaceAccentColor: SettingsDefaults.workspaceAccentColor,
+            SettingsKey.islandTabStyle: SettingsDefaults.islandTabStyle,
             SettingsKey.showSessionRecap: SettingsDefaults.showSessionRecap,
             SettingsKey.showModelLabel: SettingsDefaults.showModelLabel,
             SettingsKey.showUsageStats: SettingsDefaults.showUsageStats,

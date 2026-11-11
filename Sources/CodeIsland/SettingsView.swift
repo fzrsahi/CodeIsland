@@ -1484,6 +1484,7 @@ private struct AppearancePage: View {
     @AppStorage(SettingsKey.workspaceAutoDetect) private var workspaceAutoDetect = SettingsDefaults.workspaceAutoDetect
     @AppStorage(SettingsKey.workspaceShowRecentCommits) private var workspaceShowRecentCommits = SettingsDefaults.workspaceShowRecentCommits
     @AppStorage(SettingsKey.workspaceAccentColor) private var workspaceAccentColor = SettingsDefaults.workspaceAccentColor
+    @AppStorage(SettingsKey.islandTabStyle) private var islandTabStyle = SettingsDefaults.islandTabStyle
     @AppStorage(SettingsKey.showTaskProgress) private var showTaskProgress = SettingsDefaults.showTaskProgress
     @AppStorage(SettingsKey.showSessionRecap) private var showSessionRecap = SettingsDefaults.showSessionRecap
     @AppStorage(SettingsKey.showModelLabel) private var showModelLabel = SettingsDefaults.showModelLabel
@@ -1883,6 +1884,21 @@ private struct AppearancePage: View {
                     }
 
                     Text("Fine-tune lyric sync: negative to delay lyrics, positive to advance. Applies to Notch HUD and floating lyrics.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            Section("Island Navigation Tabs") {
+                VStack(alignment: .leading, spacing: 6) {
+                    Picker("Tab Design Style", selection: $islandTabStyle) {
+                        ForEach(IslandTabStyle.allCases) { style in
+                            Text(style.title).tag(style.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Text("Customize the aesthetic style for the 4 Notch tabs (ALL · AGENTS · WORKSPACE · MUSIC).")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                 }
