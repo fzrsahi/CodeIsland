@@ -644,6 +644,18 @@ struct NotchPanelView: View {
                         EmptyView()
                     }
                     }
+
+                    if tabLayoutMode == .unifiedBottom {
+                        UnifiedIslandTabBar(
+                            appState: appState,
+                            expandedTab: $expandedTab,
+                            workspaceManager: workspaceManager,
+                            nowPlaying: nowPlaying,
+                            isCompactInWing: false
+                        )
+                        .padding(.top, 3)
+                        .padding(.bottom, 2)
+                    }
                     }
                 }
             }
@@ -1973,17 +1985,22 @@ private struct UnifiedIslandTabBar: View {
                         Button {
                             withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedTop.rawValue }
                         } label: {
-                            Label("🌟 Unified Center Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                            Label("🌟 Di Bawah Notch: Unified Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                        }
+                        Button {
+                            withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedBottom.rawValue }
+                        } label: {
+                            Label("⚓️ Di Bawah Konten: Bottom Dock", systemImage: tabLayoutMode == .unifiedBottom ? "checkmark" : "")
                         }
                         Button {
                             withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.splitWings.rawValue }
                         } label: {
-                            Label("⚔️ Split Bilateral Wings (Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
+                            Label("⚔️ Di Atas: Split Wings (Seperti Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
                         }
                         Button {
                             withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.leftWing.rawValue }
                         } label: {
-                            Label("👈 Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
+                            Label("👈 Di Atas: Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
                         }
                     }
 
@@ -2018,17 +2035,22 @@ private struct UnifiedIslandTabBar: View {
                 Button {
                     withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedTop.rawValue }
                 } label: {
-                    Label("🌟 Unified Center Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                    Label("🌟 Di Bawah Notch: Unified Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                }
+                Button {
+                    withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedBottom.rawValue }
+                } label: {
+                    Label("⚓️ Di Bawah Konten: Bottom Dock", systemImage: tabLayoutMode == .unifiedBottom ? "checkmark" : "")
                 }
                 Button {
                     withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.splitWings.rawValue }
                 } label: {
-                    Label("⚔️ Split Bilateral Wings (Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
+                    Label("⚔️ Di Atas: Split Wings (Seperti Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
                 }
                 Button {
                     withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.leftWing.rawValue }
                 } label: {
-                    Label("👈 Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
+                    Label("👈 Di Atas: Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
                 }
             }
 
@@ -2059,6 +2081,12 @@ private struct UnifiedIslandTabBar: View {
         case .minimal:
             RoundedRectangle(cornerRadius: 3)
                 .fill(Color.white.opacity(0.02))
+        case .retro:
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.black.opacity(0.65))
+        case .glass:
+            Capsule()
+                .fill(Color.white.opacity(0.06))
         }
     }
 
@@ -2080,10 +2108,9 @@ private struct UnifiedIslandTabBar: View {
 
         Button {
             NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            appState.surface = .sessionList
             if tab == .workspace {
                 workspaceManager.resolveAndRefreshWorkspace(appState: appState)
-            } else if tab == .agents {
-                appState.surface = .sessionList
             }
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
                 expandedTab = tab
@@ -2099,8 +2126,11 @@ private struct UnifiedIslandTabBar: View {
                 isDirty: isDirty,
                 isPlayingMusic: isPlayingMusic
             )
+            .frame(minHeight: isCompactInWing ? 20 : 24)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contentShape(Rectangle())
         .onHover { hovering in
             hoveredTab = hovering ? tag : (hoveredTab == tag ? nil : hoveredTab)
         }
@@ -2257,6 +2287,81 @@ private struct UnifiedIslandTabBar: View {
                     .frame(height: 1.5)
             }
             .frame(height: isCompactInWing ? 20 : 22)
+
+        case .retro:
+            HStack(spacing: 3) {
+                if isSelected {
+                    Text("►")
+                        .font(.system(size: 7))
+                        .foregroundStyle(activeColor)
+                }
+                Text(label)
+                    .font(.system(size: isCompactInWing ? 8 : 9, weight: .black, design: .monospaced))
+                    .foregroundStyle(isSelected ? activeColor : (isHovered ? .white : Self.inactiveColor))
+                    .shadow(color: isSelected ? activeColor.opacity(0.8) : Color.clear, radius: isSelected ? 3.5 : 0)
+
+                if let badge = badgeText {
+                    Text(":\(badge)")
+                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(isSelected ? activeColor : Color(white: 0.45))
+                }
+                if showPulse {
+                    Circle()
+                        .fill(activeColor)
+                        .frame(width: 3.5, height: 3.5)
+                        .shadow(color: activeColor, radius: 2)
+                }
+                if isDirty {
+                    Text("*")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(red: 1.0, green: 0.70, blue: 0.20))
+                }
+                if isPlayingMusic {
+                    MiniEqualizerBars(color: isSelected ? activeColor : Self.activeMusicColor)
+                }
+            }
+            .padding(.horizontal, isCompactInWing ? 5 : 8)
+            .padding(.vertical, isCompactInWing ? 2.5 : 4)
+            .background(
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(isSelected ? activeColor.opacity(0.20) : (isHovered ? Color.white.opacity(0.08) : Color.black.opacity(0.35)))
+            )
+
+        case .glass:
+            HStack(spacing: 3.5) {
+                if isSelected {
+                    Circle()
+                        .fill(activeColor)
+                        .frame(width: 4, height: 4)
+                        .shadow(color: activeColor.opacity(0.8), radius: 2)
+                }
+                Text(label)
+                    .font(.system(size: isCompactInWing ? 8 : 9, weight: isSelected ? .bold : .medium, design: .rounded))
+                    .foregroundStyle(isSelected ? .white : (isHovered ? .white.opacity(0.9) : Self.inactiveColor))
+
+                if let badge = badgeText {
+                    Text(badge)
+                        .font(.system(size: 7.5, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 0.5)
+                        .background(Capsule().fill(Color.white.opacity(isSelected ? 0.25 : 0.08)))
+                        .foregroundStyle(isSelected ? .white : Self.inactiveColor)
+                }
+                if isDirty {
+                    Circle()
+                        .fill(Color(red: 1.0, green: 0.70, blue: 0.20))
+                        .frame(width: 3.5, height: 3.5)
+                }
+                if isPlayingMusic {
+                    MiniEqualizerBars(color: isSelected ? activeColor : Self.activeMusicColor)
+                }
+            }
+            .padding(.horizontal, isCompactInWing ? 6 : 9)
+            .padding(.vertical, isCompactInWing ? 2.5 : 3.5)
+            .background(
+                Capsule()
+                    .fill(isSelected ? Color.white.opacity(0.18) : (isHovered ? Color.white.opacity(0.08) : Color.white.opacity(0.03)))
+            )
         }
     }
 }
@@ -2294,6 +2399,7 @@ private struct LeftWingNavTabs: View {
             let isAllSelected = (expandedTab == .all)
             Button {
                 NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                appState?.surface = .sessionList
                 withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
                     expandedTab = .all
                 }
@@ -2305,8 +2411,11 @@ private struct LeftWingNavTabs: View {
                     activeColor: Self.activeAllColor,
                     hoverTag: "all"
                 )
+                .frame(minHeight: 22)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .contentShape(Rectangle())
             .onHover { hoveredTab = $0 ? "all" : (hoveredTab == "all" ? nil : hoveredTab) }
             .help("Executive Overview (All)")
             .accessibilityLabel("All")
@@ -2328,8 +2437,11 @@ private struct LeftWingNavTabs: View {
                     activeColor: Self.activeAgentsColor,
                     hoverTag: "agents"
                 )
+                .frame(minHeight: 22)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .contentShape(Rectangle())
             .onHover { hoveredTab = $0 ? "agents" : (hoveredTab == "agents" ? nil : hoveredTab) }
             .help("AI Coding Agents")
             .accessibilityLabel("Agents")
@@ -2343,17 +2455,22 @@ private struct LeftWingNavTabs: View {
                 Button {
                     withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedTop.rawValue }
                 } label: {
-                    Label("🌟 Unified Center Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                    Label("🌟 Di Bawah Notch: Unified Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                }
+                Button {
+                    withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedBottom.rawValue }
+                } label: {
+                    Label("⚓️ Di Bawah Konten: Bottom Dock", systemImage: tabLayoutMode == .unifiedBottom ? "checkmark" : "")
                 }
                 Button {
                     withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.splitWings.rawValue }
                 } label: {
-                    Label("⚔️ Split Bilateral Wings (Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
+                    Label("⚔️ Di Atas: Split Wings (Seperti Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
                 }
                 Button {
                     withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.leftWing.rawValue }
                 } label: {
-                    Label("👈 Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
+                    Label("👈 Di Atas: Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
                 }
             }
 
@@ -2442,6 +2559,48 @@ private struct LeftWingNavTabs: View {
                     .frame(height: 1.5)
             }
             .frame(height: 22)
+            .contentShape(Rectangle())
+
+        case .retro:
+            HStack(spacing: 2) {
+                if isSelected {
+                    Text("►")
+                        .font(.system(size: 6.5))
+                        .foregroundStyle(activeColor)
+                }
+                Text(text)
+                    .font(.system(size: 8, weight: .black, design: .monospaced))
+                    .foregroundStyle(isSelected ? activeColor : (isHovered ? .white : Self.inactiveColor))
+                    .shadow(color: isSelected ? activeColor.opacity(0.8) : Color.clear, radius: isSelected ? 3 : 0)
+            }
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2.5)
+            .background(
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(isSelected ? activeColor.opacity(0.20) : (isHovered ? Color.white.opacity(0.08) : Color.black.opacity(0.35)))
+            )
+            .frame(height: 22)
+            .contentShape(Rectangle())
+
+        case .glass:
+            HStack(spacing: 3) {
+                if isSelected {
+                    Circle()
+                        .fill(activeColor)
+                        .frame(width: 3.5, height: 3.5)
+                }
+                Text(text)
+                    .font(.system(size: 8, weight: isSelected ? .bold : .medium, design: .rounded))
+                    .foregroundStyle(isSelected ? .white : (isHovered ? .white.opacity(0.9) : Self.inactiveColor))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill(isSelected ? Color.white.opacity(0.18) : (isHovered ? Color.white.opacity(0.08) : Color.white.opacity(0.03)))
+            )
+            .frame(height: 22)
+            .contentShape(Rectangle())
         }
     }
 }
@@ -2484,6 +2643,7 @@ private struct RightWingNavTabs: View {
             let isWorkspaceSelected = (expandedTab == .workspace)
             Button {
                 NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                appState.surface = .sessionList
                 workspaceManager.resolveAndRefreshWorkspace(appState: appState)
                 withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
                     expandedTab = .workspace
@@ -2496,8 +2656,11 @@ private struct RightWingNavTabs: View {
                     activeColor: activeWorkspaceColor,
                     hoverTag: "workspace"
                 )
+                .frame(minHeight: 22)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .contentShape(Rectangle())
             .onHover { hoveredTab = $0 ? "workspace" : (hoveredTab == "workspace" ? nil : hoveredTab) }
             .help(workspaceManager.projectName.isEmpty ? "Workspace View" : "Workspace: \(workspaceManager.projectName)")
             .accessibilityLabel("Workspace")
@@ -2507,6 +2670,7 @@ private struct RightWingNavTabs: View {
             let isMusicSelected = (expandedTab == .music)
             Button {
                 NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                appState.surface = .sessionList
                 withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
                     expandedTab = .music
                 }
@@ -2518,8 +2682,11 @@ private struct RightWingNavTabs: View {
                     activeColor: Self.activeMusicColor,
                     hoverTag: "music"
                 )
+                .frame(minHeight: 22)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .contentShape(Rectangle())
             .onHover { hoveredTab = $0 ? "music" : (hoveredTab == "music" ? nil : hoveredTab) }
             .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist)" : "Music HUD")
             .accessibilityLabel("Music")
@@ -2531,17 +2698,22 @@ private struct RightWingNavTabs: View {
                     Button {
                         withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedTop.rawValue }
                     } label: {
-                        Label("🌟 Unified Center Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                        Label("🌟 Di Bawah Notch: Unified Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                    }
+                    Button {
+                        withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedBottom.rawValue }
+                    } label: {
+                        Label("⚓️ Di Bawah Konten: Bottom Dock", systemImage: tabLayoutMode == .unifiedBottom ? "checkmark" : "")
                     }
                     Button {
                         withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.splitWings.rawValue }
                     } label: {
-                        Label("⚔️ Split Bilateral Wings (Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
+                        Label("⚔️ Di Atas: Split Wings (Seperti Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
                     }
                     Button {
                         withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.leftWing.rawValue }
                     } label: {
-                        Label("👈 Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
+                        Label("👈 Di Atas: Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
                     }
                 }
 
@@ -2575,17 +2747,22 @@ private struct RightWingNavTabs: View {
                 Button {
                     withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedTop.rawValue }
                 } label: {
-                    Label("🌟 Unified Center Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                    Label("🌟 Di Bawah Notch: Unified Dock (Baru)", systemImage: tabLayoutMode == .unifiedTop ? "checkmark" : "")
+                }
+                Button {
+                    withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.unifiedBottom.rawValue }
+                } label: {
+                    Label("⚓️ Di Bawah Konten: Bottom Dock", systemImage: tabLayoutMode == .unifiedBottom ? "checkmark" : "")
                 }
                 Button {
                     withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.splitWings.rawValue }
                 } label: {
-                    Label("⚔️ Split Bilateral Wings (Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
+                    Label("⚔️ Di Atas: Split Wings (Seperti Sebelumnya)", systemImage: tabLayoutMode == .splitWings ? "checkmark" : "")
                 }
                 Button {
                     withAnimation { islandTabLayoutModeRaw = IslandTabLayoutMode.leftWing.rawValue }
                 } label: {
-                    Label("👈 Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
+                    Label("👈 Di Atas: Left Wing Dock", systemImage: tabLayoutMode == .leftWing ? "checkmark" : "")
                 }
             }
 
@@ -2674,6 +2851,48 @@ private struct RightWingNavTabs: View {
                     .frame(height: 1.5)
             }
             .frame(height: 22)
+            .contentShape(Rectangle())
+
+        case .retro:
+            HStack(spacing: 2) {
+                if isSelected {
+                    Text("►")
+                        .font(.system(size: 6.5))
+                        .foregroundStyle(activeColor)
+                }
+                Text(text)
+                    .font(.system(size: 8, weight: .black, design: .monospaced))
+                    .foregroundStyle(isSelected ? activeColor : (isHovered ? .white : Self.inactiveColor))
+                    .shadow(color: isSelected ? activeColor.opacity(0.8) : Color.clear, radius: isSelected ? 3 : 0)
+            }
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2.5)
+            .background(
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(isSelected ? activeColor.opacity(0.20) : (isHovered ? Color.white.opacity(0.08) : Color.black.opacity(0.35)))
+            )
+            .frame(height: 22)
+            .contentShape(Rectangle())
+
+        case .glass:
+            HStack(spacing: 3) {
+                if isSelected {
+                    Circle()
+                        .fill(activeColor)
+                        .frame(width: 3.5, height: 3.5)
+                }
+                Text(text)
+                    .font(.system(size: 8, weight: isSelected ? .bold : .medium, design: .rounded))
+                    .foregroundStyle(isSelected ? .white : (isHovered ? .white.opacity(0.9) : Self.inactiveColor))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill(isSelected ? Color.white.opacity(0.18) : (isHovered ? Color.white.opacity(0.08) : Color.white.opacity(0.03)))
+            )
+            .frame(height: 22)
+            .contentShape(Rectangle())
         }
     }
 }
@@ -4345,8 +4564,11 @@ private struct AgentSessionFilterBar: View {
                     }
                 } label: {
                     filterChip(item: item, isSelected: isSelected, isHovered: isHovered)
+                        .frame(minHeight: 20)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .contentShape(Rectangle())
                 .onHover { hovered in
                     hoveredTag = hovered ? item.id : (hoveredTag == item.id ? nil : hoveredTag)
                 }
@@ -4519,6 +4741,36 @@ private struct AgentSessionFilterBar: View {
             .background(
                 RoundedRectangle(cornerRadius: 2)
                     .fill(isSelected ? Color.white.opacity(0.10) : Color.clear)
+            )
+
+        case .retro:
+            HStack(spacing: 2.5) {
+                if item.isAttention {
+                    Text("▲")
+                        .font(.system(size: 7))
+                        .foregroundStyle(Color(red: 1.0, green: 0.69, blue: 0.0))
+                } else if isSelected {
+                    Text("►")
+                        .font(.system(size: 7))
+                        .foregroundStyle(item.activeColor)
+                }
+
+                Text(item.title)
+                    .font(.system(size: 8, weight: .black, design: .monospaced))
+                    .foregroundStyle(isSelected ? (item.isAttention ? Color(red: 1.0, green: 0.69, blue: 0.0) : item.activeColor) : (isHovered ? Color.white : Color(white: 0.50)))
+                    .shadow(color: isSelected ? item.activeColor.opacity(0.8) : Color.clear, radius: isSelected ? 3 : 0)
+
+                if showCounts, let count = item.count {
+                    Text(":\(count)")
+                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(isSelected ? item.activeColor : Color(white: 0.40))
+                }
+            }
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2.5)
+            .background(
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(isSelected ? item.activeColor.opacity(0.18) : (isHovered ? Color.white.opacity(0.06) : Color.black.opacity(0.35)))
             )
         }
     }

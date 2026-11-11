@@ -184,35 +184,41 @@ public enum WorkspaceAccentColor: String, CaseIterable, Identifiable, Sendable {
 }
 
 public enum IslandTabStyle: String, CaseIterable, Identifiable, Sendable {
-    case pixel = "pixel"
-    case capsule = "capsule"
-    case console = "console"
     case minimal = "minimal"
+    case capsule = "capsule"
+    case retro = "retro"
+    case pixel = "pixel"
+    case console = "console"
+    case glass = "glass"
 
     public var id: String { rawValue }
 
     public var title: String {
         switch self {
-        case .pixel: return "Cyber Pixel (5×7 Matrix)"
-        case .capsule: return "Modern Capsule (Pill)"
-        case .console: return "Machined Console ([ TAB ])"
         case .minimal: return "Minimal Blade (Underline)"
+        case .capsule: return "Modern Capsule (Pill)"
+        case .retro: return "Retro CRT / Arcade (Phosphor Glow)"
+        case .pixel: return "Cyber Pixel (5×7 Matrix)"
+        case .console: return "Machined Console ([ TAB ])"
+        case .glass: return "Frosted Glass (Specular Glow)"
         }
     }
 }
 
 public enum IslandTabLayoutMode: String, CaseIterable, Identifiable, Sendable {
-    case unifiedTop = "unifiedTop"
     case splitWings = "splitWings"
+    case unifiedTop = "unifiedTop"
+    case unifiedBottom = "unifiedBottom"
     case leftWing = "leftWing"
 
     public var id: String { rawValue }
 
     public var title: String {
         switch self {
-        case .unifiedTop: return "🌟 Unified Center Dock (Baru - 4 Tab di Tengah)"
-        case .splitWings: return "⚔️ Split Bilateral Wings (Sebelumnya - 2 Kiri & 2 Kanan Notch)"
-        case .leftWing: return "👈 Left Wing Dock (Semua 4 Tab di Sayap Kiri)"
+        case .splitWings: return "⚔️ Di Atas: Split Wings (Seperti Sebelumnya - Sayap Notch)"
+        case .unifiedTop: return "🌟 Di Bawah Notch: Unified Dock (Baru - Atas Konten)"
+        case .unifiedBottom: return "⚓️ Di Bawah Konten: Bottom Dock (Bawah Card)"
+        case .leftWing: return "👈 Di Atas: Left Wing Dock (Sayap Kiri Notch)"
         }
     }
 }
@@ -220,6 +226,7 @@ public enum IslandTabLayoutMode: String, CaseIterable, Identifiable, Sendable {
 public enum AgentFilterStyle: String, CaseIterable, Identifiable, Sendable {
     case capsule = "capsule"
     case minimal = "minimal"
+    case retro = "retro"
     case segmented = "segmented"
     case tag = "tag"
 
@@ -229,6 +236,7 @@ public enum AgentFilterStyle: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .capsule: return "Modern Capsule (Pill)"
         case .minimal: return "Minimal Blade (Underline)"
+        case .retro: return "Retro Arcade (CRT Amber/Cyan)"
         case .segmented: return "Cyber Segmented (Track)"
         case .tag: return "Machined Tag ([ TAG ])"
         }

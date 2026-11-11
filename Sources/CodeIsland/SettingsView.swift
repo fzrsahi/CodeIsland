@@ -1963,7 +1963,7 @@ private struct AppearancePage: View {
                         }
                     }
 
-                    Text("Choose how the 4 Notch tabs (ALL · AGENTS · WORKSPACE · MUSIC) are placed:\n• Unified Center Dock: Tab bar bersatu di tengah di bawah notch.\n• Split Bilateral Wings: Layout sebelumnya, 2 tab di sayap kiri (ALL, AGENTS) dan 2 tab di sayap kanan (WORKSPACE, MUSIC).\n• Left Wing Dock: Semua 4 tab digabung di sisi kiri notch.")
+                    Text("Pilih posisi penempatan 4 tab (ALL · AGENTS · WORKSPACE · MUSIC):\n• Di Atas Sayap Notch: Seperti sebelumnya, 2 tab di kiri (ALL, AGENTS) dan 2 tab di kanan (WORKSPACE, MUSIC) di garis notch.\n• Di Atas Konten (Unified Dock): 4 tab bersatu di dock tengah tepat di bawah notch.\n• Di Bawah Konten (Bottom Dock): Dock navigasi melayang di bawah kartu konten.\n• Sayap Kiri Notch: Semua 4 tab digabung di sayap kiri notch.")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
 
@@ -1975,9 +1975,8 @@ private struct AppearancePage: View {
                                 Text(style.title).tag(style.rawValue)
                             }
                         }
-                        .pickerStyle(.segmented)
 
-                        Text("Pilih gaya visual untuk 4 tab: Minimal Blade (underline), Modern Capsule (pill), Cyber Pixel, atau Machined Console.")
+                        Text("Pilih gaya visual untuk 4 tab: Minimal Blade, Modern Capsule, Retro CRT / Arcade, Cyber Pixel, Machined Console, atau Frosted Glass.")
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                     }
