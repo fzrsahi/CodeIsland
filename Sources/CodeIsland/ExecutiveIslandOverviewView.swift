@@ -38,7 +38,7 @@ struct ExecutiveIslandOverviewView: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
+        HStack(alignment: .center, spacing: 10) {
             // HERO DECK (LEFT): Live Coding Agent Command Deck (~60% space)
             HeroAgentCommandDeck(
                 appState: appState,
@@ -53,7 +53,7 @@ struct ExecutiveIslandOverviewView: View {
             .frame(maxWidth: .infinity)
 
             // TELEMETRY WINGS (RIGHT): Live Git HUD & Music Capsules (~40% space)
-            VStack(spacing: 5) {
+            VStack(spacing: 6) {
                 // Top: Git & Workspace HUD Capsule
                 MiniWorkspaceCapsule(
                     manager: workspaceManager,
@@ -77,18 +77,14 @@ struct ExecutiveIslandOverviewView: View {
                     }
                 )
             }
-            .frame(width: 250)
+            .frame(width: 270)
         }
-        .frame(height: 98)
+        .frame(height: 108)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 5)
-                .fill(Color(red: 0.05, green: 0.06, blue: 0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(Color(red: 0.16, green: 0.19, blue: 0.24), lineWidth: 1)
-                )
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white.opacity(0.05))
         )
         .padding(.horizontal, 6)
         .padding(.bottom, 6)
@@ -130,66 +126,66 @@ private struct HeroAgentCommandDeck: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(alignment: .top, spacing: 8) {
+            HStack(alignment: .top, spacing: 9) {
                 // Left Mascot Column (matches SessionCard)
                 VStack(spacing: 3) {
                     if let session = activeSession {
-                        MascotView(source: session.mascotSource, status: session.status, size: 28)
+                        MascotView(source: session.mascotSource, status: session.status, size: 32)
                         if !session.subagents.isEmpty {
-                            HStack(spacing: 1) {
+                            HStack(spacing: 1.5) {
                                 ForEach(Array(session.subagents.values.prefix(4)), id: \.agentId) { sub in
-                                    MiniAgentIcon(active: sub.status != .idle, size: 7)
+                                    MiniAgentIcon(active: sub.status != .idle, size: 8)
                                 }
                             }
                         }
                     } else {
-                        MascotView(source: "claude", status: .idle, size: 28)
+                        MascotView(source: "claude", status: .idle, size: 32)
                     }
                 }
-                .frame(width: 32)
+                .frame(width: 36)
                 .padding(.top, 1)
 
                 // Main Content Column
-                VStack(alignment: .leading, spacing: 3.5) {
+                VStack(alignment: .leading, spacing: 4) {
                     if let session = activeSession {
                         let cardStatus = SessionCardStatus(session)
                         let headline = session.headline(showProjectName: true)
                         let projectTitle = headline.text.uppercased()
 
                         // Header Row: Status Chip + Project Title + Model Tag + Token Telemetry
-                        HStack(alignment: .center, spacing: 4) {
-                            SessionStatusChip(status: cardStatus, fontSize: 7)
+                        HStack(alignment: .center, spacing: 6) {
+                            SessionStatusChip(status: cardStatus, fontSize: 10)
 
                             Text(projectTitle)
-                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                .font(.system(size: 13, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color.white)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
 
                             if let model = session.modelLabel ?? session.model, !model.isEmpty {
                                 Text(model)
-                                    .font(.system(size: 6, weight: .semibold, design: .monospaced))
-                                    .foregroundStyle(Color(white: 0.55))
-                                    .padding(.horizontal, 3)
-                                    .padding(.vertical, 0.5)
-                                    .background(RoundedRectangle(cornerRadius: 1.5).fill(Color.white.opacity(0.06)))
+                                    .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color(white: 0.65))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1.5)
+                                    .background(RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.08)))
                             }
 
                             Spacer(minLength: 0)
 
-                            HStack(spacing: 2) {
+                            HStack(spacing: 3) {
                                 Text("⚡")
-                                    .font(.system(size: 6))
+                                    .font(.system(size: 9))
                                 Text(tokenLabel)
-                                    .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
                                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
                             }
-                            .padding(.horizontal, 3.5)
-                            .padding(.vertical, 1)
-                            .background(RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.06)))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.08)))
 
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 6))
+                                .font(.system(size: 8, weight: .bold))
                                 .foregroundStyle(isHovered ? Color.white : Color(white: 0.35))
                         }
 
@@ -199,65 +195,65 @@ private struct HeroAgentCommandDeck: View {
                         Spacer(minLength: 0)
 
                         // Footer Row: Operation Count + Time Ago + Action Affordance
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             if session.totalToolCallCount > 0 {
                                 Text("\(session.totalToolCallCount) ops")
-                                    .font(.system(size: 6.5, weight: .semibold, design: .monospaced))
-                                    .foregroundStyle(Color(white: 0.45))
+                                    .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color(white: 0.60))
                             }
 
                             Text("• \(formatTimeAgo(session.lastActivity))")
-                                .font(.system(size: 6.5, design: .monospaced))
-                                .foregroundStyle(Color(white: 0.35))
+                                .font(.system(size: 9.5, design: .monospaced))
+                                .foregroundStyle(Color(white: 0.50))
 
                             if sessions.count > 1 {
                                 Text("• \(sessions.count) sessions")
-                                    .font(.system(size: 6.5, design: .monospaced))
-                                    .foregroundStyle(Color(white: 0.40))
+                                    .font(.system(size: 9.5, design: .monospaced))
+                                    .foregroundStyle(Color(white: 0.55))
                             }
 
                             Spacer(minLength: 0)
 
                             Text("INSPECT AGENTS →")
-                                .font(.system(size: 6, weight: .bold, design: .monospaced))
-                                .foregroundStyle(isHovered ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.40))
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundStyle(isHovered ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.45))
                         }
                     } else {
                         // Empty Standby State
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             Text("AUTONOMOUS AGENTS")
-                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color.white)
 
                             Text("STANDBY")
-                                .font(.system(size: 6.5, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color(white: 0.4))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.05)))
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color(white: 0.5))
+                                .padding(.horizontal, 4.5)
+                                .padding(.vertical, 1.5)
+                                .background(RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.08)))
 
                             Spacer(minLength: 0)
 
-                            HStack(spacing: 2) {
+                            HStack(spacing: 3) {
                                 Text("⚡")
-                                    .font(.system(size: 6))
+                                    .font(.system(size: 9))
                                 Text(tokenLabel)
-                                    .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
                             }
-                            .padding(.horizontal, 3.5)
-                            .padding(.vertical, 1)
-                            .background(RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.06)))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.08)))
                         }
 
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 2.5) {
                             Text("Ready for Claude Code, Gemini CLI, Cursor, or Codex")
-                                .font(.system(size: 7.5, weight: .medium, design: .monospaced))
-                                .foregroundStyle(Color.white.opacity(0.8))
+                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.85))
 
                             Text("Run an agent in Terminal to monitor live status here")
-                                .font(.system(size: 6.5, design: .monospaced))
-                                .foregroundStyle(Color(white: 0.45))
+                                .font(.system(size: 9, design: .monospaced))
+                                .foregroundStyle(Color(white: 0.50))
                         }
 
                         Spacer(minLength: 0)
@@ -265,23 +261,19 @@ private struct HeroAgentCommandDeck: View {
                         HStack {
                             Spacer()
                             Text("OPEN AGENTS TAB →")
-                                .font(.system(size: 6, weight: .bold, design: .monospaced))
-                                .foregroundStyle(isHovered ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.4))
+                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(isHovered ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.45))
                         }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 7)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(white: 0.04))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(Color.white.opacity(isHovered ? 0.16 : 0.07), lineWidth: 0.8)
-                    )
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.white.opacity(isHovered ? 0.08 : 0.03))
             )
             .contentShape(Rectangle())
         }
@@ -294,93 +286,90 @@ private struct HeroAgentCommandDeck: View {
     private func liveActivityRow(session: SessionSnapshot, cardStatus: SessionCardStatus) -> some View {
         if cardStatus == .thinking || session.status == .processing {
             // Live Thinking with Bouncing Neon Dots
-            HStack(spacing: 5) {
-                TypingIndicator(fontSize: 7.5, label: "Thinking...", bright: true, color: Color(red: 0.25, green: 0.9, blue: 0.8))
+            HStack(spacing: 6) {
+                TypingIndicator(fontSize: 10, label: "Thinking...", bright: true, color: Color(red: 0.25, green: 0.9, blue: 0.8))
 
                 if let prompt = session.lastUserPrompt, !prompt.isEmpty {
                     Text("• \(prompt)")
-                        .font(.system(size: 7, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.65))
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(Color(white: 0.80))
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
             }
-            .padding(.horizontal, 5)
-            .padding(.vertical, 3)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3.5)
             .background(
-                RoundedRectangle(cornerRadius: 2.5)
-                    .fill(Color(red: 0.03, green: 0.05, blue: 0.08))
-                    .overlay(RoundedRectangle(cornerRadius: 2.5).stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18), lineWidth: 0.6))
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.white.opacity(0.06))
             )
         } else if let tool = session.currentTool {
             // Tool Execution Line (matches SessionCard)
-            HStack(spacing: 4) {
-                SessionToolChip(tool: tool, color: cardStatus.color, fontSize: 7.5)
+            HStack(spacing: 6) {
+                SessionToolChip(tool: tool, color: cardStatus.color, fontSize: 9.5)
 
                 if let detail = session.toolDescription, !detail.isEmpty {
                     Text(detail)
-                        .font(.system(size: 7, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.85))
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.92))
                         .lineLimit(1)
                         .truncationMode(.middle)
                 } else if let prompt = session.lastUserPrompt {
                     Text(prompt)
-                        .font(.system(size: 7, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.65))
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(Color(white: 0.75))
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
 
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2.5)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
             .background(
-                RoundedRectangle(cornerRadius: 2.5)
-                    .fill(Color(red: 0.03, green: 0.04, blue: 0.06))
-                    .overlay(RoundedRectangle(cornerRadius: 2.5).stroke(Color.white.opacity(0.08), lineWidth: 0.6))
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.white.opacity(0.06))
             )
         } else if cardStatus == .needsYou {
             // Waiting for User Input / Approval
-            HStack(spacing: 3.5) {
+            HStack(spacing: 5) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 7))
+                    .font(.system(size: 9))
                     .foregroundStyle(Color(red: 0.96, green: 0.62, blue: 0.04))
 
                 Text("Requires your input or approval")
-                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color(red: 0.96, green: 0.62, blue: 0.04))
             }
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2.5)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
             .background(
-                RoundedRectangle(cornerRadius: 2.5)
+                RoundedRectangle(cornerRadius: 4)
                     .fill(Color(red: 0.96, green: 0.62, blue: 0.04).opacity(0.14))
-                    .overlay(RoundedRectangle(cornerRadius: 2.5).stroke(Color(red: 0.96, green: 0.62, blue: 0.04).opacity(0.25), lineWidth: 0.6))
             )
         } else if let recap = session.visibleRecap {
             // Recap of completed turn
-            HStack(spacing: 3) {
+            HStack(spacing: 4.5) {
                 Text("✓")
-                    .font(.system(size: 6.5, weight: .bold))
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
                 Text(recap.text)
-                    .font(.system(size: 7, design: .monospaced))
-                    .foregroundStyle(Color(white: 0.70))
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Color(white: 0.85))
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
         } else if let prompt = session.lastUserPrompt {
             // Prompt preview
             Text("› \(prompt)")
-                .font(.system(size: 7, design: .monospaced))
-                .foregroundStyle(Color(white: 0.65))
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(Color(white: 0.75))
                 .lineLimit(1)
                 .truncationMode(.tail)
         } else {
             Text("Session idle • Ready for turn")
-                .font(.system(size: 7, design: .monospaced))
-                .foregroundStyle(Color(white: 0.45))
+                .font(.system(size: 9.5, design: .monospaced))
+                .foregroundStyle(Color(white: 0.50))
         }
     }
 }
@@ -396,106 +385,111 @@ private struct MiniWorkspaceCapsule: View {
 
     var body: some View {
         Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 // Row 1: Repo, Branch, Stack
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     Image(systemName: "folder.fill")
-                        .font(.system(size: 7.5))
+                        .font(.system(size: 11))
                         .foregroundStyle(accentColor)
 
                     Text(manager.projectName.isEmpty ? "WORKSPACE" : manager.projectName.uppercased())
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.white)
                         .lineLimit(1)
                         .truncationMode(.tail)
 
                     if manager.isGitRepo {
-                        HStack(spacing: 2) {
+                        HStack(spacing: 3) {
                             Image(systemName: "arrow.triangle.branch")
-                                .font(.system(size: 5.5, weight: .bold))
+                                .font(.system(size: 8, weight: .bold))
                                 .foregroundStyle(accentColor)
                             Text(manager.branch.isEmpty ? "main" : manager.branch)
-                                .font(.system(size: 6.5, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.white.opacity(0.9))
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.95))
                                 .lineLimit(1)
                         }
-                        .padding(.horizontal, 3)
-                        .padding(.vertical, 1)
-                        .background(RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.08)))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1.5)
+                        .background(RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.10)))
                     }
 
                     Spacer(minLength: 0)
 
                     if manager.stashCount > 0 {
                         Text("\(manager.stashCount) stash")
-                            .font(.system(size: 6, weight: .bold, design: .monospaced))
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color(red: 0.69, green: 0.15, blue: 1.0))
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 0.5)
-                            .background(RoundedRectangle(cornerRadius: 1.5).fill(Color(red: 0.69, green: 0.15, blue: 1.0).opacity(0.15)))
+                            .padding(.horizontal, 4.5)
+                            .padding(.vertical, 1.5)
+                            .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(red: 0.69, green: 0.15, blue: 1.0).opacity(0.18)))
                     } else if !manager.projectType.isEmpty {
                         ProjectStackBadgeView(stack: manager.projectType, accentColor: accentColor)
                     }
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 6))
+                        .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(isHovered ? Color.white : Color(white: 0.35))
                 }
 
                 // Row 2: Status Line
                 if !manager.isGitRepo {
                     Text("No Git repo detected")
-                        .font(.system(size: 7, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.5))
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(Color(white: 0.55))
                 } else if manager.changedFiles.isEmpty {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 4.5) {
                         Image(systemName: "checkmark.shield.fill")
-                            .font(.system(size: 6))
+                            .font(.system(size: 9.5))
                             .foregroundStyle(accentColor)
                         Text("Tree clean • In sync")
-                            .font(.system(size: 7, weight: .medium, design: .monospaced))
-                            .foregroundStyle(Color.white.opacity(0.85))
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.90))
 
                         if let commit = manager.recentCommits.first {
                             Text("• \(commit.hash)")
-                                .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                                 .foregroundStyle(accentColor)
                         }
                     }
                 } else {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 4.5) {
                         Text("\(manager.changedFiles.count) changes:")
-                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.white)
 
                         if manager.modifiedCount > 0 {
                             Text("\(manager.modifiedCount) mod")
-                                .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color(red: 0.96, green: 0.62, blue: 0.04))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1.5)
+                                .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(red: 0.96, green: 0.62, blue: 0.04).opacity(0.18)))
                         }
                         if manager.untrackedCount > 0 {
                             Text("\(manager.untrackedCount) new")
-                                .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1.5)
+                                .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18)))
                         }
                         if manager.deletedCount > 0 {
                             Text("\(manager.deletedCount) del")
-                                .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color(red: 1.0, green: 0.16, blue: 0.53))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1.5)
+                                .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(red: 1.0, green: 0.16, blue: 0.53).opacity(0.18)))
                         }
                     }
                 }
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4.5)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(
-                RoundedRectangle(cornerRadius: 3.5)
-                    .fill(Color(white: 0.04))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 3.5)
-                            .stroke(Color.white.opacity(isHovered ? 0.16 : 0.07), lineWidth: 0.8)
-                    )
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.white.opacity(isHovered ? 0.08 : 0.03))
             )
             .contentShape(Rectangle())
         }
@@ -515,50 +509,48 @@ private struct MiniMusicCapsule: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 // Artwork or Waveform
                 ZStack {
                     if let art = nowPlaying.artworkImage {
                         Image(nsImage: art)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: 28, height: 28)
-                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                            .frame(width: 34, height: 34)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
                     } else {
-                        RoundedRectangle(cornerRadius: 3)
+                        RoundedRectangle(cornerRadius: 5)
                             .fill(Color(red: 0.08, green: 0.09, blue: 0.12))
-                            .frame(width: 28, height: 28)
+                            .frame(width: 34, height: 34)
                             .overlay(
                                 Image(systemName: "music.note")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 14))
                                     .foregroundStyle(Color(red: 1.0, green: 0.16, blue: 0.53))
                             )
                     }
                 }
 
                 // Middle: Track & Artist
-                VStack(alignment: .leading, spacing: 1) {
-                    HStack(spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
                         Text(nowPlaying.player.isEmpty ? "MUSIC" : nowPlaying.player.uppercased())
-                            .font(.system(size: 6, weight: .bold, design: .monospaced))
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color(red: 1.0, green: 0.16, blue: 0.53))
 
                         if nowPlaying.isPlaying {
-                            Circle()
-                                .fill(Color(red: 1.0, green: 0.16, blue: 0.53))
-                                .frame(width: 3, height: 3)
+                            MiniEqualizerBars(color: Color(red: 1.0, green: 0.16, blue: 0.53))
                         }
                     }
 
                     Text(nowPlaying.title.isEmpty ? "No track playing" : nowPlaying.title)
-                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                        .font(.system(size: 10.5, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.white)
                         .lineLimit(1)
                         .truncationMode(.tail)
 
                     Text(nowPlaying.artist.isEmpty ? "Idle" : nowPlaying.artist)
-                        .font(.system(size: 6.5, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.55))
+                        .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color(white: 0.65))
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
@@ -570,10 +562,10 @@ private struct MiniMusicCapsule: View {
                     nowPlaying.togglePlayPause()
                 }) {
                     Image(systemName: nowPlaying.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 7.5, weight: .bold))
+                        .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(Color(red: 1.0, green: 0.16, blue: 0.53))
-                        .frame(width: 18, height: 18)
-                        .background(RoundedRectangle(cornerRadius: 2.5).fill(Color(red: 1.0, green: 0.16, blue: 0.53).opacity(0.15)))
+                        .frame(width: 22, height: 22)
+                        .background(RoundedRectangle(cornerRadius: 4).fill(Color(red: 1.0, green: 0.16, blue: 0.53).opacity(0.18)))
                 }
                 .buttonStyle(.plain)
 
@@ -582,22 +574,18 @@ private struct MiniMusicCapsule: View {
                     nowPlaying.nextTrack()
                 }) {
                     Image(systemName: "forward.fill")
-                        .font(.system(size: 6.5, weight: .bold))
-                        .foregroundStyle(Color(white: 0.7))
-                        .frame(width: 16, height: 18)
+                        .font(.system(size: 8.5, weight: .bold))
+                        .foregroundStyle(Color(white: 0.80))
+                        .frame(width: 20, height: 22)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4.5)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 3.5)
-                    .fill(Color(white: 0.04))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 3.5)
-                            .stroke(Color.white.opacity(isHovered ? 0.16 : 0.07), lineWidth: 0.8)
-                    )
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.white.opacity(isHovered ? 0.08 : 0.03))
             )
             .contentShape(Rectangle())
         }

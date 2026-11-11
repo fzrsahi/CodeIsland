@@ -156,6 +156,22 @@ public enum IslandTabStyle: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+public enum IslandTabLayoutMode: String, CaseIterable, Identifiable, Sendable {
+    case unifiedTop = "unifiedTop"
+    case leftWing = "leftWing"
+    case splitWings = "splitWings"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .unifiedTop: return "Unified Center Dock (Together)"
+        case .leftWing: return "Left Wing (All 4 Tabs Left)"
+        case .splitWings: return "Split Bilateral Wings (2 Left · 2 Right)"
+        }
+    }
+}
+
 enum SettingsKey {
     // Language
     static let appLanguage = "appLanguage"                 // "system", "en", "zh", "zh-Hant", "de", "ja", "ko", "tr"
@@ -233,6 +249,7 @@ enum SettingsKey {
     static let workspaceShowRecentCommits = "workspaceShowRecentCommits"
     static let workspaceAccentColor = "workspaceAccentColor"
     static let islandTabStyle = "islandTabStyle"
+    static let islandTabLayoutMode = "islandTabLayoutMode"
 
     // Session cards
     static let showGitBranch = "showGitBranch"
@@ -380,7 +397,8 @@ struct SettingsDefaults {
     static let workspaceAutoDetect = true
     static let workspaceShowRecentCommits = true
     static let workspaceAccentColor = WorkspaceAccentColor.emerald.rawValue
-    static let islandTabStyle = IslandTabStyle.pixel.rawValue
+    static let islandTabStyle = IslandTabStyle.minimal.rawValue
+    static let islandTabLayoutMode = IslandTabLayoutMode.unifiedTop.rawValue
     static let showSessionRecap = true
     static let showModelLabel = false
     static let showUsageStats = true
@@ -497,6 +515,7 @@ class SettingsManager {
             SettingsKey.workspaceShowRecentCommits: SettingsDefaults.workspaceShowRecentCommits,
             SettingsKey.workspaceAccentColor: SettingsDefaults.workspaceAccentColor,
             SettingsKey.islandTabStyle: SettingsDefaults.islandTabStyle,
+            SettingsKey.islandTabLayoutMode: SettingsDefaults.islandTabLayoutMode,
             SettingsKey.showSessionRecap: SettingsDefaults.showSessionRecap,
             SettingsKey.showModelLabel: SettingsDefaults.showModelLabel,
             SettingsKey.showUsageStats: SettingsDefaults.showUsageStats,

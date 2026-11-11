@@ -139,6 +139,10 @@ struct NotchPanelView: View {
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
     @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
+    @AppStorage(SettingsKey.islandTabLayoutMode) private var islandTabLayoutModeRaw = SettingsDefaults.islandTabLayoutMode
+    private var tabLayoutMode: IslandTabLayoutMode {
+        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .unifiedTop
+    }
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @ObservedObject private var workspaceManager = WorkspaceMonitorManager.shared
     @ObservedObject private var sys = SystemMonitorManager.shared
@@ -377,7 +381,8 @@ struct NotchPanelView: View {
                             mascotSize: mascotSize,
                             hasNotch: hasNotch,
                             showToolStatus: showToolStatus,
-                            expandedTab: $expandedTab
+                            expandedTab: $expandedTab,
+                            workspaceManager: workspaceManager
                         )
                             .padding(.leading, (isThinking && !shouldShowExpanded) ? 8 : (shouldShowExpanded ? 8 : 0))
                             .frame(
@@ -509,6 +514,18 @@ struct NotchPanelView: View {
                             removal: .move(edge: .top).combined(with: .opacity)
                         ))
                     } else {
+                        if tabLayoutMode == .unifiedTop {
+                            UnifiedIslandTabBar(
+                                appState: appState,
+                                expandedTab: $expandedTab,
+                                workspaceManager: workspaceManager,
+                                nowPlaying: nowPlaying,
+                                isCompactInWing: false
+                            )
+                            .padding(.top, 2)
+                            .padding(.bottom, 2)
+                        }
+
                         if expandedTab == .all {
                             ExecutiveIslandOverviewView(
                                 appState: appState,
@@ -892,6 +909,7 @@ private struct CompactLeftWing: View {
     let hasNotch: Bool
     let showToolStatus: Bool
     @Binding var expandedTab: ExpandedContentTab
+    @ObservedObject var workspaceManager: WorkspaceMonitorManager
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
     // Bound via @AppStorage so flipping the default mascot in Settings rerenders this view
@@ -899,6 +917,17 @@ private struct CompactLeftWing: View {
     @AppStorage(SettingsKey.defaultSource) private var settingsDefaultSource = SettingsDefaults.defaultSource
     @AppStorage(SettingsKey.showClaudeQuota) private var showClaudeQuota = SettingsDefaults.showClaudeQuota
     @AppStorage(SettingsKey.claudeQuotaChip) private var claudeQuotaChip = SettingsDefaults.claudeQuotaChip
+    @AppStorage(SettingsKey.islandTabLayoutMode) private var islandTabLayoutModeRaw = SettingsDefaults.islandTabLayoutMode
+
+    private var tabLayoutMode: IslandTabLayoutMode {
+        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .unifiedTop
+    }
+
+    private var projectName: String? {
+        guard let sid = appState.rotatingSessionId ?? appState.activeSessionId ?? appState.sessions.keys.sorted().first,
+              let cwd = appState.sessions[sid]?.cwd, !cwd.isEmpty else { return nil }
+        return (cwd as NSString).lastPathComponent
+    }
 
     private var displaySession: SessionSnapshot? {
         let sid = appState.rotatingSessionId ?? appState.activeSessionId ?? appState.sessions.keys.sorted().first
@@ -937,14 +966,42 @@ private struct CompactLeftWing: View {
     var body: some View {
         HStack(spacing: 6) {
             if expanded {
-                AppLogoView(size: 36, showBackground: false)
+                AppLogoView(size: 32, showBackground: false)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             expandedTab = .all
                         }
                     }
-                LeftWingNavTabs(expandedTab: $expandedTab)
+
+                if tabLayoutMode == .leftWing {
+                    UnifiedIslandTabBar(
+                        appState: appState,
+                        expandedTab: $expandedTab,
+                        workspaceManager: workspaceManager,
+                        nowPlaying: nowPlaying,
+                        isCompactInWing: true
+                    )
+                } else if tabLayoutMode == .splitWings {
+                    LeftWingNavTabs(expandedTab: $expandedTab)
+                } else {
+                    // .unifiedTop: Clean header status chip next to logo
+                    HStack(spacing: 5) {
+                        Text(projectName ?? "CODEISLAND")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(white: 0.85))
+                            .lineLimit(1)
+                        if isThinking {
+                            TypingIndicator(fontSize: 8.5, color: Color(red: 0.0, green: 0.96, blue: 0.83))
+                        }
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.white.opacity(0.06))
+                    )
+                }
             } else {
                 ZStack {
                     if nowPlaying.isPlaying && displayStatus == .idle {
@@ -1170,6 +1227,11 @@ private struct CompactRightWing: View {
     @AppStorage(SettingsKey.quietHoursStart) private var quietHoursStart = SettingsDefaults.quietHoursStart
     @AppStorage(SettingsKey.quietHoursEnd) private var quietHoursEnd = SettingsDefaults.quietHoursEnd
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
+    @AppStorage(SettingsKey.islandTabLayoutMode) private var islandTabLayoutModeRaw = SettingsDefaults.islandTabLayoutMode
+
+    private var tabLayoutMode: IslandTabLayoutMode {
+        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .unifiedTop
+    }
     /// The waiting badges pulse forever; with Reduce Motion they hold still
     /// (a one-off follow-up bounce still marks a reminder).
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1225,13 +1287,36 @@ private struct CompactRightWing: View {
         HStack(spacing: 5) {
             if expanded {
                 HStack(spacing: 8) {
-                    // Navigation tabs on the right: [ WORKSPACE | MUSIC ]
-                    RightWingNavTabs(
-                        appState: appState,
-                        expandedTab: $expandedTab,
-                        workspaceManager: workspaceManager,
-                        availableWidth: expandedWingWidth
-                    )
+                    if tabLayoutMode == .splitWings {
+                        RightWingNavTabs(
+                            appState: appState,
+                            expandedTab: $expandedTab,
+                            workspaceManager: workspaceManager,
+                            availableWidth: expandedWingWidth
+                        )
+                    } else {
+                        // In unifiedTop and leftWing modes:
+                        if nowPlaying.isPlaying {
+                            HStack(spacing: 4) {
+                                MiniEqualizerBars(color: Color(red: 1.0, green: 0.16, blue: 0.53))
+                                Text(nowPlaying.title.isEmpty ? "Playing" : nowPlaying.title)
+                                    .font(.system(size: 8.5, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color(white: 0.80))
+                                    .lineLimit(1)
+                                    .frame(maxWidth: 110, alignment: .trailing)
+                            }
+                        } else if let branch = gitBranch {
+                            HStack(spacing: 3) {
+                                Image(systemName: "arrow.triangle.branch")
+                                    .font(.system(size: 7.5))
+                                    .foregroundStyle(Color(white: 0.5))
+                                Text(branch)
+                                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(Color(white: 0.75))
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
 
                     Spacer(minLength: 4)
 
@@ -1738,6 +1823,326 @@ struct QuitConfirmButton: View {
     }
 }
 
+/// Mini 3-bar animated audio equalizer
+struct MiniEqualizerBars: View {
+    let color: Color
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 0.08)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let h1 = 3.0 + CGFloat((sin(t * 7.0) + 1.0) / 2.0) * 5.0
+            let h2 = 3.0 + CGFloat((cos(t * 9.0) + 1.0) / 2.0) * 7.0
+            let h3 = 3.0 + CGFloat((sin(t * 5.5) + 1.0) / 2.0) * 4.5
+            HStack(spacing: 1.5) {
+                RoundedRectangle(cornerRadius: 0.5)
+                    .fill(color)
+                    .frame(width: 1.5, height: h1)
+                RoundedRectangle(cornerRadius: 0.5)
+                    .fill(color)
+                    .frame(width: 1.5, height: h2)
+                RoundedRectangle(cornerRadius: 0.5)
+                    .fill(color)
+                    .frame(width: 1.5, height: h3)
+            }
+            .frame(height: 11, alignment: .bottom)
+        }
+    }
+}
+
+/// Unified 4-Tab Navigation Dock [ ALL · AGENTS · WORKSPACE · MUSIC ]
+private struct UnifiedIslandTabBar: View {
+    var appState: AppState
+    @Binding var expandedTab: ExpandedContentTab
+    @ObservedObject var workspaceManager: WorkspaceMonitorManager
+    @ObservedObject var nowPlaying: NowPlayingManager
+    var isCompactInWing: Bool = false
+
+    @AppStorage(SettingsKey.islandTabStyle) private var islandTabStyleRaw = SettingsDefaults.islandTabStyle
+    @AppStorage(SettingsKey.workspaceAccentColor) private var workspaceAccentColorRaw = SettingsDefaults.workspaceAccentColor
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hoveredTab: String?
+
+    private var tabStyle: IslandTabStyle {
+        IslandTabStyle(rawValue: islandTabStyleRaw) ?? .pixel
+    }
+
+    private var activeWorkspaceColor: Color {
+        WorkspaceAccentColor(rawValue: workspaceAccentColorRaw)?.color ?? Color(red: 0.0, green: 0.90, blue: 0.46)
+    }
+
+    static let activeAllColor = Color(red: 0.0, green: 0.96, blue: 0.83)
+    static let activeAgentsColor = Color(red: 0.3, green: 0.85, blue: 0.4)
+    static let activeMusicColor = Color(red: 1.0, green: 0.16, blue: 0.53)
+    static let inactiveColor = Color.white.opacity(0.60)
+
+    private var activeAgentCount: Int {
+        appState.sessions.count
+    }
+
+    private var isAnyAgentWorking: Bool {
+        if appState.status == .processing || appState.status == .running { return true }
+        return appState.sessions.values.contains {
+            $0.status == .processing || $0.status == .running || $0.currentTool != nil
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: isCompactInWing ? 2 : 4) {
+            tabButton(
+                tab: .all,
+                title: "ALL",
+                shortTitle: "ALL",
+                activeColor: Self.activeAllColor,
+                tag: "all"
+            )
+
+            tabButton(
+                tab: .agents,
+                title: isCompactInWing ? "AGT" : "AGENTS",
+                shortTitle: "AGT",
+                activeColor: Self.activeAgentsColor,
+                tag: "agents",
+                badgeText: activeAgentCount > 0 ? "\(activeAgentCount)" : nil,
+                showPulse: isAnyAgentWorking
+            )
+
+            tabButton(
+                tab: .workspace,
+                title: isCompactInWing ? "WORK" : "WORKSPACE",
+                shortTitle: "WORK",
+                activeColor: activeWorkspaceColor,
+                tag: "workspace",
+                isDirty: !workspaceManager.changedFiles.isEmpty
+            )
+
+            tabButton(
+                tab: .music,
+                title: isCompactInWing ? "MUS" : "MUSIC",
+                shortTitle: "MUS",
+                activeColor: Self.activeMusicColor,
+                tag: "music",
+                isPlayingMusic: nowPlaying.isPlaying
+            )
+        }
+        .padding(.horizontal, isCompactInWing ? 2 : 6)
+        .padding(.vertical, isCompactInWing ? 1 : 2)
+        .background(dockBackground)
+    }
+
+    @ViewBuilder
+    private var dockBackground: some View {
+        switch tabStyle {
+        case .pixel:
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color(white: 0.04))
+        case .capsule:
+            Capsule()
+                .fill(Color(white: 0.05))
+        case .console:
+            RoundedRectangle(cornerRadius: 3)
+                .fill(Color(white: 0.04))
+        case .minimal:
+            RoundedRectangle(cornerRadius: 3)
+                .fill(Color.white.opacity(0.02))
+        }
+    }
+
+    @ViewBuilder
+    private func tabButton(
+        tab: ExpandedContentTab,
+        title: String,
+        shortTitle: String,
+        activeColor: Color,
+        tag: String,
+        badgeText: String? = nil,
+        showPulse: Bool = false,
+        isDirty: Bool = false,
+        isPlayingMusic: Bool = false
+    ) -> some View {
+        let isSelected = (expandedTab == tab)
+        let isHovered = (hoveredTab == tag)
+        let label = isCompactInWing ? shortTitle : title
+
+        Button {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            if tab == .workspace {
+                workspaceManager.resolveAndRefreshWorkspace(appState: appState)
+            }
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
+                expandedTab = tab
+            }
+        } label: {
+            tabItemBody(
+                label: label,
+                isSelected: isSelected,
+                isHovered: isHovered,
+                activeColor: activeColor,
+                badgeText: badgeText,
+                showPulse: showPulse,
+                isDirty: isDirty,
+                isPlayingMusic: isPlayingMusic
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            hoveredTab = hovering ? tag : (hoveredTab == tag ? nil : hoveredTab)
+        }
+    }
+
+    @ViewBuilder
+    private func tabItemBody(
+        label: String,
+        isSelected: Bool,
+        isHovered: Bool,
+        activeColor: Color,
+        badgeText: String?,
+        showPulse: Bool,
+        isDirty: Bool,
+        isPlayingMusic: Bool
+    ) -> some View {
+        switch tabStyle {
+        case .pixel:
+            HStack(spacing: 3) {
+                PixelText(
+                    text: label,
+                    color: isSelected ? activeColor : (isHovered ? .white.opacity(0.9) : Self.inactiveColor),
+                    pixelSize: isCompactInWing ? 1.1 : 1.3
+                )
+                if let badge = badgeText {
+                    Text(badge)
+                        .font(.system(size: isCompactInWing ? 7 : 8, weight: .bold, design: .monospaced))
+                        .foregroundStyle(isSelected ? activeColor : Self.inactiveColor)
+                }
+                if showPulse {
+                    Circle()
+                        .fill(activeColor)
+                        .frame(width: 3.5, height: 3.5)
+                }
+                if isDirty {
+                    Text("●")
+                        .font(.system(size: 5.5))
+                        .foregroundStyle(Color(red: 1.0, green: 0.70, blue: 0.20))
+                }
+                if isPlayingMusic {
+                    MiniEqualizerBars(color: isSelected ? activeColor : Self.activeMusicColor)
+                }
+            }
+            .padding(.horizontal, isCompactInWing ? 5 : 8)
+            .padding(.vertical, isCompactInWing ? 2.5 : 4)
+            .background(
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(isSelected ? activeColor.opacity(0.18) : (isHovered ? Color.white.opacity(0.06) : Color.clear))
+            )
+
+        case .capsule:
+            HStack(spacing: 3.5) {
+                if isSelected {
+                    Circle()
+                        .fill(activeColor)
+                        .frame(width: 3.5, height: 3.5)
+                }
+                Text(label)
+                    .font(.system(size: isCompactInWing ? 8 : 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(isSelected ? activeColor : (isHovered ? .white : Self.inactiveColor))
+
+                if let badge = badgeText {
+                    Text(badge)
+                        .font(.system(size: 7.5, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 3.5)
+                        .padding(.vertical, 0.5)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? activeColor.opacity(0.25) : Color.white.opacity(0.08))
+                        )
+                        .foregroundStyle(isSelected ? activeColor : Self.inactiveColor)
+                }
+                if isDirty {
+                    Circle()
+                        .fill(Color(red: 1.0, green: 0.70, blue: 0.20))
+                        .frame(width: 3.5, height: 3.5)
+                }
+                if isPlayingMusic {
+                    MiniEqualizerBars(color: isSelected ? activeColor : Self.activeMusicColor)
+                }
+            }
+            .padding(.horizontal, isCompactInWing ? 6 : 9)
+            .padding(.vertical, isCompactInWing ? 2.5 : 3.5)
+            .background(
+                Capsule()
+                    .fill(isSelected ? activeColor.opacity(0.18) : (isHovered ? Color.white.opacity(0.07) : Color.clear))
+            )
+
+        case .console:
+            HStack(spacing: 2) {
+                Text("[")
+                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(white: 0.35))
+                if isSelected {
+                    Text("●")
+                        .font(.system(size: 5.5))
+                        .foregroundStyle(activeColor)
+                }
+                Text(label)
+                    .font(.system(size: isCompactInWing ? 7.5 : 8.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? activeColor : (isHovered ? .white : Self.inactiveColor))
+
+                if let badge = badgeText {
+                    Text(":\(badge)")
+                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(isSelected ? activeColor : Color(white: 0.45))
+                }
+                if isDirty {
+                    Text("*")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(red: 1.0, green: 0.70, blue: 0.20))
+                }
+                if isPlayingMusic {
+                    Text("♫")
+                        .font(.system(size: 7.5, weight: .bold))
+                        .foregroundStyle(Self.activeMusicColor)
+                }
+                Text("]")
+                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(white: 0.35))
+            }
+            .padding(.horizontal, isCompactInWing ? 3 : 5)
+            .padding(.vertical, isCompactInWing ? 2 : 3)
+            .background(
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(isSelected ? Color.white.opacity(0.10) : (isHovered ? Color.white.opacity(0.04) : Color.clear))
+            )
+
+        case .minimal:
+            VStack(spacing: 2) {
+                HStack(spacing: 3) {
+                    Text(label)
+                        .font(.system(size: isCompactInWing ? 8 : 9, weight: isSelected ? .bold : .medium))
+                        .foregroundStyle(isSelected ? .white : (isHovered ? .white.opacity(0.85) : Self.inactiveColor))
+                    if let badge = badgeText {
+                        Text(badge)
+                            .font(.system(size: 7.5, weight: .bold))
+                            .foregroundStyle(isSelected ? activeColor : Self.inactiveColor)
+                    }
+                    if isDirty {
+                        Circle()
+                            .fill(Color(red: 1.0, green: 0.70, blue: 0.20))
+                            .frame(width: 3, height: 3)
+                    }
+                    if isPlayingMusic {
+                        MiniEqualizerBars(color: isSelected ? activeColor : Self.activeMusicColor)
+                    }
+                }
+                .padding(.horizontal, isCompactInWing ? 4 : 6)
+                .padding(.top, 2)
+
+                Rectangle()
+                    .fill(isSelected ? activeColor : Color.clear)
+                    .frame(height: 1.5)
+            }
+            .frame(height: isCompactInWing ? 20 : 22)
+        }
+    }
+}
+
 /// Left-wing primary tabs: [ ALL | AGENTS ]
 private struct LeftWingNavTabs: View {
     @Binding var expandedTab: ExpandedContentTab
@@ -1806,10 +2211,7 @@ private struct LeftWingNavTabs: View {
             .accessibilityAddTraits(isAgentsSelected ? .isSelected : [])
         }
         .background(
-            tabStyle == .pixel ? Rectangle().fill(.white.opacity(0.05)).frame(height: layout.stripHeight) : nil
-        )
-        .overlay(
-            tabStyle == .pixel ? Rectangle().stroke((expandedTab == .all ? Self.activeAllColor : (expandedTab == .agents ? Self.activeAgentsColor : .white.opacity(0.1))), lineWidth: 1).frame(height: layout.stripHeight) : nil
+            tabStyle == .pixel ? RoundedRectangle(cornerRadius: 3).fill(.white.opacity(0.05)).frame(height: layout.stripHeight) : nil
         )
     }
 
@@ -1969,10 +2371,7 @@ private struct RightWingNavTabs: View {
             .accessibilityAddTraits(isMusicSelected ? .isSelected : [])
         }
         .background(
-            tabStyle == .pixel ? Rectangle().fill(.white.opacity(0.05)).frame(height: layout.stripHeight) : nil
-        )
-        .overlay(
-            tabStyle == .pixel ? Rectangle().stroke((expandedTab == .workspace ? activeWorkspaceColor : (expandedTab == .music ? Self.activeMusicColor : .white.opacity(0.1))), lineWidth: 1).frame(height: layout.stripHeight) : nil
+            tabStyle == .pixel ? RoundedRectangle(cornerRadius: 3).fill(.white.opacity(0.05)).frame(height: layout.stripHeight) : nil
         )
     }
 

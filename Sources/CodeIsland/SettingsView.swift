@@ -1485,6 +1485,7 @@ private struct AppearancePage: View {
     @AppStorage(SettingsKey.workspaceShowRecentCommits) private var workspaceShowRecentCommits = SettingsDefaults.workspaceShowRecentCommits
     @AppStorage(SettingsKey.workspaceAccentColor) private var workspaceAccentColor = SettingsDefaults.workspaceAccentColor
     @AppStorage(SettingsKey.islandTabStyle) private var islandTabStyle = SettingsDefaults.islandTabStyle
+    @AppStorage(SettingsKey.islandTabLayoutMode) private var islandTabLayoutMode = SettingsDefaults.islandTabLayoutMode
     @AppStorage(SettingsKey.showTaskProgress) private var showTaskProgress = SettingsDefaults.showTaskProgress
     @AppStorage(SettingsKey.showSessionRecap) private var showSessionRecap = SettingsDefaults.showSessionRecap
     @AppStorage(SettingsKey.showModelLabel) private var showModelLabel = SettingsDefaults.showModelLabel
@@ -1890,17 +1891,31 @@ private struct AppearancePage: View {
             }
 
             Section("Island Navigation Tabs") {
-                VStack(alignment: .leading, spacing: 6) {
-                    Picker("Tab Design Style", selection: $islandTabStyle) {
-                        ForEach(IslandTabStyle.allCases) { style in
-                            Text(style.title).tag(style.rawValue)
+                VStack(alignment: .leading, spacing: 10) {
+                    Picker("Dock Layout Mode", selection: $islandTabLayoutMode) {
+                        ForEach(IslandTabLayoutMode.allCases) { mode in
+                            Text(mode.title).tag(mode.rawValue)
                         }
                     }
-                    .pickerStyle(.segmented)
 
-                    Text("Customize the aesthetic style for the 4 Notch tabs (ALL · AGENTS · WORKSPACE · MUSIC).")
+                    Text("Choose how the 4 tabs are arranged: Unified Center Dock puts all 4 tabs together without any notch gap, Left Wing groups all 4 tabs on the left, or Split Wings.")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Picker("Tab Design Style", selection: $islandTabStyle) {
+                            ForEach(IslandTabStyle.allCases) { style in
+                                Text(style.title).tag(style.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        Text("Customize the aesthetic style for the 4 Notch tabs (ALL · AGENTS · WORKSPACE · MUSIC).")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
 

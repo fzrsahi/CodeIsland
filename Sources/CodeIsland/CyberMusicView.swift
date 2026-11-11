@@ -672,11 +672,11 @@ struct CyberMusicHUDView: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            // LEFT COLUMN: Album Art, Track info, Scrubber & Controls (175pt fixed width)
+        HStack(alignment: .center, spacing: 14) {
+            // LEFT COLUMN: Album Art, Track info, Scrubber & Controls
             VStack(alignment: .leading, spacing: 5) {
                 Button(action: { nowPlaying.activateCurrentPlayer() }) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 9) {
                         // Album Cover (48x48)
                         ZStack {
                             if let art = nowPlaying.artworkImage {
@@ -684,11 +684,10 @@ struct CyberMusicHUDView: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
                                     .frame(width: 48, height: 48)
-                                    .clipShape(RoundedRectangle(cornerRadius: 5))
-                                    .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(white: 0.25), lineWidth: 0.8))
-                                    .shadow(color: Color.black.opacity(0.5), radius: 3, y: 2)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1.5)
                             } else {
-                                RoundedRectangle(cornerRadius: 5)
+                                RoundedRectangle(cornerRadius: 6)
                                     .fill(Color(red: 0.08, green: 0.09, blue: 0.12))
                                     .frame(width: 48, height: 48)
                                     .overlay(Image(systemName: "music.note").font(.system(size: 18)).foregroundColor(Color(red: 0.0, green: 0.96, blue: 0.83)))
@@ -697,31 +696,31 @@ struct CyberMusicHUDView: View {
                         .id(nowPlaying.title + nowPlaying.artist)
 
                         // Track Title & Artist
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 2.5) {
                             HStack(spacing: 4) {
                                 Text(nowPlaying.player.isEmpty ? "SPOTIFY" : nowPlaying.player.uppercased())
-                                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 8, weight: .bold, design: .monospaced))
                                     .foregroundStyle(Color(red: 1.0, green: 0.16, blue: 0.53))
                                     .lineLimit(1)
 
                                 if nowPlaying.isBrowserJSHintVisible {
                                     Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(.system(size: 6.5))
+                                        .font(.system(size: 7))
                                         .foregroundStyle(Color(red: 0.96, green: 0.62, blue: 0.04))
                                         .help(nowPlaying.browserJSHintText)
                                 }
                             }
 
                             Text(nowPlaying.title.isEmpty ? "No track" : nowPlaying.title)
-                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .font(.system(size: 12.5, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color.white)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                                 .id(nowPlaying.title)
 
                             Text(nowPlaying.artist.isEmpty ? "Idle" : nowPlaying.artist)
-                                .font(.system(size: 9, design: .monospaced))
-                                .foregroundStyle(Color(white: 0.65))
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(Color(white: 0.70))
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         }
@@ -742,11 +741,11 @@ struct CyberMusicHUDView: View {
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 2)
                                 .fill(Color(red: 0.14, green: 0.16, blue: 0.22))
-                                .frame(height: 3)
+                                .frame(height: 3.5)
 
                             RoundedRectangle(cornerRadius: 2)
                                 .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                .frame(width: totalWidth * progressFraction, height: 3)
+                                .frame(width: totalWidth * progressFraction, height: 3.5)
                         }
                         .contentShape(Rectangle())
                         .gesture(
@@ -759,16 +758,16 @@ struct CyberMusicHUDView: View {
                                 }
                         )
                     }
-                    .frame(height: 4)
+                    .frame(height: 4.5)
 
                     HStack {
                         Text(formatTime(nowPlaying.playerPosition))
-                            .font(.system(size: 7.5, weight: .medium, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.45))
+                            .font(.system(size: 8, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Color(white: 0.50))
                         Spacer()
                         Text(formatTime(nowPlaying.trackDuration))
-                            .font(.system(size: 7.5, weight: .medium, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.45))
+                            .font(.system(size: 8, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Color(white: 0.50))
                     }
                 }
 
@@ -776,28 +775,28 @@ struct CyberMusicHUDView: View {
                 HStack(spacing: 8) {
                     Button(action: { nowPlaying.previousTrack() }) {
                         Image(systemName: "backward.fill")
-                            .font(.system(size: 8.5, weight: .bold))
+                            .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(Color(white: 0.85))
-                            .frame(width: 20, height: 20)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(Color(white: 0.11)))
+                            .frame(width: 22, height: 22)
+                            .background(RoundedRectangle(cornerRadius: 4).fill(Color(white: 0.12)))
                     }
                     .buttonStyle(.plain)
 
                     Button(action: { nowPlaying.togglePlayPause() }) {
                         Image(systemName: nowPlaying.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 9.5, weight: .bold))
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                            .frame(width: 22, height: 20)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(Color(red: 0.05, green: 0.14, blue: 0.14)))
+                            .frame(width: 24, height: 22)
+                            .background(RoundedRectangle(cornerRadius: 4).fill(Color(red: 0.05, green: 0.16, blue: 0.16)))
                     }
                     .buttonStyle(.plain)
 
                     Button(action: { nowPlaying.nextTrack() }) {
                         Image(systemName: "forward.fill")
-                            .font(.system(size: 8.5, weight: .bold))
+                            .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(Color(white: 0.85))
-                            .frame(width: 20, height: 20)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(Color(white: 0.11)))
+                            .frame(width: 22, height: 22)
+                            .background(RoundedRectangle(cornerRadius: 4).fill(Color(white: 0.12)))
                     }
                     .buttonStyle(.plain)
 
@@ -809,23 +808,18 @@ struct CyberMusicHUDView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Divider Rule (fixed height, never expands!)
-            Rectangle()
-                .fill(Color(red: 0.16, green: 0.19, blue: 0.24))
-                .frame(width: 1, height: 92)
-
-            // RIGHT COLUMN: Synced Real-Time Lyrics View (clean, full-height lyrics only)
+            // RIGHT COLUMN: Synced Real-Time Lyrics View (Organic Flow, No Hard Divider Line)
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     Text("LYRICS")
-                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
 
                     Spacer()
 
                     if nowPlaying.lyricsLoading {
                         Text("LOADING...")
-                            .font(.system(size: 7, design: .monospaced))
+                            .font(.system(size: 8, design: .monospaced))
                             .foregroundStyle(Color(white: 0.45))
                     }
                 }
@@ -836,10 +830,10 @@ struct CyberMusicHUDView: View {
                             .font(.system(size: 16))
                             .foregroundColor(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6))
                         Text(nowPlaying.lyricsLoading ? "Fetching lyrics..." : "No lyrics found")
-                            .font(.system(size: 8.5, design: .monospaced))
+                            .font(.system(size: 9.5, design: .monospaced))
                             .foregroundStyle(Color(white: 0.45))
                     }
-                    .frame(maxWidth: .infinity, minHeight: 82, maxHeight: 82, alignment: .center)
+                    .frame(maxWidth: .infinity, minHeight: 92, maxHeight: 92, alignment: .center)
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView(.vertical, showsIndicators: false) {
@@ -856,14 +850,14 @@ struct CyberMusicHUDView: View {
                                         if isCurrent {
                                             Circle()
                                                 .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                                .frame(width: 3, height: 3)
+                                                .frame(width: 3.5, height: 3.5)
                                         }
                                         KaraokeLyricLineView(
                                             text: line.text,
                                             isCurrent: isCurrent,
                                             currentFraction: fraction,
                                             primaryColor: Color(red: 0.0, green: 0.96, blue: 0.83),
-                                            fontSize: isCurrent ? 9.5 : 8.0
+                                            fontSize: isCurrent ? 11.0 : 9.5
                                         )
                                         .lineLimit(2)
                                     }
@@ -876,7 +870,7 @@ struct CyberMusicHUDView: View {
                             }
                             .padding(.trailing, 4)
                         }
-                        .frame(height: 82)
+                        .frame(height: 92)
                         .simultaneousGesture(
                             DragGesture(minimumDistance: 4)
                                 .onChanged { _ in
@@ -894,18 +888,20 @@ struct CyberMusicHUDView: View {
                     }
                 }
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
             .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.white.opacity(0.03))
+            )
         }
-        .frame(height: 98)
+        .frame(height: 108)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 5)
-                .fill(Color(red: 0.05, green: 0.06, blue: 0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(Color(red: 0.16, green: 0.19, blue: 0.24), lineWidth: 1)
-                )
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white.opacity(0.05))
         )
         .padding(.horizontal, 6)
         .padding(.bottom, 6)
