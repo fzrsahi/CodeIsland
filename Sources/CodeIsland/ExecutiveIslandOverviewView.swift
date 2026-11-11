@@ -95,7 +95,7 @@ struct ExecutiveIslandOverviewView: View {
     }
 }
 
-// MARK: - Hero Agent Command Deck (Dominant Left Side)
+// MARK: - Hero Agent Command Deck (Dominant Left Side, styled like SessionCard)
 
 private struct HeroAgentCommandDeck: View {
     var appState: AppState
@@ -108,207 +108,172 @@ private struct HeroAgentCommandDeck: View {
         Array(appState.sessions.values)
     }
 
-    private var needsAttention: SessionSnapshot? {
-        sessions.first(where: { $0.status == .waitingApproval || $0.status == .waitingQuestion })
-    }
-
-    private var workingSession: SessionSnapshot? {
-        sessions.first(where: { $0.status == .running || $0.status == .processing })
-    }
-
     private var activeSession: SessionSnapshot? {
-        needsAttention ?? workingSession ?? sessions.first
+        if let needs = sessions.first(where: { $0.status == .waitingApproval || $0.status == .waitingQuestion }) {
+            return needs
+        }
+        if let work = sessions.first(where: { $0.status == .running || $0.status == .processing }) {
+            return work
+        }
+        return sessions.first
     }
 
-    @ViewBuilder
-    private var statusPill: some View {
-        if let _ = needsAttention {
-            HStack(spacing: 3) {
-                Circle()
-                    .fill(Color(red: 0.96, green: 0.62, blue: 0.04))
-                    .frame(width: 4, height: 4)
-                Text("NEEDS APPROVAL")
-                    .font(.system(size: 6.5, weight: .black, design: .monospaced))
-                    .foregroundStyle(Color(red: 0.96, green: 0.62, blue: 0.04))
-            }
-            .padding(.horizontal, 4.5)
-            .padding(.vertical, 1.5)
-            .background(RoundedRectangle(cornerRadius: 2).fill(Color(red: 0.96, green: 0.62, blue: 0.04).opacity(0.18)))
-        } else if let _ = workingSession {
-            HStack(spacing: 3) {
-                Circle()
-                    .fill(Color(red: 0.0, green: 0.90, blue: 0.46))
-                    .frame(width: 4, height: 4)
-                Text("WORKING LIVE")
-                    .font(.system(size: 6.5, weight: .black, design: .monospaced))
-                    .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
-            }
-            .padding(.horizontal, 4.5)
-            .padding(.vertical, 1.5)
-            .background(RoundedRectangle(cornerRadius: 2).fill(Color(red: 0.0, green: 0.90, blue: 0.46).opacity(0.16)))
-        } else if !sessions.isEmpty {
-            Text("\(sessions.count) AGENTS IDLE")
-                .font(.system(size: 6.5, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color(white: 0.5))
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1.5)
-                .background(RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.06)))
-        } else {
-            Text("STANDBY")
-                .font(.system(size: 6.5, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color(white: 0.4))
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1.5)
-                .background(RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.05)))
-        }
-    }
-
-    @ViewBuilder
-    private var consoleExecutionBox: some View {
-        if let session = activeSession {
-            let headline = session.headline(showProjectName: true)
-            let projectTitle = headline.text.uppercased()
-            let toolName = session.currentTool ?? "Executing"
-            let detail = session.toolDescription ?? (session.model ?? "Processing request")
-
-            VStack(alignment: .leading, spacing: 3) {
-                // Project & Model Row
-                HStack(spacing: 4) {
-                    Text(projectTitle)
-                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-
-                    if let model = session.model, !model.isEmpty {
-                        Text(model)
-                            .font(.system(size: 6, weight: .medium, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.5))
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 0.5)
-                            .background(RoundedRectangle(cornerRadius: 1.5).fill(Color.white.opacity(0.06)))
-                    }
-
-                    Spacer(minLength: 0)
-
-                    if session.totalToolCallCount > 0 {
-                        Text("\(session.totalToolCallCount) ops")
-                            .font(.system(size: 6.5, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.45))
-                    }
-                }
-
-                // Machined Terminal Activity Box
-                HStack(spacing: 4) {
-                    Text("$")
-                        .font(.system(size: 7, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-
-                    Text(toolName)
-                        .font(.system(size: 7, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-
-                    Text("•")
-                        .font(.system(size: 6.5))
-                        .foregroundStyle(Color(white: 0.25))
-
-                    Text(detail)
-                        .font(.system(size: 7, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.80))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2.5)
-                .background(
-                    RoundedRectangle(cornerRadius: 2.5)
-                        .fill(Color(red: 0.03, green: 0.04, blue: 0.06))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 2.5)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 0.6)
-                        )
-                )
-            }
-        } else {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Autonomous Coding Agents Standby")
-                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.85))
-
-                HStack(spacing: 3) {
-                    Text("$")
-                        .font(.system(size: 7, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                    Text("Ready for Claude Code, Gemini CLI, or Cursor in Terminal")
-                        .font(.system(size: 7, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.5))
-                }
-            }
-        }
+    private func formatTimeAgo(_ date: Date) -> String {
+        let seconds = Int(-date.timeIntervalSinceNow)
+        if seconds < 60 { return "\(max(1, seconds))s ago" }
+        let minutes = seconds / 60
+        if minutes < 60 { return "\(minutes)m ago" }
+        let hours = minutes / 60
+        if hours < 24 { return "\(hours)h ago" }
+        return "\(hours / 24)d ago"
     }
 
     var body: some View {
         Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 4) {
-                // Header Row
-                HStack(spacing: 5) {
-                    Image(systemName: "cpu")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-
-                    Text("AGENT COMMAND DECK")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white)
-
-                    Spacer(minLength: 0)
-
-                    statusPill
-
-                    // Token consumption telemetry
-                    HStack(spacing: 2) {
-                        Text("⚡")
-                            .font(.system(size: 6))
-                        Text(tokenLabel)
-                            .font(.system(size: 6.5, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                    }
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.06)))
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 6.5, weight: .semibold))
-                        .foregroundStyle(isHovered ? Color.white : Color(white: 0.35))
-                }
-
-                // Live Execution Box
-                consoleExecutionBox
-
-                Spacer(minLength: 0)
-
-                // Secondary agent strip / hints
-                HStack(spacing: 4) {
-                    if sessions.count > 1 {
-                        Text("\(sessions.count) agents active")
-                            .font(.system(size: 6.5, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.45))
+            HStack(alignment: .top, spacing: 8) {
+                // Left Mascot Column (matches SessionCard)
+                VStack(spacing: 3) {
+                    if let session = activeSession {
+                        MascotView(source: session.mascotSource, status: session.status, size: 28)
+                        if !session.subagents.isEmpty {
+                            HStack(spacing: 1) {
+                                ForEach(Array(session.subagents.values.prefix(4)), id: \.agentId) { sub in
+                                    MiniAgentIcon(active: sub.status != .idle, size: 7)
+                                }
+                            }
+                        }
                     } else {
-                        Text("Click deck to open detailed agents view")
-                            .font(.system(size: 6.5, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.35))
+                        MascotView(source: "claude", status: .idle, size: 28)
                     }
-
-                    Spacer(minLength: 0)
-
-                    Text("INSPECT AGENTS →")
-                        .font(.system(size: 6, weight: .bold, design: .monospaced))
-                        .foregroundStyle(isHovered ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.40))
                 }
+                .frame(width: 32)
+                .padding(.top, 1)
+
+                // Main Content Column
+                VStack(alignment: .leading, spacing: 3.5) {
+                    if let session = activeSession {
+                        let cardStatus = SessionCardStatus(session)
+                        let headline = session.headline(showProjectName: true)
+                        let projectTitle = headline.text.uppercased()
+
+                        // Header Row: Status Chip + Project Title + Model Tag + Token Telemetry
+                        HStack(alignment: .center, spacing: 4) {
+                            SessionStatusChip(status: cardStatus, fontSize: 7)
+
+                            Text(projectTitle)
+                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.white)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+
+                            if let model = session.modelLabel ?? session.model, !model.isEmpty {
+                                Text(model)
+                                    .font(.system(size: 6, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color(white: 0.55))
+                                    .padding(.horizontal, 3)
+                                    .padding(.vertical, 0.5)
+                                    .background(RoundedRectangle(cornerRadius: 1.5).fill(Color.white.opacity(0.06)))
+                            }
+
+                            Spacer(minLength: 0)
+
+                            HStack(spacing: 2) {
+                                Text("⚡")
+                                    .font(.system(size: 6))
+                                Text(tokenLabel)
+                                    .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                            }
+                            .padding(.horizontal, 3.5)
+                            .padding(.vertical, 1)
+                            .background(RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.06)))
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 6))
+                                .foregroundStyle(isHovered ? Color.white : Color(white: 0.35))
+                        }
+
+                        // Live Activity Body: Thinking or Tool Running or Recap (matches SessionCard)
+                        liveActivityRow(session: session, cardStatus: cardStatus)
+
+                        Spacer(minLength: 0)
+
+                        // Footer Row: Operation Count + Time Ago + Action Affordance
+                        HStack(spacing: 4) {
+                            if session.totalToolCallCount > 0 {
+                                Text("\(session.totalToolCallCount) ops")
+                                    .font(.system(size: 6.5, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color(white: 0.45))
+                            }
+
+                            Text("• \(formatTimeAgo(session.lastActivity))")
+                                .font(.system(size: 6.5, design: .monospaced))
+                                .foregroundStyle(Color(white: 0.35))
+
+                            if sessions.count > 1 {
+                                Text("• \(sessions.count) sessions")
+                                    .font(.system(size: 6.5, design: .monospaced))
+                                    .foregroundStyle(Color(white: 0.40))
+                            }
+
+                            Spacer(minLength: 0)
+
+                            Text("INSPECT AGENTS →")
+                                .font(.system(size: 6, weight: .bold, design: .monospaced))
+                                .foregroundStyle(isHovered ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.40))
+                        }
+                    } else {
+                        // Empty Standby State
+                        HStack(spacing: 4) {
+                            Text("AUTONOMOUS AGENTS")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.white)
+
+                            Text("STANDBY")
+                                .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color(white: 0.4))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.05)))
+
+                            Spacer(minLength: 0)
+
+                            HStack(spacing: 2) {
+                                Text("⚡")
+                                    .font(.system(size: 6))
+                                Text(tokenLabel)
+                                    .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                            }
+                            .padding(.horizontal, 3.5)
+                            .padding(.vertical, 1)
+                            .background(RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.06)))
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Ready for Claude Code, Gemini CLI, Cursor, or Codex")
+                                .font(.system(size: 7.5, weight: .medium, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.8))
+
+                            Text("Run an agent in Terminal to monitor live status here")
+                                .font(.system(size: 6.5, design: .monospaced))
+                                .foregroundStyle(Color(white: 0.45))
+                        }
+
+                        Spacer(minLength: 0)
+
+                        HStack {
+                            Spacer()
+                            Text("OPEN AGENTS TAB →")
+                                .font(.system(size: 6, weight: .bold, design: .monospaced))
+                                .foregroundStyle(isHovered ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(white: 0.4))
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 5.5)
+            .padding(.vertical, 6)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(
                 RoundedRectangle(cornerRadius: 4)
@@ -323,6 +288,100 @@ private struct HeroAgentCommandDeck: View {
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .help("Click to view full Agent Sessions list")
+    }
+
+    @ViewBuilder
+    private func liveActivityRow(session: SessionSnapshot, cardStatus: SessionCardStatus) -> some View {
+        if cardStatus == .thinking || session.status == .processing {
+            // Live Thinking with Bouncing Neon Dots
+            HStack(spacing: 5) {
+                TypingIndicator(fontSize: 7.5, label: "Thinking...", bright: true, color: Color(red: 0.25, green: 0.9, blue: 0.8))
+
+                if let prompt = session.lastUserPrompt, !prompt.isEmpty {
+                    Text("• \(prompt)")
+                        .font(.system(size: 7, design: .monospaced))
+                        .foregroundStyle(Color(white: 0.65))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            .padding(.horizontal, 5)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 2.5)
+                    .fill(Color(red: 0.03, green: 0.05, blue: 0.08))
+                    .overlay(RoundedRectangle(cornerRadius: 2.5).stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18), lineWidth: 0.6))
+            )
+        } else if let tool = session.currentTool {
+            // Tool Execution Line (matches SessionCard)
+            HStack(spacing: 4) {
+                SessionToolChip(tool: tool, color: cardStatus.color, fontSize: 7.5)
+
+                if let detail = session.toolDescription, !detail.isEmpty {
+                    Text(detail)
+                        .font(.system(size: 7, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.85))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                } else if let prompt = session.lastUserPrompt {
+                    Text(prompt)
+                        .font(.system(size: 7, design: .monospaced))
+                        .foregroundStyle(Color(white: 0.65))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2.5)
+            .background(
+                RoundedRectangle(cornerRadius: 2.5)
+                    .fill(Color(red: 0.03, green: 0.04, blue: 0.06))
+                    .overlay(RoundedRectangle(cornerRadius: 2.5).stroke(Color.white.opacity(0.08), lineWidth: 0.6))
+            )
+        } else if cardStatus == .needsYou {
+            // Waiting for User Input / Approval
+            HStack(spacing: 3.5) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 7))
+                    .foregroundStyle(Color(red: 0.96, green: 0.62, blue: 0.04))
+
+                Text("Requires your input or approval")
+                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(red: 0.96, green: 0.62, blue: 0.04))
+            }
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2.5)
+            .background(
+                RoundedRectangle(cornerRadius: 2.5)
+                    .fill(Color(red: 0.96, green: 0.62, blue: 0.04).opacity(0.14))
+                    .overlay(RoundedRectangle(cornerRadius: 2.5).stroke(Color(red: 0.96, green: 0.62, blue: 0.04).opacity(0.25), lineWidth: 0.6))
+            )
+        } else if let recap = session.visibleRecap {
+            // Recap of completed turn
+            HStack(spacing: 3) {
+                Text("✓")
+                    .font(.system(size: 6.5, weight: .bold))
+                    .foregroundStyle(Color(red: 0.0, green: 0.90, blue: 0.46))
+                Text(recap.text)
+                    .font(.system(size: 7, design: .monospaced))
+                    .foregroundStyle(Color(white: 0.70))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        } else if let prompt = session.lastUserPrompt {
+            // Prompt preview
+            Text("› \(prompt)")
+                .font(.system(size: 7, design: .monospaced))
+                .foregroundStyle(Color(white: 0.65))
+                .lineLimit(1)
+                .truncationMode(.tail)
+        } else {
+            Text("Session idle • Ready for turn")
+                .font(.system(size: 7, design: .monospaced))
+                .foregroundStyle(Color(white: 0.45))
+        }
     }
 }
 

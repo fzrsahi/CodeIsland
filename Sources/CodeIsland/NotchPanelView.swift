@@ -6372,7 +6372,7 @@ private extension View {
 
 // MARK: - Typing Indicator (three bouncing dots)
 
-private struct TypingIndicator: View {
+struct TypingIndicator: View {
     let fontSize: CGFloat
     var label: String? = nil
     var bright: Bool = false
