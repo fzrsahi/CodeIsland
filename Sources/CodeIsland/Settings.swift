@@ -474,9 +474,9 @@ struct SettingsDefaults {
     static let workspaceAutoDetect = true
     static let workspaceShowRecentCommits = true
     static let workspaceAccentColor = WorkspaceAccentColor.emerald.rawValue
-    static let islandTabStyle = IslandTabStyle.minimal.rawValue
-    static let islandTabLayoutMode = IslandTabLayoutMode.unifiedTop.rawValue
-    static let agentFilterStyle = AgentFilterStyle.capsule.rawValue
+    static let islandTabStyle = IslandTabStyle.retro.rawValue
+    static let islandTabLayoutMode = IslandTabLayoutMode.splitWings.rawValue
+    static let agentFilterStyle = AgentFilterStyle.retro.rawValue
     static let showAgentFilterCounts = true
     static let showSessionRecap = true
     static let showModelLabel = false

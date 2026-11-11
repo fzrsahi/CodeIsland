@@ -155,7 +155,7 @@ struct NotchPanelView: View {
     @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
     @AppStorage(SettingsKey.islandTabLayoutMode) private var islandTabLayoutModeRaw = SettingsDefaults.islandTabLayoutMode
     private var tabLayoutMode: IslandTabLayoutMode {
-        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .unifiedTop
+        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .splitWings
     }
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @ObservedObject private var workspaceManager = WorkspaceMonitorManager.shared
@@ -179,7 +179,7 @@ struct NotchPanelView: View {
     /// Measured width of the collapsed right wing (0 until first laid out).
     @State private var rightWingWidth: CGFloat = 0
     @State private var isHoveringRightWing = false
-    @State private var expandedTab: ExpandedContentTab = .all
+    @State private var expandedTab: ExpandedContentTab = .agents
 
     private var isActive: Bool { !appState.sessions.isEmpty || nowPlaying.isPlaying }
     /// First launch / no-session state should still render a visible marker so the app
@@ -951,7 +951,7 @@ private struct CompactLeftWing: View {
     @AppStorage(SettingsKey.islandTabLayoutMode) private var islandTabLayoutModeRaw = SettingsDefaults.islandTabLayoutMode
 
     private var tabLayoutMode: IslandTabLayoutMode {
-        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .unifiedTop
+        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .splitWings
     }
 
     private var projectName: String? {
@@ -1263,7 +1263,7 @@ private struct CompactRightWing: View {
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
 
     private var tabLayoutMode: IslandTabLayoutMode {
-        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .unifiedTop
+        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .splitWings
     }
 
     private var modernMusicAccent: Color {
@@ -1914,11 +1914,11 @@ private struct UnifiedIslandTabBar: View {
     @State private var hoveredTab: String?
 
     private var tabLayoutMode: IslandTabLayoutMode {
-        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .unifiedTop
+        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .splitWings
     }
 
     private var tabStyle: IslandTabStyle {
-        IslandTabStyle(rawValue: islandTabStyleRaw) ?? .pixel
+        IslandTabStyle(rawValue: islandTabStyleRaw) ?? .retro
     }
 
     private var activeWorkspaceColor: Color {
@@ -2289,16 +2289,19 @@ private struct UnifiedIslandTabBar: View {
             .frame(height: isCompactInWing ? 20 : 22)
 
         case .retro:
-            HStack(spacing: 3) {
+            HStack(spacing: 2.5) {
+                Text("[")
+                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? activeColor.opacity(0.7) : Color(white: 0.35))
                 if isSelected {
                     Text("►")
-                        .font(.system(size: 7))
+                        .font(.system(size: 6.5))
                         .foregroundStyle(activeColor)
                 }
                 Text(label)
                     .font(.system(size: isCompactInWing ? 8 : 9, weight: .black, design: .monospaced))
                     .foregroundStyle(isSelected ? activeColor : (isHovered ? .white : Self.inactiveColor))
-                    .shadow(color: isSelected ? activeColor.opacity(0.8) : Color.clear, radius: isSelected ? 3.5 : 0)
+                    .shadow(color: isSelected ? activeColor.opacity(0.85) : Color.clear, radius: isSelected ? 3.5 : 0)
 
                 if let badge = badgeText {
                     Text(":\(badge)")
@@ -2319,12 +2322,19 @@ private struct UnifiedIslandTabBar: View {
                 if isPlayingMusic {
                     MiniEqualizerBars(color: isSelected ? activeColor : Self.activeMusicColor)
                 }
+                Text("]")
+                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? activeColor.opacity(0.7) : Color(white: 0.35))
             }
             .padding(.horizontal, isCompactInWing ? 5 : 8)
             .padding(.vertical, isCompactInWing ? 2.5 : 4)
             .background(
                 RoundedRectangle(cornerRadius: 3)
-                    .fill(isSelected ? activeColor.opacity(0.20) : (isHovered ? Color.white.opacity(0.08) : Color.black.opacity(0.35)))
+                    .fill(isSelected ? activeColor.opacity(0.22) : (isHovered ? Color.white.opacity(0.08) : Color.black.opacity(0.40)))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3)
+                            .stroke(isSelected ? activeColor.opacity(0.65) : Color.white.opacity(0.08), lineWidth: 0.8)
+                    )
             )
 
         case .glass:
@@ -2377,11 +2387,11 @@ private struct LeftWingNavTabs: View {
     @State private var hoveredTab: String?
 
     private var tabLayoutMode: IslandTabLayoutMode {
-        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .unifiedTop
+        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .splitWings
     }
 
     private var tabStyle: IslandTabStyle {
-        IslandTabStyle(rawValue: islandTabStyleRaw) ?? .pixel
+        IslandTabStyle(rawValue: islandTabStyleRaw) ?? .retro
     }
 
     private var useShortLabels: Bool {
@@ -2562,22 +2572,32 @@ private struct LeftWingNavTabs: View {
             .contentShape(Rectangle())
 
         case .retro:
-            HStack(spacing: 2) {
+            HStack(spacing: 2.5) {
+                Text("[")
+                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? activeColor.opacity(0.7) : Color(white: 0.35))
                 if isSelected {
                     Text("►")
-                        .font(.system(size: 6.5))
+                        .font(.system(size: 6))
                         .foregroundStyle(activeColor)
                 }
                 Text(text)
                     .font(.system(size: 8, weight: .black, design: .monospaced))
                     .foregroundStyle(isSelected ? activeColor : (isHovered ? .white : Self.inactiveColor))
-                    .shadow(color: isSelected ? activeColor.opacity(0.8) : Color.clear, radius: isSelected ? 3 : 0)
+                    .shadow(color: isSelected ? activeColor.opacity(0.85) : Color.clear, radius: isSelected ? 3.5 : 0)
+                Text("]")
+                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? activeColor.opacity(0.7) : Color(white: 0.35))
             }
-            .padding(.horizontal, 5)
+            .padding(.horizontal, 4)
             .padding(.vertical, 2.5)
             .background(
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(isSelected ? activeColor.opacity(0.20) : (isHovered ? Color.white.opacity(0.08) : Color.black.opacity(0.35)))
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(isSelected ? activeColor.opacity(0.22) : (isHovered ? Color.white.opacity(0.08) : Color.black.opacity(0.40)))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3)
+                            .stroke(isSelected ? activeColor.opacity(0.65) : Color.white.opacity(0.08), lineWidth: 0.8)
+                    )
             )
             .frame(height: 22)
             .contentShape(Rectangle())
@@ -2619,11 +2639,11 @@ private struct RightWingNavTabs: View {
     @AppStorage(SettingsKey.islandTabLayoutMode) private var islandTabLayoutModeRaw = SettingsDefaults.islandTabLayoutMode
 
     private var tabLayoutMode: IslandTabLayoutMode {
-        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .unifiedTop
+        IslandTabLayoutMode(rawValue: islandTabLayoutModeRaw) ?? .splitWings
     }
 
     private var tabStyle: IslandTabStyle {
-        IslandTabStyle(rawValue: islandTabStyleRaw) ?? .pixel
+        IslandTabStyle(rawValue: islandTabStyleRaw) ?? .retro
     }
 
     private var activeWorkspaceColor: Color {
@@ -2854,22 +2874,32 @@ private struct RightWingNavTabs: View {
             .contentShape(Rectangle())
 
         case .retro:
-            HStack(spacing: 2) {
+            HStack(spacing: 2.5) {
+                Text("[")
+                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? activeColor.opacity(0.7) : Color(white: 0.35))
                 if isSelected {
                     Text("►")
-                        .font(.system(size: 6.5))
+                        .font(.system(size: 6))
                         .foregroundStyle(activeColor)
                 }
                 Text(text)
                     .font(.system(size: 8, weight: .black, design: .monospaced))
                     .foregroundStyle(isSelected ? activeColor : (isHovered ? .white : Self.inactiveColor))
-                    .shadow(color: isSelected ? activeColor.opacity(0.8) : Color.clear, radius: isSelected ? 3 : 0)
+                    .shadow(color: isSelected ? activeColor.opacity(0.85) : Color.clear, radius: isSelected ? 3.5 : 0)
+                Text("]")
+                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? activeColor.opacity(0.7) : Color(white: 0.35))
             }
-            .padding(.horizontal, 5)
+            .padding(.horizontal, 4)
             .padding(.vertical, 2.5)
             .background(
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(isSelected ? activeColor.opacity(0.20) : (isHovered ? Color.white.opacity(0.08) : Color.black.opacity(0.35)))
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(isSelected ? activeColor.opacity(0.22) : (isHovered ? Color.white.opacity(0.08) : Color.black.opacity(0.40)))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3)
+                            .stroke(isSelected ? activeColor.opacity(0.65) : Color.white.opacity(0.08), lineWidth: 0.8)
+                    )
             )
             .frame(height: 22)
             .contentShape(Rectangle())
@@ -4513,7 +4543,7 @@ private struct AgentSessionFilterBar: View {
     @State private var hoveredTag: String?
 
     private var filterStyle: AgentFilterStyle {
-        AgentFilterStyle(rawValue: agentFilterStyleRaw) ?? .capsule
+        AgentFilterStyle(rawValue: agentFilterStyleRaw) ?? .retro
     }
 
     private var totalCount: Int {
@@ -4744,14 +4774,17 @@ private struct AgentSessionFilterBar: View {
             )
 
         case .retro:
-            HStack(spacing: 2.5) {
+            HStack(spacing: 2) {
+                Text("[")
+                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? item.activeColor.opacity(0.7) : Color(white: 0.35))
                 if item.isAttention {
                     Text("▲")
                         .font(.system(size: 7))
                         .foregroundStyle(Color(red: 1.0, green: 0.69, blue: 0.0))
                 } else if isSelected {
                     Text("►")
-                        .font(.system(size: 7))
+                        .font(.system(size: 6.5))
                         .foregroundStyle(item.activeColor)
                 }
 
@@ -4765,12 +4798,19 @@ private struct AgentSessionFilterBar: View {
                         .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                         .foregroundStyle(isSelected ? item.activeColor : Color(white: 0.40))
                 }
+                Text("]")
+                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? item.activeColor.opacity(0.7) : Color(white: 0.35))
             }
-            .padding(.horizontal, 5)
+            .padding(.horizontal, 4)
             .padding(.vertical, 2.5)
             .background(
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(isSelected ? item.activeColor.opacity(0.18) : (isHovered ? Color.white.opacity(0.06) : Color.black.opacity(0.35)))
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(isSelected ? item.activeColor.opacity(0.20) : (isHovered ? Color.white.opacity(0.06) : Color.black.opacity(0.35)))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3)
+                            .stroke(isSelected ? item.activeColor.opacity(0.6) : Color.white.opacity(0.08), lineWidth: 0.75)
+                    )
             )
         }
     }
