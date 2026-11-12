@@ -20,9 +20,9 @@
 # Each run launches the app isolated (CODEISLAND_ISOLATED=1, its own hook
 # socket, no hooks, no discovery) with --preview <scenario>, settings pinned on
 # the command line (argument domain, nothing written to the app's defaults),
-# warms up, then measures 60 s with top, takes memory readings, and samples
-# the main thread for 10 s. Exit status: 0 pass, 1 regression or enforced
-# target missed, 2 usage or setup error.
+# warms up, then measures a 60 s window (CPU time, two top samples, memory,
+# counters), and samples the main thread for 10 s. Exit status: 0 pass, 1
+# regression or enforced target missed, 2 usage or setup error.
 
 set -euo pipefail
 
@@ -48,6 +48,7 @@ OUT_DIR=""
 usage() { sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; }
 die() { echo "bench: $*" >&2; exit 2; }
 log() { echo "[bench] $*" >&2; }
+now() { python3 -c 'import time; print(time.time())'; }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -185,6 +186,10 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
+# Keep the Mac and the display awake while this script runs: a display that
+# sleeps pauses NowPlaying's timers, and a Mac that sleeps stretches the window.
+caffeinate -d -i -w $$ &
+
 if [[ "$KEEP_INSTALLED" == 0 ]]; then
   # Remember every running CodeIsland's bundle, then quit them the normal way
   # so they save their sessions.
@@ -207,6 +212,12 @@ fi
 ENV_JSON="$OUT_DIR/env.json"
 write_env "$ENV_JSON"
 log "Environment: $(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));print(d["macModel"], "macOS", d["macOS"], d["commit"], "players:", ",".join(d["players"]) or "none")' "$ENV_JSON")"
+# zsh runs `cmd &` at nice 5 (BG_NICE); a niced app gets scheduled later.
+[[ "$(ps -o nice= -p $$ | tr -d ' ')" == "0" ]] || log "WARNING: running niced ($(ps -o nice= -p $$ | tr -d ' ')); in zsh use 'setopt no_bg_nice' before backgrounding"
+load_now="$(sysctl -n vm.loadavg | awk '{print $2}')"
+cores="$(sysctl -n hw.ncpu)"
+python3 -c "import sys; sys.exit(0 if float('$load_now') < float('$cores') / 2 else 1)" \
+  || log "WARNING: load average $load_now on $cores cores; close heavy apps, numbers will be noisy"
 
 launch() {  # launch <scenario> <run dir>
   local scenario="$1" dir="$2" spec preview flags
@@ -289,8 +300,18 @@ for run in $(seq 1 "$RUNS"); do
 
     cp "$dir/counters.json" "$dir/counters-start.json"
     read -r fp_start _ <<<"$(footprint_mb "$BENCH_PID")"
-    /usr/bin/top -l $(( MEASURE_SECONDS + 1 )) -s 1 -pid "$BENCH_PID" -stats pid,cpu,idlew,power,mem >"$dir/top.txt" 2>&1
+    load="$(sysctl -n vm.loadavg | awk '{print $2}')"
+    cpu_start="$(ps -o time= -p "$BENCH_PID" | tr -d ' ')"
+    t_start="$(now)"
+    # Two samples: the second covers the whole window (CPU, POWER, wakeups).
+    # One sample per second walks every process 60 times and starves on a
+    # loaded Mac.
+    /usr/bin/top -l 2 -s "$MEASURE_SECONDS" -pid "$BENCH_PID" -stats pid,cpu,idlew,power,mem >"$dir/top.txt" 2>&1
+    cpu_end="$(ps -o time= -p "$BENCH_PID" | tr -d ' ')"
+    t_end="$(now)"
     ensure_alive "$scenario" "$dir"
+    python3 -c "import sys; sys.exit(0 if float('$t_end') - float('$t_start') < $MEASURE_SECONDS * 1.2 else 1)" \
+      || log "WARNING: the ${MEASURE_SECONDS}s window took $(python3 -c "print(round(float('$t_end') - float('$t_start')))")s (Mac asleep or starved); rerun this scenario"
     # The counter file is rewritten every 5 s; wait for the next write so the
     # window ends on a snapshot taken after the measurement.
     sleep 5
@@ -301,10 +322,19 @@ for run in $(seq 1 "$RUNS"); do
     sample "$BENCH_PID" "$SAMPLE_SECONDS" -file "$dir/sample.txt" >/dev/null 2>&1 || log "sample failed for $scenario"
     stop_app
 
-    python3 - "$dir" "$scenario" "$pid" "$fp_start" "$fp_end" "$fp_peak" "$rss_kb" <<'EOF'
+    python3 - "$dir" "$scenario" "$pid" "$fp_start" "$fp_end" "$fp_peak" "$rss_kb" \
+      "$cpu_start" "$cpu_end" "$t_start" "$t_end" "$load" <<'EOF'
 import json, sys, os
-d, scenario, pid, start, end, peak, rss = sys.argv[1:8]
-json.dump({"scenario": scenario, "pid": int(pid)}, open(os.path.join(d, "run.json"), "w"))
+d, scenario, pid, start, end, peak, rss, c0, c1, t0, t1, load = sys.argv[1:13]
+def secs(t):  # ps time: [[hh:]mm:]ss.cc
+    total = 0.0
+    for part in t.split(":"):
+        total = total * 60 + float(part)
+    return total
+json.dump({"scenario": scenario, "pid": int(pid),
+           "cpuSeconds": round(secs(c1) - secs(c0), 3),
+           "wallSeconds": round(float(t1) - float(t0), 3),
+           "loadAvg1": float(load)}, open(os.path.join(d, "run.json"), "w"))
 json.dump({"footprintStartMB": float(start), "footprintEndMB": float(end),
            "footprintPeakMB": float(peak), "rssMB": round(int(rss) / 1024, 1)},
           open(os.path.join(d, "memory.json"), "w"))

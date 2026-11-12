@@ -36,7 +36,7 @@ COUNTER_NOISE = 2.0             # per minute
 
 # Metrics shown and compared, in order. Report-only metrics have no noise floor.
 METRICS = [
-    ("cpu", "CPU %"),
+    ("cpu", "CPU % (CPU time / wall time)"),
     ("idleWakeupsPerSec", "idle wakeups/s"),
     ("power", "Energy Impact (top POWER)"),
     ("mainThreadBusyPct", "main thread busy % (sample)"),
@@ -45,6 +45,7 @@ METRICS = [
     ("footprintPeakMB", "footprint peak MB"),
     ("footprintGrowthPct", "footprint growth %"),
     ("rssMB", "RSS MB"),
+    ("loadAvg1", "system load avg (1 min)"),
 ]
 
 DEFAULT_TARGETS = {
@@ -70,8 +71,9 @@ DEFAULT_TARGETS = {
 
 # ---------------------------------------------------------------- summarize
 
-def parse_top(path, pid):
-    """CPU and POWER per sample (first dropped), wakeups/s from cumulative IDLEW."""
+def parse_top(path, pid, wall_seconds):
+    """POWER and %CPU of the second sample (it spans the whole window), and
+    wakeups/s from the cumulative IDLEW of the two samples."""
     cpu, power, idlew = [], [], []
     pat = re.compile(r"^\s*%s\s+([\d.]+)\s+(\d+)\S*\s+([\d.]+)" % re.escape(str(pid)))
     with open(path, errors="replace") as f:
@@ -81,14 +83,12 @@ def parse_top(path, pid):
                 cpu.append(float(m.group(1)))
                 idlew.append(int(m.group(2)))
                 power.append(float(m.group(3)))
-    if len(cpu) < 3:
-        raise SystemExit("top.txt: fewer than 3 samples for pid %s" % pid)
-    seconds = len(idlew) - 1
+    if len(cpu) < 2:
+        raise SystemExit("top.txt: fewer than 2 samples for pid %s" % pid)
     return {
-        "cpu": round(statistics.mean(cpu[1:]), 2),
-        "power": round(statistics.mean(power[1:]), 2),
-        "idleWakeupsPerSec": round((idlew[-1] - idlew[0]) / seconds, 1),
-        "topSamples": len(cpu) - 1,
+        "topCpu": cpu[-1],
+        "power": power[-1],
+        "idleWakeupsPerSec": round((idlew[-1] - idlew[0]) / wall_seconds, 1),
     }
 
 
@@ -203,8 +203,11 @@ def summarize(run_dir):
         run = json.load(f)
     with open(os.path.join(run_dir, "memory.json")) as f:
         mem = json.load(f)
-    result = {"scenario": run["scenario"], "pid": run["pid"]}
-    result.update(parse_top(os.path.join(run_dir, "top.txt"), run["pid"]))
+    result = {"scenario": run["scenario"], "pid": run["pid"], "loadAvg1": run["loadAvg1"]}
+    # CPU from the process's own CPU time over the window: exact, and unlike a
+    # sampled %CPU it does not drift when the Mac is busy.
+    result["cpu"] = round(100.0 * run["cpuSeconds"] / run["wallSeconds"], 2)
+    result.update(parse_top(os.path.join(run_dir, "top.txt"), run["pid"], run["wallSeconds"]))
     sample = parse_sample(os.path.join(run_dir, "sample.txt"))
     result["mainThreadBusyPct"] = sample["mainThreadBusyPct"]
     result["busyByImage"] = sample["busyByImage"]

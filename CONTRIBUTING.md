@@ -103,7 +103,7 @@ scripts/perf/bench.sh --no-build         # reuse .build/release/CodeIsland.app
 scripts/perf/bench.sh --soak 24          # footprint every 10 min for 24 h, then `leaks`
 ```
 
-**What it does:** builds the release app, quits a running CodeIsland (it is relaunched at the end; `--keep-installed` skips this), then for each scenario launches an isolated instance (`CODEISLAND_ISOLATED=1`, its own hook socket, no hooks, no discovery) with `--preview <scenario>` and settings pinned on the command line. After a 15 s warm-up (65 s for `waiting-long`) it records 60 s of `top`, memory from `vmmap`, a 10 s `sample` of the main thread, and the app's internal counters. Keep the Mac otherwise quiet while it runs.
+**What it does:** builds the release app, quits a running CodeIsland (it is relaunched at the end; `--keep-installed` skips this), then for each scenario launches an isolated instance (`CODEISLAND_ISOLATED=1`, its own hook socket, no hooks, no discovery) with `--preview <scenario>` and settings pinned on the command line. After a 15 s warm-up (65 s for `waiting-long`) it measures a 60 s window: CPU from the process's CPU time, idle wakeups and POWER from two `top` samples, memory from `vmmap`, the app's internal counters, then a 10 s `sample` of the main thread. Keep the Mac otherwise quiet while it runs; the report shows the load average so a noisy run is easy to spot.
 
 **Reading the report:** per scenario you get CPU %, idle wakeups/s, `top` POWER (the Energy Impact number), main-thread busy %, footprint at start/end/peak, RSS, counters per minute, and where the main thread spends its time.
 
