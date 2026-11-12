@@ -52,6 +52,13 @@ final class PerfCounters: @unchecked Sendable {
         bump(name.rawValue, by: amount)
     }
 
+    /// PROTOTYPE (ca-music-visuals): read a counter for the switcher panel.
+    func count(_ name: Name) -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return counts[name.rawValue] ?? 0
+    }
+
     /// AppleScript runs per target (`spotify`, `music`, a browser's raw value).
     func bumpAppleScript(target: String) {
         bump("appleScriptExec.\(target)")

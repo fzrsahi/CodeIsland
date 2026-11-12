@@ -303,8 +303,12 @@ struct CyberMusicWingView: View {
         self.isHovered = isHovered
     }
 
+    @ObservedObject private var proto = PrototypeVisuals.shared
+    @ObservedObject private var gate = MascotAnimationGate.shared
+
     private var isModernClean: Bool {
-        musicHUDTheme == MusicHUDTheme.modernClean.rawValue
+        if PrototypeVisuals.enabled { return proto.theme == MusicHUDTheme.modernClean.rawValue }
+        return musicHUDTheme == MusicHUDTheme.modernClean.rawValue
     }
 
     private var accentColor: Color {
@@ -350,13 +354,23 @@ struct CyberMusicWingView: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
 
+                if proto.usesCoreAnimation {
+                    // PROTOTYPE: Core Animation spectrum
+                    CASpectrumView(
+                        variant: proto.variant,
+                        style: .modern(color: NSColor(accentColor), maxHeight: 11.0),
+                        barCount: 3, barWidth: 2.0, barSpacing: 1.6,
+                        animating: gate.animationsActive && !proto.frozen
+                    )
+                } else {
                 ModernAudioSpectrumView(
                     barCount: 3,
-                    isPlaying: nowPlaying.isPlaying,
+                    isPlaying: nowPlaying.isPlaying && !proto.frozen,
                     barWidth: 2.0,
                     maxHeight: 11.0,
                     color: accentColor
                 )
+                }
             }
             .padding(.horizontal, 2)
             .padding(.vertical, 1)
@@ -396,14 +410,25 @@ struct CyberMusicWingView: View {
                 }
 
                 // Equalizer: Pixel dancing spectrum using active theme accent as base
+                if proto.usesCoreAnimation {
+                    // PROTOTYPE: Core Animation spectrum
+                    CASpectrumView(
+                        variant: proto.variant,
+                        style: .retro(palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor),
+                                      segmentHeight: 1.6, segmentSpacing: 0.8),
+                        barCount: isHovered ? 3 : 4, barWidth: 2.0, barSpacing: 1.5,
+                        animating: gate.animationsActive && !proto.frozen
+                    )
+                } else {
                 CyberAudioSpectrumView(
                     barCount: isHovered ? 3 : 4,
-                    isPlaying: nowPlaying.isPlaying,
+                    isPlaying: nowPlaying.isPlaying && !proto.frozen,
                     barWidth: 2.0,
                     segmentHeight: 1.6,
                     segmentSpacing: 0.8,
                     palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
                 )
+                }
             }
             .padding(.horizontal, 2)
             .padding(.vertical, 1)
@@ -529,6 +554,8 @@ struct SubNotchFloatingLyricCapsuleView: View {
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @State private var isHovered = false
     @State private var capsuleWidth: CGFloat = 180
+    @ObservedObject private var proto = PrototypeVisuals.shared
+    @ObservedObject private var gate = MascotAnimationGate.shared
 
     private var activePreset: FloatingLyricPreset {
         FloatingLyricPreset(rawValue: floatingLyricPreset) ?? .pureText
@@ -655,9 +682,21 @@ struct SubNotchFloatingLyricCapsuleView: View {
                 }
                 .frame(maxWidth: .infinity)
 
+                if proto.usesCoreAnimation {
+                    // PROTOTYPE: Core Animation spectrum
+                    CASpectrumView(
+                        variant: proto.variant,
+                        style: .retro(palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor),
+                                      segmentHeight: 1.4, segmentSpacing: 0.6),
+                        barCount: 3, barWidth: 1.8, barSpacing: 1.5,
+                        animating: gate.animationsActive && !proto.frozen
+                    )
+                    .shadow(color: Color.black.opacity(0.8), radius: 2)
+                    .frame(width: 14)
+                } else {
                 CyberAudioSpectrumView(
                     barCount: 3,
-                    isPlaying: nowPlaying.isPlaying,
+                    isPlaying: nowPlaying.isPlaying && !proto.frozen,
                     barWidth: 1.8,
                     segmentHeight: 1.4,
                     segmentSpacing: 0.6,
@@ -665,6 +704,7 @@ struct SubNotchFloatingLyricCapsuleView: View {
                 )
                 .shadow(color: Color.black.opacity(0.8), radius: 2)
                 .frame(width: 14)
+                }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 4)

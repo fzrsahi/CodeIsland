@@ -86,7 +86,7 @@ struct MascotView: View {
             }
         }
         .environment(\.mascotSpeed, Double(speedPct) / 100.0)
-        .environment(\.mascotAnimationsActive, animationGate.animationsActive)
+        .environment(\.mascotAnimationsActive, animationGate.animationsActive && !PrototypeVisuals.enabled)
         .environment(\.mascotAnimationEpoch, animationGate.epoch)
     }
 }

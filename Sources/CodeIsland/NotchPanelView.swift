@@ -991,6 +991,8 @@ private struct CompactLeftWing: View {
     let showToolStatus: Bool
     @Binding var expandedTab: ExpandedContentTab
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
+    @ObservedObject private var proto = PrototypeVisuals.shared
+    @ObservedObject private var gate = MascotAnimationGate.shared
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
     // Bound via @AppStorage so flipping the default mascot in Settings rerenders this view
     // even when AppState.primarySource wasn't recomputed (no session mutations in flight).
@@ -1020,7 +1022,7 @@ private struct CompactLeftWing: View {
     }
     private var displayStatus: AgentStatus { displaySession?.status ?? .idle }
     private var effectiveMascotStatus: MascotAgentStatus {
-        if displayStatus == .idle && nowPlaying.isPlaying {
+        if displayStatus == .idle && nowPlaying.isPlaying && !PrototypeVisuals.enabled {
             return .running
         }
         return displayStatus
@@ -1045,7 +1047,15 @@ private struct CompactLeftWing: View {
                 SessionGroupingTabs(mode: $groupingMode, expandedTab: $expandedTab)
             } else {
                 ZStack {
-                    if nowPlaying.isPlaying && displayStatus == .idle {
+                    if proto.usesCoreAnimation && displayStatus == .idle {
+                        // PROTOTYPE: Core Animation aura / breath glow
+                        CAGlowView(
+                            kind: nowPlaying.isPlaying ? .aura : .breath,
+                            variant: proto.variant,
+                            mascotSize: mascotSize,
+                            animating: gate.animationsActive && !proto.frozen
+                        )
+                    } else if nowPlaying.isPlaying && displayStatus == .idle {
                         // Neon beat aura when music is vibing
                         TimelineView(.animation(minimumInterval: 0.05)) { timeline in
                             let t = timeline.date.timeIntervalSinceReferenceDate
@@ -1090,7 +1100,7 @@ private struct CompactLeftWing: View {
                         .transition(.opacity)
                         .animation(.easeInOut(duration: 0.3), value: displaySource)
 
-                    if nowPlaying.isPlaying && displayStatus == .idle {
+                    if nowPlaying.isPlaying && displayStatus == .idle && !PrototypeVisuals.enabled {
                         // Floating cyberpunk neon music notes
                         TimelineView(.animation(minimumInterval: 0.08)) { timeline in
                             let t = timeline.date.timeIntervalSinceReferenceDate
@@ -1262,6 +1272,7 @@ private struct CompactRightWing: View {
     var expandedWingWidth: CGFloat = 240
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
+    @ObservedObject private var proto = PrototypeVisuals.shared
     @AppStorage(SettingsKey.soundEnabled) private var soundEnabled = SettingsDefaults.soundEnabled
     @AppStorage(SettingsKey.showToolStatus) private var showToolStatus = SettingsDefaults.showToolStatus
     @AppStorage(SettingsKey.quietHoursEnabled) private var quietHoursEnabled = SettingsDefaults.quietHoursEnabled
@@ -1483,10 +1494,15 @@ private struct CompactRightWing: View {
                         .symbolEffect(.bounce, value: appState.followUps.hintPulse)
                         .help(l10n["follow_up_hint"])
                 } else if appState.status == .waitingApproval || appState.status == .waitingQuestion {
-                    Image(systemName: "bell.fill")
-                        .font(.system(size: 8.5, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
-                        .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+                    if proto.usesCoreAnimation {
+                        // PROTOTYPE: Core Animation opacity pulse
+                        CABellView(animating: !reduceMotion && !proto.frozen)
+                    } else {
+                        Image(systemName: "bell.fill")
+                            .font(.system(size: 8.5, weight: .bold))
+                            .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
+                            .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion && !proto.frozen)
+                    }
                 }
             }
         }

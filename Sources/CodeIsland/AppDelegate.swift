@@ -193,6 +193,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if previewAllowed, let scenario = DebugHarness.requestedScenario() {
             Self.log.debug("Loading scenario: \(scenario.rawValue)")
             DebugHarness.apply(scenario, to: appState)
+            PrototypeVisuals.shared.start(appState: appState)
             // Isolated instances start no discovery, which is what starts the
             // cleanup tick; the benchmark measures it, so start it here.
             if isolated { appState.startCleanupTimer() }
