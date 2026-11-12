@@ -39,6 +39,11 @@ private class NotchHostingView<Content: View>: NSHostingView<Content> {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    override func layout() {
+        PerfCounters.shared?.bump(.hostingLayoutPass)
+        super.layout()
+    }
+
     /// Latest requested value awaiting its deferred apply, or nil when nothing
     /// is queued. Coalescing matters: SwiftUI sets these several times per
     /// animation frame, and the mascot drives frames continuously, so one

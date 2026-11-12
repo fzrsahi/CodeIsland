@@ -198,6 +198,8 @@ final class NowPlayingManager: ObservableObject {
     private var progressTimer: Timer?
     private var idleDiscoveryTimer: Timer?
     private(set) var isDisplayAsleep = false
+    /// Set by `startSimulatedPlayback`: no player is asked anything any more.
+    private(set) var isSimulated = false
     private var lastFetchedLyricsKey: String = ""
     private var lastBrowserSnapshots: [PlaybackSourceKind: PlaybackSnapshot] = [:]
     private let probeQueue = DispatchQueue(label: "com.codeisland.nowplaying.probe", qos: .userInitiated)
@@ -307,7 +309,7 @@ final class NowPlayingManager: ObservableObject {
     }
 
     private func handleAppleMusicNotification(_ notification: Notification) {
-        guard let info = notification.userInfo else { return }
+        guard !isSimulated, let info = notification.userInfo else { return }
         let state = info["Player State"] as? String ?? ""
         let playing = (state == "Playing")
 
@@ -340,7 +342,7 @@ final class NowPlayingManager: ObservableObject {
     }
 
     private func handleSpotifyNotification(_ notification: Notification) {
-        guard let info = notification.userInfo else { return }
+        guard !isSimulated, let info = notification.userInfo else { return }
         let state = info["Player State"] as? String ?? ""
         let playing = (state == "Playing")
 
@@ -451,6 +453,7 @@ final class NowPlayingManager: ObservableObject {
         idleDiscoveryTimer?.invalidate()
         idleDiscoveryTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
+                PerfCounters.shared?.bump(.nowPlayingTick)
                 guard let self = self, !self.isPlaying else { return }
                 self.fetchPlaybackDetails()
             }
@@ -463,6 +466,7 @@ final class NowPlayingManager: ObservableObject {
         var tickCount = 0
         progressTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             Task { @MainActor in
+                PerfCounters.shared?.bump(.nowPlayingTick)
                 guard let self = self, self.isPlaying else { return }
                 tickCount += 1
 
@@ -912,6 +916,7 @@ final class NowPlayingManager: ObservableObject {
 
     func fetchPlaybackDetails() {
         guard !RuntimeEnvironment.isRunningTests else { return }
+        guard !isSimulated else { return }
         guard fetchGate.begin() else { return }
         let detectWeb = Self.isWebMusicDetectionEnabled()
         let lastSource = self.activeSource
@@ -939,6 +944,7 @@ final class NowPlayingManager: ObservableObject {
 
             // 1. Desktop Spotify
             if isSpotifyRunning {
+                PerfCounters.shared?.bumpAppleScript(target: "spotify")
                 let spotifyScript = """
                 tell application "Spotify"
                     set trackName to name of current track
@@ -963,6 +969,7 @@ final class NowPlayingManager: ObservableObject {
 
             // 2. Apple Music Desktop
             if isMusicRunning {
+                PerfCounters.shared?.bumpAppleScript(target: "music")
                 let musicScript = """
                 tell application "Music"
                     set trackName to name of current track
@@ -995,6 +1002,7 @@ final class NowPlayingManager: ObservableObject {
 
             // 3. Running Web Browsers (open.spotify.com, music.youtube.com, music.apple.com)
             for browser in runningBrowsers {
+                PerfCounters.shared?.bumpAppleScript(target: "\(browser)")
                 let probeScript = Self.buildBrowserProbeScript(for: browser)
                 if let rawOutput = Self.runAppleScript(probeScript) {
                     let lines = rawOutput.components(separatedBy: .newlines)
@@ -1068,6 +1076,7 @@ final class NowPlayingManager: ObservableObject {
     }
 
     func applySnapshot(_ chosen: PlaybackSnapshot) {
+        guard !isSimulated else { return }
         log.debug(
             "apply \(chosen.source.displayBadge, privacy: .public) playing=\(chosen.isPlaying) pos=\(chosen.position) dur=\(chosen.duration) js=\(chosen.isJSBridgeAvailable)"
         )
@@ -1136,9 +1145,38 @@ final class NowPlayingManager: ObservableObject {
         }
     }
 
+    /// Preview / benchmark only (`--preview music`): plays a fixed track with
+    /// synced lyrics and stops asking any player, so no AppleScript runs and no
+    /// lyrics are fetched. The progress timer and lyric index run as for a real
+    /// track.
+    func startSimulatedPlayback(title: String, artist: String, album: String, duration: Double, lrc: String, artwork: NSImage?) {
+        isSimulated = true
+        idleDiscoveryTimer?.invalidate()
+        idleDiscoveryTimer = nil
+        activeSource = .spotifyDesktop
+        player = PlaybackSourceKind.spotifyDesktop.displayBadge
+        isBrowserJSHintVisible = false
+        browserJSHintText = ""
+        self.title = title
+        self.artist = artist
+        self.album = album
+        trackDuration = duration
+        playerPosition = 0
+        lyrics = Self.parseLRC(lrc)
+        currentLyricIndex = lyrics.first?.id ?? 0
+        lyricsLoading = false
+        artworkURL = ""
+        artworkImage = artwork
+        isPlaying = true
+        triggerToast()
+        startProgressTimer()
+    }
+
     /// Clears everything the HUD reads. Called when no source is playing any more so the island
     /// does not keep showing a frozen track (and a position clamped at duration) forever.
     func resetToIdle() {
+        // A probe started before simulated playback must not clear it.
+        guard !isSimulated else { return }
         guard activeSource != nil || isPlaying || !title.isEmpty else { return }
 
         stopProgressTimer()

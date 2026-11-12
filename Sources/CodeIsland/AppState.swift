@@ -474,7 +474,7 @@ final class AppState {
         return sessions[rid]
     }
 
-    private func startCleanupTimer() {
+    func startCleanupTimer() {
         guard cleanupTimer == nil else { return }
         cleanupTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -523,6 +523,7 @@ final class AppState {
     }
 
     private func cleanupIdleSessions() {
+        PerfCounters.shared?.bump(.cleanupTickWork)
         // 1. Verify monitored PIDs are still alive (DispatchSource can silently miss exits)
         //    Also kill orphaned processes (ppid <= 1, terminal closed but process survived).
         let sweep = processMonitor.sweep()

@@ -22,6 +22,12 @@ import CodeIslandCore
 //   factory     — Factory/Droid CLI single session
 //   codebuddy   — CodeBuddy CLI single session
 //   allcli      — All CLIs running simultaneously
+//   idle        — no sessions
+//   music       — no sessions, simulated track playing (no AppleScript)
+//   stress      — 30 sessions
+//
+// Debug builds always honour --preview; release builds only when isolated
+// (CODEISLAND_ISOLATED=1), which is how scripts/perf/bench.sh measures them.
 
 enum PreviewScenario: String, CaseIterable {
     case working
@@ -43,6 +49,8 @@ enum PreviewScenario: String, CaseIterable {
     case allcli
     // Special states
     case idle
+    /// No sessions; NowPlaying plays a simulated track (no AppleScript).
+    case music
     // Performance stress test
     case stress
 }
@@ -88,6 +96,7 @@ enum DebugHarness {
         case .kimi: applyKimi(to: appState)
         case .allcli: applyAllCLI(to: appState)
         case .idle: applyIdle(to: appState)
+        case .music: applyMusic(to: appState)
         case .stress: applyStress(to: appState)
         }
     }
@@ -532,6 +541,10 @@ enum DebugHarness {
         state.sessions.removeAll()
         state.activeSessionId = nil
         state.surface = .collapsed
+        // An isolated instance discovers nothing and hears only its own
+        // socket, so there is nothing to clear, and a timer here would be
+        // counted against idle by the benchmark.
+        guard !RuntimeEnvironment.isIsolated else { return }
         // Continuously clear sessions to block hook events during preview
         Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
             Task { @MainActor in
@@ -542,6 +555,24 @@ enum DebugHarness {
                 }
             }
         }
+    }
+
+    // MARK: - Music (simulated NowPlaying)
+
+    private static func applyMusic(to state: AppState) {
+        applyIdle(to: state)
+        // One synced line every 4 s, longer than any benchmark window.
+        let lrc = (0..<150).map { i in
+            String(format: "[%02d:%02d.00]Benchmark lyric line %d", (i * 4) / 60, (i * 4) % 60, i + 1)
+        }.joined(separator: "\n")
+        NowPlayingManager.shared.startSimulatedPlayback(
+            title: "Benchmark Track",
+            artist: "CodeIsland",
+            album: "Perf Harness",
+            duration: 600,
+            lrc: lrc,
+            artwork: NSImage(named: NSImage.applicationIconName)
+        )
     }
 
     // MARK: - Stress Test (30 sessions)

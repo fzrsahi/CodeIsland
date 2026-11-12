@@ -85,6 +85,7 @@ final class ESP32StatePublisher {
     }
 
     private func flush(reason: String) {
+        PerfCounters.shared?.bump(.publishESP32)
         guard let appState else { return }
         guard bridge.status == .connected else { return }
         guard bridge.selectedBuddyIdentifier != nil else { return }

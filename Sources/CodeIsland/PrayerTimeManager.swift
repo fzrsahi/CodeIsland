@@ -263,6 +263,7 @@ public final class PrayerTimeManager: ObservableObject {
 
     internal func tick(now: Date = Date()) {
         guard isEnabled else { return }
+        PerfCounters.shared?.bump(.prayerTick)
 
         let now = simulatedDate ?? now
         let tz = locationService.activeCity.timeZone
