@@ -94,14 +94,28 @@ struct CyberAudioSpectrumView: View {
         }
     }
 
+    /// Fixed size the CA replacement reports to layout — identical to the
+    /// SwiftUI HStack it replaces, so the measured wing width never changes.
+    private var caSize: CGSize {
+        CARetroSpectrumView.fixedSize(barCount: barCount, barWidth: barWidth,
+                                      segmentHeight: segmentHeight, segmentSpacing: segmentSpacing)
+    }
+
     var body: some View {
-        let canAnimate = animationGates.allows(.music)
-        // A still spectrum (Reduce Motion, or a class that may not move) holds
-        // the bottom segment lit.
-        if canAnimate {
-            TimelineView(.animation(minimumInterval: 0.04)) { timeline in
-                bars(time: timeline.date.timeIntervalSinceReferenceDate)
-            }
+        // Gated on the Music class (one decision from ticket 03): while a
+        // track plays, the render server drives the segments — no SwiftUI
+        // redraw per frame. The still frame (gate off, Reduce Motion, paused)
+        // stays SwiftUI and holds the bottom segment lit, exactly as before.
+        if animationGates.allows(.music) && isPlaying {
+            CARetroSpectrumView(
+                barCount: barCount,
+                barWidth: barWidth,
+                segmentHeight: segmentHeight,
+                segmentSpacing: segmentSpacing,
+                palette: activePalette,
+                animating: true
+            )
+            .frame(width: caSize.width, height: caSize.height)
         } else {
             bars(time: nil)
         }
@@ -215,11 +229,25 @@ struct ModernAudioSpectrumView: View {
     var color: Color = Color(red: 1.0, green: 0.65, blue: 0.45)
     @Environment(\.animationGates) private var animationGates
 
+    /// Fixed size the CA replacement reports to layout — identical to the
+    /// SwiftUI HStack it replaces, so the measured wing width never changes.
+    private var caSize: CGSize {
+        CAModernSpectrumView.fixedSize(barCount: barCount, barWidth: barWidth, maxHeight: maxHeight)
+    }
+
     var body: some View {
-        if animationGates.allows(.music) {
-            TimelineView(.animation(minimumInterval: 0.04)) { timeline in
-                bars(time: timeline.date.timeIntervalSinceReferenceDate)
-            }
+        // Gated on the Music class (one decision from ticket 03): while a
+        // track plays, the render server drives the capsule heights — no
+        // SwiftUI redraw per frame. The still frame stays SwiftUI.
+        if animationGates.allows(.music) && isPlaying {
+            CAModernSpectrumView(
+                barCount: barCount,
+                barWidth: barWidth,
+                maxHeight: maxHeight,
+                color: color,
+                animating: true
+            )
+            .frame(width: caSize.width, height: caSize.height)
         } else {
             // Still frame: every capsule at its rest height.
             bars(time: nil)
