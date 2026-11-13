@@ -1450,10 +1450,11 @@ private struct CompactRightWing: View {
                         .symbolEffect(.bounce, value: appState.followUps.hintPulse)
                         .help(l10n["follow_up_hint"])
                 } else if appState.status == .waitingApproval || appState.status == .waitingQuestion {
-                    Image(systemName: "bell.fill")
-                        .font(.system(size: 8.5, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
-                        .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+                    // A repeating `.symbolEffect` costs a layout pass per
+                    // display frame; the bell pulses on the render server
+                    // instead and keeps pulsing after the island goes quiet.
+                    PulsingBellView(animating: !reduceMotion)
+                        .frame(width: 10, height: 10)
                 }
             }
         }
@@ -6257,6 +6258,7 @@ private struct TypingIndicator: View {
     @State private var phase: CGFloat = -80
     @State private var dotPulse: Double = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.animationGates) private var animationGates
 
     var body: some View {
         HStack(spacing: 5) {
@@ -6323,7 +6325,9 @@ private struct TypingIndicator: View {
         .fixedSize(horizontal: true, vertical: false)
         .onAppear {
             phase = bright ? -90 : -70
-            guard !reduceMotion else { return }
+            // A `repeatForever` SwiftUI animation keeps the panel's layout on
+            // the display link; the Attention class is what lets it run.
+            guard !reduceMotion, animationGates.allows(.attention) else { return }
             withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: false)) {
                 phase = bright ? 110 : 90
             }
