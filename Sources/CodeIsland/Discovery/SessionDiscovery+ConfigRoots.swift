@@ -43,6 +43,7 @@ extension SessionDiscovery {
         var size = 0
         guard sysctl(&mib, 3, nil, &size, nil, 0) == 0, size > 0 else { return nil }
         var buffer = [UInt8](repeating: 0, count: size)
+        PerfCounters.shared?.bump(.procArgsRead)
         guard sysctl(&mib, 3, &buffer, &size, nil, 0) == 0 else { return nil }
         let keys = Set(ConfigDirCLI.allCases.map(\.environmentKey))
         return ProcArgsParser.completeEnvironment(Array(buffer.prefix(size)), keys: keys)

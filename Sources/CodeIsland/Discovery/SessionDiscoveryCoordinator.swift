@@ -13,6 +13,9 @@ private final class ProjectsWatcherBox: @unchecked Sendable {
     weak var coordinator: SessionDiscoveryCoordinator?
     private let lock = NSLock()
     private var cancelled = false
+    /// The queue the FSEvents callback runs on. Reading the event paths (and
+    /// deciding they are uninteresting) happens here, not on the main thread.
+    let queue = DispatchQueue(label: "com.codeisland.discovery.fsevents", qos: .utility)
 
     func cancel() {
         lock.lock()
@@ -20,12 +23,12 @@ private final class ProjectsWatcherBox: @unchecked Sendable {
         lock.unlock()
     }
 
-    func handleChange() {
+    func handleChange(paths: [String]) {
         lock.lock()
         let isCancelled = cancelled
         lock.unlock()
         guard !isCancelled else { return }
-        coordinator?.handleProjectsDirChange()
+        coordinator?.handleProjectsDirChange(paths: paths)
     }
 }
 
@@ -87,6 +90,9 @@ final class SessionDiscoveryCoordinator {
     private var pendingRescan = false
     nonisolated(unsafe) private var codexDesktopScanTask: Task<Void, Never>?
     private var lastCodexDesktopPollAt: Date?
+    /// Leading + trailing scan throttle (see `DiscoveryScanThrottle`).
+    private var scanThrottle = DiscoveryScanThrottle()
+    private var trailingScanTask: Task<Void, Never>?
     /// Bumped by `stop()`: a scan from before it lands dropped, and leaves
     /// alone the handle of a scan started since.
     private var generation = 0
@@ -128,7 +134,14 @@ final class SessionDiscoveryCoordinator {
         let scan = scanners.sessions
         let generation = self.generation
         scanTask = Task.detached { [weak self] in
+            let started = Date()
+            // One process snapshot for the whole scan: every source shares the
+            // paths it reads instead of asking the kernel again.
+            ProcessTable.beginScanSnapshot()
             let discovered = scan()
+            ProcessTable.endScanSnapshot()
+            let elapsedMs = Int(Date().timeIntervalSince(started) * 1000)
+            PerfCounters.shared?.bump(.discoveryScanMs, by: elapsedMs)
             guard !Task.isCancelled else { return }
             await MainActor.run { [weak self] in
                 guard let self, self.generation == generation else { return }
@@ -219,10 +232,12 @@ final class SessionDiscoveryCoordinator {
 
         let stream = FSEventStreamCreate(
             nil,
-            { (_, info, _, _, _, _) in
+            { (_, info, _, eventCount, eventPaths, _) in
                 guard let info = info else { return }
                 let box = Unmanaged<ProjectsWatcherBox>.fromOpaque(info).takeUnretainedValue()
-                box.handleChange()
+                // `UseCFTypes` hands over a CFArray of CFStrings.
+                let paths = (Unmanaged<CFArray>.fromOpaque(eventPaths).takeUnretainedValue() as? [String]) ?? []
+                box.handleChange(paths: paths)
             },
             &context,
             watchRoots as CFArray,
@@ -236,7 +251,7 @@ final class SessionDiscoveryCoordinator {
         )
 
         guard let stream = stream else { return }
-        FSEventStreamSetDispatchQueue(stream, .main)
+        FSEventStreamSetDispatchQueue(stream, box.queue)
         FSEventStreamStart(stream)
         self.projectsWatcherBox = box
         self.fsEventStream = stream
@@ -265,17 +280,47 @@ final class SessionDiscoveryCoordinator {
         codexDesktopScanTask?.cancel()
         codexDesktopScanTask = nil
         lastCodexDesktopPollAt = nil
+        trailingScanTask?.cancel()
+        trailingScanTask = nil
+        scanThrottle.reset()
     }
 
-    /// Called by FSEventStream when a known session-store directory changes.
-    nonisolated fileprivate func handleProjectsDirChange() {
+    /// Called by FSEventStream (on the watcher's own queue) with the paths a
+    /// batch touched. Only a change discovery actually needs — a store nobody
+    /// is tailing — reaches the main actor at all.
+    nonisolated fileprivate func handleProjectsDirChange(paths: [String]) {
+        let tailed = SessionDiscovery.tailedTranscriptPathsSnapshot()
+        guard DiscoveryScanPolicy.hasInterestingEvent(paths: paths, tailedPaths: tailed) else { return }
         Task { @MainActor [weak self] in
-            guard let self = self else { return }
-            // FSEvents already coalesces writes with a two-second latency, and
-            // requestScan() coalesces events that arrive during a scan.
-            // Dropping events in an additional time window can miss the final
-            // lifecycle write and leave the island showing stale state.
-            self.requestScan()
+            self?.handleInterestingProjectsDirChange()
+        }
+    }
+
+    /// A batch worth scanning for: throttled leading + trailing. The trailing
+    /// scan is kept on a timer, so the last lifecycle write of a burst is read
+    /// even when the burst is still going when the gap expires.
+    private func handleInterestingProjectsDirChange() {
+        guard !isStopped else { return }
+        let now = Date()
+        switch scanThrottle.decide(hasInterestingEvent: true, now: now) {
+        case .ignore:
+            return
+        case .scanNow:
+            scanThrottle.noteScanStarted(at: now)
+            trailingScanTask?.cancel()
+            trailingScanTask = nil
+            requestScan()
+        case .scanLater(let due):
+            guard trailingScanTask == nil else { return }
+            let delay = max(0, due.timeIntervalSince(now))
+            trailingScanTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                guard !Task.isCancelled, let self else { return }
+                self.trailingScanTask = nil
+                guard !self.isStopped else { return }
+                self.scanThrottle.noteScanStarted(at: Date())
+                self.requestScan()
+            }
         }
     }
 
