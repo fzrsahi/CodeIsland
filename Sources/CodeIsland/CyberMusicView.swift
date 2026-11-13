@@ -1361,57 +1361,63 @@ struct RetroCyberMusicHUDContentView: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            // LEFT COLUMN: Album Art, Track info, Scrubber & Controls (185pt fixed width)
+        HStack(alignment: .center, spacing: 12) {
+            // LEFT COLUMN: Retro 8-Bit Audio Deck
             VStack(alignment: .leading, spacing: 5) {
+                // Deck Header with Pixel Title & Spectrum Visualizer
+                HStack(spacing: 5) {
+                    PixelText(text: "AUDIO DECK", color: activeProgressColor, pixelSize: 1.1)
+                    Spacer()
+                    Text(nowPlaying.player.isEmpty ? "SPOTIFY" : nowPlaying.player.uppercased())
+                        .font(.system(size: 7, weight: .bold, design: .monospaced))
+                        .foregroundStyle(activeProgressColor)
+                        .padding(.horizontal, 3.5)
+                        .padding(.vertical, 1)
+                        .overlay(Rectangle().stroke(activeProgressColor.opacity(0.45), lineWidth: 0.8))
+
+                    CyberDiscoVisualizer(
+                        isPlaying: nowPlaying.isPlaying,
+                        barCount: 6,
+                        maxHeight: 11,
+                        palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
+                    )
+                }
+
+                // Track & Album Info in 1px Stepped Box
                 Button(action: { nowPlaying.activateCurrentPlayer() }) {
-                    HStack(spacing: 8) {
-                        // Album Cover (48x48)
+                    HStack(spacing: 7) {
+                        // Pixel Stepped Album Art (42x42)
                         ZStack {
                             if let art = nowPlaying.artworkImage {
                                 Image(nsImage: art)
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
-                                    .frame(width: 48, height: 48)
-                                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                                    .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).stroke(Color.white.opacity(0.18), lineWidth: 0.8))
-                                    .shadow(color: Color.black.opacity(0.5), radius: 3, y: 2)
+                                    .frame(width: 42, height: 42)
+                                    .clipped()
+                                    .overlay(Rectangle().stroke(activeProgressColor.opacity(0.6), lineWidth: 1))
                             } else {
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .fill(Color(red: 0.08, green: 0.09, blue: 0.12))
-                                    .frame(width: 48, height: 48)
-                                    .overlay(Image(systemName: "music.note").font(.system(size: 18)).foregroundColor(activeProgressColor))
+                                Rectangle()
+                                    .fill(Color(red: 0.06, green: 0.07, blue: 0.09))
+                                    .frame(width: 42, height: 42)
+                                    .overlay(Image(systemName: "music.note").font(.system(size: 14)).foregroundColor(activeProgressColor))
+                                    .overlay(Rectangle().stroke(activeProgressColor.opacity(0.5), lineWidth: 1))
                             }
                         }
                         .id(nowPlaying.title + nowPlaying.artist)
 
-                        // Track Title & Artist
+                        // Title & Artist
                         VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 4) {
-                                Text(nowPlaying.player.isEmpty ? "SPOTIFY" : nowPlaying.player.uppercased())
-                                    .font(.system(size: 7, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(activeProgressColor)
-                                    .lineLimit(1)
-
-                                if nowPlaying.isBrowserJSHintVisible {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(.system(size: 6.5))
-                                        .foregroundStyle(Color(red: 0.96, green: 0.62, blue: 0.04))
-                                        .help(nowPlaying.browserJSHintText)
-                                }
-                            }
-
                             ModernMarqueeText(
-                                text: nowPlaying.title.isEmpty ? "No track" : nowPlaying.title,
-                                font: .system(size: 11, weight: .bold, design: .monospaced),
+                                text: nowPlaying.title.isEmpty ? "NO AUDIO" : nowPlaying.title,
+                                font: .system(size: 10.5, weight: .bold, design: .monospaced),
                                 color: .white
                             )
-                            .frame(height: 15)
+                            .frame(height: 14)
                             .id(nowPlaying.title)
 
-                            Text(nowPlaying.artist.isEmpty ? "Idle" : nowPlaying.artist)
-                                .font(.system(size: 9, design: .monospaced))
-                                .foregroundStyle(Color(white: 0.65))
+                            Text(nowPlaying.artist.isEmpty ? "IDLE" : nowPlaying.artist)
+                                .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.65))
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         }
@@ -1419,189 +1425,171 @@ struct RetroCyberMusicHUDContentView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(nowPlaying.isBrowserJSHintVisible ? nowPlaying.browserJSHintText : "Click to focus active music player or browser tab")
+                .help(nowPlaying.isBrowserJSHintVisible ? nowPlaying.browserJSHintText : "Click to focus active music player")
 
-                // Interactive Scrubber
-                VStack(spacing: 2) {
+                // Segmented 8-Bit Pixel Scrubber
+                let totalSegments = 18
+                let effectivePosition = dragPosition ?? nowPlaying.playerPosition
+                let progressFraction = nowPlaying.trackDuration > 0
+                    ? min(1.0, max(0.0, effectivePosition / nowPlaying.trackDuration))
+                    : 0.0
+                let activeSegments = Int(progressFraction * Double(totalSegments))
+
+                VStack(spacing: 2.5) {
                     GeometryReader { geo in
-                        let totalWidth = geo.size.width
-                        let effectivePosition = dragPosition ?? nowPlaying.playerPosition
-                        let progressFraction: CGFloat = nowPlaying.trackDuration > 0
-                            ? min(1.0, max(0.0, CGFloat(effectivePosition / nowPlaying.trackDuration)))
-                            : 0.0
-
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.white.opacity(0.14))
-                                .frame(height: 3)
-
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(activeProgressGradient)
-                                .frame(width: totalWidth * progressFraction, height: 3)
+                        let segW = max(2.5, (geo.size.width - CGFloat(totalSegments - 1) * 2) / CGFloat(totalSegments))
+                        HStack(spacing: 2) {
+                            ForEach(0..<totalSegments, id: \.self) { idx in
+                                Rectangle()
+                                    .fill(idx < activeSegments ? activeProgressColor : (idx == activeSegments ? Color.white : Color.white.opacity(0.12)))
+                                    .frame(width: segW, height: 5)
+                            }
                         }
                         .contentShape(Rectangle())
                         .gesture(
                             DragGesture(minimumDistance: 0)
                                 .onChanged { value in
                                     guard nowPlaying.trackDuration > 0 else { return }
-                                    let fraction = min(1.0, max(0.0, value.location.x / totalWidth))
-                                    dragPosition = Double(fraction) * nowPlaying.trackDuration
+                                    let fraction = min(1.0, max(0.0, Double(value.location.x / geo.size.width)))
+                                    dragPosition = fraction * nowPlaying.trackDuration
                                 }
                                 .onEnded { value in
                                     guard nowPlaying.trackDuration > 0 else {
                                         dragPosition = nil
                                         return
                                     }
-                                    let fraction = min(1.0, max(0.0, value.location.x / totalWidth))
-                                    let targetTime = Double(fraction) * nowPlaying.trackDuration
+                                    let fraction = min(1.0, max(0.0, Double(value.location.x / geo.size.width)))
+                                    let target = fraction * nowPlaying.trackDuration
                                     dragPosition = nil
-                                    nowPlaying.seek(to: targetTime)
+                                    nowPlaying.seek(to: target)
                                 }
                         )
                     }
-                    .frame(height: 4)
+                    .frame(height: 5)
 
                     HStack {
-                        let effectivePosition = dragPosition ?? nowPlaying.playerPosition
                         Text(formatTime(effectivePosition))
-                            .font(.system(size: 7.5, weight: .medium, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.45))
+                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(activeProgressColor.opacity(0.85))
+                        Spacer()
+                        Text("//")
+                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.25))
                         Spacer()
                         Text(formatTime(nowPlaying.trackDuration))
-                            .font(.system(size: 7.5, weight: .medium, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.45))
+                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.50))
                     }
                 }
 
-                // Playback Controls + Mini Disco
-                HStack(spacing: 8) {
+                // Retro Arcade Transport Controls
+                HStack(spacing: 5) {
                     Button(action: { nowPlaying.previousTrack() }) {
-                        Image(systemName: "backward.fill")
-                            .font(.system(size: 8.5, weight: .bold))
-                            .foregroundStyle(Color(white: 0.85))
-                            .frame(width: 20, height: 20)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.10)))
+                        Text("◀◀")
+                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.85))
+                            .frame(width: 26, height: 17)
+                            .background(Color.white.opacity(0.08))
+                            .overlay(Rectangle().stroke(Color.white.opacity(0.20), lineWidth: 0.8))
                     }
                     .buttonStyle(.plain)
 
                     Button(action: { nowPlaying.togglePlayPause() }) {
-                        Image(systemName: nowPlaying.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 9.5, weight: .bold))
+                        Text(nowPlaying.isPlaying ? "❚❚" : "▶")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
                             .foregroundStyle(activeProgressColor)
-                            .frame(width: 22, height: 20)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(activeProgressColor.opacity(0.18)))
+                            .frame(width: 30, height: 17)
+                            .background(activeProgressColor.opacity(0.18))
+                            .overlay(Rectangle().stroke(activeProgressColor.opacity(0.6), lineWidth: 1))
                     }
                     .buttonStyle(.plain)
 
                     Button(action: { nowPlaying.nextTrack() }) {
-                        Image(systemName: "forward.fill")
-                            .font(.system(size: 8.5, weight: .bold))
-                            .foregroundStyle(Color(white: 0.85))
-                            .frame(width: 20, height: 20)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.10)))
+                        Text("▶▶")
+                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.85))
+                            .frame(width: 26, height: 17)
+                            .background(Color.white.opacity(0.08))
+                            .overlay(Rectangle().stroke(Color.white.opacity(0.20), lineWidth: 0.8))
                     }
                     .buttonStyle(.plain)
 
                     Spacer()
-
-                    // Retro Disco Visualizer (compact 6 bars, Color Theme base with vibrant gradient)
-                    CyberDiscoVisualizer(
-                        isPlaying: nowPlaying.isPlaying,
-                        barCount: 6,
-                        maxHeight: 16,
-                        palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
-                    )
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Divider Rule (subtle vertical line, blends cleanly with dark backdrop)
+            // Divider Rule: 1px phosphor vertical line
             Rectangle()
                 .fill(Color.white.opacity(0.12))
-                .frame(width: 1, height: 90)
+                .frame(width: 1, height: 94)
 
-            // RIGHT COLUMN: Synced Real-Time Lyrics View (clean, full-height lyrics only)
+            // RIGHT COLUMN: Retro CRT Lyrics Terminal
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Text("LYRICS")
-                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(activeProgressColor)
-
+                    PixelText(text: "CRT LYRICS", color: activeProgressColor, pixelSize: 1.1)
                     Spacer()
-
                     if nowPlaying.lyricsLoading {
-                        Text("LOADING...")
-                            .font(.system(size: 7, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.45))
+                        Text("SCANNING...")
+                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            .foregroundStyle(activeProgressColor.opacity(0.7))
+                    } else if !nowPlaying.lyrics.isEmpty {
+                        Text("SYNCED")
+                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
                     }
                 }
 
-                if nowPlaying.lyrics.isEmpty {
-                    VStack(spacing: 4) {
-                        Image(systemName: "waveform")
-                            .font(.system(size: 16))
-                            .foregroundColor(activeProgressColor.opacity(0.6))
-                        Text(nowPlaying.lyricsLoading ? "Fetching lyrics..." : "No lyrics found")
-                            .font(.system(size: 8.5, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.45))
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 82, maxHeight: 82, alignment: .center)
-                } else {
-                    ScrollViewReader { proxy in
-                        ScrollView(.vertical, showsIndicators: false) {
-                            LazyVStack(alignment: .leading, spacing: 3.5) {
-                                let currentLine = nowPlaying.lyrics.first(where: { $0.id == nowPlaying.currentLyricIndex })
-                                let nextLine = nowPlaying.lyrics.first(where: { $0.id == (nowPlaying.currentLyricIndex + 1) })
-                                let duration = max(1.0, (nextLine?.timestamp ?? ((currentLine?.timestamp ?? 0) + 3.8)) - (currentLine?.timestamp ?? 0))
-                                let elapsed = max(0.0, nowPlaying.playerPosition - (currentLine?.timestamp ?? 0))
-                                let currentFraction = min(1.0, elapsed / duration)
+                ZStack {
+                    Rectangle()
+                        .fill(Color(red: 0.04, green: 0.05, blue: 0.07))
+                        .overlay(Rectangle().stroke(Color.white.opacity(0.12), lineWidth: 0.8))
 
-                                ForEach(nowPlaying.lyrics) { line in
-                                    let isCurrent = (line.id == nowPlaying.currentLyricIndex)
-
-                                    HStack(spacing: 4) {
-                                        if isCurrent {
-                                            Circle()
-                                                .fill(activeProgressColor)
-                                                .frame(width: 3.5, height: 3.5)
+                    if nowPlaying.lyrics.isEmpty {
+                        VStack(spacing: 4) {
+                            Text(nowPlaying.lyricsLoading ? "[ SCANNING MATRIX... ]" : "[ NO LYRIC FEED ]")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.40))
+                        }
+                    } else {
+                        ScrollViewReader { proxy in
+                            ScrollView(.vertical, showsIndicators: false) {
+                                LazyVStack(alignment: .leading, spacing: 3.5) {
+                                    ForEach(nowPlaying.lyrics) { line in
+                                        let isCurrent = (line.id == nowPlaying.currentLyricIndex)
+                                        HStack(alignment: .top, spacing: 3) {
+                                            Text(isCurrent ? ">" : " ")
+                                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                                .foregroundStyle(activeProgressColor)
+                                            Text(line.text)
+                                                .font(.system(size: 8.5, weight: isCurrent ? .bold : .medium, design: .monospaced))
+                                                .foregroundStyle(isCurrent ? activeProgressColor : Color.white.opacity(0.40))
+                                                .lineLimit(2)
                                         }
-                                        KaraokeLyricLineView(
-                                            text: line.text,
-                                            isCurrent: isCurrent,
-                                            currentFraction: isCurrent ? currentFraction : 0.0,
-                                            primaryColor: activeProgressColor,
-                                            fontSize: isCurrent ? 9.5 : 8.0
-                                        )
-                                        .lineLimit(2)
+                                        .padding(.horizontal, 4)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            nowPlaying.seek(to: line.timestamp)
+                                        }
+                                        .id(line.id)
                                     }
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        nowPlaying.seek(to: line.timestamp)
-                                    }
-                                    .id(line.id)
                                 }
+                                .padding(.vertical, 4)
                             }
-                            .padding(.trailing, 4)
-                        }
-                        .frame(height: 82)
-                        .simultaneousGesture(
-                            DragGesture(minimumDistance: 4)
-                                .onChanged { _ in
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                            .frame(height: 82)
+                            .onAppear {
+                                proxy.scrollTo(nowPlaying.currentLyricIndex, anchor: .center)
+                            }
+                            .onChange(of: nowPlaying.currentLyricIndex) { _, newIndex in
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    proxy.scrollTo(newIndex, anchor: .center)
                                 }
-                        )
-                        .onAppear {
-                            proxy.scrollTo(nowPlaying.currentLyricIndex, anchor: .center)
-                        }
-                        .onChange(of: nowPlaying.currentLyricIndex) { _, newIndex in
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                proxy.scrollTo(newIndex, anchor: .center)
                             }
                         }
                     }
                 }
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(height: 104)
         .padding(.horizontal, 14)

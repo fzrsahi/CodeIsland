@@ -132,6 +132,44 @@ public final class PrayerTimeManager: ObservableObject {
         return String(format: "%02d:%02d", comps.hour ?? 0, comps.minute ?? 0)
     }
 
+    /// Qibla Direction towards Kaaba (Makkah: 21.4225° N, 39.8262° E)
+    public var qiblaDegrees: Double {
+        let kaabaLat = 21.4225 * .pi / 180.0
+        let kaabaLon = 39.8262 * .pi / 180.0
+        let coords = locationService.effectiveCoordinates
+        let userLat = coords.latitude * .pi / 180.0
+        let userLon = coords.longitude * .pi / 180.0
+        let deltaLon = kaabaLon - userLon
+        let y = sin(deltaLon)
+        let x = cos(userLat) * tan(kaabaLat) - sin(userLat) * cos(deltaLon)
+        var deg = atan2(y, x) * 180.0 / .pi
+        if deg < 0 { deg += 360.0 }
+        return deg
+    }
+
+    public var qiblaCompassDirection: String {
+        let deg = qiblaDegrees
+        let cardinals = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                         "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+        let index = Int(round(deg.truncatingRemainder(dividingBy: 360) / 22.5)) % 16
+        return cardinals[index]
+    }
+
+    /// Snoozes the approaching prayer reminder banner for N minutes
+    public func snoozeMiniPeekBanner(minutes: Int = 5) {
+        dismissMiniPeekBanner()
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(minutes) * 60 * 1_000_000_000)
+            guard self.isPrayerPrioritized else { return }
+            self.showMiniPeekBanner = true
+        }
+    }
+
+    /// Preview chime / adhan sound effect
+    public func playAdhanPreview() {
+        NSSound(named: "Glass")?.play()
+    }
+
     private var cancellables = Set<AnyCancellable>()
     private var timerCancellable: AnyCancellable?
     private var lastCalculatedDay: YearMonthDay?

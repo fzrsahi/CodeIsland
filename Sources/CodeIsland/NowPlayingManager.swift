@@ -308,7 +308,12 @@ final class NowPlayingManager: ObservableObject {
         return nil
     }
 
+    private var isMusicFeatureEnabled: Bool {
+        UserDefaults.standard.object(forKey: SettingsKey.musicEnabled) as? Bool ?? SettingsDefaults.musicEnabled
+    }
+
     private func handleAppleMusicNotification(_ notification: Notification) {
+        guard isMusicFeatureEnabled else { return }
         guard let info = notification.userInfo else { return }
         let state = info["Player State"] as? String ?? ""
         let playing = (state == "Playing")
@@ -342,6 +347,7 @@ final class NowPlayingManager: ObservableObject {
     }
 
     private func handleSpotifyNotification(_ notification: Notification) {
+        guard isMusicFeatureEnabled else { return }
         guard let info = notification.userInfo else { return }
         let state = info["Player State"] as? String ?? ""
         let playing = (state == "Playing")

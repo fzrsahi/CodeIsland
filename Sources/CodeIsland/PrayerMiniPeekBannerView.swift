@@ -1,11 +1,20 @@
 import SwiftUI
 import CodeIslandCore
 
-/// Mini Peek Toast Banner that gently rolls down from under the notch for ~6 seconds
-/// upon approaching prayer time or when prayer time arrives.
+/// Interactive Mini Peek Toast Banner that gently rolls down from under the notch
+/// upon approaching prayer time (T <= 10m) or when prayer time arrives.
+/// Supports both Pixel Retro (8-Bit) and Modern Clean themes with direct micro-actions (Open Tab, Snooze 5m, Dismiss).
 public struct PrayerMiniPeekBannerView: View {
     @ObservedObject var manager: PrayerTimeManager
     var onOpenFull: () -> Void
+
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    @State private var isHovering = false
+    @State private var hoveredButton: String? = nil
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
 
     public init(manager: PrayerTimeManager, onOpenFull: @escaping () -> Void) {
         self.manager = manager
@@ -13,73 +22,256 @@ public struct PrayerMiniPeekBannerView: View {
     }
 
     public var body: some View {
-        Button(action: onOpenFull) {
-            HStack(spacing: 8) {
-                // Phase / Prayer Icon Capsule
-                ZStack {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(manager.currentPhase.accentColor.opacity(0.18))
-                        .frame(width: 28, height: 28)
-                    Image(systemName: manager.currentPhase.systemImage)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(manager.currentPhase.accentColor)
+        Group {
+            if isPixel {
+                pixelBanner
+            } else {
+                modernBanner
+            }
+        }
+        .onHover { isHovering = $0 }
+    }
+
+    // MARK: - 1. Pixel Retro (8-Bit) Banner
+
+    private var pixelBanner: some View {
+        HStack(spacing: 8) {
+            // 8-bit Mosque / Crescent Icon Box
+            ZStack {
+                Rectangle()
+                    .fill(Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.18))
+                    .frame(width: 26, height: 26)
+                    .overlay(
+                        Rectangle()
+                            .stroke(Color(red: 0.12, green: 0.84, blue: 0.38), lineWidth: 1)
+                    )
+
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+            }
+
+            // Text Info
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    Text(manager.miniPeekBannerTitle.uppercased())
+                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white)
+                        .lineLimit(1)
+
+                    if manager.upcomingPrayer != nil {
+                        let diffMins = manager.minutesUntilNextPrayer
+                        Text(diffMins <= 0 ? "[NOW]" : "[\(diffMins)M]")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                    }
                 }
 
-                // Announcement text
-                VStack(alignment: .leading, spacing: 2) {
+                Text(manager.miniPeekBannerSubtitle.uppercased())
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.65))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 4)
+
+            // Interactive Actions Strip
+            HStack(spacing: 4) {
+                // Open Tab Button
+                Button(action: {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    onOpenFull()
+                }) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.system(size: 8, weight: .bold))
+                        Text("BUKA")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    }
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 3)
+                    .background(
+                        Rectangle()
+                            .fill(hoveredButton == "open" ? Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.35) : Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.18))
+                            .overlay(Rectangle().stroke(Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.8), lineWidth: 0.8))
+                    )
+                    .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                }
+                .buttonStyle(.plain)
+                .onHover { if $0 { hoveredButton = "open" } else if hoveredButton == "open" { hoveredButton = nil } }
+                .help("Buka Tab Sholat Lengkap")
+
+                // Snooze 5m Button
+                Button(action: {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    manager.snoozeMiniPeekBanner(minutes: 5)
+                }) {
+                    Text("+5M")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .padding(.horizontal, 4.5)
+                        .padding(.vertical, 3)
+                        .background(
+                            Rectangle()
+                                .fill(hoveredButton == "snooze" ? Color.white.opacity(0.20) : Color.white.opacity(0.08))
+                                .overlay(Rectangle().stroke(Color.white.opacity(0.3), lineWidth: 0.8))
+                        )
+                        .foregroundStyle(Color.white.opacity(0.85))
+                }
+                .buttonStyle(.plain)
+                .onHover { if $0 { hoveredButton = "snooze" } else if hoveredButton == "snooze" { hoveredButton = nil } }
+                .help("Tunda pengingat 5 menit")
+
+                // Dismiss Button
+                Button(action: {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        manager.dismissMiniPeekBanner()
+                    }
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 7.5, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(hoveredButton == "dismiss" ? 1.0 : 0.45))
+                        .frame(width: 16, height: 16)
+                        .background(
+                            Rectangle()
+                                .fill(hoveredButton == "dismiss" ? Color.white.opacity(0.15) : Color.clear)
+                        )
+                }
+                .buttonStyle(.plain)
+                .onHover { if $0 { hoveredButton = "dismiss" } else if hoveredButton == "dismiss" { hoveredButton = nil } }
+                .help("Tutup pengingat")
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Rectangle()
+                .fill(Color(red: 0.05, green: 0.07, blue: 0.10))
+                .overlay(
+                    Rectangle()
+                        .stroke(Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.55), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 8)
+        .padding(.bottom, 5)
+    }
+
+    // MARK: - 2. Modern Clean Banner
+
+    private var modernBanner: some View {
+        HStack(spacing: 8) {
+            // Phase / Prayer Icon Capsule
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(manager.currentPhase.accentColor.opacity(0.18))
+                    .frame(width: 30, height: 30)
+                Image(systemName: manager.currentPhase.systemImage)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(manager.currentPhase.accentColor)
+            }
+
+            // Announcement text
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
                     Text(manager.miniPeekBannerTitle)
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
-                    Text(manager.miniPeekBannerSubtitle)
-                        .font(.system(size: 9, design: .rounded))
-                        .foregroundStyle(Color.white.opacity(0.65))
-                        .lineLimit(1)
+                    if manager.upcomingPrayer != nil {
+                        let diffMins = manager.minutesUntilNextPrayer
+                        Text(diffMins <= 0 ? "Now" : "-\(diffMins)m")
+                            .font(.system(size: 8.5, weight: .bold, design: .rounded))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1.5)
+                            .background(
+                                Capsule()
+                                    .fill(manager.currentPhase.accentColor.opacity(0.25))
+                            )
+                            .foregroundStyle(manager.currentPhase.accentColor)
+                    }
                 }
 
-                Spacer(minLength: 4)
+                Text(manager.miniPeekBannerSubtitle)
+                    .font(.system(size: 9, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.65))
+                    .lineLimit(1)
+            }
 
-                // Countdown badge
-                if manager.upcomingPrayer != nil {
-                    let diffMins = manager.minutesUntilNextPrayer
-                    Text(diffMins <= 0 ? "Now" : "-\(diffMins)m")
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2.5)
+            Spacer(minLength: 4)
+
+            // Modern Interactive Action Strip
+            HStack(spacing: 4) {
+                // Open Tab Button
+                Button(action: {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    onOpenFull()
+                }) {
+                    Text("View")
+                        .font(.system(size: 9.5, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3.5)
                         .background(
                             Capsule()
-                                .fill(manager.currentPhase.accentColor.opacity(0.25))
+                                .fill(manager.currentPhase.accentColor.opacity(hoveredButton == "open" ? 0.45 : 0.25))
+                                .overlay(Capsule().stroke(manager.currentPhase.accentColor.opacity(0.6), lineWidth: 0.6))
                         )
-                        .foregroundStyle(manager.currentPhase.accentColor)
                 }
+                .buttonStyle(.plain)
+                .onHover { if $0 { hoveredButton = "open" } else if hoveredButton == "open" { hoveredButton = nil } }
 
-                // Dismiss button
+                // Snooze 5m Button
                 Button(action: {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    manager.snoozeMiniPeekBanner(minutes: 5)
+                }) {
+                    Text("+5m")
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.85))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3.5)
+                        .background(
+                            Capsule()
+                                .fill(Color.white.opacity(hoveredButton == "snooze" ? 0.16 : 0.08))
+                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                        )
+                }
+                .buttonStyle(.plain)
+                .onHover { if $0 { hoveredButton = "snooze" } else if hoveredButton == "snooze" { hoveredButton = nil } }
+                .help("Tunda 5 menit")
+
+                // Dismiss Button
+                Button(action: {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         manager.dismissMiniPeekBanner()
                     }
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(Color.white.opacity(0.45))
+                        .foregroundColor(Color.white.opacity(hoveredButton == "dismiss" ? 0.9 : 0.45))
                         .frame(width: 16, height: 16)
+                        .background(
+                            Circle()
+                                .fill(hoveredButton == "dismiss" ? Color.white.opacity(0.15) : Color.clear)
+                        )
                 }
                 .buttonStyle(.plain)
+                .onHover { if $0 { hoveredButton = "dismiss" } else if hoveredButton == "dismiss" { hoveredButton = nil } }
             }
-            .padding(.horizontal, 11)
-            .padding(.vertical, 7)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.white.opacity(0.06))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
-                    )
-            )
-            .padding(.horizontal, 8)
-            .padding(.bottom, 5)
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.07))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
+                )
+        )
+        .padding(.horizontal, 8)
+        .padding(.bottom, 5)
     }
 }

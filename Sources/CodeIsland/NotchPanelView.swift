@@ -364,13 +364,17 @@ struct NotchPanelView: View {
         if isHoveringRightWing && !shouldShowExpanded {
             return 154
         }
+        var width: CGFloat = 84
         if hasQuotaChip {
-            return quotaWingWidth
+            width = max(width, quotaWingWidth)
+        }
+        if prayerManager.isPrayerPrioritized {
+            width = max(width, 134)
         }
         if nowPlaying.isPlaying {
-            return 64
+            width = max(width, 120)
         }
-        return 84
+        return width
     }
 
     /// Notch cutout reserved in the center of the expanded header.
@@ -409,7 +413,8 @@ struct NotchPanelView: View {
             return min(max(baseWidth, minWidth), maxPanelWidth)
         }
         if showIdleIndicator {
-            let wing = idleHovered ? (compactWingWidth + 6) : compactWingWidth
+            let baseWing = idleHovered ? (compactWingWidth + 6) : compactWingWidth
+            let wing = prayerManager.isEnabled ? max(baseWing, IdleIndicatorBar.idlePrayerWingMinWidth) : baseWing
             return nw + wing * 2
         }
         if !isActive { return nw }
@@ -496,7 +501,7 @@ struct NotchPanelView: View {
                             expandedTab: expandedTabBinding,
                             workspaceManager: workspaceManager
                         )
-                            .padding(.leading, hasQuotaChip ? 8 : 0)
+                            .padding(.leading, hasQuotaChip ? 12 : 0)
                             .frame(
                                 width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
                                 alignment: hasQuotaChip ? .leading : .center
@@ -2103,6 +2108,9 @@ private struct HeaderNavigationMenuTabs: View {
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.agentsEnabled) private var agentsEnabled = SettingsDefaults.agentsEnabled
+    @AppStorage(SettingsKey.workspaceEnabled) private var workspaceEnabled = SettingsDefaults.workspaceEnabled
+    @AppStorage(SettingsKey.musicEnabled) private var musicEnabled = SettingsDefaults.musicEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var activeLabelTab: ExpandedContentTab? {
@@ -2135,97 +2143,103 @@ private struct HeaderNavigationMenuTabs: View {
             // Modern Clean SF Symbols - borderless, backgroundless container with leading-revealing text
             HStack(spacing: 4) {
                 // AGENTS TAB
-                let isAgentsActive = expandedTab == .agents
-                let showAgentsLabel = isAgentsActive && (activeLabelTab == .agents || !appState.isTabTransitioning)
-                Button {
-                    switchToTab(.agents)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "cpu.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                        if showAgentsLabel {
-                            Text("Agents")
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                                .lineLimit(1)
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
+                if agentsEnabled {
+                    let isAgentsActive = expandedTab == .agents
+                    let showAgentsLabel = isAgentsActive && (activeLabelTab == .agents || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.agents)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "cpu.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                            if showAgentsLabel {
+                                Text("Agents")
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .lineLimit(1)
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .leading).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            }
                         }
+                        .foregroundStyle(isAgentsActive ? activeAccentColor : Self.inactiveColor)
+                        .padding(.horizontal, isAgentsActive ? 8 : 6)
+                        .frame(height: 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(isAgentsActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .foregroundStyle(isAgentsActive ? activeAccentColor : Self.inactiveColor)
-                    .padding(.horizontal, isAgentsActive ? 8 : 6)
-                    .frame(height: 20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(isAgentsActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .help("AI Agents")
                 }
-                .buttonStyle(.plain)
-                .help("AI Agents")
 
                 // WORKSPACE TAB
-                let isWorkActive = expandedTab == .workspace
-                let showWorkLabel = isWorkActive && (activeLabelTab == .workspace || !appState.isTabTransitioning)
-                Button {
-                    switchToTab(.workspace)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "folder.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                        if showWorkLabel {
-                            Text("Workspace")
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                                .lineLimit(1)
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
+                if workspaceEnabled {
+                    let isWorkActive = expandedTab == .workspace
+                    let showWorkLabel = isWorkActive && (activeLabelTab == .workspace || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.workspace)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "folder.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                            if showWorkLabel {
+                                Text("Workspace")
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .lineLimit(1)
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .leading).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            }
                         }
+                        .foregroundStyle(isWorkActive ? activeAccentColor : Self.inactiveColor)
+                        .padding(.horizontal, isWorkActive ? 8 : 6)
+                        .frame(height: 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(isWorkActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .foregroundStyle(isWorkActive ? activeAccentColor : Self.inactiveColor)
-                    .padding(.horizontal, isWorkActive ? 8 : 6)
-                    .frame(height: 20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(isWorkActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .help(workspaceManager.projectName.isEmpty ? "Workspace View" : "Workspace: \(workspaceManager.projectName)")
                 }
-                .buttonStyle(.plain)
-                .help(workspaceManager.projectName.isEmpty ? "Workspace View" : "Workspace: \(workspaceManager.projectName)")
 
                 // MUSIC TAB
-                let isMusicActive = expandedTab == .music
-                let showMusicLabel = isMusicActive && (activeLabelTab == .music || !appState.isTabTransitioning)
-                Button {
-                    switchToTab(.music)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 11, weight: .semibold))
-                        if showMusicLabel {
-                            Text("Music")
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                                .lineLimit(1)
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
+                if musicEnabled {
+                    let isMusicActive = expandedTab == .music
+                    let showMusicLabel = isMusicActive && (activeLabelTab == .music || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.music)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "music.note")
+                                .font(.system(size: 11, weight: .semibold))
+                            if showMusicLabel {
+                                Text("Music")
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .lineLimit(1)
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .leading).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            }
                         }
+                        .foregroundStyle(isMusicActive ? activeAccentColor : Self.inactiveColor)
+                        .padding(.horizontal, isMusicActive ? 8 : 6)
+                        .frame(height: 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(isMusicActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .foregroundStyle(isMusicActive ? activeAccentColor : Self.inactiveColor)
-                    .padding(.horizontal, isMusicActive ? 8 : 6)
-                    .frame(height: 20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(isMusicActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist)" : "Music HUD")
                 }
-                .buttonStyle(.plain)
-                .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist)" : "Music HUD")
 
                 // PRAYER TAB
                 if PrayerTimeManager.shared.isEnabled {
@@ -2265,109 +2279,115 @@ private struct HeaderNavigationMenuTabs: View {
             // Retro Cyber Pixel Tabs - borderless, backgroundless container with leading-revealing text
             HStack(spacing: 4) {
                 // AGENTS PIXEL TAB
-                let isAgentsActive = expandedTab == .agents
-                let showAgentsLabel = isAgentsActive && (activeLabelTab == .agents || !appState.isTabTransitioning)
-                Button {
-                    switchToTab(.agents)
-                } label: {
-                    HStack(spacing: 4) {
-                        PixelIcon(
-                            glyph: .agents,
-                            color: isAgentsActive ? activeAccentColor : Self.inactiveColor,
-                            pixelSize: 1.35
-                        )
-                        if showAgentsLabel {
-                            PixelText(
-                                text: "AGENTS",
-                                color: activeAccentColor,
-                                pixelSize: 1.15
+                if agentsEnabled {
+                    let isAgentsActive = expandedTab == .agents
+                    let showAgentsLabel = isAgentsActive && (activeLabelTab == .agents || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.agents)
+                    } label: {
+                        HStack(spacing: 4) {
+                            PixelIcon(
+                                glyph: .agents,
+                                color: isAgentsActive ? activeAccentColor : Self.inactiveColor,
+                                pixelSize: 1.35
                             )
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .leading).combined(with: .opacity),
-                                removal: .move(edge: .leading).combined(with: .opacity)
-                            ))
+                            if showAgentsLabel {
+                                PixelText(
+                                    text: "AGENTS",
+                                    color: activeAccentColor,
+                                    pixelSize: 1.15
+                                )
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .leading).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                ))
+                            }
                         }
+                        .padding(.horizontal, isAgentsActive ? 7 : 5)
+                        .frame(height: 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(isAgentsActive ? activeAccentColor.opacity(0.20) : .clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .padding(.horizontal, isAgentsActive ? 7 : 5)
-                    .frame(height: 18)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(isAgentsActive ? activeAccentColor.opacity(0.20) : .clear)
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .help("AI Agents")
                 }
-                .buttonStyle(.plain)
-                .help("AI Agents")
 
                 // WORKSPACE PIXEL TAB
-                let isWorkActive = expandedTab == .workspace
-                let showWorkLabel = isWorkActive && (activeLabelTab == .workspace || !appState.isTabTransitioning)
-                Button {
-                    switchToTab(.workspace)
-                } label: {
-                    HStack(spacing: 4) {
-                        PixelIcon(
-                            glyph: .workspace,
-                            color: isWorkActive ? activeAccentColor : Self.inactiveColor,
-                            pixelSize: 1.35
-                        )
-                        if showWorkLabel {
-                            PixelText(
-                                text: "WORK",
-                                color: activeAccentColor,
-                                pixelSize: 1.15
+                if workspaceEnabled {
+                    let isWorkActive = expandedTab == .workspace
+                    let showWorkLabel = isWorkActive && (activeLabelTab == .workspace || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.workspace)
+                    } label: {
+                        HStack(spacing: 4) {
+                            PixelIcon(
+                                glyph: .workspace,
+                                color: isWorkActive ? activeAccentColor : Self.inactiveColor,
+                                pixelSize: 1.35
                             )
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .leading).combined(with: .opacity),
-                                removal: .move(edge: .leading).combined(with: .opacity)
-                            ))
+                            if showWorkLabel {
+                                PixelText(
+                                    text: "WORK",
+                                    color: activeAccentColor,
+                                    pixelSize: 1.15
+                                )
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .leading).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                ))
+                            }
                         }
+                        .padding(.horizontal, isWorkActive ? 7 : 5)
+                        .frame(height: 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(isWorkActive ? activeAccentColor.opacity(0.20) : .clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .padding(.horizontal, isWorkActive ? 7 : 5)
-                    .frame(height: 18)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(isWorkActive ? activeAccentColor.opacity(0.20) : .clear)
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .help(workspaceManager.projectName.isEmpty ? "Workspace View" : "Workspace: \(workspaceManager.projectName)")
                 }
-                .buttonStyle(.plain)
-                .help(workspaceManager.projectName.isEmpty ? "Workspace View" : "Workspace: \(workspaceManager.projectName)")
 
                 // MUSIC PIXEL TAB
-                let isMusicActive = expandedTab == .music
-                let showMusicLabel = isMusicActive && (activeLabelTab == .music || !appState.isTabTransitioning)
-                Button {
-                    switchToTab(.music)
-                } label: {
-                    HStack(spacing: 4) {
-                        PixelIcon(
-                            glyph: .music,
-                            color: isMusicActive ? activeAccentColor : Self.inactiveColor,
-                            pixelSize: 1.35
-                        )
-                        if showMusicLabel {
-                            PixelText(
-                                text: "MUSIC",
-                                color: activeAccentColor,
-                                pixelSize: 1.15
+                if musicEnabled {
+                    let isMusicActive = expandedTab == .music
+                    let showMusicLabel = isMusicActive && (activeLabelTab == .music || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.music)
+                    } label: {
+                        HStack(spacing: 4) {
+                            PixelIcon(
+                                glyph: .music,
+                                color: isMusicActive ? activeAccentColor : Self.inactiveColor,
+                                pixelSize: 1.35
                             )
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .leading).combined(with: .opacity),
-                                removal: .move(edge: .leading).combined(with: .opacity)
-                            ))
+                            if showMusicLabel {
+                                PixelText(
+                                    text: "MUSIC",
+                                    color: activeAccentColor,
+                                    pixelSize: 1.15
+                                )
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .leading).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                ))
+                            }
                         }
+                        .padding(.horizontal, isMusicActive ? 7 : 5)
+                        .frame(height: 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(isMusicActive ? activeAccentColor.opacity(0.20) : .clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .padding(.horizontal, isMusicActive ? 7 : 5)
-                    .frame(height: 18)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(isMusicActive ? activeAccentColor.opacity(0.20) : .clear)
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist)" : "Music HUD")
                 }
-                .buttonStyle(.plain)
-                .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist)" : "Music HUD")
 
                 // PRAYER PIXEL TAB
                 if PrayerTimeManager.shared.isEnabled {
@@ -2525,10 +2545,11 @@ private struct IdleIndicatorBar: View {
     var onExpand: (() -> Void)? = nil
     @AppStorage(SettingsKey.defaultSource) private var defaultSource = SettingsDefaults.defaultSource
 
-    private static let idlePrayerWingMinWidth: CGFloat = 126
+    static let idlePrayerWingMinWidth: CGFloat = 126
 
-    private var wingWidth: CGFloat {
-        hovered ? (compactWingWidth + 6) : compactWingWidth
+    private var effectiveWingWidth: CGFloat {
+        let base = hovered ? (compactWingWidth + 6) : compactWingWidth
+        return PrayerTimeManager.shared.isEnabled ? max(base, Self.idlePrayerWingMinWidth) : base
     }
 
     var body: some View {
@@ -2540,7 +2561,7 @@ private struct IdleIndicatorBar: View {
                     .opacity(hovered ? 0.95 : 0.65)
                 Spacer(minLength: 0)
             }
-            .frame(width: wingWidth, alignment: .center)
+            .frame(width: effectiveWingWidth, alignment: .center)
             .contentShape(Rectangle())
             .onTapGesture { onExpand?() }
             .help("Click to expand tabs (Agents / Workspace / Music)")
@@ -2568,7 +2589,7 @@ private struct IdleIndicatorBar: View {
                     )
                     .padding(.trailing, 8)
             }
-            .frame(width: prayerManager.isEnabled ? max(wingWidth, Self.idlePrayerWingMinWidth) : wingWidth, alignment: .trailing)
+            .frame(width: effectiveWingWidth, alignment: .trailing)
             .contentShape(Rectangle())
             .onTapGesture { onExpand?() }
             .help(prayerManager.isEnabled ? "Prayer Times & Living Clock (Click to open Prayer tab)" : "Click to expand tabs (Agents / Workspace / Music)")
@@ -6680,6 +6701,15 @@ struct PixelText: View {
         "•": [0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
         "/": [0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
         "-": [0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+        ":": [0,0,0,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+        ".": [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
+        ">": [1,0,0,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+        "<": [0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,0,0,1,0, 0,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
+        "[": [0,1,1,1,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
+        "]": [0,1,1,1,0, 0,0,0,1,0, 0,0,0,1,0, 0,0,0,1,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
+        "+": [0,0,0,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
+        "%": [1,1,0,0,1, 1,1,0,1,0, 0,0,1,0,0, 0,1,0,1,1, 1,0,0,1,1, 0,0,0,0,0, 0,0,0,0,0],
+        "!": [0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
         " ": [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
     ]
 

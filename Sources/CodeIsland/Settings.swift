@@ -280,6 +280,11 @@ enum SettingsKey {
     // boolean autoExpandOnCompletion — see AppState.completionStyle migration.
     static let completionNotificationStyle = "completionNotificationStyle"
 
+    // Master Feature Toggles (Memory & Energy Optimization)
+    static let agentsEnabled = "agentsEnabled"
+    static let workspaceEnabled = "workspaceEnabled"
+    static let musicEnabled = "musicEnabled"
+
     // Prayer & Living Diorama Clock
     static let prayerEnabled = "prayerEnabled"
     static let prayerCalculationMethod = "prayerCalculationMethod"
@@ -482,6 +487,11 @@ struct SettingsDefaults {
     static let pushSummaryLength = PushMessageFormatter.defaultSummaryLimit
     static let pushChannels = ""
 
+    // Master Feature Toggles (Memory & Energy Optimization)
+    static let agentsEnabled = true
+    static let workspaceEnabled = true
+    static let musicEnabled = true
+
     // Prayer & Living Diorama Clock
     static let prayerEnabled = false
     static let prayerCalculationMethod = "kemenag"
@@ -595,6 +605,9 @@ class SettingsManager {
             SettingsKey.pushSummaryLength: SettingsDefaults.pushSummaryLength,
             SettingsKey.pushChannels: SettingsDefaults.pushChannels,
             SettingsKey.prayerEnabled: SettingsDefaults.prayerEnabled,
+            SettingsKey.agentsEnabled: SettingsDefaults.agentsEnabled,
+            SettingsKey.workspaceEnabled: SettingsDefaults.workspaceEnabled,
+            SettingsKey.musicEnabled: SettingsDefaults.musicEnabled,
             SettingsKey.prayerCalculationMethod: SettingsDefaults.prayerCalculationMethod,
             SettingsKey.prayerHijriCalendarSource: SettingsDefaults.prayerHijriCalendarSource,
             SettingsKey.prayerHijriDayOffset: SettingsDefaults.prayerHijriDayOffset,

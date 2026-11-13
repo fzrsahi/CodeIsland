@@ -1101,6 +1101,7 @@ struct PixelRetroWorkspaceView: View {
 struct CyberWorkspaceView: View {
     @ObservedObject var manager: WorkspaceMonitorManager
     var appState: AppState
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.workspaceHUDTheme) private var workspaceHUDTheme = SettingsDefaults.workspaceHUDTheme
 
     init(manager: WorkspaceMonitorManager, appState: AppState) {
@@ -1108,15 +1109,21 @@ struct CyberWorkspaceView: View {
         self.appState = appState
     }
 
+    private var isPixel: Bool {
+        if islandUITheme == IslandUITheme.pixel.rawValue { return true }
+        if islandUITheme == IslandUITheme.modern.rawValue { return false }
+        return workspaceHUDTheme == WorkspaceHUDTheme.pixelRetro.rawValue
+    }
+
     var body: some View {
         Group {
-            if workspaceHUDTheme == WorkspaceHUDTheme.pixelRetro.rawValue {
+            if isPixel {
                 PixelRetroWorkspaceView(manager: manager, appState: appState)
             } else {
                 ModernWorkspaceView(manager: manager, appState: appState)
             }
         }
-        .animation(.easeInOut(duration: 0.20), value: workspaceHUDTheme)
+        .animation(.easeInOut(duration: 0.20), value: isPixel)
         .onAppear {
             manager.resolveAndRefreshWorkspace(appState: appState)
         }

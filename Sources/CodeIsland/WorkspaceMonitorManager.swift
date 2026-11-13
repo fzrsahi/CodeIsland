@@ -176,8 +176,12 @@ public final class WorkspaceMonitorManager: ObservableObject {
         }
     }
 
+    private var isWorkspaceFeatureEnabled: Bool {
+        UserDefaults.standard.object(forKey: SettingsKey.workspaceEnabled) as? Bool ?? SettingsDefaults.workspaceEnabled
+    }
+
     public func refresh(force: Bool = false) {
-        guard !currentCwd.isEmpty else { return }
+        guard isWorkspaceFeatureEnabled, !currentCwd.isEmpty else { return }
         let now = Date()
         if !force && now.timeIntervalSince(lastRefreshTime) < 1.5 {
             return
