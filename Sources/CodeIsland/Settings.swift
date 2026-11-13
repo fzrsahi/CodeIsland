@@ -92,6 +92,9 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
     case frostedGlass = "frostedGlass"
     case neonHud = "neonHud"
     case seamlessGlass = "seamlessGlass"
+    case retroPixel = "retroPixel"
+    case liquidAurora = "liquidAurora"
+    case minimalBraun = "minimalBraun"
 
     public var id: String { rawValue }
 
@@ -102,6 +105,9 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .frostedGlass: return "Frosted Glass (Blur Pill)"
         case .neonHud: return "Cyberpunk HUD (Brackets)"
         case .seamlessGlass: return "Seamless Glass (No Border)"
+        case .retroPixel: return "8-Bit Retro Arcade (Pixel Strip)"
+        case .liquidAurora: return "Liquid Aurora (Dynamic Glow)"
+        case .minimalBraun: return "Braun Industrial (Studio Strip)"
         }
     }
 
@@ -112,6 +118,9 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .frostedGlass: return "GLASS"
         case .neonHud: return "HUD"
         case .seamlessGlass: return "SEAMLESS"
+        case .retroPixel: return "8-BIT"
+        case .liquidAurora: return "AURORA"
+        case .minimalBraun: return "STUDIO"
         }
     }
 
@@ -122,6 +131,9 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .frostedGlass: return "Apple-style translucent frosted blur pill."
         case .neonHud: return "Futuristic HUD with bracket accents and monospace telemetry."
         case .seamlessGlass: return "Borderless translucent frosted glass with smooth vertical roll-up lyrics and pure text focus."
+        case .retroPixel: return "Authentic 8-bit stepped pixel frame, monospaced typography, and dancing retro spectrum visualizer."
+        case .liquidAurora: return "Luxurious translucent glass with animated shifting multi-color aurora ambient glow behind lyrics."
+        case .minimalBraun: return "Ultra-clean Dieter Rams / Teenage Engineering audio monitor strip with live emerald recording dot."
         }
     }
 }

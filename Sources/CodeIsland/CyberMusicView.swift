@@ -622,6 +622,15 @@ struct SubNotchFloatingLyricCapsuleView: View {
         case .seamlessGlass:
             chromeWidth = 44
             minWidth = 200
+        case .retroPixel:
+            chromeWidth = 68
+            minWidth = 135
+        case .liquidAurora:
+            chromeWidth = 72
+            minWidth = 140
+        case .minimalBraun:
+            chromeWidth = 76
+            minWidth = 145
         }
 
         let textWidth = (text as NSString).size(withAttributes: [.font: font]).width
@@ -812,6 +821,121 @@ struct SubNotchFloatingLyricCapsuleView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 4.5)
+
+        case .retroPixel:
+            // Preset 6: 8-Bit Retro Arcade — stepped pixel typography & live pixel audio spectrum
+            HStack(spacing: 6) {
+                Text("▶")
+                    .font(.system(size: 8, weight: .black, design: .monospaced))
+                    .foregroundStyle((MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme).color)
+                    .frame(width: 10)
+
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .bold, design: .monospaced))
+                        .foregroundStyle(activeTextColor)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id(activeDisplayText)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 4)),
+                            removal: .opacity.combined(with: .offset(y: -4))
+                        ))
+                }
+                .frame(maxWidth: .infinity)
+
+                CyberAudioSpectrumView(
+                    barCount: 3,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: 1.8,
+                    segmentHeight: 1.4,
+                    segmentSpacing: 0.6,
+                    palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
+                )
+                .frame(width: 14)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4.5)
+
+        case .liquidAurora:
+            // Preset 7: Liquid Aurora — translucent pill with flowing multi-color ambient glow behind lyrics
+            HStack(spacing: 7) {
+                Image(systemName: "music.note.sparkles")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), radius: 3)
+                    .frame(width: 12)
+
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .bold, design: activeFontDesign))
+                        .foregroundStyle(Color.white)
+                        .shadow(color: Color.black.opacity(0.85), radius: 2.5, y: 1.2)
+                        .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.4), radius: 5)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id(activeDisplayText)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 4)),
+                            removal: .opacity.combined(with: .offset(y: -4))
+                        ))
+                }
+                .frame(maxWidth: .infinity)
+
+                ModernAudioSpectrumView(
+                    barCount: 3,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: 1.8,
+                    maxHeight: 9.0,
+                    color: Color(red: 0.0, green: 0.96, blue: 0.83)
+                )
+                .frame(width: 14)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+
+        case .minimalBraun:
+            // Preset 8: Braun Industrial — studio monitor strip with live recording status dot & Swiss typography
+            HStack(spacing: 7) {
+                HStack(spacing: 3) {
+                    Circle()
+                        .fill(nowPlaying.isPlaying ? Color(red: 0.12, green: 0.84, blue: 0.38) : Color.white.opacity(0.3))
+                        .frame(width: 4.5, height: 4.5)
+                        .shadow(color: nowPlaying.isPlaying ? Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.8) : Color.clear, radius: 2)
+                    Text("LIVE")
+                        .font(.system(size: 6.5, weight: .black, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.75))
+                }
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1.5)
+                .background(Color.white.opacity(0.06))
+                .clipShape(Capsule())
+
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .semibold, design: activeFontDesign))
+                        .foregroundStyle(Color.white.opacity(0.95))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id(activeDisplayText)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 3)),
+                            removal: .opacity.combined(with: .offset(y: -3))
+                        ))
+                }
+                .frame(maxWidth: .infinity)
+
+                ModernAudioSpectrumView(
+                    barCount: 3,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: 1.6,
+                    maxHeight: 8.5,
+                    color: Color.white.opacity(0.8)
+                )
+                .frame(width: 12)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4.5)
         }
     }
 
@@ -885,6 +1009,79 @@ struct SubNotchFloatingLyricCapsuleView: View {
             Capsule()
                 .fill(Color.black.opacity(isHovered ? 0.45 : 0.32))
                 .shadow(color: Color.black.opacity(0.40), radius: 6, x: 0, y: 2)
+
+        case .retroPixel:
+            // 8-bit stepped pixel box with theme color hairline stroke
+            Rectangle()
+                .fill(Color(red: 0.04, green: 0.05, blue: 0.07).opacity(0.95))
+                .overlay(
+                    Rectangle()
+                        .stroke(
+                            (MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme).color.opacity(isHovered ? 0.95 : 0.60),
+                            lineWidth: 1.0
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.90), radius: 6, y: 3)
+
+        case .liquidAurora:
+            // Translucent glass capsule with animated liquid aurora glow
+            TimelineView(.animation(minimumInterval: 0.04)) { timeline in
+                let t = timeline.date.timeIntervalSinceReferenceDate
+                let shift = CGFloat(sin(t * 1.5) * 15.0)
+                Capsule()
+                    .fill(Color.black.opacity(0.75))
+                    .overlay(
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.20),
+                                        Color(red: 1.0, green: 0.16, blue: 0.53).opacity(0.18),
+                                        Color(red: 0.58, green: 0.20, blue: 1.0).opacity(0.22)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .offset(x: shift)
+                            .blur(radius: 6)
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(isHovered ? 0.50 : 0.30),
+                                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.40 : 0.15)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                lineWidth: 0.8
+                            )
+                    )
+                    .shadow(color: Color.black.opacity(0.85), radius: 8, y: 3)
+            }
+
+        case .minimalBraun:
+            // Studio monitor matte graphite capsule with subtle specular edge
+            Capsule()
+                .fill(Color(red: 0.07, green: 0.08, blue: 0.09).opacity(0.96))
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(isHovered ? 0.28 : 0.16),
+                                    Color.white.opacity(0.04)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 0.75
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.8), radius: 6, y: 2.5)
         }
     }
 
@@ -1540,10 +1737,10 @@ struct RetroCyberMusicHUDContentView: View {
             // RIGHT COLUMN: Retro CRT Lyrics (Seamless, Borderless, Floating Stream)
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    PixelText(text: "LIRIK", color: activeProgressColor, pixelSize: 1.1)
+                    PixelText(text: "LYRICS", color: activeProgressColor, pixelSize: 1.1)
                     Spacer()
                     if nowPlaying.lyricsLoading {
-                        Text("MEMUAT...")
+                        Text("LOADING...")
                             .font(.system(size: 7, weight: .bold, design: .monospaced))
                             .foregroundStyle(activeProgressColor.opacity(0.7))
                     } else if !nowPlaying.lyrics.isEmpty {
@@ -1551,7 +1748,7 @@ struct RetroCyberMusicHUDContentView: View {
                             Circle()
                                 .fill(Color(red: 0.12, green: 0.84, blue: 0.38))
                                 .frame(width: 3.5, height: 3.5)
-                            Text("SINKRON")
+                            Text("SYNCED")
                                 .font(.system(size: 7, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
                         }
@@ -1562,7 +1759,7 @@ struct RetroCyberMusicHUDContentView: View {
                 if nowPlaying.lyrics.isEmpty {
                     VStack(spacing: 4) {
                         Spacer()
-                        Text(nowPlaying.lyricsLoading ? "[ MEMINDAI LIRIK... ]" : "[ TIDAK ADA LIRIK ]")
+                        Text(nowPlaying.lyricsLoading ? "[ SCANNING MATRIX... ]" : "[ NO LYRIC FEED ]")
                             .font(.system(size: 8, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.white.opacity(0.40))
                         Spacer()
