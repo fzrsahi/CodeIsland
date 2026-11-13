@@ -30,6 +30,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         let isolated = RuntimeEnvironment.isIsolated
+        // Starts the benchmark's counter file when CODEISLAND_PERF_COUNTERS is set.
+        _ = PerfCounters.shared
         // One island per hook socket. A second one — `open -n`, a second copy
         // of the app — would take the socket from the first, which would go
         // on unheard, and remove its hosts' sockets. An island on a
@@ -181,11 +183,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Preview mode: inject mock data if --preview flag is present. Release
+        // builds take it only when isolated, for scripts/perf/bench.sh.
         #if DEBUG
-        // Preview mode: inject mock data if --preview flag is present
-        if let scenario = DebugHarness.requestedScenario() {
+        let previewAllowed = true
+        #else
+        let previewAllowed = isolated
+        #endif
+        if previewAllowed, let scenario = DebugHarness.requestedScenario() {
             Self.log.debug("Loading scenario: \(scenario.rawValue)")
             DebugHarness.apply(scenario, to: appState)
+            // Isolated instances start no discovery, which is what starts the
+            // cleanup tick; the benchmark measures it, so start it here.
+            if isolated { appState.startCleanupTimer() }
             // --collapsed keeps the bar collapsed, for checking the compact layout.
             if DebugHarness.keepsCollapsed { return }
             Task { @MainActor in
@@ -198,7 +208,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
-        #endif
 
         // Sparkle runs scheduled checks itself on the cadence declared in
         // Info.plist (SUScheduledCheckInterval). Start the updater once — it
@@ -240,6 +249,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        PerfCounters.shared?.write()
         // Nothing was started; what is on disk is the other island's.
         guard !standingAside else { return }
         hookRecoveryTimer?.invalidate()

@@ -107,6 +107,7 @@ final class AppleCompanionPublisher: NSObject, ObservableObject {
     }
 
     private func flush(reason: String) {
+        PerfCounters.shared?.bump(.publishCompanion)
         guard enabled, let appState else { return }
         sequence &+= 1
         let payload = appState.appleCompanionStatePayload(sequence: sequence)

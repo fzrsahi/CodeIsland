@@ -124,6 +124,7 @@ final class SessionDiscoveryCoordinator {
         }
 
         pendingRescan = false
+        PerfCounters.shared?.bump(.discoveryScan)
         let scan = scanners.sessions
         let generation = self.generation
         scanTask = Task.detached { [weak self] in
