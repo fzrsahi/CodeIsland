@@ -684,6 +684,8 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         MascotAnimationGate.shared.setPanelVisible(true)
         MascotAnimationGate.shared.setIdleSettled(isIslandSettled())
         MascotAnimationGate.shared.setMusicPlaying(NowPlayingManager.shared.isPlaying)
+        // An expanded island is being looked at, so Now Playing may probe more often.
+        NowPlayingManager.shared.isIslandExpanded = appState.surface.isExpanded
         MascotAnimationGate.shared.setWaitingForUser(isWaitingForUser())
     }
 
