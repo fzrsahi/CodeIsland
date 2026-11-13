@@ -39,7 +39,10 @@ extension AppState {
         ) { [weak self] note in
             guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
                   app.bundleIdentifier == AppState.codexAppBundleId else { return }
-            Task { @MainActor in self?.startCodexAppServerClientIfPossible() }
+            Task { @MainActor in
+                self?.startCodexDesktopPollTimer()
+                self?.startCodexAppServerClientIfPossible()
+            }
         })
 
         observers.append(center.addObserver(
@@ -49,7 +52,10 @@ extension AppState {
         ) { [weak self] note in
             guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
                   app.bundleIdentifier == AppState.codexAppBundleId else { return }
-            Task { @MainActor in self?.stopCodexAppServerClient() }
+            Task { @MainActor in
+                self?.stopCodexDesktopPollTimer()
+                self?.stopCodexAppServerClient()
+            }
         })
 
         codexAppServerObservers = observers
@@ -57,11 +63,13 @@ extension AppState {
         // Catch up with whatever state we booted into. A bundle-identifier
         // lookup walks Launch Services' index instead of every running app.
         if !NSRunningApplication.runningApplications(withBundleIdentifier: AppState.codexAppBundleId).isEmpty {
+            startCodexDesktopPollTimer()
             startCodexAppServerClientIfPossible()
         }
     }
 
     func stopCodexAppServerWatcher() {
+        stopCodexDesktopPollTimer()
         codexAppServerReconnectTask?.cancel()
         codexAppServerReconnectTask = nil
         if let observers = codexAppServerObservers {
@@ -183,6 +191,38 @@ extension AppState {
             }
         }
     }
+
+    // MARK: - Codex Desktop discovery poll
+
+    /// Codex Desktop's threads live in a state database nothing watches, so
+    /// discovery has to ask. It used to ride the cleanup sweep; now it has a
+    /// timer of its own that exists only while Codex Desktop runs, which is
+    /// also the condition the poll itself checks.
+    func startCodexDesktopPollTimer() {
+        guard codexDesktopPollTimer == nil else { return }
+        let timer = Timer.scheduledTimer(withTimeInterval: Self.codexDesktopPollInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.discovery.pollCodexDesktopIfDue(now: Date()) {
+                    NSRunningApplication
+                        .runningApplications(withBundleIdentifier: AppState.codexAppBundleId)
+                        .isEmpty ? [] : [AppState.codexAppBundleId]
+                }
+            }
+        }
+        // A poll a moment late changes nothing; the cadence test is about the
+        // interval, not the wake instant.
+        timer.tolerance = Self.codexDesktopPollInterval * 0.1
+        codexDesktopPollTimer = timer
+    }
+
+    func stopCodexDesktopPollTimer() {
+        codexDesktopPollTimer?.invalidate()
+        codexDesktopPollTimer = nil
+    }
+
+    /// Matches `SessionDiscoveryCoordinator.shouldPollCodexDesktopDiscovery`.
+    nonisolated static let codexDesktopPollInterval: TimeInterval = 6
 
     static func codexAppServerExecutableURL(
         runningBundleURLs: [URL] = NSRunningApplication
