@@ -1499,8 +1499,19 @@ final class AppState {
 
     /// Recompute cached status/source/counts from sessions in a single O(n) pass.
     /// Call after any mutation to `sessions` or session status.
+    /// Whether any card is thinking, kept as derived state so the collapsed
+    /// bar does not have to walk every session on each render.
+    private(set) var isThinking = false
+    /// The card the collapsed bar is showing, likewise derived.
+    private(set) var displaySessionId: String?
+
     func refreshDerivedState() {
         let summary = deriveSessionSummary(from: sessions)
+        let thinking = summary.status == .processing || summary.status == .running
+            || sessions.values.contains { $0.status == .processing || $0.status == .running || $0.currentTool != nil }
+        if isThinking != thinking { isThinking = thinking }
+        let display = rotatingSessionId ?? activeSessionId ?? sessions.keys.sorted().first
+        if displaySessionId != display { displaySessionId = display }
         // Whenever no session is actively working, honor the user-configured
         // default mascot. Covers both "no sessions at all" (#102) and "all
         // sessions idle" (#149) — without this, a user who sets the default
