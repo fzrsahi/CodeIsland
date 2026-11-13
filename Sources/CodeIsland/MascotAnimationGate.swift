@@ -114,10 +114,10 @@ final class MascotAnimationGate: ObservableObject {
     /// animating whatever the machine running it is set to.
     @Published private(set) var reduceMotion: Bool = false
 
-    /// Whether mascot per-frame animations should run right now.
+    /// Whether mascot per-frame animations should run right now. The mascot
+    /// class, with every input the gate has — including a playing track.
     var animationsActive: Bool {
-        Self.shouldAnimate(isVisible: isPanelVisible, isAwake: isAwake, isIdleSettled: isIdleSettled,
-                           reduceMotion: reduceMotion)
+        Self.shouldAnimate(.mascot, state: state)
     }
 
     /// The current state, as the pure decision sees it.
@@ -189,7 +189,11 @@ final class MascotAnimationGate: ObservableObject {
         guard state.isVisible, state.isAwake, !state.reduceMotion else { return false }
         switch kind {
         case .mascot:
-            return !state.isIdleSettled && state.waitingForInteraction < AnimationState.waitingQuietAfter
+            // While a track plays the mascot holds its idle pose: the Music
+            // class owns the motion, and a running mascot next to it spent
+            // frames saying nothing.
+            return !state.isIdleSettled && !state.musicPlaying
+                && state.waitingForInteraction < AnimationState.waitingQuietAfter
         case .ambientIdle:
             return !state.isIdleSettled
         case .music:

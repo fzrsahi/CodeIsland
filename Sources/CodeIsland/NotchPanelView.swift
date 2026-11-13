@@ -1029,40 +1029,6 @@ private struct CompactLeftWing: View {
     /// The mascot shows the session's own status. Music used to force a
     /// `.running` pose here, which spent frames on a pose that said nothing.
     private var effectiveMascotStatus: MascotAgentStatus { displayStatus }
-    /// Neon beat aura behind the mascot while a track plays.
-    private func musicAura(beat: Double) -> some View {
-        Circle()
-            .fill(
-                RadialGradient(
-                    colors: [
-                        Color(red: 1.0, green: 0.16, blue: 0.53).opacity(0.24 + beat * 0.18),
-                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.12 + beat * 0.10),
-                        Color.clear
-                    ],
-                    center: .center,
-                    startRadius: 2,
-                    endRadius: mascotSize * 0.6 + CGFloat(beat * 3.0)
-                )
-            )
-            .frame(width: mascotSize + 8, height: mascotSize + 8)
-    }
-
-    /// The slow glow behind an idle mascot.
-    private func breathGlow(breath: Double) -> some View {
-        Circle()
-            .fill(
-                RadialGradient(
-                    colors: [
-                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18 + breath * 0.14),
-                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.0)
-                    ],
-                    center: .center,
-                    startRadius: 2,
-                    endRadius: mascotSize * 0.55 + CGFloat(breath * 2.0)
-                )
-            )
-            .frame(width: mascotSize + 4, height: mascotSize + 4)
-    }
 
     private var isThinking: Bool {
         displayStatus == .processing || displayStatus == .running || appState.status == .processing || appState.status == .running
@@ -1085,27 +1051,17 @@ private struct CompactLeftWing: View {
             } else {
                 ZStack {
                     if nowPlaying.isPlaying && displayStatus == .idle {
-                        // Neon beat aura when music is vibing. Gated on the
-                        // Music class: a still frame when it may not animate.
-                        if animationGates.allows(.music) {
-                            TimelineView(.animation(minimumInterval: 0.05)) { timeline in
-                                let t = timeline.date.timeIntervalSinceReferenceDate
-                                let beat = (sin(t * 3.5) + 1.0) / 2.0 // 0.0 ... 1.0
-                                musicAura(beat: beat)
-                            }
-                        } else {
-                            musicAura(beat: 0.5)
-                        }
+                        // Neon beat aura when music is vibing: a CA layer pulsed
+                        // by the render server, gated on the Music class. Held
+                        // at mid-beat when the class may not animate.
+                        CAMusicGlowView(kind: .aura, mascotSize: mascotSize,
+                                      animating: animationGates.allows(.music))
+                            .frame(width: mascotSize + 8, height: mascotSize + 8)
                     } else if displayStatus == .idle {
-                        if animationGates.allows(.ambientIdle) {
-                            TimelineView(.animation(minimumInterval: 0.06)) { timeline in
-                                let t = timeline.date.timeIntervalSinceReferenceDate
-                                let breath = (sin(t * 2.0) + 1.0) / 2.0 // 0.0 ... 1.0
-                                breathGlow(breath: breath)
-                            }
-                        } else {
-                            breathGlow(breath: 0.5)
-                        }
+                        // Slow idle glow, same treatment under Ambient Idle.
+                        CAMusicGlowView(kind: .breath, mascotSize: mascotSize,
+                                      animating: animationGates.allows(.ambientIdle))
+                            .frame(width: mascotSize + 4, height: mascotSize + 4)
                     }
 
                     MascotView(source: displaySource, status: effectiveMascotStatus, size: mascotSize)
