@@ -184,7 +184,39 @@ final class NowPlayingManager: ObservableObject {
     @Published var player: String = "" // "Spotify", "Music", "SPOTIFY · BRAVE", "YT MUSIC · CHROME", etc.
     @Published var artworkURL: String = ""
     @Published var artworkImage: NSImage?
-    @Published var playerPosition: Double = 0
+    /// Bumped per artwork request so a slow load cannot land on a newer track.
+    private var artworkToken = 0
+    /// Where the track was, when, and how fast it is moving from there.
+    /// The position is derived from this, so a playing track does not need a
+    /// 4 Hz publish: the bar reads the anchor and interpolates locally.
+    struct PlaybackAnchor: Equatable, Sendable {
+        var position: Double
+        var at: Date
+        var rate: Double
+
+        func position(at now: Date) -> Double {
+            position + rate * max(0, now.timeIntervalSince(at))
+        }
+    }
+
+    @Published private(set) var playbackAnchor = PlaybackAnchor(position: 0, at: Date(), rate: 0)
+
+    /// The current position, interpolated from the anchor. Published only
+    /// through `playbackAnchor`, which changes on play, pause, seek and track
+    /// change — not four times a second.
+    var playerPosition: Double { playbackAnchor.position(at: Date()) }
+
+    /// The position as of a specific instant (the progress bar's timeline).
+    func position(at date: Date) -> Double {
+        min(trackDuration > 0 ? trackDuration : .greatestFiniteMagnitude,
+            playbackAnchor.position(at: date))
+    }
+
+    /// Move the anchor and, with it, the published position.
+    private func setAnchor(position: Double, playing: Bool, at now: Date = Date()) {
+        let anchor = PlaybackAnchor(position: position, at: now, rate: playing ? 1 : 0)
+        if playbackAnchor != anchor { playbackAnchor = anchor }
+    }
     @Published var trackDuration: Double = 0
     @Published var showToast: Bool = false
     @Published var lyrics: [LyricLine] = []
@@ -554,18 +586,18 @@ final class NowPlayingManager: ObservableObject {
         }
 
         if trackChanged {
-            self.playerPosition = position ?? 0.0
+            self.setAnchor(position: position ?? 0.0, playing: playing)
             self.currentLyricIndex = 0
             self.lyrics = []
             triggerToast()
             fetchLyrics(title: title, artist: artist)
         } else if let position = position {
-            self.playerPosition = position
+            self.setAnchor(position: position, playing: isPlaying)
             self.updateCurrentLyricIndex()
         }
 
         if self.trackDuration > 0 && self.playerPosition > self.trackDuration {
-            self.playerPosition = 0.0
+            self.setAnchor(position: 0, playing: isPlaying)
             self.updateCurrentLyricIndex()
         }
 
@@ -597,32 +629,39 @@ final class NowPlayingManager: ObservableObject {
     // MARK: - Playback Progress & Adaptive Polling
 
 
+    /// No interpolation timer any more: the position comes from the anchor,
+    /// and the one thing that still has to happen on time is the lyric line
+    /// changing. One timer, armed for the next line's timestamp.
     private func startProgressTimer() {
-        guard !isDisplayAsleep else { return }
-        progressTimer?.invalidate()
-        let timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self = self, self.isPlaying else { return }
-
-                if self.trackDuration > 0 {
-                    if self.playerPosition < self.trackDuration {
-                        self.playerPosition = min(self.trackDuration, self.playerPosition + 0.25)
-                    }
-                } else {
-                    self.playerPosition += 0.25
-                }
-                self.updateCurrentLyricIndex()
-                // Probes belong to the policy timer, not to the interpolation.
-            }
-        }
-        // The progress bar is interpolated, so a tick a few ms late is invisible.
-        timer.tolerance = 0.025
-        progressTimer = timer
+        updateCurrentLyricIndex()
+        scheduleNextLyricWake()
     }
 
     private func stopProgressTimer() {
         progressTimer?.invalidate()
         progressTimer = nil
+    }
+
+    /// Arm one timer for the moment the next lyric line starts. Re-armed
+    /// whenever the anchor moves (seek, pause, new track) and after each line.
+    private func scheduleNextLyricWake() {
+        progressTimer?.invalidate()
+        progressTimer = nil
+        guard isPlaying, !isDisplayAsleep, !lyrics.isEmpty else { return }
+        let offset = UserDefaults.standard.double(forKey: SettingsKey.lyricSyncOffset)
+        let position = playerPosition + offset
+        guard let delay = Self.nextLyricDelay(lyrics: lyrics, position: position) else { return }
+        let timer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.progressTimer = nil
+                self.updateCurrentLyricIndex()
+                self.scheduleNextLyricWake()
+            }
+        }
+        // A line a few hundredths of a second late is invisible.
+        timer.tolerance = min(0.2, delay * 0.1)
+        progressTimer = timer
     }
 
     var currentLyricText: String {
@@ -1131,7 +1170,7 @@ final class NowPlayingManager: ObservableObject {
                 """
                 if let rawOutput = Self.runAppleScript(musicScript),
                    let snapshot = Self.parseDesktopOutput(rawOutput, source: .appleMusic) {
-                    candidates.append(snapshot)
+                    candidates.append(Self.artworkPerTrack(snapshot))
                 }
             }
 
@@ -1238,7 +1277,12 @@ final class NowPlayingManager: ObservableObject {
         }
 
         if trackChanged {
-            self.playerPosition = chosen.isJSBridgeAvailable ? max(0.0, chosen.position) : 0.0
+            // A title-only snapshot knows the track but not the transport, so
+            // its position must not start interpolating.
+            self.setAnchor(
+                position: chosen.isJSBridgeAvailable ? max(0.0, chosen.position) : 0,
+                playing: chosen.isPlaying && chosen.isJSBridgeAvailable
+            )
             self.currentLyricIndex = 0
             self.lyrics = []
             if chosen.isPlaying {
@@ -1247,13 +1291,13 @@ final class NowPlayingManager: ObservableObject {
             self.fetchLyrics(title: chosen.title, artist: chosen.artist)
         } else if chosen.isJSBridgeAvailable && chosen.position >= 0 {
             if abs(self.playerPosition - chosen.position) > 0.75 || self.playerPosition == 0 {
-                self.playerPosition = chosen.position
+                self.setAnchor(position: chosen.position, playing: chosen.isPlaying && chosen.isJSBridgeAvailable)
                 self.updateCurrentLyricIndex()
             }
         }
 
         if self.trackDuration > 0 && self.playerPosition > self.trackDuration {
-            self.playerPosition = 0.0
+            self.setAnchor(position: 0, playing: isPlaying)
             self.updateCurrentLyricIndex()
         }
 
@@ -1271,6 +1315,7 @@ final class NowPlayingManager: ObservableObject {
         }
 
         self.updateCurrentLyricIndex()
+        self.scheduleNextLyricWake()
         self.armProbeTimer()
 
         // Load artwork if changed
@@ -1301,7 +1346,7 @@ final class NowPlayingManager: ObservableObject {
         self.artist = artist
         self.album = album
         trackDuration = duration
-        playerPosition = 0
+        setAnchor(position: 0, playing: false)
         lyrics = Self.parseLRC(lrc)
         currentLyricIndex = lyrics.first?.id ?? 0
         lyricsLoading = false
@@ -1332,7 +1377,7 @@ final class NowPlayingManager: ObservableObject {
         player = ""
         artworkURL = ""
         artworkImage = nil
-        playerPosition = 0
+        setAnchor(position: 0, playing: false)
         trackDuration = 0
         lyrics = []
         currentLyricIndex = 0
@@ -1345,7 +1390,45 @@ final class NowPlayingManager: ObservableObject {
         lastBrowserSnapshots = [:]
     }
 
+    /// Music writes its cover to one fixed path, so a changed cover and an
+    /// unchanged one look identical to the loader and the HUD kept the first
+    /// track's art. Copy it to a path that names the track instead.
+    nonisolated static func artworkPerTrack(_ snapshot: PlaybackSnapshot) -> PlaybackSnapshot {
+        let source = snapshot.artworkURLOrPath
+        guard !source.isEmpty, !source.hasPrefix("http"),
+              FileManager.default.fileExists(atPath: source) else { return snapshot }
+        let key = "\(snapshot.title)|\(snapshot.artist)"
+        var hasher = Hasher()
+        hasher.combine(key)
+        let destination = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codeisland-artwork-\(UInt(bitPattern: hasher.finalize())).png")
+        if !FileManager.default.fileExists(atPath: destination.path) {
+            try? FileManager.default.copyItem(atPath: source, toPath: destination.path)
+        }
+        return PlaybackSnapshot(
+            title: snapshot.title, artist: snapshot.artist, album: snapshot.album,
+            position: snapshot.position, duration: snapshot.duration,
+            artworkURLOrPath: destination.path, isPlaying: snapshot.isPlaying,
+            source: snapshot.source, isJSBridgeAvailable: snapshot.isJSBridgeAvailable
+        )
+    }
+
+    /// How long until the next line starts, from the current position. nil
+    /// when the last line is already showing.
+    nonisolated static func nextLyricDelay(lyrics: [LyricLine], position: Double) -> TimeInterval? {
+        guard let next = lyrics.first(where: { $0.timestamp > position }) else { return nil }
+        return max(0.05, next.timestamp - position)
+    }
+
+    /// Artwork is downsampled before it is held: a 3000 px cover in a 17 pt
+    /// square is tens of megabytes of the footprint for nothing.
+    nonisolated static let artworkMaxPixelSize: CGFloat = 256
+
+    /// Load the cover for `pathOrUrl`. A load that is superseded by a new
+    /// track is dropped instead of landing on the next track's cover.
     private func loadArtwork(from pathOrUrl: String) {
+        artworkToken &+= 1
+        let token = artworkToken
         guard !pathOrUrl.isEmpty else {
             self.artworkImage = nil
             return
@@ -1354,17 +1437,35 @@ final class NowPlayingManager: ObservableObject {
         if pathOrUrl.hasPrefix("http") {
             guard let url = URL(string: pathOrUrl) else { return }
             URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-                if let data = data, let img = NSImage(data: data) {
-                    Task { @MainActor in
-                        self?.artworkImage = img
-                    }
+                guard let data, let img = Self.downsampledArtwork(data) else { return }
+                Task { @MainActor in
+                    guard let self, self.artworkToken == token else { return }
+                    self.artworkImage = img
                 }
             }.resume()
-        } else if FileManager.default.fileExists(atPath: pathOrUrl) {
-            if let img = NSImage(contentsOfFile: pathOrUrl) {
-                self.artworkImage = img
-            }
+        } else if let img = Self.downsampledArtwork(atPath: pathOrUrl) {
+            self.artworkImage = img
         }
+    }
+
+    private func loadArtworkFile(url: URL) -> NSImage? { Self.downsampledArtwork(atPath: url.path) }
+
+    nonisolated static func downsampledArtwork(atPath path: String) -> NSImage? {
+        guard let data = FileManager.default.contents(atPath: path) else { return nil }
+        return downsampledArtwork(data)
+    }
+
+    nonisolated static func downsampledArtwork(_ data: Data) -> NSImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: artworkMaxPixelSize,
+        ]
+        guard let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return NSImage(data: data)
+        }
+        return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
     }
 
     // MARK: - Lyrics Engine
@@ -1624,7 +1725,7 @@ final class NowPlayingManager: ObservableObject {
             DispatchQueue.global(qos: .userInitiated).async {
                 _ = Self.runAppleScript(script)
             }
-            self.playerPosition = position
+            self.setAnchor(position: position, playing: isPlaying)
             updateCurrentLyricIndex()
         } else {
             let app = (activeSource == .appleMusic || player == "Music") ? "Music" : "Spotify"
@@ -1632,7 +1733,7 @@ final class NowPlayingManager: ObservableObject {
             DispatchQueue.global(qos: .userInitiated).async {
                 _ = Self.runAppleScript(script)
             }
-            self.playerPosition = position
+            self.setAnchor(position: position, playing: isPlaying)
             updateCurrentLyricIndex()
         }
     }
