@@ -577,7 +577,7 @@
     },
     "waiting-long": {
       "cpu": {
-        "enforce": false,
+        "enforce": true,
         "max": 2.0
       }
     }

@@ -32,6 +32,9 @@ import CodeIslandCore
 enum PreviewScenario: String, CaseIterable {
     case working
     case approval
+    /// Collapsed island with one session parked on an approval and a tool in
+    /// flight — the state `bench.sh` measures as `waiting-long`.
+    case waiting
     case question
     case completion
     case multi
@@ -77,6 +80,8 @@ enum DebugHarness {
             applyWorking(to: appState)
         case .approval:
             applyApproval(to: appState)
+        case .waiting:
+            applyWaiting(to: appState)
         case .question:
             applyQuestion(to: appState)
         case .completion:
@@ -136,6 +141,27 @@ enum DebugHarness {
         state.sessions["preview-approval"] = s
         state.activeSessionId = "preview-approval"
         state.surface = .approvalCard(sessionId: "preview-approval")
+    }
+
+    /// The collapsed waiting state: an approval is pending and its tool is
+    /// still named on the bar, which is the shape the wing renders. Derived
+    /// state is refreshed so the bar sees the session at once.
+    private static func applyWaiting(to state: AppState) {
+        var s = SessionSnapshot()
+        s.status = .waitingApproval
+        s.cwd = "/Users/dev/api-server"
+        s.model = "claude-opus-4-20250514"
+        s.source = "claude"
+        s.currentTool = "Bash"
+        s.toolDescription = "npm run test -- --coverage"
+        s.lastUserPrompt = "Run the test suite"
+        s.addRecentMessage(ChatMessage(isUser: true, text: "Run the test suite"))
+        s.termApp = "iTerm.app"
+
+        state.sessions["preview-waiting"] = s
+        state.activeSessionId = "preview-waiting"
+        state.surface = .collapsed
+        state.refreshDerivedState()
     }
 
     private static func applyQuestion(to state: AppState) {
