@@ -23,11 +23,42 @@ enum ProcessTable {
         return Array(pids.prefix(count)).filter { $0 > 0 }
     }
 
+    /// Executable paths already read, keyed by `(pid, start time)` so a reused
+    /// pid cannot answer with the previous process's path. A discovery scan
+    /// reads each process once and hands the same answer to all its sources.
+    private static let pathCache = ProcessPathCache()
+
     static func executablePath(for pid: pid_t) -> String? {
+        let identity = processIdentity(for: pid)
+        if let cached = pathCache.path(for: identity) { return cached }
+        // One read per process per scan, however many sources ask.
+        if let inScan = pathCache.scanPath(for: identity) { return inScan }
+        PerfCounters.shared?.bump(.procPathRead)
         var pathBuffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
         let len = proc_pidpath(pid, &pathBuffer, UInt32(pathBuffer.count))
         guard len > 0 else { return nil }
-        return String(cString: pathBuffer)
+        let path = String(cString: pathBuffer)
+        pathCache.store(path, for: identity)
+        return path
+    }
+
+    /// Start a discovery scan's shared snapshot: paths are read once per pid
+    /// and shared by every source in the scan.
+    static func beginScanSnapshot() { pathCache.beginScan() }
+
+    /// End the scan's snapshot; what it read is kept for later scans.
+    static func endScanSnapshot() { pathCache.endScan() }
+
+    /// The process's start time, for the cache key. A process with no start
+    /// time is cached by pid alone, which is only wrong across pid reuse —
+    /// and pid reuse also changes the path, so the read repeats anyway.
+    static func processIdentity(for pid: pid_t) -> ProcessIdentity {
+        var info = proc_bsdinfo()
+        let size = MemoryLayout<proc_bsdinfo>.size
+        let ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, Int32(size))
+        guard ret > 0 else { return ProcessIdentity(pid: pid, startTime: nil) }
+        let seconds = TimeInterval(info.pbi_start_tvsec) + TimeInterval(info.pbi_start_tvusec) / 1_000_000
+        return ProcessIdentity(pid: pid, startTime: Date(timeIntervalSince1970: seconds))
     }
 
     /// Get the current working directory of a process using proc_pidinfo

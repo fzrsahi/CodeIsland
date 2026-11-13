@@ -24,6 +24,12 @@ final class PerfCounters: @unchecked Sendable {
         case prayerTick
         /// NowPlaying timer ticks (idle discovery and progress).
         case nowPlayingTick
+        /// Process executable-path reads during discovery (`proc_pidpath`).
+        case procPathRead
+        /// Process argv/environment reads during discovery (`KERN_PROCARGS2`).
+        case procArgsRead
+        /// Milliseconds one discovery scan took, summed over the window.
+        case discoveryScanMs
     }
 
     static let shared: PerfCounters? = {

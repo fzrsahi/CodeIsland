@@ -25,6 +25,9 @@ extension AppState {
               let path = session.transcriptPath, !path.isEmpty else { return }
         if attachedTranscriptPaths[sessionId] == path { return }
         attachedTranscriptPaths[sessionId] = path
+        // The watcher must not rescan the whole process table for writes the
+        // tailer is already reading.
+        SessionDiscovery.setTailedTranscriptPaths(Set(attachedTranscriptPaths.values))
 
         // Backfill messages from the transcript file so recentMessages is populated
         let messages: [ChatMessage]
@@ -213,6 +216,7 @@ extension AppState {
     /// when a new transcript path supersedes an older one.
     func detachTranscriptTailer(sessionId: String) {
         attachedTranscriptPaths.removeValue(forKey: sessionId)
+        SessionDiscovery.setTailedTranscriptPaths(Set(attachedTranscriptPaths.values))
         attachedTranscriptTokens.removeValue(forKey: sessionId)
         pendingAgentTaskBackfills.removeValue(forKey: sessionId)
         transcriptTailer.detach(sessionId: sessionId)
