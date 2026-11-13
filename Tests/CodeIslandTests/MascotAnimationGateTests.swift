@@ -115,8 +115,10 @@ final class AnimationClassGateTests: XCTestCase {
         XCTAssertFalse(MascotAnimationGate.shouldAnimate(.mascot, state: state(settled: true)))
     }
 
-    func testMascotRunsWhileMusicPlays() {
-        XCTAssertTrue(MascotAnimationGate.shouldAnimate(.mascot, state: state(music: true)))
+    func testMascotHoldsItsIdlePoseWhileMusicPlays() {
+        // The Music class owns the motion; a running mascot would spend frames
+        // on a pose that says nothing.
+        XCTAssertFalse(MascotAnimationGate.shouldAnimate(.mascot, state: state(music: true)))
     }
 
     func testAmbientGlowFollowsTheSettledState() {
