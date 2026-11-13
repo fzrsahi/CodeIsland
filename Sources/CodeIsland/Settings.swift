@@ -367,6 +367,10 @@ enum SettingsKey {
     static let pushAwayIdleMinutes = "pushAwayIdleMinutes"
     static let pushSummaryLength = "pushSummaryLength"
     static let pushChannels = "pushChannels"  // JSON [PushChannelConfig]; empty = nothing configured
+    // Apple Mail Integration
+    static let mailIntegrationEnabled = "mailIntegrationEnabled"
+    static let mailAutoPeekNewEmail = "mailAutoPeekNewEmail"
+    static let mailPollingIntervalSeconds = "mailPollingIntervalSeconds"
 }
 
 struct SettingsDefaults {
@@ -497,6 +501,11 @@ struct SettingsDefaults {
     static let prayerLastAltitude: Double = 0.0
     static let prayerResolvedCityName = ""
     static let prayerUsePreciseLocation = true
+
+    // Apple Mail Integration
+    static let mailIntegrationEnabled = true
+    static let mailAutoPeekNewEmail = true
+    static let mailPollingIntervalSeconds = 45
 }
 
 @MainActor
@@ -608,6 +617,9 @@ class SettingsManager {
             SettingsKey.prayerLastAltitude: SettingsDefaults.prayerLastAltitude,
             SettingsKey.prayerResolvedCityName: SettingsDefaults.prayerResolvedCityName,
             SettingsKey.prayerUsePreciseLocation: SettingsDefaults.prayerUsePreciseLocation,
+            SettingsKey.mailIntegrationEnabled: SettingsDefaults.mailIntegrationEnabled,
+            SettingsKey.mailAutoPeekNewEmail: SettingsDefaults.mailAutoPeekNewEmail,
+            SettingsKey.mailPollingIntervalSeconds: SettingsDefaults.mailPollingIntervalSeconds,
         ])
     }
 

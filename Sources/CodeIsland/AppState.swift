@@ -21,6 +21,7 @@ enum ExpandedContentTab: Int, CaseIterable, Sendable {
     case workspace = 1
     case music = 2
     case prayer = 3
+    case mail = 4
 
     var tabIndex: Int { rawValue }
 }
@@ -280,6 +281,8 @@ final class AppState {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
             if target == .workspace {
                 WorkspaceMonitorManager.shared.resolveAndRefreshWorkspace(appState: self)
+            } else if target == .mail {
+                MailManager.shared.refresh()
             }
             withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                 if target == .agents {
