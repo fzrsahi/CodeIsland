@@ -38,6 +38,7 @@ final class AppleCompanionPublisher: NSObject, ObservableObject {
     )
     private var heartbeatTimer: Timer?
     private var sequence: UInt64 = 0
+    private var lastSentContentKey: String?
     private let bluetooth = AppleCompanionBluetoothPeripheral()
 
     private let encoder: JSONEncoder = {
@@ -115,6 +116,14 @@ final class AppleCompanionPublisher: NSObject, ObservableObject {
         guard enabled, let appState else { return }
         sequence &+= 1
         let payload = appState.appleCompanionStatePayload(sequence: sequence)
+
+        if reason == "change" {
+            let key = PublishDedupe.companionContentKey(for: payload)
+            guard key != lastSentContentKey else { return }
+            lastSentContentKey = key
+        } else {
+            lastSentContentKey = PublishDedupe.companionContentKey(for: payload)
+        }
 
         bluetooth.publish(payload)
 
