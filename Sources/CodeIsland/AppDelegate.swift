@@ -168,11 +168,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Hooks auto-recovery: periodic + app activation trigger
         if !isolated {
-            hookRecoveryTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+            let timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
                 Task { @MainActor in
                     self?.checkAndRepairHooks()
                 }
             }
+            // Hook repair is a safety net; a minute late is fine.
+            timer.tolerance = 30
+            hookRecoveryTimer = timer
             NSWorkspace.shared.notificationCenter.addObserver(
                 forName: NSWorkspace.didActivateApplicationNotification,
                 object: nil, queue: .main

@@ -50,6 +50,7 @@ public enum ClaudeUsageScanner {
     /// copy, hands it to the background scan, and stores the returned state.
     public struct FileCache: Sendable {
         struct CachedMessage: Sendable, Equatable {
+            let id: String
             let timestamp: Date
             let usage: ClaudeUsageTotals
         }
@@ -128,6 +129,9 @@ public enum ClaudeUsageScanner {
                         consumeNewLines(path: path, into: &entry)
                     }
                     entry.entries.removeAll { $0.timestamp < cutoff }
+                    // Keep the dedupe set bounded by the entries it guards: a
+                    // long-lived transcript would otherwise grow it forever.
+                    entry.seenIds = Set(entry.entries.map(\.id))
                     cache.files[path] = entry
 
                     for message in entry.entries where message.timestamp <= now {
@@ -162,7 +166,7 @@ public enum ClaudeUsageScanner {
             guard let parsed = parseAssistantUsage(String(line)),
                   !entry.seenIds.contains(parsed.messageId) else { continue }
             entry.seenIds.insert(parsed.messageId)
-            entry.entries.append(.init(timestamp: parsed.timestamp, usage: parsed.usage))
+            entry.entries.append(.init(id: parsed.messageId, timestamp: parsed.timestamp, usage: parsed.usage))
         }
     }
 

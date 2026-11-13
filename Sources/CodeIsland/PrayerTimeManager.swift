@@ -276,20 +276,24 @@ public final class PrayerTimeManager: ObservableObject {
         let m = comps.minute ?? 0
         let s = comps.second ?? 0
 
-        self.currentTimeString = String(format: "%02d:%02d", h, m)
-        self.currentSecondsString = String(format: "%02d:%02d:%02d", h, m, s)
+        let timeString = String(format: "%02d:%02d", h, m)
+        if currentTimeString != timeString { currentTimeString = timeString }
+        let secondsString = String(format: "%02d:%02d:%02d", h, m, s)
+        if currentSecondsString != secondsString { currentSecondsString = secondsString }
 
         // Solar 24h progress [0..1] and fractional hour [0..24)
         let totalSeconds = Double(h * 3600 + m * 60 + s)
-        self.solarProgress = totalSeconds / 86400.0
-        self.currentFractionalHour = totalSeconds / 3600.0
-
+        let progress = totalSeconds / 86400.0
+        if solarProgress != progress { solarProgress = progress }
+        let fractionalHour = totalSeconds / 3600.0
+        if currentFractionalHour != fractionalHour { currentFractionalHour = fractionalHour }
         // Cached DateFormatter: formatted string only recalculated when calendar day changes
         let day = comps.day ?? 0
         if cachedGregorianDay != day {
             cachedGregorianDay = day
             gregorianDateFormatter.timeZone = tz
-            self.gregorianDateString = gregorianDateFormatter.string(from: now)
+            let formatted = gregorianDateFormatter.string(from: now)
+            if gregorianDateString != formatted { gregorianDateString = formatted }
         }
 
         // Auto-recalculate if midnight rolled over
@@ -301,23 +305,28 @@ public final class PrayerTimeManager: ObservableObject {
         guard let schedule = todaySchedule else { return }
 
         // Determine current phase
+        let phase: DayPhase
         if now < schedule.subuh {
-            self.currentPhase = .malam
+            phase = .malam
         } else if h < 11 {
-            self.currentPhase = .pagi
+            phase = .pagi
         } else if now < schedule.ashar {
-            self.currentPhase = .siang
+            phase = .siang
         } else if now < schedule.maghrib {
-            self.currentPhase = .sore
+            phase = .sore
         } else {
-            self.currentPhase = .malam
+            phase = .malam
         }
+        if currentPhase != phase { currentPhase = phase }
 
         // Upcoming fardh prayer & countdown
         if let next = schedule.nextFardhPrayer(at: now, tomorrowSubuh: tomorrowSubuh) {
-            self.upcomingPrayer = next
+            if upcomingPrayer?.prayer != next.prayer || upcomingPrayer?.date != next.date {
+                upcomingPrayer = next
+            }
             let diff = next.date.timeIntervalSince(now)
-            self.minutesUntilNextPrayer = Int(ceil(diff / 60.0))
+            let minutes = Int(ceil(diff / 60.0))
+            if minutesUntilNextPrayer != minutes { minutesUntilNextPrayer = minutes }
         }
 
         // Evaluate mini peek banners directly in tick loop

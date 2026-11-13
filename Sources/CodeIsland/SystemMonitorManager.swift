@@ -3,7 +3,7 @@ import AppKit
 import IOKit.ps
 import Darwin
 
-public struct SystemMetrics: Sendable {
+public struct SystemMetrics: Sendable, Equatable {
     public var cpuUsagePercent: Double = 0.0
     public var memoryUsedGB: Double = 0.0
     public var memoryTotalGB: Double = 0.0
@@ -21,7 +21,9 @@ public final class SystemMonitorManager: ObservableObject {
 
     @Published public private(set) var metrics = SystemMetrics()
     @Published public var showChargingBanner: Bool = false
-    @Published public var chargingBannerDismissTimer: Timer?
+    /// Not `@Published`: nothing renders the timer, and publishing it every
+    /// charge event re-rendered every observer for no visible change.
+    public var chargingBannerDismissTimer: Timer?
 
     private var monitorTimer: Timer?
     private var previousCpuLoad: host_cpu_load_info?
@@ -59,11 +61,14 @@ public final class SystemMonitorManager: ObservableObject {
     public func startMonitoring() {
         guard monitorTimer == nil else { return }
         refreshMetrics()
-        monitorTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+        let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.refreshMetrics()
             }
         }
+        // A sample may land a little late; nothing depends on the exact instant.
+        timer.tolerance = 0.2
+        monitorTimer = timer
     }
 
     public func stopMonitoring() {
@@ -85,7 +90,7 @@ public final class SystemMonitorManager: ObservableObject {
         }
         lastChargingState = isCharging
 
-        metrics = SystemMetrics(
+        let newMetrics = SystemMetrics(
             cpuUsagePercent: cpu,
             memoryUsedGB: memUsed,
             memoryTotalGB: memTotal,
@@ -96,6 +101,7 @@ public final class SystemMonitorManager: ObservableObject {
             isCharging: isCharging,
             isACPowered: isAC
         )
+        if metrics != newMetrics { metrics = newMetrics }
     }
 
     public func triggerChargingBanner() {

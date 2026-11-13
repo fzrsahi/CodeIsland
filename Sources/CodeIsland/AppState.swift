@@ -148,6 +148,10 @@ final class AppState {
     /// app-server delivered `thread/closed`.
     @ObservationIgnored
     var closedCodexAppThreads: [String: Date] = [:]
+    /// How long a `thread/closed` tombstone is kept before the cleanup tick
+    /// drops it. Long enough to outlive a trailing state-DB scan, short enough
+    /// that the dictionary cannot grow for the life of the app.
+    nonisolated static let closedCodexThreadTTL: TimeInterval = 24 * 3600
     /// Grok sessions retired because their pager process started another
     /// session (#318), mapped to that process. While it lives, discovery and
     /// trailing passive hooks must not resurrect the card; a new prompt or
@@ -289,12 +293,14 @@ final class AppState {
     private static var usageScanInFlight = false
     /// Incremental parse state — round-trips through each detached scan so
     /// growing transcripts are only read past their last consumed offset.
+    @ObservationIgnored
     private var usageFileCache = ClaudeUsageScanner.FileCache()
 
     /// Glance completion mode: an agent finished while the pill was collapsed —
     /// light the dot instead of expanding. Cleared when the user expands the
     /// panel, with a long failsafe so a missed dot never lingers forever.
     var glanceCompletionActive = false
+    @ObservationIgnored
     private var glanceDismissTask: Task<Void, Never>?
 
     var justCompletedSessionId: String? {
@@ -329,8 +335,10 @@ final class AppState {
     /// Auto-collapse timer fired but mouse is inside panel — defer collapse until mouse leaves
     var deferCollapseOnMouseLeave = false
     /// Exit watches on the sessions' local CLI processes.
+    @ObservationIgnored
     private let processMonitor = SessionProcessMonitor()
     /// Sessions in the grace period after their process exited, with that process.
+    @ObservationIgnored
     private var exitingSessions: [String: ProcessIdentity] = [:]
     @ObservationIgnored
     nonisolated(unsafe) private var saveTimer: Timer?
@@ -375,6 +383,7 @@ final class AppState {
         default: return false
         }
     }
+    @ObservationIgnored
     private var modelReadRetryAt: [String: Date] = [:]
     /// Cards whose model (`maybeBackfillModel`), YOLO setting or native-app
     /// turn end is being read off the main actor.
@@ -476,11 +485,14 @@ final class AppState {
 
     func startCleanupTimer() {
         guard cleanupTimer == nil else { return }
-        cleanupTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+        let timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.cleanupIdleSessions()
             }
         }
+        // The sweep has no deadline of its own; let the system coalesce the wake.
+        timer.tolerance = 0.3
+        cleanupTimer = timer
     }
 
     /// Agents whose tracked process is a long-lived daemon rather than a
@@ -524,6 +536,12 @@ final class AppState {
 
     private func cleanupIdleSessions() {
         PerfCounters.shared?.bump(.cleanupTickWork)
+        // Tombstones for closed Codex Desktop threads only guard discovery for a
+        // while; keeping them forever leaks one entry per thread ever closed.
+        if !closedCodexAppThreads.isEmpty {
+            let expiry = Date().addingTimeInterval(-Self.closedCodexThreadTTL)
+            closedCodexAppThreads = closedCodexAppThreads.filter { $0.value > expiry }
+        }
         // 1. Verify monitored PIDs are still alive (DispatchSource can silently miss exits)
         //    Also kill orphaned processes (ppid <= 1, terminal closed but process survived).
         let sweep = processMonitor.sweep()
@@ -938,6 +956,9 @@ final class AppState {
         hostHarnessProbes.removeValue(forKey: sessionId)
         hostHarnessProbeRetryAt.removeValue(forKey: sessionId)
         claudeTerminalProbes.removeValue(forKey: sessionId)
+        gitBranchCheckedAt.removeValue(forKey: sessionId)
+        providerTitleReads.removeValue(forKey: sessionId)
+        providerTitleGenerations.removeValue(forKey: sessionId)
         if activeSessionId == sessionId {
             activeSessionId = mostActiveSessionId()
         }
@@ -1110,6 +1131,7 @@ final class AppState {
 
     /// Last unresolved-branch probe per session — keeps `gitBranch == nil`
     /// (non-repo cwds, SessionStart snapshot rebuilds) from probing on every event.
+    @ObservationIgnored
     private var gitBranchCheckedAt: [String: Date] = [:]
 
     /// Branch resolution runs detached: .git probing on a dead network mount
@@ -1127,8 +1149,13 @@ final class AppState {
             let info = GitBranchReader.read(cwd: cwd)
             await MainActor.run { [weak self] in
                 guard let self, var s = self.sessions[sessionId], s.cwd == cwd else { return }
-                s.gitBranch = info?.branch
-                s.gitIsWorktree = info?.isWorktree ?? false
+                let branch = info?.branch
+                let isWorktree = info?.isWorktree ?? false
+                // Re-assigning the same values republishes `sessions` and
+                // re-renders every observer for nothing.
+                guard s.gitBranch != branch || s.gitIsWorktree != isWorktree else { return }
+                s.gitBranch = branch
+                s.gitIsWorktree = isWorktree
                 self.sessions[sessionId] = s
             }
         }
@@ -1137,7 +1164,9 @@ final class AppState {
     /// Last conclusive host-harness probe per session, keyed to the CLI pid it
     /// walked. A SessionStart rebuilds the snapshot; the cache lets the result
     /// be re-applied without walking the ancestry again. (#321)
+    @ObservationIgnored
     private var hostHarnessProbes: [String: (pid: pid_t, harness: HostHarness?)] = [:]
+    @ObservationIgnored
     private var hostHarnessProbesInFlight: Set<String> = []
     /// Throttle for probes that could not read the process (it had already
     /// exited, or the pid is a short-lived hook shell) — retried, not cached.
@@ -1454,9 +1483,11 @@ final class AppState {
     }
 
     @ObservationIgnored
+    @ObservationIgnored
     private var providerTitleReads: [String: ProviderTitleRead] = [:]
     /// Per card, bumped when a title arrives from elsewhere (Codex's
     /// `thread/started`): a store read started before then is stale.
+    @ObservationIgnored
     @ObservationIgnored
     private var providerTitleGenerations: [String: Int] = [:]
 

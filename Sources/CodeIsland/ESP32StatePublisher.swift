@@ -66,11 +66,14 @@ final class ESP32StatePublisher {
                 bridge.start()
             }
             syncConfig()
-            heartbeatTimer = Timer.scheduledTimer(withTimeInterval: heartbeatInterval, repeats: true) { [weak self] _ in
+            let timer = Timer.scheduledTimer(withTimeInterval: heartbeatInterval, repeats: true) { [weak self] _ in
                 Task { @MainActor in
                     self?.flush(reason: "heartbeat")
                 }
             }
+            // A heartbeat a beat late is still well inside the firmware's timeout.
+            timer.tolerance = heartbeatInterval * 0.1
+            heartbeatTimer = timer
         } else {
             endKeepAliveActivity()
             resetEventState()
