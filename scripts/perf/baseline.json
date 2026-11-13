@@ -571,11 +571,11 @@
     },
     "music": {
       "counters.hostingLayoutPass": {
-        "enforce": false,
+        "enforce": true,
         "max": 70.0
       },
       "cpu": {
-        "enforce": false,
+        "enforce": true,
         "max": 3.0
       }
     },
