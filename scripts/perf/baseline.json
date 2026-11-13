@@ -1,14 +1,41 @@
 {
   "environment": {
-    "commit": "aa3d25e",
-    "date": "2026-11-12T21:41:57+08:00",
+    "commit": "fa1f293-dirty",
+    "date": "2026-11-13T22:59:04+08:00",
     "macModel": "Mac17,5",
     "macOS": "27.2",
     "players": [
+      "com.apple.Safari",
       "com.brave.Browser"
     ]
   },
   "scenarios": {
+    "discovery-active": {
+      "busyByImage": [],
+      "counters": {
+        "appleScriptExec.brave": 4.3,
+        "appleScriptExec.safari": 4.3,
+        "discoveryScan": 12.0,
+        "discoveryScanMs": 1572.3,
+        "hostingLayoutPass": 0.0,
+        "nowPlayingTick": 4.3,
+        "procPathRead": 166.3,
+        "publishCompanion": 12.0,
+        "publishESP32": 12.0
+      },
+      "cpu": 2.81,
+      "footprintEndMB": 36.7,
+      "footprintGrowthPct": 0.0,
+      "footprintPeakMB": 70.5,
+      "footprintStartMB": 36.7,
+      "idleWakeupsPerSec": 8.4,
+      "loadAvg1": 3.08,
+      "mainThreadBusyPct": null,
+      "power": 3.2,
+      "rssMB": 75.6,
+      "runs": 3,
+      "topCodeIsland": []
+    },
     "idle": {
       "busyByImage": [
         {
@@ -533,6 +560,16 @@
   },
   "schema": 1,
   "targets": {
+    "discovery-active": {
+      "counters.discoveryScan": {
+        "enforce": true,
+        "max": 12.0
+      },
+      "counters.procPathRead": {
+        "enforce": true,
+        "max": 2000.0
+      }
+    },
     "idle": {
       "counters.cleanupTickWork": {
         "enforce": true,

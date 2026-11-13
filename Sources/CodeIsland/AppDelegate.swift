@@ -114,7 +114,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         if !isolated {
             CustomAgentCommandManager.shared.syncAll()
+        }
+        // `CODEISLAND_PERF_DISCOVERY=1` lets an isolated run discover sessions
+        // so `bench.sh` can measure discovery's cost acting on a fake HOME.
+        // Process monitoring and the orphan reaper stay off (they check
+        // `isIsolated` themselves), so no real agent is touched.
+        if !isolated || RuntimeEnvironment.perfDiscoveryEnabled {
             appState.startSessionDiscovery()
+        }
+        if !isolated {
             appState.startCodexAppServerWatcher()
             appState.startAiWorkWatcher()
             appState.startCoworkWatcher()
