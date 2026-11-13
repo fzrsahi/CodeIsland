@@ -1174,10 +1174,8 @@ struct ModernCleanMusicHUDContentView: View {
 
                     Spacer(minLength: 2)
 
-                    // Di bawah: Tombol aksi (⏮, ▶/⏸, ⏭) terpusat horizontal di tengah-tengah (kanan-kiri)
-                    HStack(spacing: 20) {
-                        Spacer()
-
+                    // Di bawah: Tombol aksi (⏮, ▶/⏸, ⏭) & Modern Animated Spectrum
+                    HStack(spacing: 14) {
                         Button(action: { nowPlaying.previousTrack() }) {
                             Image(systemName: "backward.fill")
                                 .font(.system(size: 11, weight: .semibold))
@@ -1211,6 +1209,19 @@ struct ModernCleanMusicHUDContentView: View {
                         .buttonStyle(.plain)
 
                         Spacer()
+
+                        // Modern dynamic dancing audio wave
+                        ModernAudioSpectrumView(
+                            barCount: 4,
+                            isPlaying: nowPlaying.isPlaying,
+                            barWidth: 2.2,
+                            maxHeight: 12.0,
+                            color: (MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme).color
+                        )
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(Color.white.opacity(0.06))
+                        .clipShape(Capsule())
                     }
                     .frame(height: 26)
                 }
@@ -1218,18 +1229,9 @@ struct ModernCleanMusicHUDContentView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.trailing, 6)
             }
-            .frame(width: 250, alignment: .leading)
+            .frame(width: 255, alignment: .leading)
 
-            // Soft vertical separator line (subtle gradient fade)
-            Rectangle()
-                .fill(LinearGradient(
-                    colors: [Color.clear, Color.white.opacity(0.12), Color.white.opacity(0.12), Color.clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                ))
-                .frame(width: 1, height: 74)
-
-            // RIGHT COLUMN: Multi-Line Interactive Synced Lyrics (Scrollable, Selectable, Centered Focus)
+            // RIGHT COLUMN: Multi-Line Interactive Synced Lyrics (Seamless, Borderless, Scrollable)
             VStack(alignment: .leading, spacing: 0) {
                 if nowPlaying.lyrics.isEmpty {
                     VStack(spacing: 4) {
@@ -1361,46 +1363,45 @@ struct RetroCyberMusicHUDContentView: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 16) {
             // LEFT COLUMN: Retro 8-Bit Audio Deck
             VStack(alignment: .leading, spacing: 5) {
-                // Deck Header with Pixel Title & Spectrum Visualizer
-                HStack(spacing: 5) {
+                // Deck Header: Title & Player source badge (clean, uncrowded)
+                HStack(spacing: 6) {
                     PixelText(text: "AUDIO DECK", color: activeProgressColor, pixelSize: 1.1)
                     Spacer()
-                    Text(nowPlaying.player.isEmpty ? "SPOTIFY" : nowPlaying.player.uppercased())
-                        .font(.system(size: 7, weight: .bold, design: .monospaced))
-                        .foregroundStyle(activeProgressColor)
-                        .padding(.horizontal, 3.5)
-                        .padding(.vertical, 1)
-                        .overlay(Rectangle().stroke(activeProgressColor.opacity(0.45), lineWidth: 0.8))
-
-                    CyberDiscoVisualizer(
-                        isPlaying: nowPlaying.isPlaying,
-                        barCount: 6,
-                        maxHeight: 11,
-                        palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
-                    )
+                    HStack(spacing: 3.5) {
+                        Circle()
+                            .fill(activeProgressColor)
+                            .frame(width: 3.5, height: 3.5)
+                            .opacity(nowPlaying.isPlaying ? 1.0 : 0.4)
+                        Text(nowPlaying.player.isEmpty ? "SPOTIFY" : nowPlaying.player.uppercased())
+                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.85))
+                    }
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1.5)
+                    .background(Color.white.opacity(0.06))
                 }
 
-                // Track & Album Info in 1px Stepped Box
+                // Track & Album Info (Clean, open layout)
                 Button(action: { nowPlaying.activateCurrentPlayer() }) {
-                    HStack(spacing: 7) {
-                        // Pixel Stepped Album Art (42x42)
+                    HStack(spacing: 8) {
+                        // Pixel Stepped Album Art (44x44)
                         ZStack {
                             if let art = nowPlaying.artworkImage {
                                 Image(nsImage: art)
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
-                                    .frame(width: 42, height: 42)
+                                    .frame(width: 44, height: 44)
                                     .clipped()
                                     .overlay(Rectangle().stroke(activeProgressColor.opacity(0.6), lineWidth: 1))
                             } else {
                                 Rectangle()
                                     .fill(Color(red: 0.06, green: 0.07, blue: 0.09))
-                                    .frame(width: 42, height: 42)
+                                    .frame(width: 44, height: 44)
                                     .overlay(Image(systemName: "music.note").font(.system(size: 14)).foregroundColor(activeProgressColor))
-                                    .overlay(Rectangle().stroke(activeProgressColor.opacity(0.5), lineWidth: 1))
+                                    .overlay(Rectangle().stroke(activeProgressColor.opacity(0.4), lineWidth: 1))
                             }
                         }
                         .id(nowPlaying.title + nowPlaying.artist)
@@ -1409,15 +1410,15 @@ struct RetroCyberMusicHUDContentView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             ModernMarqueeText(
                                 text: nowPlaying.title.isEmpty ? "NO AUDIO" : nowPlaying.title,
-                                font: .system(size: 10.5, weight: .bold, design: .monospaced),
+                                font: .system(size: 11, weight: .bold, design: .monospaced),
                                 color: .white
                             )
-                            .frame(height: 14)
+                            .frame(height: 15)
                             .id(nowPlaying.title)
 
                             Text(nowPlaying.artist.isEmpty ? "IDLE" : nowPlaying.artist)
                                 .font(.system(size: 8.5, weight: .medium, design: .monospaced))
-                                .foregroundStyle(Color.white.opacity(0.65))
+                                .foregroundStyle(Color.white.opacity(0.60))
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         }
@@ -1442,7 +1443,7 @@ struct RetroCyberMusicHUDContentView: View {
                             ForEach(0..<totalSegments, id: \.self) { idx in
                                 Rectangle()
                                     .fill(idx < activeSegments ? activeProgressColor : (idx == activeSegments ? Color.white : Color.white.opacity(0.12)))
-                                    .frame(width: segW, height: 5)
+                                    .frame(width: segW, height: 4.5)
                             }
                         }
                         .contentShape(Rectangle())
@@ -1482,114 +1483,144 @@ struct RetroCyberMusicHUDContentView: View {
                     }
                 }
 
-                // Retro Arcade Transport Controls
-                HStack(spacing: 5) {
-                    Button(action: { nowPlaying.previousTrack() }) {
-                        Text("◀◀")
-                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.white.opacity(0.85))
-                            .frame(width: 26, height: 17)
-                            .background(Color.white.opacity(0.08))
-                            .overlay(Rectangle().stroke(Color.white.opacity(0.20), lineWidth: 0.8))
-                    }
-                    .buttonStyle(.plain)
+                // Transport Controls + STEREO DISCO EQUALIZER INTEGRATED SIDE-BY-SIDE
+                HStack(spacing: 8) {
+                    // Tactile Retro Arcade Transport Buttons
+                    HStack(spacing: 4) {
+                        Button(action: { nowPlaying.previousTrack() }) {
+                            Text("◀◀")
+                                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.85))
+                                .frame(width: 25, height: 18)
+                                .background(Color.white.opacity(0.08))
+                                .overlay(Rectangle().stroke(Color.white.opacity(0.18), lineWidth: 0.8))
+                        }
+                        .buttonStyle(.plain)
 
-                    Button(action: { nowPlaying.togglePlayPause() }) {
-                        Text(nowPlaying.isPlaying ? "❚❚" : "▶")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                            .foregroundStyle(activeProgressColor)
-                            .frame(width: 30, height: 17)
-                            .background(activeProgressColor.opacity(0.18))
-                            .overlay(Rectangle().stroke(activeProgressColor.opacity(0.6), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
+                        Button(action: { nowPlaying.togglePlayPause() }) {
+                            Text(nowPlaying.isPlaying ? "❚❚" : "▶")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .foregroundStyle(activeProgressColor)
+                                .frame(width: 29, height: 18)
+                                .background(activeProgressColor.opacity(0.18))
+                                .overlay(Rectangle().stroke(activeProgressColor.opacity(0.65), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
 
-                    Button(action: { nowPlaying.nextTrack() }) {
-                        Text("▶▶")
-                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.white.opacity(0.85))
-                            .frame(width: 26, height: 17)
-                            .background(Color.white.opacity(0.08))
-                            .overlay(Rectangle().stroke(Color.white.opacity(0.20), lineWidth: 0.8))
+                        Button(action: { nowPlaying.nextTrack() }) {
+                            Text("▶▶")
+                                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.85))
+                                .frame(width: 25, height: 18)
+                                .background(Color.white.opacity(0.08))
+                                .overlay(Rectangle().stroke(Color.white.opacity(0.18), lineWidth: 0.8))
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
 
                     Spacer()
+
+                    // THE VIBRANT DISCO EQUALIZER - Integrated pulse right beside playback controls!
+                    HStack(spacing: 2) {
+                        CyberDiscoVisualizer(
+                            isPlaying: nowPlaying.isPlaying,
+                            barCount: 8,
+                            maxHeight: 14,
+                            palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
+                        )
+                    }
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.white.opacity(0.04))
+                    .overlay(Rectangle().stroke(Color.white.opacity(0.10), lineWidth: 0.8))
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(width: 255, alignment: .leading)
 
-            // Divider Rule: 1px phosphor vertical line
-            Rectangle()
-                .fill(Color.white.opacity(0.12))
-                .frame(width: 1, height: 94)
-
-            // RIGHT COLUMN: Retro CRT Lyrics Terminal
+            // RIGHT COLUMN: Retro CRT Lyrics (Seamless, Borderless, Floating Stream)
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    PixelText(text: "CRT LYRICS", color: activeProgressColor, pixelSize: 1.1)
+                    PixelText(text: "LIRIK", color: activeProgressColor, pixelSize: 1.1)
                     Spacer()
                     if nowPlaying.lyricsLoading {
-                        Text("SCANNING...")
+                        Text("MEMUAT...")
                             .font(.system(size: 7, weight: .bold, design: .monospaced))
                             .foregroundStyle(activeProgressColor.opacity(0.7))
                     } else if !nowPlaying.lyrics.isEmpty {
-                        Text("SYNCED")
-                            .font(.system(size: 7, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                        HStack(spacing: 3) {
+                            Circle()
+                                .fill(Color(red: 0.12, green: 0.84, blue: 0.38))
+                                .frame(width: 3.5, height: 3.5)
+                            Text("SINKRON")
+                                .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                        }
                     }
                 }
 
-                ZStack {
-                    Rectangle()
-                        .fill(Color(red: 0.04, green: 0.05, blue: 0.07))
-                        .overlay(Rectangle().stroke(Color.white.opacity(0.12), lineWidth: 0.8))
-
-                    if nowPlaying.lyrics.isEmpty {
-                        VStack(spacing: 4) {
-                            Text(nowPlaying.lyricsLoading ? "[ SCANNING MATRIX... ]" : "[ NO LYRIC FEED ]")
-                                .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.white.opacity(0.40))
-                        }
-                    } else {
-                        ScrollViewReader { proxy in
-                            ScrollView(.vertical, showsIndicators: false) {
-                                LazyVStack(alignment: .leading, spacing: 3.5) {
-                                    ForEach(nowPlaying.lyrics) { line in
-                                        let isCurrent = (line.id == nowPlaying.currentLyricIndex)
-                                        HStack(alignment: .top, spacing: 3) {
-                                            Text(isCurrent ? ">" : " ")
-                                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                                .foregroundStyle(activeProgressColor)
-                                            Text(line.text)
-                                                .font(.system(size: 8.5, weight: isCurrent ? .bold : .medium, design: .monospaced))
-                                                .foregroundStyle(isCurrent ? activeProgressColor : Color.white.opacity(0.40))
-                                                .lineLimit(2)
-                                        }
-                                        .padding(.horizontal, 4)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            nowPlaying.seek(to: line.timestamp)
-                                        }
-                                        .id(line.id)
+                // Borderless, Floating Synced Lyrics Stream
+                if nowPlaying.lyrics.isEmpty {
+                    VStack(spacing: 4) {
+                        Spacer()
+                        Text(nowPlaying.lyricsLoading ? "[ MEMINDAI LIRIK... ]" : "[ TIDAK ADA LIRIK ]")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.40))
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollViewReader { proxy in
+                        ScrollView(.vertical, showsIndicators: false) {
+                            LazyVStack(alignment: .leading, spacing: 4) {
+                                ForEach(nowPlaying.lyrics) { line in
+                                    let isCurrent = (line.id == nowPlaying.currentLyricIndex)
+                                    HStack(alignment: .top, spacing: 4) {
+                                        Text(isCurrent ? "▶" : " ")
+                                            .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                                            .foregroundStyle(activeProgressColor)
+                                        Text(line.text)
+                                            .font(.system(size: 8.5, weight: isCurrent ? .bold : .medium, design: .monospaced))
+                                            .foregroundStyle(isCurrent ? activeProgressColor : Color.white.opacity(0.38))
+                                            .shadow(color: isCurrent ? activeProgressColor.opacity(0.6) : Color.clear, radius: 4)
+                                            .lineLimit(2)
                                     }
+                                    .padding(.horizontal, 2)
+                                    .padding(.vertical, 1)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        nowPlaying.seek(to: line.timestamp)
+                                    }
+                                    .id(line.id)
                                 }
-                                .padding(.vertical, 4)
                             }
-                            .frame(height: 82)
-                            .onAppear {
-                                proxy.scrollTo(nowPlaying.currentLyricIndex, anchor: .center)
-                            }
-                            .onChange(of: nowPlaying.currentLyricIndex) { _, newIndex in
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    proxy.scrollTo(newIndex, anchor: .center)
-                                }
+                            .padding(.vertical, 8)
+                        }
+                        .frame(height: 84)
+                        .mask(
+                            LinearGradient(
+                                gradient: Gradient(stops: [
+                                    .init(color: .clear, location: 0.0),
+                                    .init(color: .black, location: 0.18),
+                                    .init(color: .black, location: 0.82),
+                                    .init(color: .clear, location: 1.0)
+                                ]),
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .onAppear {
+                            proxy.scrollTo(nowPlaying.currentLyricIndex, anchor: .center)
+                        }
+                        .onChange(of: nowPlaying.currentLyricIndex) { _, newIndex in
+                            withAnimation(.easeInOut(duration: 0.22)) {
+                                proxy.scrollTo(newIndex, anchor: .center)
                             }
                         }
                     }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 4)
         }
         .frame(height: 104)
         .padding(.horizontal, 14)
