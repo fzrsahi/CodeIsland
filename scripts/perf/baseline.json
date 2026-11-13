@@ -534,6 +534,10 @@
   "schema": 1,
   "targets": {
     "idle": {
+      "counters.cleanupTickWork": {
+        "enforce": true,
+        "max": 0.0
+      },
       "counters.hostingLayoutPass": {
         "enforce": false,
         "max": 10.0
