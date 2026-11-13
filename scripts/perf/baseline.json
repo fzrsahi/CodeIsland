@@ -539,7 +539,7 @@
         "max": 0.0
       },
       "counters.hostingLayoutPass": {
-        "enforce": false,
+        "enforce": true,
         "max": 10.0
       },
       "cpu": {
