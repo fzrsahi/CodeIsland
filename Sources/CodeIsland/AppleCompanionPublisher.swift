@@ -83,11 +83,15 @@ final class AppleCompanionPublisher: NSObject, ObservableObject {
         advertiser.startAdvertisingPeer()
         bluetooth.configure(enabled: true)
         advertising = true
-        heartbeatTimer = Timer.scheduledTimer(withTimeInterval: max(1.0, heartbeatSeconds), repeats: true) { [weak self] _ in
+        let heartbeat = max(1.0, heartbeatSeconds)
+        let timer = Timer.scheduledTimer(withTimeInterval: heartbeat, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.flush(reason: "heartbeat")
             }
         }
+        // The iPhone watchdog allows 8–24 s, so a late beat costs nothing.
+        timer.tolerance = heartbeat * 0.1
+        heartbeatTimer = timer
         flush(reason: "enabled")
     }
 

@@ -451,20 +451,24 @@ final class NowPlayingManager: ObservableObject {
     private func startIdleDiscoveryTimer() {
         guard !isDisplayAsleep else { return }
         idleDiscoveryTimer?.invalidate()
-        idleDiscoveryTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+        let timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 PerfCounters.shared?.bump(.nowPlayingTick)
                 guard let self = self, !self.isPlaying else { return }
                 self.fetchPlaybackDetails()
             }
         }
+        // Detection may lag a tick; the policy's intervals are the contract,
+        // not the exact wake instant.
+        timer.tolerance = 0.3
+        idleDiscoveryTimer = timer
     }
 
     private func startProgressTimer() {
         guard !isDisplayAsleep else { return }
         progressTimer?.invalidate()
         var tickCount = 0
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+        let timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 PerfCounters.shared?.bump(.nowPlayingTick)
                 guard let self = self, self.isPlaying else { return }
@@ -485,6 +489,9 @@ final class NowPlayingManager: ObservableObject {
                 }
             }
         }
+        // The progress bar is interpolated, so a tick a few ms late is invisible.
+        timer.tolerance = 0.025
+        progressTimer = timer
     }
 
     private func stopProgressTimer() {
@@ -1082,22 +1089,23 @@ final class NowPlayingManager: ObservableObject {
         )
         let trackChanged = (self.title != chosen.title || self.artist != chosen.artist) && !chosen.title.isEmpty
 
+        let badge = chosen.source.displayBadge
         self.activeSource = chosen.source
-        self.player = chosen.source.displayBadge
+        self.player = badge
 
         if case .webMusic(_, let browser) = chosen.source, !chosen.isJSBridgeAvailable {
-            self.isBrowserJSHintVisible = true
-            self.browserJSHintText = browser.jsPermissionHint
+            if !self.isBrowserJSHintVisible { self.isBrowserJSHintVisible = true }
+            if self.browserJSHintText != browser.jsPermissionHint { self.browserJSHintText = browser.jsPermissionHint }
         } else {
-            self.isBrowserJSHintVisible = false
-            self.browserJSHintText = ""
+            if self.isBrowserJSHintVisible { self.isBrowserJSHintVisible = false }
+            if !self.browserJSHintText.isEmpty { self.browserJSHintText = "" }
         }
 
-        self.title = chosen.title
-        self.artist = chosen.artist
-        self.album = chosen.album
+        if self.title != chosen.title { self.title = chosen.title }
+        if self.artist != chosen.artist { self.artist = chosen.artist }
+        if self.album != chosen.album { self.album = chosen.album }
 
-        if chosen.duration > 0 {
+        if chosen.duration > 0, self.trackDuration != chosen.duration {
             self.trackDuration = chosen.duration
         }
 
@@ -1121,7 +1129,7 @@ final class NowPlayingManager: ObservableObject {
             self.updateCurrentLyricIndex()
         }
 
-        self.isPlaying = chosen.isPlaying
+        if self.isPlaying != chosen.isPlaying { self.isPlaying = chosen.isPlaying }
         // Only a probe that could observe transport state may drive the interpolation timer.
         // A title-only (Tier 2) snapshot knows the track but not the position, so advancing
         // from 0 would report progress that was never observed.
@@ -1498,19 +1506,39 @@ final class NowPlayingManager: ObservableObject {
 
     nonisolated private static func runAppleScript(_ script: String) -> String? {
         guard !RuntimeEnvironment.isRunningTests else { return nil }
+        guard let appleScript = compiledAppleScript(script) else { return nil }
         var error: NSDictionary?
-        if let appleScript = NSAppleScript(source: script) {
-            let result = appleScript.executeAndReturnError(&error)
-            if error == nil {
-                return result.stringValue
-            }
-            // Debug level on purpose: a denied Automation grant fails on every poll, so an
-            // error-level line here would flood the log. Read it with
-            // `log show --debug --predicate 'subsystem == "com.codeisland"'`.
-            let number = error?[NSAppleScript.errorNumber] as? Int ?? 0
-            let message = error?[NSAppleScript.errorMessage] as? String ?? "unknown"
-            log.debug("AppleScript failed (\(number, privacy: .public)): \(message, privacy: .public)")
+        // One instance is shared between probes, so executions are serialized:
+        // NSAppleScript is not reentrant.
+        appleScriptExecutionLock.lock()
+        let result = appleScript.executeAndReturnError(&error)
+        appleScriptExecutionLock.unlock()
+        if error == nil {
+            return result.stringValue
         }
+        // Debug level on purpose: a denied Automation grant fails on every poll, so an
+        // error-level line here would flood the log. Read it with
+        // `log show --debug --predicate 'subsystem == "com.codeisland"'`.
+        let number = error?[NSAppleScript.errorNumber] as? Int ?? 0
+        let message = error?[NSAppleScript.errorMessage] as? String ?? "unknown"
+        log.debug("AppleScript failed (\(number, privacy: .public)): \(message, privacy: .public)")
         return nil
     }
+
+    /// Compiling is the expensive half of a probe and the source is the same
+    /// string on every poll, so each source is compiled once and reused.
+    /// Seek scripts embed a position, so the cache is capped rather than unbounded.
+    nonisolated private static func compiledAppleScript(_ script: String) -> NSAppleScript? {
+        appleScriptCacheLock.lock()
+        defer { appleScriptCacheLock.unlock() }
+        if let cached = appleScriptCache[script] { return cached }
+        guard let compiled = NSAppleScript(source: script) else { return nil }
+        if appleScriptCache.count >= 64 { appleScriptCache.removeAll() }
+        appleScriptCache[script] = compiled
+        return compiled
+    }
+
+    nonisolated(unsafe) private static var appleScriptCache: [String: NSAppleScript] = [:]
+    nonisolated private static let appleScriptCacheLock = NSLock()
+    nonisolated private static let appleScriptExecutionLock = NSLock()
 }

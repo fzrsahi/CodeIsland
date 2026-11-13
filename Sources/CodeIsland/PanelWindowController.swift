@@ -516,7 +516,11 @@ class PanelWindowController: NSObject, NSWindowDelegate {
     private func updatePosition() {
         guard let panel = panel else { return }
         let screen = chosenScreen()
-        panel.setFrame(panelFrame(for: screen), display: true)
+        let target = panelFrame(for: screen)
+        // `updatePosition` runs on every hover/visibility change; a no-op
+        // `setFrame` still walks AppKit's layout and re-renders the hosting view.
+        guard panel.frame != target else { return }
+        panel.setFrame(target, display: true)
     }
 
     private func panelFrame(for screen: NSScreen) -> NSRect {
@@ -637,7 +641,7 @@ class PanelWindowController: NSObject, NSWindowDelegate {
     /// Poll every 1.5s while in fullscreen; stop when fullscreen ends
     private func startFullscreenExitPoller() {
         fullscreenPoller?.invalidate()
-        fullscreenPoller = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
             Task { @MainActor in
                 guard let self = self else { timer.invalidate(); return }
                 if !self.isActiveSpaceFullscreen() {
@@ -650,6 +654,9 @@ class PanelWindowController: NSObject, NSWindowDelegate {
                 }
             }
         }
+        // A fullscreen exit is noticed a moment later; nothing depends on 1.5 s exactly.
+        timer.tolerance = 0.15
+        fullscreenPoller = timer
     }
 
     /// Update panel visibility based on settings

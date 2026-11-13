@@ -54,8 +54,9 @@ extension AppState {
 
         codexAppServerObservers = observers
 
-        // Catch up with whatever state we booted into.
-        if NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == AppState.codexAppBundleId }) {
+        // Catch up with whatever state we booted into. A bundle-identifier
+        // lookup walks Launch Services' index instead of every running app.
+        if !NSRunningApplication.runningApplications(withBundleIdentifier: AppState.codexAppBundleId).isEmpty {
             startCodexAppServerClientIfPossible()
         }
     }
@@ -115,9 +116,8 @@ extension AppState {
 
     private func handleCodexAppServerExit() {
         codexAppServerClient = nil
-        let hostRunning = NSWorkspace.shared.runningApplications.contains {
-            $0.bundleIdentifier == AppState.codexAppBundleId
-        }
+        let hostRunning = !NSRunningApplication
+            .runningApplications(withBundleIdentifier: AppState.codexAppBundleId).isEmpty
         switch Self.codexAppServerExitStrategy(
             hostRunning: hostRunning,
             watcherActive: codexAppServerObservers != nil
@@ -167,9 +167,8 @@ extension AppState {
                     self.codexAppServerReconnectTask = nil
                     return
                 }
-                guard NSWorkspace.shared.runningApplications.contains(where: {
-                    $0.bundleIdentifier == AppState.codexAppBundleId
-                }) else {
+                guard !NSRunningApplication
+                    .runningApplications(withBundleIdentifier: AppState.codexAppBundleId).isEmpty else {
                     self.codexAppServerReconnectTask = nil
                     self.removeCodexAppServerSessions()
                     return
@@ -186,9 +185,9 @@ extension AppState {
     }
 
     static func codexAppServerExecutableURL(
-        runningBundleURLs: [URL] = NSWorkspace.shared.runningApplications.compactMap { app in
-            app.bundleIdentifier == AppState.codexAppBundleId ? app.bundleURL : nil
-        },
+        runningBundleURLs: [URL] = NSRunningApplication
+            .runningApplications(withBundleIdentifier: AppState.codexAppBundleId)
+            .compactMap(\.bundleURL),
         fallbackPaths: [String] = [
             CodexAppServerClient.defaultExecutablePath,
             NSHomeDirectory() + "/Applications/Codex.app/Contents/Resources/codex",
