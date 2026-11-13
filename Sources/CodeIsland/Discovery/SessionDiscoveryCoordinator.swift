@@ -23,12 +23,19 @@ private final class ProjectsWatcherBox: @unchecked Sendable {
         lock.unlock()
     }
 
+    /// Runs on `queue`. Only the path filter happens here — reading the
+    /// coordinator (a `@MainActor` weak reference) off the main thread would be
+    /// a data race — and a batch worth scanning hops to the main actor.
     func handleChange(paths: [String]) {
         lock.lock()
         let isCancelled = cancelled
         lock.unlock()
         guard !isCancelled else { return }
-        coordinator?.handleProjectsDirChange(paths: paths)
+        let tailed = SessionDiscovery.tailedTranscriptPathsSnapshot()
+        guard DiscoveryScanPolicy.hasInterestingEvent(paths: paths, tailedPaths: tailed) else { return }
+        Task { @MainActor [weak self] in
+            self?.coordinator?.handleInterestingProjectsDirChange()
+        }
     }
 }
 
@@ -75,7 +82,9 @@ final class SessionDiscoveryCoordinator {
         )
 
         /// `inert` in a test process, `live` otherwise.
-        static var current: Scanners { RuntimeEnvironment.isRunningTests ? .inert : .live }
+        static var current: Scanners {
+            RuntimeEnvironment.isRunningTests ? .inert : .live
+        }
     }
 
     var scanners: Scanners
@@ -232,11 +241,12 @@ final class SessionDiscoveryCoordinator {
 
         let stream = FSEventStreamCreate(
             nil,
-            { (_, info, _, eventCount, eventPaths, _) in
-                guard let info = info else { return }
+            { (_, info, eventCount, eventPaths, _, _) in
+                guard let info else { return }
                 let box = Unmanaged<ProjectsWatcherBox>.fromOpaque(info).takeUnretainedValue()
-                // `UseCFTypes` hands over a CFArray of CFStrings.
-                let paths = (Unmanaged<CFArray>.fromOpaque(eventPaths).takeUnretainedValue() as? [String]) ?? []
+                // Without `UseCFTypes` the payload is `count` C strings.
+                let entries = eventPaths.assumingMemoryBound(to: UnsafePointer<CChar>?.self)
+                let paths = (0..<Int(eventCount)).compactMap { entries[$0].map { String(cString: $0) } }
                 box.handleChange(paths: paths)
             },
             &context,
@@ -244,8 +254,7 @@ final class SessionDiscoveryCoordinator {
             FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
             2.0,  // 2-second latency (coalesces rapid writes)
             FSEventStreamCreateFlags(
-                kFSEventStreamCreateFlagUseCFTypes
-                    | kFSEventStreamCreateFlagNoDefer
+                kFSEventStreamCreateFlagNoDefer
                     | kFSEventStreamCreateFlagFileEvents
             )
         )
@@ -285,21 +294,10 @@ final class SessionDiscoveryCoordinator {
         scanThrottle.reset()
     }
 
-    /// Called by FSEventStream (on the watcher's own queue) with the paths a
-    /// batch touched. Only a change discovery actually needs — a store nobody
-    /// is tailing — reaches the main actor at all.
-    nonisolated fileprivate func handleProjectsDirChange(paths: [String]) {
-        let tailed = SessionDiscovery.tailedTranscriptPathsSnapshot()
-        guard DiscoveryScanPolicy.hasInterestingEvent(paths: paths, tailedPaths: tailed) else { return }
-        Task { @MainActor [weak self] in
-            self?.handleInterestingProjectsDirChange()
-        }
-    }
-
     /// A batch worth scanning for: throttled leading + trailing. The trailing
     /// scan is kept on a timer, so the last lifecycle write of a burst is read
     /// even when the burst is still going when the gap expires.
-    private func handleInterestingProjectsDirChange() {
+    fileprivate func handleInterestingProjectsDirChange() {
         guard !isStopped else { return }
         let now = Date()
         switch scanThrottle.decide(hasInterestingEvent: true, now: now) {

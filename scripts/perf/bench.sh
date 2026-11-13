@@ -69,7 +69,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 QUICK=(idle idle-prayer working music)
-FULL=("${QUICK[@]}" multi stress working-expanded waiting-long approval-card)
+FULL=("${QUICK[@]}" multi stress working-expanded waiting-long approval-card discovery-active)
 if [[ ${#SCENARIOS[@]} -eq 0 ]]; then
   if [[ "$SUITE" == "full" ]]; then SCENARIOS=("${FULL[@]}"); else SCENARIOS=("${QUICK[@]}"); fi
 fi
@@ -92,6 +92,9 @@ scenario_spec() {
     waiting-long)     echo "waiting|--collapsed|65" ;;
     # The expanded approval card (regression only).
     approval-card)    echo "approval||15" ;;
+    # Discovery with an agent writing a transcript every second, against a
+    # synthetic HOME so no real session is touched.
+    discovery-active) echo "discovery|--collapsed|15" ;;
     *) return 1 ;;
   esac
 }
@@ -175,6 +178,7 @@ BENCH_PID=""
 RELAUNCH=()
 cleanup() {
   local status=$?
+  stop_discovery_writer
   if [[ -n "$BENCH_PID" ]] && kill -0 "$BENCH_PID" 2>/dev/null; then
     kill "$BENCH_PID" 2>/dev/null || true
     wait "$BENCH_PID" 2>/dev/null || true
@@ -221,6 +225,40 @@ cores="$(sysctl -n hw.ncpu)"
 python3 -c "import sys; sys.exit(0 if float('$load_now') < float('$cores') / 2 else 1)" \
   || log "WARNING: load average $load_now on $cores cores; close heavy apps, numbers will be noisy"
 
+# A fake Claude store under a synthetic HOME, and one writer appending a line
+# per second — the shape of an agent working. `CFFIXED_USER_HOME` is what
+# actually redirects `homeDirectoryForCurrentUser`; HOME does not.
+DISCOVERY_WRITER_PID=""
+prepare_discovery_home() {  # prepare_discovery_home <run dir>
+  local dir="$1"
+  local home="$dir/home"
+  local projects="$home/.claude/projects/-bench-project"
+  mkdir -p "$projects"
+  printf '%s\n' '{"type":"assistant","timestamp":"2026-01-01T00:00:00.000Z","message":{"id":"bench-0","usage":{"input_tokens":10,"output_tokens":5}}}' >"$projects/bench.jsonl"
+  DISCOVERY_HOME="$home"
+  DISCOVERY_TRANSCRIPT="$projects/bench.jsonl"
+}
+
+start_discovery_writer() {
+  [[ -n "${DISCOVERY_TRANSCRIPT:-}" ]] || return 0
+  (
+    n=0
+    while :; do
+      n=$((n + 1))
+      printf '%s\n' "{\"type\":\"assistant\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"message\":{\"id\":\"bench-$n\",\"usage\":{\"input_tokens\":10,\"output_tokens\":5}}}" >>"$DISCOVERY_TRANSCRIPT"
+      sleep 1
+    done
+  ) &
+  DISCOVERY_WRITER_PID=$!
+}
+
+stop_discovery_writer() {
+  [[ -n "${DISCOVERY_WRITER_PID:-}" ]] || return 0
+  kill "$DISCOVERY_WRITER_PID" 2>/dev/null || true
+  wait "$DISCOVERY_WRITER_PID" 2>/dev/null || true
+  DISCOVERY_WRITER_PID=""
+}
+
 launch() {  # launch <scenario> <run dir>
   local scenario="$1" dir="$2" spec preview flags
   spec="$(scenario_spec "$scenario")"
@@ -229,14 +267,22 @@ launch() {  # launch <scenario> <run dir>
   [[ -n "$flags" ]] && args+=($flags)
   local pinned=()
   while IFS= read -r line; do pinned+=("$line"); done < <(pinned_defaults "$scenario")
-  CODEISLAND_ISOLATED=1 \
+  local extra_env=()
+  if [[ "$scenario" == "discovery-active" ]]; then
+    prepare_discovery_home "$dir"
+    extra_env=("CFFIXED_USER_HOME=$DISCOVERY_HOME" "CODEISLAND_PERF_DISCOVERY=1")
+    start_discovery_writer
+  fi
+  env CODEISLAND_ISOLATED=1 \
   CODEISLAND_SOCKET_PATH="/tmp/codeisland-bench-$$.sock" \
   CODEISLAND_PERF_COUNTERS="$dir/counters.json" \
+  "${extra_env[@]+"${extra_env[@]}"}" \
     "$EXE" "${args[@]}" "${pinned[@]}" >"$dir/app.log" 2>&1 &
   BENCH_PID=$!
 }
 
 stop_app() {
+  stop_discovery_writer
   if [[ -n "$BENCH_PID" ]]; then
     kill "$BENCH_PID" 2>/dev/null || true
     wait "$BENCH_PID" 2>/dev/null || true

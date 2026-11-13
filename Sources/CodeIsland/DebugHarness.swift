@@ -52,6 +52,9 @@ enum PreviewScenario: String, CaseIterable {
     case allcli
     // Special states
     case idle
+    /// No preview sessions and discovery left running — what
+    /// `bench.sh`'s `discovery-active` scenario measures.
+    case discovery
     /// No sessions; NowPlaying plays a simulated track (no AppleScript).
     case music
     // Performance stress test
@@ -101,6 +104,7 @@ enum DebugHarness {
         case .kimi: applyKimi(to: appState)
         case .allcli: applyAllCLI(to: appState)
         case .idle: applyIdle(to: appState)
+        case .discovery: applyDiscovery(to: appState)
         case .music: applyMusic(to: appState)
         case .stress: applyStress(to: appState)
         }
@@ -581,6 +585,14 @@ enum DebugHarness {
                 }
             }
         }
+    }
+
+    /// Clear whatever discovery found and keep it running: the benchmark wants
+    /// discovery's own cost, not the preview's.
+    private static func applyDiscovery(to state: AppState) {
+        state.sessions.removeAll()
+        state.activeSessionId = nil
+        state.surface = .collapsed
     }
 
     // MARK: - Music (simulated NowPlaying)
