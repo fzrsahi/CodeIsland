@@ -1187,10 +1187,14 @@ struct ModernCleanMusicHUDContentView: View {
                     Spacer(minLength: 2)
 
                     // Di tengah: Scrubber Bar & Durasi (diberi padding kanan agar tidak mepet border)
+                    // The position comes from the anchor; a local timeline at
+                    // two ticks a second keeps the bar smooth without the
+                    // manager publishing four times a second.
+                    TimelineView(.periodic(from: .now, by: 0.5)) { timeline in
                     VStack(spacing: 2) {
                         GeometryReader { geo in
                             let totalWidth = geo.size.width
-                            let effectivePosition = dragPosition ?? nowPlaying.playerPosition
+                            let effectivePosition = dragPosition ?? nowPlaying.position(at: timeline.date)
                             let progressFraction: CGFloat = nowPlaying.trackDuration > 0
                                 ? min(1.0, max(0.0, CGFloat(effectivePosition / nowPlaying.trackDuration)))
                                 : 0.0
@@ -1227,7 +1231,7 @@ struct ModernCleanMusicHUDContentView: View {
                         .frame(height: 3)
 
                         HStack {
-                            let effectivePosition = dragPosition ?? nowPlaying.playerPosition
+                            let effectivePosition = dragPosition ?? nowPlaying.position(at: timeline.date)
                             Text(formatTime(effectivePosition))
                                 .font(.system(size: 7.5, weight: .medium, design: .monospaced))
                                 .foregroundStyle(Color.white.opacity(0.48))
@@ -1238,6 +1242,7 @@ struct ModernCleanMusicHUDContentView: View {
                         }
                     }
                     .padding(.trailing, 10)
+                    }
 
                     Spacer(minLength: 2)
 
@@ -1489,6 +1494,7 @@ struct RetroCyberMusicHUDContentView: View {
                 .help(nowPlaying.isBrowserJSHintVisible ? nowPlaying.browserJSHintText : "Click to focus active music player or browser tab")
 
                 // Interactive Scrubber
+                TimelineView(.periodic(from: .now, by: 0.5)) { timeline in
                 VStack(spacing: 2) {
                     GeometryReader { geo in
                         let totalWidth = geo.size.width
@@ -1538,6 +1544,7 @@ struct RetroCyberMusicHUDContentView: View {
                             .font(.system(size: 7.5, weight: .medium, design: .monospaced))
                             .foregroundStyle(Color(white: 0.45))
                     }
+                }
                 }
 
                 // Playback Controls + Mini Disco
