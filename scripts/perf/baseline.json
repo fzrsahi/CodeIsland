@@ -553,15 +553,19 @@
     },
     "idle-prayer": {
       "counters.hostingLayoutPass": {
-        "enforce": false,
+        "enforce": true,
         "max": 10.0
       },
+      "counters.prayerTick": {
+        "enforce": true,
+        "max": 2.0
+      },
       "cpu": {
-        "enforce": false,
+        "enforce": true,
         "max": 2.0
       },
       "footprintGrowthPct": {
-        "enforce": false,
+        "enforce": true,
         "max": 10.0
       }
     },
