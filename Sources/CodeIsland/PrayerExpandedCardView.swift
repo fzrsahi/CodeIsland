@@ -9,6 +9,14 @@ public struct PrayerExpandedCardView: View {
         self.manager = manager
     }
 
+    /// `HH:mm:ss` in the city's zone at a given instant.
+    static func clockText(at date: Date, timeZone: TimeZone) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let c = calendar.dateComponents([.hour, .minute, .second], from: date)
+        return String(format: "%02d:%02d:%02d", c.hour ?? 0, c.minute ?? 0, c.second ?? 0)
+    }
+
     public var body: some View {
         let upcoming = manager.upcomingPrayer
         let schedule = manager.todaySchedule
@@ -72,10 +80,14 @@ public struct PrayerExpandedCardView: View {
 
                     Spacer(minLength: 4)
 
-                    // Big Digital Clock (Left-aligned)
-                    Text(manager.currentSecondsString)
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                    // Big Digital Clock (Left-aligned). The seconds live only
+                    // here: a local timeline runs while the card is on screen,
+                    // so the manager can wake once a minute.
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text(Self.clockText(at: context.date, timeZone: manager.timeZone))
+                            .font(.system(size: 40, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                    }
 
                     Spacer(minLength: 6)
 
