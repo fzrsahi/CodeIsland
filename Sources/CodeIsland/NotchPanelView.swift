@@ -209,6 +209,8 @@ struct NotchPanelView: View {
         self.screenWidth = screenWidth
         if initialTab != .agents {
             self.appState.expandedTab = initialTab
+        } else if ProcessInfo.processInfo.arguments.contains("workspace") {
+            self.appState.expandedTab = .workspace
         }
     }
 

@@ -1491,6 +1491,7 @@ private struct AppearancePage: View {
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
+    @AppStorage(SettingsKey.workspaceHUDTheme) private var workspaceHUDTheme = SettingsDefaults.workspaceHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
@@ -1959,6 +1960,21 @@ private struct AppearancePage: View {
                     }
 
                     Text("Fine-tune lyric sync: negative to delay lyrics, positive to advance. Applies to Notch HUD and floating lyrics.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            Section("Workspace HUD") {
+                VStack(alignment: .leading, spacing: 3) {
+                    Picker("Workspace HUD Theme", selection: $workspaceHUDTheme) {
+                        ForEach(WorkspaceHUDTheme.allCases) { theme in
+                            Text(theme.title).tag(theme.rawValue)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    Text(WorkspaceHUDTheme(rawValue: workspaceHUDTheme)?.description ?? "")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                 }
