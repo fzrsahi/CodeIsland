@@ -158,6 +158,9 @@ struct NotchPanelView: View {
     @ObservedObject private var sys = SystemMonitorManager.shared
     @ObservedObject private var prayerManager = PrayerTimeManager.shared
     @ObservedObject private var volumeManager = SystemVolumeManager.shared
+    /// The single source of truth for which animation classes may run. Read
+    /// here, at the panel root, so every loop below inherits one decision.
+    @ObservedObject private var animationGate = MascotAnimationGate.shared
 
     /// Delayed hover: prevents accidental expansion when mouse passes through
     @State private var hoverTimer: Timer?
@@ -975,6 +978,9 @@ struct NotchPanelView: View {
         .environment(\.sessionGroupingTabsRoom, SessionGroupingTabsLayout.room(
             panelWidth: panelWidth, notchWidth: notchW, hasNotch: hasNotch
         ))
+        .environment(\.animationGates, animationGate.gates)
+        .environment(\.mascotAnimationsActive, animationGate.animationsActive)
+        .environment(\.mascotAnimationEpoch, animationGate.epoch)
         .animation(NotchAnimation.open, value: appState.surface)
     }
 }
@@ -990,6 +996,7 @@ private struct CompactLeftWing: View {
     let hasNotch: Bool
     let showToolStatus: Bool
     @Binding var expandedTab: ExpandedContentTab
+    @Environment(\.animationGates) private var animationGates
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
     // Bound via @AppStorage so flipping the default mascot in Settings rerenders this view
@@ -1019,12 +1026,44 @@ private struct CompactLeftWing: View {
         return appState.primarySource
     }
     private var displayStatus: AgentStatus { displaySession?.status ?? .idle }
-    private var effectiveMascotStatus: MascotAgentStatus {
-        if displayStatus == .idle && nowPlaying.isPlaying {
-            return .running
-        }
-        return displayStatus
+    /// The mascot shows the session's own status. Music used to force a
+    /// `.running` pose here, which spent frames on a pose that said nothing.
+    private var effectiveMascotStatus: MascotAgentStatus { displayStatus }
+    /// Neon beat aura behind the mascot while a track plays.
+    private func musicAura(beat: Double) -> some View {
+        Circle()
+            .fill(
+                RadialGradient(
+                    colors: [
+                        Color(red: 1.0, green: 0.16, blue: 0.53).opacity(0.24 + beat * 0.18),
+                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.12 + beat * 0.10),
+                        Color.clear
+                    ],
+                    center: .center,
+                    startRadius: 2,
+                    endRadius: mascotSize * 0.6 + CGFloat(beat * 3.0)
+                )
+            )
+            .frame(width: mascotSize + 8, height: mascotSize + 8)
     }
+
+    /// The slow glow behind an idle mascot.
+    private func breathGlow(breath: Double) -> some View {
+        Circle()
+            .fill(
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18 + breath * 0.14),
+                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.0)
+                    ],
+                    center: .center,
+                    startRadius: 2,
+                    endRadius: mascotSize * 0.55 + CGFloat(breath * 2.0)
+                )
+            )
+            .frame(width: mascotSize + 4, height: mascotSize + 4)
+    }
+
     private var isThinking: Bool {
         displayStatus == .processing || displayStatus == .running || appState.status == .processing || appState.status == .running
     }
@@ -1046,42 +1085,26 @@ private struct CompactLeftWing: View {
             } else {
                 ZStack {
                     if nowPlaying.isPlaying && displayStatus == .idle {
-                        // Neon beat aura when music is vibing
-                        TimelineView(.animation(minimumInterval: 0.05)) { timeline in
-                            let t = timeline.date.timeIntervalSinceReferenceDate
-                            let beat = (sin(t * 3.5) + 1.0) / 2.0 // 0.0 ... 1.0
-                            Circle()
-                                .fill(
-                                    RadialGradient(
-                                        colors: [
-                                            Color(red: 1.0, green: 0.16, blue: 0.53).opacity(0.24 + beat * 0.18),
-                                            Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.12 + beat * 0.10),
-                                            Color.clear
-                                        ],
-                                        center: .center,
-                                        startRadius: 2,
-                                        endRadius: mascotSize * 0.6 + CGFloat(beat * 3.0)
-                                    )
-                                )
-                                .frame(width: mascotSize + 8, height: mascotSize + 8)
+                        // Neon beat aura when music is vibing. Gated on the
+                        // Music class: a still frame when it may not animate.
+                        if animationGates.allows(.music) {
+                            TimelineView(.animation(minimumInterval: 0.05)) { timeline in
+                                let t = timeline.date.timeIntervalSinceReferenceDate
+                                let beat = (sin(t * 3.5) + 1.0) / 2.0 // 0.0 ... 1.0
+                                musicAura(beat: beat)
+                            }
+                        } else {
+                            musicAura(beat: 0.5)
                         }
                     } else if displayStatus == .idle {
-                        TimelineView(.animation(minimumInterval: 0.06)) { timeline in
-                            let t = timeline.date.timeIntervalSinceReferenceDate
-                            let breath = (sin(t * 2.0) + 1.0) / 2.0 // 0.0 ... 1.0
-                            Circle()
-                                .fill(
-                                    RadialGradient(
-                                        colors: [
-                                            Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18 + breath * 0.14),
-                                            Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.0)
-                                        ],
-                                        center: .center,
-                                        startRadius: 2,
-                                        endRadius: mascotSize * 0.55 + CGFloat(breath * 2.0)
-                                    )
-                                )
-                                .frame(width: mascotSize + 4, height: mascotSize + 4)
+                        if animationGates.allows(.ambientIdle) {
+                            TimelineView(.animation(minimumInterval: 0.06)) { timeline in
+                                let t = timeline.date.timeIntervalSinceReferenceDate
+                                let breath = (sin(t * 2.0) + 1.0) / 2.0 // 0.0 ... 1.0
+                                breathGlow(breath: breath)
+                            }
+                        } else {
+                            breathGlow(breath: 0.5)
                         }
                     }
 
@@ -1090,19 +1113,6 @@ private struct CompactLeftWing: View {
                         .transition(.opacity)
                         .animation(.easeInOut(duration: 0.3), value: displaySource)
 
-                    if nowPlaying.isPlaying && displayStatus == .idle {
-                        // Floating cyberpunk neon music notes
-                        TimelineView(.animation(minimumInterval: 0.08)) { timeline in
-                            let t = timeline.date.timeIntervalSinceReferenceDate
-                            let yOffset = CGFloat(sin(t * 2.5) * 2.0) - 5
-                            let xOffset = CGFloat(cos(t * 2.0) * 2.0) + (mascotSize * 0.38)
-                            Text("♪")
-                                .font(.system(size: 7.5, weight: .bold))
-                                .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), radius: 2)
-                                .offset(x: xOffset, y: yOffset)
-                        }
-                    }
                 }
 
                 // Tool name or thinking indicator
@@ -1260,6 +1270,7 @@ private struct CompactRightWing: View {
     @Binding var expandedTab: ExpandedContentTab
     @ObservedObject var workspaceManager: WorkspaceMonitorManager
     var expandedWingWidth: CGFloat = 240
+    @Environment(\.animationGates) private var animationGates
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @AppStorage(SettingsKey.soundEnabled) private var soundEnabled = SettingsDefaults.soundEnabled

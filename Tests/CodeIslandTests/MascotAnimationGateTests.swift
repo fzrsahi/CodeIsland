@@ -91,3 +91,117 @@ final class MascotAnimationGateTests: XCTestCase {
         gate.setIdleSettled(false)
     }
 }
+
+// MARK: - Animation classes (idle-perf ticket 03)
+
+@MainActor
+final class AnimationClassGateTests: XCTestCase {
+    private func state(
+        visible: Bool = true,
+        awake: Bool = true,
+        reduceMotion: Bool = false,
+        settled: Bool = false,
+        music: Bool = false,
+        waiting: TimeInterval = 0
+    ) -> AnimationState {
+        AnimationState(
+            isVisible: visible, isAwake: awake, reduceMotion: reduceMotion,
+            isIdleSettled: settled, musicPlaying: music, waitingForInteraction: waiting
+        )
+    }
+
+    func testMascotSleepsWhenTheIslandIsSettled() {
+        XCTAssertTrue(MascotAnimationGate.shouldAnimate(.mascot, state: state()))
+        XCTAssertFalse(MascotAnimationGate.shouldAnimate(.mascot, state: state(settled: true)))
+    }
+
+    func testMascotRunsWhileMusicPlays() {
+        XCTAssertTrue(MascotAnimationGate.shouldAnimate(.mascot, state: state(music: true)))
+    }
+
+    func testAmbientGlowFollowsTheSettledState() {
+        XCTAssertTrue(MascotAnimationGate.shouldAnimate(.ambientIdle, state: state()))
+        XCTAssertFalse(MascotAnimationGate.shouldAnimate(.ambientIdle, state: state(settled: true)))
+    }
+
+    func testMusicOnlyMovesWhileSomethingPlays() {
+        XCTAssertFalse(MascotAnimationGate.shouldAnimate(.music, state: state()))
+        XCTAssertTrue(MascotAnimationGate.shouldAnimate(.music, state: state(music: true)))
+    }
+
+    func testAttentionRunsUntilTheIslandHasBeenLeftAloneForAMinute() {
+        XCTAssertTrue(MascotAnimationGate.shouldAnimate(.attention, state: state(waiting: 0)))
+        XCTAssertTrue(MascotAnimationGate.shouldAnimate(.attention, state: state(waiting: 59)))
+        XCTAssertFalse(MascotAnimationGate.shouldAnimate(.attention, state: state(waiting: 60)))
+        XCTAssertFalse(MascotAnimationGate.shouldAnimate(.attention, state: state(waiting: 600)))
+    }
+
+    func testMascotStopsAfterAMinuteOfWaiting() {
+        XCTAssertTrue(MascotAnimationGate.shouldAnimate(.mascot, state: state(waiting: 59)))
+        XCTAssertFalse(MascotAnimationGate.shouldAnimate(.mascot, state: state(waiting: 60)))
+    }
+
+    func testReduceMotionStopsEveryLoop() {
+        for kind in [AnimationKind.mascot, .ambientIdle, .music, .attention, .marquee] {
+            XCTAssertFalse(
+                MascotAnimationGate.shouldAnimate(kind, state: state(reduceMotion: true, music: true)),
+                "\(kind) must hold still under Reduce Motion"
+            )
+        }
+    }
+
+    func testHiddenOrAsleepStopsEveryLoop() {
+        for kind in [AnimationKind.mascot, .ambientIdle, .music, .attention, .marquee] {
+            XCTAssertFalse(MascotAnimationGate.shouldAnimate(kind, state: state(visible: false, music: true)))
+            XCTAssertFalse(MascotAnimationGate.shouldAnimate(kind, state: state(awake: false, music: true)))
+        }
+    }
+
+    func testTransitionsAndSettingsPreviewsAreNeverGated() {
+        let dark = state(visible: false, awake: false, reduceMotion: true, settled: true, waiting: 600)
+        XCTAssertTrue(MascotAnimationGate.shouldAnimate(.transient, state: dark))
+        XCTAssertTrue(MascotAnimationGate.shouldAnimate(.settings, state: dark))
+    }
+
+    func testMarqueeNeedsTheGateButNotAHoverToDecide() {
+        // Hover and overflow are the view's own conditions; the gate only says
+        // the class may move at all.
+        XCTAssertTrue(MascotAnimationGate.shouldAnimate(.marquee, state: state(settled: true)))
+        XCTAssertFalse(MascotAnimationGate.shouldAnimate(.marquee, state: state(reduceMotion: true)))
+    }
+
+    func testGatesResolveEveryClassFromOneState() {
+        let gates = AnimationGates(
+            mascot: false, ambientIdle: false, music: true, attention: false, marquee: false, transient: true
+        )
+        XCTAssertFalse(gates.allows(.mascot))
+        XCTAssertTrue(gates.allows(.music))
+        XCTAssertTrue(gates.allows(.transient))
+        XCTAssertTrue(AnimationGates.all.allows(.mascot))
+    }
+
+    func testWaitingGoesQuietOnItsOwnAndWakesOnInteraction() {
+        let gate = MascotAnimationGate.shared
+        gate.setPanelVisible(true)
+        gate.setMusicPlaying(false)
+        defer { gate.setWaitingForUser(false) }
+
+        gate.setWaitingForUser(true)
+        XCTAssertFalse(gate.isWaitingQuiet, "a fresh wait is not quiet yet")
+        XCTAssertTrue(gate.gates.mascot)
+
+        // Interaction restarts the quiet clock instead of ending the wait.
+        gate.noteInteraction()
+        XCTAssertTrue(gate.isWaitingForUser)
+        XCTAssertFalse(gate.isWaitingQuiet)
+        XCTAssertTrue(gate.gates.attention)
+    }
+
+    func testLeavingTheWaitingStateClearsQuiet() {
+        let gate = MascotAnimationGate.shared
+        gate.setWaitingForUser(true)
+        gate.setWaitingForUser(false)
+        XCTAssertFalse(gate.isWaitingQuiet)
+        XCTAssertTrue(gate.gates.mascot)
+    }
+}

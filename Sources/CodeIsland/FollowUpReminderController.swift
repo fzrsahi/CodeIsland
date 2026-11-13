@@ -397,6 +397,9 @@ final class FollowUpReminderController {
 
     private func perform(_ reminders: [FollowUpReminder]) {
         guard !reminders.isEmpty, let appState else { return }
+        // A reminder that just sounded is the user's cue to look again: revive
+        // a waiting island that had gone quiet.
+        MascotAnimationGate.shared.noteInteraction()
         for reminder in reminders { notify(reminder) }
 
         // One card at a time: the most urgent item gets its card back when the

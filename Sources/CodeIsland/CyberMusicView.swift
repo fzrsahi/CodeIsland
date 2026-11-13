@@ -65,6 +65,7 @@ struct CyberAudioSpectrumView: View {
     var segmentSpacing: CGFloat = 1.0
     var palette: RetroSpectrumPalette? = nil
     var accentColor: Color? = nil
+    @Environment(\.animationGates) private var animationGates
 
     private var activePalette: RetroSpectrumPalette {
         if let palette { return palette }
@@ -94,26 +95,39 @@ struct CyberAudioSpectrumView: View {
     }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 0.04)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .bottom, spacing: 1.5) {
-                ForEach(0..<barCount, id: \.self) { barIndex in
-                    let normalized: Double = {
-                        guard isPlaying else { return 0.2 }
-                        let factor = Double(barIndex)
-                        let b1 = sin(time * 8.0 + factor * 1.5) * 0.4
-                        let b2 = cos(time * 13.0 + factor * 2.2) * 0.3
-                        let b3 = sin(time * 4.5) * 0.15
-                        return max(0.15, min(1.0, 0.45 + b1 + b2 + b3))
-                    }()
-                    let activeCount = isPlaying ? Int((normalized * 4.0).rounded()) : 1
+        let canAnimate = animationGates.allows(.music)
+        // A still spectrum (Reduce Motion, or a class that may not move) holds
+        // the bottom segment lit.
+        if canAnimate {
+            TimelineView(.animation(minimumInterval: 0.04)) { timeline in
+                bars(time: timeline.date.timeIntervalSinceReferenceDate)
+            }
+        } else {
+            bars(time: nil)
+        }
+    }
 
-                    VStack(spacing: segmentSpacing) {
-                        ForEach((0..<4).reversed(), id: \.self) { step in
-                            Rectangle()
-                                .fill(segmentColor(level: step, isActive: step < activeCount))
-                                .frame(width: barWidth, height: segmentHeight)
-                        }
+    /// `time == nil` renders the still frame: one segment lit, no motion.
+    @ViewBuilder
+    private func bars(time: TimeInterval?) -> some View {
+        HStack(alignment: .bottom, spacing: 1.5) {
+            ForEach(0..<barCount, id: \.self) { barIndex in
+                let normalized: Double = {
+                    guard isPlaying else { return 0.2 }
+                    guard let time else { return 0.15 }
+                    let factor = Double(barIndex)
+                    let b1 = sin(time * 8.0 + factor * 1.5) * 0.4
+                    let b2 = cos(time * 13.0 + factor * 2.2) * 0.3
+                    let b3 = sin(time * 4.5) * 0.15
+                    return max(0.15, min(1.0, 0.45 + b1 + b2 + b3))
+                }()
+                let activeCount = isPlaying ? Int((normalized * 4.0).rounded()) : 1
+
+                VStack(spacing: segmentSpacing) {
+                    ForEach((0..<4).reversed(), id: \.self) { step in
+                        Rectangle()
+                            .fill(segmentColor(level: step, isActive: step < activeCount))
+                            .frame(width: barWidth, height: segmentHeight)
                     }
                 }
             }
@@ -129,6 +143,7 @@ struct CyberDiscoVisualizer: View {
     var maxHeight: CGFloat = 18
     var palette: RetroSpectrumPalette? = nil
     var accentColor: Color? = nil
+    @Environment(\.animationGates) private var animationGates
 
     private var activePalette: RetroSpectrumPalette {
         if let palette { return palette }
@@ -143,16 +158,26 @@ struct CyberDiscoVisualizer: View {
     }
 
     var body: some View {
+        if animationGates.allows(.music) {
+            TimelineView(.animation(minimumInterval: 0.04)) { timeline in
+                bars(time: timeline.date.timeIntervalSinceReferenceDate)
+            }
+        } else {
+            bars(time: nil)
+        }
+    }
+
+    /// `time == nil` renders the still frame: every bar at rest.
+    @ViewBuilder
+    private func bars(time: TimeInterval?) -> some View {
         let pal = activePalette
-        TimelineView(.animation(minimumInterval: 0.04)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .bottom, spacing: 2.0) {
-                ForEach(0..<barCount, id: \.self) { i in
-                    let factor = Double(i) * 0.9
-                    let wave = isPlaying
-                        ? max(0.12, min(1.0, 0.5 + sin(time * 7.0 + factor) * 0.35 + cos(time * 12.0 + factor * 1.7) * 0.25))
-                        : 0.15
-                    let barH = max(3, maxHeight * CGFloat(wave))
+        HStack(alignment: .bottom, spacing: 2.0) {
+            ForEach(0..<barCount, id: \.self) { i in
+                let factor = Double(i) * 0.9
+                let wave = isPlaying && time != nil
+                    ? max(0.12, min(1.0, 0.5 + sin(time! * 7.0 + factor) * 0.35 + cos(time! * 12.0 + factor * 1.7) * 0.25))
+                    : 0.15
+                let barH = max(3, maxHeight * CGFloat(wave))
 
                     VStack(spacing: 1.2) {
                         Rectangle()
@@ -176,8 +201,7 @@ struct CyberDiscoVisualizer: View {
                     }
                 }
             }
-            .frame(height: maxHeight + 4, alignment: .bottom)
-        }
+        .frame(height: maxHeight + 4, alignment: .bottom)
     }
 }
 
@@ -189,28 +213,39 @@ struct ModernAudioSpectrumView: View {
     var barWidth: CGFloat = 1.8
     var maxHeight: CGFloat = 9.0
     var color: Color = Color(red: 1.0, green: 0.65, blue: 0.45)
+    @Environment(\.animationGates) private var animationGates
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 0.04)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .center, spacing: 1.6) {
-                ForEach(0..<barCount, id: \.self) { barIndex in
-                    let normalized: CGFloat = {
-                        guard isPlaying else { return 0.25 }
-                        let factor = Double(barIndex)
-                        let b1 = sin(time * 8.0 + factor * 2.2) * 0.42
-                        let b2 = cos(time * 12.5 + factor * 1.7) * 0.28
-                        let b3 = sin(time * 4.2 + factor * 0.9) * 0.15
-                        return max(0.25, min(1.0, CGFloat(0.55 + b1 + b2 + b3)))
-                    }()
-
-                    Capsule()
-                        .fill(color)
-                        .frame(width: barWidth, height: max(2.5, maxHeight * normalized))
-                }
+        if animationGates.allows(.music) {
+            TimelineView(.animation(minimumInterval: 0.04)) { timeline in
+                bars(time: timeline.date.timeIntervalSinceReferenceDate)
             }
-            .frame(height: maxHeight, alignment: .center)
+        } else {
+            // Still frame: every capsule at its rest height.
+            bars(time: nil)
         }
+    }
+
+    @ViewBuilder
+    private func bars(time: TimeInterval?) -> some View {
+        HStack(alignment: .center, spacing: 1.6) {
+            ForEach(0..<barCount, id: \.self) { barIndex in
+                let normalized: CGFloat = {
+                    guard isPlaying else { return 0.25 }
+                    guard let time else { return 0.25 }
+                    let factor = Double(barIndex)
+                    let b1 = sin(time * 8.0 + factor * 2.2) * 0.42
+                    let b2 = cos(time * 12.5 + factor * 1.7) * 0.28
+                    let b3 = sin(time * 4.2 + factor * 0.9) * 0.15
+                    return max(0.25, min(1.0, CGFloat(0.55 + b1 + b2 + b3)))
+                }()
+
+                Capsule()
+                    .fill(color)
+                    .frame(width: barWidth, height: max(2.5, maxHeight * normalized))
+            }
+        }
+        .frame(height: maxHeight, alignment: .center)
     }
 }
 
@@ -229,6 +264,7 @@ struct ModernMarqueeText: View {
     var color: Color = .white
     var maxWidth: CGFloat? = nil
     var centerShortText: Bool = false
+    @Environment(\.animationGates) private var animationGates
     @State private var textWidth: CGFloat = 0
     @State private var startDate = Date()
 
@@ -236,7 +272,33 @@ struct ModernMarqueeText: View {
         GeometryReader { geo in
             let containerWidth = maxWidth ?? geo.size.width
             let excess = max(0, textWidth - containerWidth)
-            TimelineView(.animation(minimumInterval: 0.03)) { timeline in
+            // The Marquee class still needs text wider than its box; a title
+            // that fits never scrolls, so no timeline is created for it.
+            if animationGates.allows(.marquee) && excess > 0 {
+                scrolling(containerWidth: containerWidth, excess: excess, height: geo.size.height)
+            } else {
+                Text(text)
+                    .font(font)
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(width: containerWidth, height: geo.size.height, alignment: (centerShortText && excess == 0) ? .center : .leading)
+                    .clipped()
+            }
+        }
+        .frame(width: maxWidth)
+        .onPreferenceChange(ModernMarqueeTextWidthKey.self) { width in
+            if abs(self.textWidth - width) > 1 {
+                self.textWidth = width
+            }
+        }
+        .onChange(of: text) {
+            startDate = Date()
+        }
+    }
+
+    private func scrolling(containerWidth: CGFloat, excess: CGFloat, height: CGFloat) -> some View {
+        TimelineView(.animation(minimumInterval: 0.03)) { timeline in
                 let offset: CGFloat = {
                     guard excess > 0 else { return 0 }
                     let scrollDuration = max(2.5, Double(excess) / 22.0)
@@ -274,18 +336,8 @@ struct ModernMarqueeText: View {
                         }
                     )
                     .offset(x: -offset)
-                    .frame(width: containerWidth, height: geo.size.height, alignment: (centerShortText && excess == 0) ? .center : .leading)
+                    .frame(width: containerWidth, height: height, alignment: .leading)
                     .clipped()
-            }
-        }
-        .frame(width: maxWidth)
-        .onPreferenceChange(ModernMarqueeTextWidthKey.self) { width in
-            if abs(self.textWidth - width) > 1 {
-                self.textWidth = width
-            }
-        }
-        .onChange(of: text) {
-            startDate = Date()
         }
     }
 }

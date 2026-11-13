@@ -232,6 +232,9 @@ class PanelWindowController: NSObject, NSWindowDelegate {
             Task { @MainActor in
                 guard let self else { return }
                 self.isSessionObservationArmed = false
+                // A session event is the user's cue to look again: it revives a
+                // waiting island that had gone quiet.
+                MascotAnimationGate.shared.noteInteraction()
                 self.updateVisibility()
                 self.armSessionObservation()
             }
@@ -680,15 +683,25 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         }
         MascotAnimationGate.shared.setPanelVisible(true)
         MascotAnimationGate.shared.setIdleSettled(isIslandSettled())
+        MascotAnimationGate.shared.setMusicPlaying(NowPlayingManager.shared.isPlaying)
+        MascotAnimationGate.shared.setWaitingForUser(isWaitingForUser())
     }
 
     /// Collapsed island with nothing running — the state a Mac spends most of
     /// its day in, and the one where a live mascot timeline costs real CPU for
-    /// motion nobody is looking at (#299). Any expanded surface, or any session
-    /// that is not idle, keeps the mascot animating.
+    /// motion nobody is looking at (#299). Any expanded surface, any session
+    /// that is not idle, or a playing track keeps the island animating.
     private func isIslandSettled() -> Bool {
         guard !appState.surface.isExpanded else { return false }
+        guard !NowPlayingManager.shared.isPlaying else { return false }
         return appState.sessions.values.allSatisfy { $0.status == .idle }
+    }
+
+    /// A session parked on an approval or a question is waiting for the user.
+    private func isWaitingForUser() -> Bool {
+        appState.sessions.values.contains {
+            $0.status == .waitingApproval || $0.status == .waitingQuestion
+        }
     }
 
     private func isActiveSpaceFullscreen() -> Bool {
