@@ -140,6 +140,9 @@ final class AppState {
     /// NSWorkspace launch/terminate observers tracking Codex Desktop.
     @ObservationIgnored
     var codexAppServerObservers: [NSObjectProtocol]?
+    /// The Codex Desktop discovery poll, alive only while Codex Desktop is.
+    @ObservationIgnored
+    nonisolated(unsafe) var codexDesktopPollTimer: Timer?
     /// Backoff loop used when the auxiliary app-server exits while the Desktop
     /// host remains open.
     @ObservationIgnored
@@ -313,6 +316,10 @@ final class AppState {
     /// XCTest ARC). Only mutated on the main actor while `self` is alive.
     @ObservationIgnored
     nonisolated(unsafe) private var cleanupTimer: Timer?
+    /// The interval the current one-shot sweep was armed with, so a session
+    /// change that does not move it leaves the timer alone.
+    @ObservationIgnored
+    private var cleanupScheduledInterval: TimeInterval?
     private var autoCollapseTask: Task<Void, Never>?
     /// How long a completion card stays up on its own. Tests shorten it.
     @ObservationIgnored
@@ -483,15 +490,51 @@ final class AppState {
         return sessions[rid]
     }
 
+    /// How often the idle sweep has to run, or nil when it can stop.
+    ///
+    /// A sweep is cheap but never free: it walks every session and asks the
+    /// process table. With nothing on the island there is nothing to sweep, so
+    /// the timer stops; with every card idle a slow sweep is enough; while a
+    /// turn is running the card has to settle promptly.
+    nonisolated static func cleanupInterval(sessionCount: Int, hasActiveSession: Bool) -> TimeInterval? {
+        guard sessionCount > 0 else { return nil }
+        return hasActiveSession ? 3 : 15
+    }
+
+    /// Whether any card is doing something the sweep can act on.
+    private var hasActiveSession: Bool {
+        sessions.values.contains { $0.status != .idle }
+    }
+
     func startCleanupTimer() {
-        guard cleanupTimer == nil else { return }
-        let timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+        rescheduleCleanupIfNeeded(force: true)
+    }
+
+    /// Re-arm the one-shot sweep when the island's composition changed the
+    /// interval it needs. Called from `refreshDerivedState`, i.e. on every
+    /// session change, so the cadence follows the sessions without polling.
+    private func rescheduleCleanupIfNeeded(force: Bool = false) {
+        let interval = Self.cleanupInterval(sessionCount: sessions.count, hasActiveSession: hasActiveSession)
+        guard force || interval != cleanupScheduledInterval else { return }
+        cleanupScheduledInterval = interval
+        scheduleCleanupTick(after: interval)
+    }
+
+    private func scheduleCleanupTick(after interval: TimeInterval?) {
+        cleanupTimer?.invalidate()
+        cleanupTimer = nil
+        guard let interval else { return }
+        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
             Task { @MainActor in
-                self?.cleanupIdleSessions()
+                guard let self else { return }
+                self.cleanupTimer = nil
+                self.cleanupScheduledInterval = nil
+                self.cleanupIdleSessions()
+                self.rescheduleCleanupIfNeeded(force: true)
             }
         }
         // The sweep has no deadline of its own; let the system coalesce the wake.
-        timer.tolerance = 0.3
+        timer.tolerance = interval * 0.1
         cleanupTimer = timer
     }
 
@@ -536,6 +579,9 @@ final class AppState {
 
     private func cleanupIdleSessions() {
         PerfCounters.shared?.bump(.cleanupTickWork)
+        // What the sweep can change. A tick that changes nothing must not
+        // republish derived state or push a device payload.
+        let fingerprintBefore = cleanupFingerprint()
         // Tombstones for closed Codex Desktop threads only guard discovery for a
         // while; keeping them forever leaks one entry per thread ever closed.
         if !closedCodexAppThreads.isEmpty {
@@ -680,7 +726,8 @@ final class AppState {
                 removeSession(key)
             }
         }
-        discovery.pollCodexDesktopIfDue(now: Date(), runningBundleIdentifiers: runningBundleIds)
+        // The Codex Desktop poll has a timer of its own (see
+        // `startCodexDesktopPollTimer`); the sweep must not carry it.
 
         // 4. Remove idle sessions past timeout (user setting, or 10 min default for no-monitor sessions)
         let userTimeout = SettingsManager.shared.sessionTimeout
@@ -720,7 +767,23 @@ final class AppState {
         // 5. Reclaim memory for abandoned tool_use_id cache entries.
         prunePendingToolUses()
 
-        refreshDerivedState()
+        if cleanupFingerprint() != fingerprintBefore {
+            refreshDerivedState()
+        }
+    }
+
+    /// A cheap digest of the fields the sweep mutates. Two ticks that leave
+    /// every card as it was produce the same value.
+    private func cleanupFingerprint() -> Int {
+        var hasher = Hasher()
+        hasher.combine(sessions.count)
+        for (id, session) in sessions {
+            hasher.combine(id)
+            hasher.combine(session.status)
+            hasher.combine(session.currentTool)
+            hasher.combine(session.toolDescription)
+        }
+        return hasher.finalize()
     }
 
     /// Settle a native app's thinking card idle once its transcript shows
@@ -953,6 +1016,8 @@ final class AppState {
         subagentModelObservations.removeValue(forKey: sessionId)
         subagentModelReads.removeValue(forKey: sessionId)
         hermesStoreReads.removeValue(forKey: sessionId)
+        // A removed session's unfinished tool calls can never be answered.
+        pendingToolUses = pendingToolUses.filter { $0.key.sessionId != sessionId }
         hostHarnessProbes.removeValue(forKey: sessionId)
         hostHarnessProbeRetryAt.removeValue(forKey: sessionId)
         claudeTerminalProbes.removeValue(forKey: sessionId)
@@ -1455,6 +1520,7 @@ final class AppState {
         if totalSessionCount != summary.totalSessionCount { totalSessionCount = summary.totalSessionCount }
         ESP32StatePublisher.shared.notifyDirty()
         AppleCompanionPublisher.shared.notifyDirty()
+        rescheduleCleanupIfNeeded()
     }
 
     private func refreshProviderTitle(for trackedSessionId: String, providerSessionId: String? = nil) {
@@ -1483,11 +1549,9 @@ final class AppState {
     }
 
     @ObservationIgnored
-    @ObservationIgnored
     private var providerTitleReads: [String: ProviderTitleRead] = [:]
     /// Per card, bumped when a title arrives from elsewhere (Codex's
     /// `thread/started`): a store read started before then is stale.
-    @ObservationIgnored
     @ObservationIgnored
     private var providerTitleGenerations: [String: Int] = [:]
 
