@@ -149,8 +149,8 @@ public final class PrayerTimeManager: ObservableObject {
 
     public var qiblaCompassDirection: String {
         let deg = qiblaDegrees
-        let cardinals = ["U", "UTL", "TL", "TTL", "T", "TTG", "TG", "STG",
-                         "S", "SBD", "BD", "BBD", "B", "BBL", "BL", "UBL"]
+        let cardinals = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                         "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
         let index = Int(round(deg.truncatingRemainder(dividingBy: 360) / 22.5)) % 16
         return cardinals[index]
     }
@@ -158,10 +158,10 @@ public final class PrayerTimeManager: ObservableObject {
     public var qiblaCompassDirectionFull: String {
         let deg = qiblaDegrees
         let cardinals = [
-            "Utara", "Utara Timur Laut", "Timur Laut", "Timur Timur Laut",
-            "Timur", "Timur Menenggara", "Tenggara", "Selatan Menenggara",
-            "Selatan", "Selatan Barat Daya", "Barat Daya", "Barat Barat Daya",
-            "Barat", "Barat Barat Laut", "Barat Laut", "Utara Barat Laut"
+            "North", "North-Northeast", "Northeast", "East-Northeast",
+            "East", "East-Southeast", "Southeast", "South-Southeast",
+            "South", "South-Southwest", "Southwest", "West-Southwest",
+            "West", "West-Northwest", "Northwest", "North-Northwest"
         ]
         let index = Int(round(deg.truncatingRemainder(dividingBy: 360) / 22.5)) % 16
         return cardinals[index]
@@ -400,7 +400,7 @@ public final class PrayerTimeManager: ObservableObject {
             let key = "\(next.prayer.rawValue)-\(alertBeforeMinutes)"
             if !triggeredAlerts.contains(key) {
                 triggeredAlerts.insert(key)
-                let title = "\(alertBeforeMinutes) Menit Menuju \(next.prayer.displayName)"
+                let title = "\(alertBeforeMinutes) Minutes to \(next.prayer.displayName)"
                 let subtitle = "\(currentTimeString) · \(locationService.displayName)"
                 enqueueOrPresentBanner(title: title, subtitle: subtitle, appState: appState)
             }
@@ -411,7 +411,7 @@ public final class PrayerTimeManager: ObservableObject {
             let key = "\(next.prayer.rawValue)-0"
             if !triggeredAlerts.contains(key) {
                 triggeredAlerts.insert(key)
-                let title = "Waktu Salat \(next.prayer.displayName) Telah Tiba"
+                let title = "\(next.prayer.displayName) Time Has Arrived"
                 let subtitle = "\(currentTimeString) · \(locationService.displayName)"
                 enqueueOrPresentBanner(title: title, subtitle: subtitle, appState: appState)
             }

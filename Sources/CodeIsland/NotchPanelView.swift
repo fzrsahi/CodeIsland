@@ -354,10 +354,10 @@ struct NotchPanelView: View {
     }
 
     private var quotaWingWidth: CGFloat {
-        guard hasQuotaChip else { return 84 }
+        guard hasQuotaChip else { return 88 }
         let limit = QuotaChip.limit(appState: appState, enabled: showClaudeQuota, modeRaw: claudeQuotaChip)
         let chipWidth = quotaChipWidth > 0 ? quotaChipWidth : (limit.map { QuotaChip.estimatedWidth(for: $0) } ?? 90)
-        return max(142, mascotSize + chipWidth + 28)
+        return max(148, mascotSize + chipWidth + 32)
     }
 
     /// Symmetrical wing width calculated dynamically — ultra-compact, sleek, and balanced
@@ -368,7 +368,7 @@ struct NotchPanelView: View {
         if isHoveringRightWing && !shouldShowExpanded {
             return 154
         }
-        var width: CGFloat = 84
+        var width: CGFloat = 88
         if hasQuotaChip {
             width = max(width, quotaWingWidth)
         }
@@ -505,7 +505,7 @@ struct NotchPanelView: View {
                             expandedTab: expandedTabBinding,
                             workspaceManager: workspaceManager
                         )
-                            .padding(.leading, 10)
+                            .padding(.leading, 12)
                             .frame(
                                 width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
                                 alignment: .leading
@@ -541,7 +541,7 @@ struct NotchPanelView: View {
                             workspaceManager: workspaceManager,
                             expandedWingWidth: expandedWingWidth
                         )
-                            .padding(.trailing, 10)
+                            .padding(.trailing, 12)
                             .frame(
                                 width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
                                 alignment: .trailing

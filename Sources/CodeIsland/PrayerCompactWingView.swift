@@ -38,7 +38,7 @@ public struct PrayerCompactWingView: View {
                 HStack(spacing: 2) {
                     Text(next.prayer.displayName)
                         .font(.system(size: 8, weight: .semibold, design: isPixel ? .monospaced : .rounded))
-                    Text(diffMins <= 0 ? "Tiba" : "-\(diffMins)m")
+                    Text(diffMins <= 0 ? "NOW" : "-\(diffMins)m")
                         .font(.system(size: 8, weight: .bold, design: isPixel ? .monospaced : .rounded))
                 }
                 .padding(.horizontal, 4.5)

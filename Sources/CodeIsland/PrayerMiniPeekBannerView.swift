@@ -99,7 +99,7 @@ public struct PrayerMiniPeekBannerView: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { if $0 { hoveredButton = "open" } else if hoveredButton == "open" { hoveredButton = nil } }
-                .help("Buka Tab Sholat Lengkap")
+                .help("Open Prayer Tab")
 
                 // Snooze 5m Button
                 Button(action: {
@@ -119,7 +119,7 @@ public struct PrayerMiniPeekBannerView: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { if $0 { hoveredButton = "snooze" } else if hoveredButton == "snooze" { hoveredButton = nil } }
-                .help("Tunda pengingat 5 menit")
+                .help("Snooze reminder 5 minutes")
 
                 // Dismiss Button
                 Button(action: {
@@ -139,7 +139,7 @@ public struct PrayerMiniPeekBannerView: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { if $0 { hoveredButton = "dismiss" } else if hoveredButton == "dismiss" { hoveredButton = nil } }
-                .help("Tutup pengingat")
+                .help("Dismiss reminder")
             }
         }
         .padding(.horizontal, 10)
@@ -180,7 +180,7 @@ public struct PrayerMiniPeekBannerView: View {
 
                     if manager.upcomingPrayer != nil {
                         let diffMins = manager.minutesUntilNextPrayer
-                        Text(diffMins <= 0 ? "Tiba" : "-\(diffMins)m")
+                        Text(diffMins <= 0 ? "NOW" : "-\(diffMins)m")
                             .font(.system(size: 8.5, weight: .bold, design: .rounded))
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1.5)
@@ -207,7 +207,7 @@ public struct PrayerMiniPeekBannerView: View {
                     NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                     onOpenFull()
                 }) {
-                    Text("Buka")
+                    Text("Open")
                         .font(.system(size: 9.5, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 8)
@@ -239,7 +239,7 @@ public struct PrayerMiniPeekBannerView: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { if $0 { hoveredButton = "snooze" } else if hoveredButton == "snooze" { hoveredButton = nil } }
-                .help("Tunda 5 menit")
+                .help("Snooze 5 minutes")
 
                 // Dismiss Button
                 Button(action: {
