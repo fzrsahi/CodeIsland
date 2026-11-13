@@ -38,10 +38,10 @@ public struct PrayerCompactWingView: View {
                 HStack(spacing: 2) {
                     Text(next.prayer.displayName)
                         .font(.system(size: 8, weight: .semibold, design: isPixel ? .monospaced : .rounded))
-                    Text(diffMins <= 0 ? "Now" : "-\(diffMins)m")
+                    Text(diffMins <= 0 ? "Tiba" : "-\(diffMins)m")
                         .font(.system(size: 8, weight: .bold, design: isPixel ? .monospaced : .rounded))
                 }
-                .padding(.horizontal, 4)
+                .padding(.horizontal, 4.5)
                 .padding(.vertical, 1.5)
                 .background(
                     Group {
@@ -55,38 +55,6 @@ public struct PrayerCompactWingView: View {
                     }
                 )
                 .foregroundStyle(isPixel ? Color(red: 0.12, green: 0.84, blue: 0.38) : (diffMins <= 15 ? manager.currentPhase.accentColor : Color.white.opacity(0.8)))
-            }
-
-            // Solar Progress Horizon Strip
-            ZStack(alignment: .leading) {
-                if isPixel {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.12))
-                        .frame(width: 30, height: 3)
-
-                    Rectangle()
-                        .fill(Color(red: 0.12, green: 0.84, blue: 0.38))
-                        .frame(width: max(3, 30 * CGFloat(manager.solarProgress)), height: 3)
-                } else {
-                    Capsule()
-                        .fill(Color.white.opacity(0.12))
-                        .frame(width: 32, height: 2.5)
-
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [manager.currentPhase.accentColor.opacity(0.4), manager.currentPhase.accentColor],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: max(3, 32 * CGFloat(manager.solarProgress)), height: 2.5)
-
-                    Circle()
-                        .fill(manager.currentPhase.accentColor)
-                        .frame(width: 4, height: 4)
-                        .offset(x: max(0, min(28, 32 * CGFloat(manager.solarProgress) - 2)))
-                }
             }
         }
         .padding(.horizontal, 4)

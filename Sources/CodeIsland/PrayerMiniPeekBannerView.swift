@@ -61,7 +61,7 @@ public struct PrayerMiniPeekBannerView: View {
 
                     if manager.upcomingPrayer != nil {
                         let diffMins = manager.minutesUntilNextPrayer
-                        Text(diffMins <= 0 ? "[NOW]" : "[\(diffMins)M]")
+                        Text(diffMins <= 0 ? "[TIBA]" : "[-\(diffMins)M]")
                             .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
                     }
@@ -180,7 +180,7 @@ public struct PrayerMiniPeekBannerView: View {
 
                     if manager.upcomingPrayer != nil {
                         let diffMins = manager.minutesUntilNextPrayer
-                        Text(diffMins <= 0 ? "Now" : "-\(diffMins)m")
+                        Text(diffMins <= 0 ? "Tiba" : "-\(diffMins)m")
                             .font(.system(size: 8.5, weight: .bold, design: .rounded))
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1.5)
@@ -207,7 +207,7 @@ public struct PrayerMiniPeekBannerView: View {
                     NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                     onOpenFull()
                 }) {
-                    Text("View")
+                    Text("Buka")
                         .font(.system(size: 9.5, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 8)
