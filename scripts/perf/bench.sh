@@ -69,7 +69,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 QUICK=(idle idle-prayer working music)
-FULL=("${QUICK[@]}" multi stress working-expanded waiting-long)
+FULL=("${QUICK[@]}" multi stress working-expanded waiting-long approval-card)
 if [[ ${#SCENARIOS[@]} -eq 0 ]]; then
   if [[ "$SUITE" == "full" ]]; then SCENARIOS=("${FULL[@]}"); else SCENARIOS=("${QUICK[@]}"); fi
 fi
@@ -88,8 +88,10 @@ scenario_spec() {
     multi)            echo "multi|--collapsed|15" ;;
     stress)           echo "stress|--collapsed|15" ;;
     working-expanded) echo "working||15" ;;
-    # Waiting > 60 s without interaction (the long-wait state).
-    waiting-long)     echo "approval|--collapsed|65" ;;
+    # Waiting > 60 s without interaction: collapsed, approval pending, tool live.
+    waiting-long)     echo "waiting|--collapsed|65" ;;
+    # The expanded approval card (regression only).
+    approval-card)    echo "approval||15" ;;
     *) return 1 ;;
   esac
 }
