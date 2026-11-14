@@ -342,7 +342,7 @@ struct NotchPanelView: View {
     }
 
     private var hasQuotaChip: Bool {
-        guard showAgentDetails, showClaudeQuota, !shouldShowExpanded,
+        guard showAgentDetails, showClaudeQuota, !shouldShowExpanded, !nowPlaying.isPlaying,
               let _ = QuotaChip.limit(appState: appState, enabled: showClaudeQuota, modeRaw: claudeQuotaChip),
               appState.claudeQuota.snapshot != nil
         else { return false }
@@ -368,15 +368,15 @@ struct NotchPanelView: View {
         if isHoveringRightWing && !shouldShowExpanded {
             return 154
         }
+        if prayerManager.isPrayerPrioritized && !shouldShowExpanded {
+            return 134
+        }
+        if nowPlaying.isPlaying && !shouldShowExpanded {
+            return 58
+        }
         var width: CGFloat = 88
         if hasQuotaChip {
             width = max(width, quotaWingWidth)
-        }
-        if prayerManager.isPrayerPrioritized {
-            width = max(width, 134)
-        }
-        if nowPlaying.isPlaying {
-            width = max(width, 120)
         }
         return width
     }
@@ -1233,7 +1233,7 @@ private struct CompactLeftWing: View {
                         insertion: .opacity.combined(with: .scale(scale: 0.9)),
                         removal: .opacity
                     ))
-                } else if showAgentDetails,
+                } else if !nowPlaying.isPlaying && showAgentDetails,
                           let limit = QuotaChip.limit(appState: appState, enabled: showClaudeQuota, modeRaw: claudeQuotaChip),
                           let snapshot = appState.claudeQuota.snapshot {
                     // Plan-limit chip takes the tool slot while no tool is
