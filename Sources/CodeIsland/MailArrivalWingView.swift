@@ -7,19 +7,19 @@ public struct RollerCoasterGeometry {
     // Generates cubic Bézier spline segments:
     // Starts at x = 4 (center notch, right beside camera)
     // Travels to the right into the mailbox:
-    // 1. isCompact == true (Notch Tidur / Idle, width ~62): Direct, snappy curved swoop into mailbox (entryX = 40)
-    // 2. isCompact == false (Agent Aktif / Jalan, width = 118): 360° loop-de-loop (apex y = 9.5, never cut off by top bezel, entryX = 96)
+    // 1. isCompact == true (Notch Tidur / Idle, width ~62): Direct, snappy curved swoop into mailbox (entryX = 37)
+    // 2. isCompact == false (Agent Aktif / Jalan, width = 118): 360° loop-de-loop (apex y = 9.5, never cut off by top bezel, entryX = 93)
 
     public static func controlPoints(for width: CGFloat, isCompact: Bool) -> [(p0: CGPoint, p1: CGPoint, p2: CGPoint, p3: CGPoint)] {
-        let entryX = max(width - 22, isCompact ? 36 : 78)
-        let entryY: CGFloat = 13.5
+        let entryX = max(width - 25, isCompact ? 35 : 78)
+        let entryY: CGFloat = 14.0
 
         if isCompact {
             // Direct curved swoop from center (x = 4) into mailbox (x = entryX)
             let seg = (
-                p0: CGPoint(x: 4, y: 13.5),
-                p1: CGPoint(x: 16, y: 17.0),
-                p2: CGPoint(x: entryX - 10, y: 11.5),
+                p0: CGPoint(x: 4, y: 14.0),
+                p1: CGPoint(x: 16, y: 17.5),
+                p2: CGPoint(x: entryX - 10, y: 12.0),
                 p3: CGPoint(x: entryX, y: entryY)
             )
             return [seg]
@@ -27,15 +27,15 @@ public struct RollerCoasterGeometry {
 
         // Active Agent Mode (width = 118):
         // Envelope starts at x = 4 (center notch, right beside camera)
-        // Curves up to loop apex at loopX ~ 48, y = 9.5
+        // Curves up to loop apex at loopX ~ 47, y = 9.5
         // Loops clockwise down to y = 20.0
-        // Exits loop at x = 64, y = 13.5
-        // Glides straight into mailbox door at (entryX, 13.5)
+        // Exits loop at x = 62, y = 14.0
+        // Glides straight into mailbox door at (entryX, 14.0)
         let loopX = min(max(entryX * 0.50, 44), 52)
 
         let seg0 = (
-            p0: CGPoint(x: 4, y: 13.5),
-            p1: CGPoint(x: loopX - 24, y: 13.5),
+            p0: CGPoint(x: 4, y: 14.0),
+            p1: CGPoint(x: loopX - 24, y: 14.0),
             p2: CGPoint(x: loopX - 12, y: 9.5),
             p3: CGPoint(x: loopX, y: 9.5)
         )
@@ -48,12 +48,12 @@ public struct RollerCoasterGeometry {
         let seg2 = (
             p0: CGPoint(x: loopX + 8, y: 20.0),
             p1: CGPoint(x: loopX + 1, y: 21.0),
-            p2: CGPoint(x: loopX + 2, y: 13.5),
-            p3: CGPoint(x: loopX + 16, y: 13.5)
+            p2: CGPoint(x: loopX + 2, y: 14.0),
+            p3: CGPoint(x: loopX + 15, y: 14.0)
         )
         let seg3 = (
-            p0: CGPoint(x: loopX + 16, y: 13.5),
-            p1: CGPoint(x: loopX + 30, y: 13.5),
+            p0: CGPoint(x: loopX + 15, y: 14.0),
+            p1: CGPoint(x: loopX + 28, y: 14.0),
             p2: CGPoint(x: entryX - 8, y: entryY),
             p3: CGPoint(x: entryX, y: entryY)
         )
@@ -249,23 +249,23 @@ public struct MailArrivalWingView: View {
                                 )
                             }
 
-                            // Micro +1 badge popping cleanly above mailbox dome
+                            // Clean +1 badge popping cleanly above mailbox dome
                             if showBadge {
                                 Text("+1")
-                                    .font(.system(size: 5.5, weight: .heavy, design: isRetro ? .monospaced : .rounded))
+                                    .font(.system(size: 6.8, weight: .heavy, design: isRetro ? .monospaced : .rounded))
                                     .foregroundStyle(.white)
-                                    .padding(.horizontal, 2.2)
-                                    .padding(.vertical, 0.6)
+                                    .padding(.horizontal, 2.8)
+                                    .padding(.vertical, 0.8)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 2.2)
+                                        RoundedRectangle(cornerRadius: 2.8)
                                             .fill(accentColor)
-                                            .shadow(color: accentColor.opacity(0.4), radius: 1.0)
+                                            .shadow(color: accentColor.opacity(0.45), radius: 1.2)
                                     )
-                                    .offset(x: -1, y: -4)
+                                    .offset(x: -1, y: -4.5)
                                     .transition(.scale.combined(with: .opacity))
                             }
                         }
-                        .frame(width: 16, height: 14)
+                        .frame(width: 19, height: 16.5)
                         .padding(.trailing, 6)
                     }
                     .frame(width: w, height: h, alignment: .trailing)
@@ -288,18 +288,18 @@ private struct ModernMiniEnvelopeView: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 1.2)
+            RoundedRectangle(cornerRadius: 1.5)
                 .fill(Color.white)
-                .frame(width: 10, height: 6.5)
-                .shadow(color: Color.black.opacity(0.35), radius: 0.8)
+                .frame(width: 12.5, height: 8.5)
+                .shadow(color: Color.black.opacity(0.35), radius: 1.0)
 
             Path { path in
                 path.move(to: CGPoint(x: 0, y: 0))
-                path.addLine(to: CGPoint(x: 5.0, y: 3.6))
-                path.addLine(to: CGPoint(x: 10, y: 0))
+                path.addLine(to: CGPoint(x: 6.25, y: 4.6))
+                path.addLine(to: CGPoint(x: 12.5, y: 0))
             }
-            .stroke(accentColor, lineWidth: 0.8)
-            .frame(width: 10, height: 6.5)
+            .stroke(accentColor, lineWidth: 0.9)
+            .frame(width: 12.5, height: 8.5)
         }
     }
 }
@@ -313,33 +313,33 @@ private struct PixelMiniEnvelopeView: View {
         ZStack {
             Rectangle()
                 .fill(Color.white)
-                .frame(width: 10, height: 7)
+                .frame(width: 12.5, height: 8.5)
 
             VStack {
                 Spacer()
                 Rectangle()
                     .fill(Color(red: 0.80, green: 0.83, blue: 0.88))
-                    .frame(width: 10, height: 1)
+                    .frame(width: 12.5, height: 1)
             }
-            .frame(width: 10, height: 7)
+            .frame(width: 12.5, height: 8.5)
 
             Path { path in
                 path.move(to: CGPoint(x: 0, y: 0))
-                path.addLine(to: CGPoint(x: 5.0, y: 3.5))
-                path.addLine(to: CGPoint(x: 10, y: 0))
+                path.addLine(to: CGPoint(x: 6.25, y: 4.4))
+                path.addLine(to: CGPoint(x: 12.5, y: 0))
             }
-            .stroke(accentColor, style: StrokeStyle(lineWidth: 1.0, lineCap: .square))
-            .frame(width: 10, height: 7)
+            .stroke(accentColor, style: StrokeStyle(lineWidth: 1.1, lineCap: .square))
+            .frame(width: 12.5, height: 8.5)
 
             Rectangle()
                 .fill(Color(red: 0.94, green: 0.25, blue: 0.37))
-                .frame(width: 2.5, height: 1.5)
-                .offset(y: 0.8)
+                .frame(width: 3.0, height: 1.8)
+                .offset(y: 1.0)
         }
     }
 }
 
-// MARK: - Modern Clean Suburban Curb Mailbox (Miniaturized 16x14, Warm Wood Post & Crisp Metallic Dome)
+// MARK: - Modern Clean Suburban Curb Mailbox (19x16.5, Warm Wood Post & Crisp Metallic Dome)
 
 private struct ModernCleanCurbMailboxView: View {
     let flagUp: Bool
@@ -348,21 +348,21 @@ private struct ModernCleanCurbMailboxView: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // 1. Warm Timber Post (Height 5, firmly inside notch bounds)
+            // 1. Warm Timber Post (Height 6, safely inside notch)
             HStack(spacing: 0) {
-                Rectangle().fill(Color(red: 0.68, green: 0.32, blue: 0.05)).frame(width: 0.7, height: 5)
-                Rectangle().fill(Color(red: 0.45, green: 0.20, blue: 0.05)).frame(width: 1.0, height: 5)
+                Rectangle().fill(Color(red: 0.68, green: 0.32, blue: 0.05)).frame(width: 0.8, height: 6)
+                Rectangle().fill(Color(red: 0.45, green: 0.20, blue: 0.05)).frame(width: 1.1, height: 6)
             }
-            .offset(x: 7.2, y: 0)
+            .offset(x: 8.5, y: 0)
 
             // 2. Mailbox Body
             ZStack(alignment: .trailing) {
                 // Curved suburban dome with silver top highlight & deep slate shadow
                 Path { path in
-                    path.move(to: CGPoint(x: 1, y: 3))
-                    path.addQuadCurve(to: CGPoint(x: 14, y: 3), control: CGPoint(x: 7.5, y: 0.5))
-                    path.addLine(to: CGPoint(x: 14, y: 8.5))
-                    path.addLine(to: CGPoint(x: 1, y: 8.5))
+                    path.move(to: CGPoint(x: 1, y: 3.5))
+                    path.addQuadCurve(to: CGPoint(x: 16, y: 3.5), control: CGPoint(x: 8.5, y: 0.5))
+                    path.addLine(to: CGPoint(x: 16, y: 10))
+                    path.addLine(to: CGPoint(x: 1, y: 10))
                     path.closeSubpath()
                 }
                 .fill(
@@ -378,59 +378,59 @@ private struct ModernCleanCurbMailboxView: View {
                 )
                 .overlay(
                     Path { path in
-                        path.move(to: CGPoint(x: 1, y: 3))
-                        path.addQuadCurve(to: CGPoint(x: 14, y: 3), control: CGPoint(x: 7.5, y: 0.5))
-                        path.addLine(to: CGPoint(x: 14, y: 8.5))
-                        path.addLine(to: CGPoint(x: 1, y: 8.5))
+                        path.move(to: CGPoint(x: 1, y: 3.5))
+                        path.addQuadCurve(to: CGPoint(x: 16, y: 3.5), control: CGPoint(x: 8.5, y: 0.5))
+                        path.addLine(to: CGPoint(x: 16, y: 10))
+                        path.addLine(to: CGPoint(x: 1, y: 10))
                         path.closeSubpath()
                     }
-                    .stroke(Color.white.opacity(0.85), lineWidth: 0.7)
+                    .stroke(Color.white.opacity(0.85), lineWidth: 0.8)
                 )
 
                 // Entrance cavity on left
                 Path { path in
-                    path.move(to: CGPoint(x: 1, y: 3))
-                    path.addQuadCurve(to: CGPoint(x: 4.5, y: 3), control: CGPoint(x: 2.75, y: 1.2))
-                    path.addLine(to: CGPoint(x: 4.5, y: 8.5))
-                    path.addLine(to: CGPoint(x: 1, y: 8.5))
+                    path.move(to: CGPoint(x: 1, y: 3.5))
+                    path.addQuadCurve(to: CGPoint(x: 5, y: 3.5), control: CGPoint(x: 3, y: 1.3))
+                    path.addLine(to: CGPoint(x: 5, y: 10))
+                    path.addLine(to: CGPoint(x: 1, y: 10))
                     path.closeSubpath()
                 }
                 .fill(Color(red: 0.02, green: 0.04, blue: 0.08))
                 .overlay(
                     Path { path in
-                        path.move(to: CGPoint(x: 1, y: 3))
-                        path.addQuadCurve(to: CGPoint(x: 4.5, y: 3), control: CGPoint(x: 2.75, y: 1.2))
-                        path.addLine(to: CGPoint(x: 4.5, y: 8.5))
-                        path.addLine(to: CGPoint(x: 1, y: 8.5))
+                        path.move(to: CGPoint(x: 1, y: 3.5))
+                        path.addQuadCurve(to: CGPoint(x: 5, y: 3.5), control: CGPoint(x: 3, y: 1.3))
+                        path.addLine(to: CGPoint(x: 5, y: 10))
+                        path.addLine(to: CGPoint(x: 1, y: 10))
                         path.closeSubpath()
                     }
-                    .stroke(accentColor, lineWidth: 0.7)
+                    .stroke(accentColor, lineWidth: 0.8)
                 )
 
                 // Red Flip-up Flag with yellow brass bolt
                 ZStack(alignment: .bottomLeading) {
                     VStack(alignment: .leading, spacing: 0) {
-                        Rectangle().fill(Color(red: 0.98, green: 0.32, blue: 0.32)).frame(width: 2.5, height: 1.5)
-                        Rectangle().fill(Color(red: 0.90, green: 0.20, blue: 0.20)).frame(width: 1.0, height: 2.5)
+                        Rectangle().fill(Color(red: 0.98, green: 0.32, blue: 0.32)).frame(width: 3.0, height: 1.8)
+                        Rectangle().fill(Color(red: 0.90, green: 0.20, blue: 0.20)).frame(width: 1.2, height: 3.0)
                     }
 
                     Circle()
                         .fill(Color(red: 0.99, green: 0.88, blue: 0.28))
-                        .frame(width: 1.5, height: 1.5)
-                        .offset(x: -0.2, y: 3)
+                        .frame(width: 1.8, height: 1.8)
+                        .offset(x: -0.2, y: 3.5)
                 }
                 .rotationEffect(.degrees(flagUp ? -72 : 0), anchor: .bottomLeading)
-                .offset(x: 2, y: -2)
+                .offset(x: 2.5, y: -2.5)
             }
-            .frame(width: 15, height: 9)
-            .offset(y: -4.5)
+            .frame(width: 17, height: 10.5)
+            .offset(y: -5.5)
             .scaleEffect(recoil ? 1.12 : 1.0, anchor: .center)
         }
-        .frame(width: 16, height: 14)
+        .frame(width: 19, height: 16.5)
     }
 }
 
-// MARK: - Authentic 8-Bit Pixel Art Curb Mailbox (Miniaturized 16x14, Solid Shading, Volume & Depth)
+// MARK: - Authentic 8-Bit Pixel Art Curb Mailbox (19x16.5, Solid Shading, Volume & Depth)
 
 private struct RetroPixelCurbMailboxView: View {
     let flagUp: Bool
@@ -439,60 +439,60 @@ private struct RetroPixelCurbMailboxView: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // 1. Shaded 3-Tone Wooden Timber Post (Height 5, safely inside notch)
+            // 1. Shaded 3-Tone Wooden Timber Post (Height 6, safely inside notch)
             HStack(spacing: 0) {
-                Rectangle().fill(Color(red: 0.71, green: 0.33, blue: 0.04)).frame(width: 0.7, height: 5)
-                Rectangle().fill(Color(red: 0.47, green: 0.21, blue: 0.06)).frame(width: 1.0, height: 5)
-                Rectangle().fill(Color(red: 0.27, green: 0.10, blue: 0.01)).frame(width: 0.7, height: 5)
+                Rectangle().fill(Color(red: 0.71, green: 0.33, blue: 0.04)).frame(width: 0.8, height: 6)
+                Rectangle().fill(Color(red: 0.47, green: 0.21, blue: 0.06)).frame(width: 1.1, height: 6)
+                Rectangle().fill(Color(red: 0.27, green: 0.10, blue: 0.01)).frame(width: 0.7, height: 6)
             }
-            .offset(x: 7.0, y: 0)
+            .offset(x: 8.2, y: 0)
 
             // 2. Stepped Curved Dome with Solid Pixel Shading & Volume
             ZStack(alignment: .trailing) {
                 VStack(spacing: 0) {
                     // Top dome highlights (light silver reflection)
-                    Rectangle().fill(Color(red: 0.95, green: 0.96, blue: 0.98)).frame(width: 9, height: 1)
-                    Rectangle().fill(Color(red: 0.80, green: 0.84, blue: 0.88)).frame(width: 12, height: 1)
+                    Rectangle().fill(Color(red: 0.95, green: 0.96, blue: 0.98)).frame(width: 11, height: 1)
+                    Rectangle().fill(Color(red: 0.80, green: 0.84, blue: 0.88)).frame(width: 14, height: 1)
 
                     // Upper body midtone
-                    Rectangle().fill(Color(red: 0.39, green: 0.45, blue: 0.55)).frame(width: 14, height: 1.8)
+                    Rectangle().fill(Color(red: 0.39, green: 0.45, blue: 0.55)).frame(width: 16.5, height: 2.2)
 
                     // Lower body & shadow depth
-                    Rectangle().fill(Color(red: 0.20, green: 0.25, blue: 0.33)).frame(width: 14, height: 2.0)
-                    Rectangle().fill(Color(red: 0.12, green: 0.16, blue: 0.23)).frame(width: 14, height: 1.2)
-                    Rectangle().fill(Color(red: 0.06, green: 0.09, blue: 0.16)).frame(width: 12, height: 1)
+                    Rectangle().fill(Color(red: 0.20, green: 0.25, blue: 0.33)).frame(width: 16.5, height: 2.4)
+                    Rectangle().fill(Color(red: 0.12, green: 0.16, blue: 0.23)).frame(width: 16.5, height: 1.5)
+                    Rectangle().fill(Color(red: 0.06, green: 0.09, blue: 0.16)).frame(width: 14, height: 1.2)
                 }
                 .overlay(alignment: .leading) {
                     HStack(spacing: 0) {
                         Rectangle()
                             .fill(accentColor)
-                            .frame(width: 0.8, height: 5)
+                            .frame(width: 1.0, height: 6.0)
                         Rectangle()
                             .fill(Color(red: 0.01, green: 0.02, blue: 0.09))
-                            .frame(width: 3.2, height: 5)
+                            .frame(width: 3.8, height: 6.0)
                     }
-                    .offset(x: 1, y: 0.8)
+                    .offset(x: 1, y: 1.0)
                 }
 
                 // 3. Pixel Red Flag with Brass Pivot Pin
                 ZStack(alignment: .bottomLeading) {
                     VStack(alignment: .leading, spacing: 0) {
-                        Rectangle().fill(Color(red: 0.97, green: 0.44, blue: 0.44)).frame(width: 2.5, height: 1.5)
-                        Rectangle().fill(Color(red: 0.88, green: 0.18, blue: 0.18)).frame(width: 1.0, height: 2.5)
+                        Rectangle().fill(Color(red: 0.97, green: 0.44, blue: 0.44)).frame(width: 3.0, height: 1.8)
+                        Rectangle().fill(Color(red: 0.88, green: 0.18, blue: 0.18)).frame(width: 1.2, height: 3.0)
                     }
 
                     Rectangle()
                         .fill(Color(red: 0.99, green: 0.88, blue: 0.28))
-                        .frame(width: 1.5, height: 1.5)
-                        .offset(x: -0.3, y: 3)
+                        .frame(width: 1.8, height: 1.8)
+                        .offset(x: -0.3, y: 3.5)
                 }
                 .rotationEffect(.degrees(flagUp ? -72 : 0), anchor: .bottomLeading)
-                .offset(x: 2, y: -2)
+                .offset(x: 2.5, y: -2.5)
             }
-            .frame(width: 15, height: 9)
-            .offset(y: -4.5)
+            .frame(width: 17, height: 10.5)
+            .offset(y: -5.5)
             .scaleEffect(recoil ? 1.12 : 1.0, anchor: .center)
         }
-        .frame(width: 16, height: 14)
+        .frame(width: 19, height: 16.5)
     }
 }
