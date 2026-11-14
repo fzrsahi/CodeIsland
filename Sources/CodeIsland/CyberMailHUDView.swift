@@ -209,38 +209,40 @@ private struct ModernCleanMailHUDContentView: View {
                     .lineLimit(2)
                     .lineSpacing(2)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer(minLength: 6)
+            // Fixed Action Slot: Prevents ANY text wrap shift or vertical jump on hover
+            ZStack(alignment: .trailing) {
+                if isHovered {
+                    HStack(spacing: 6) {
+                        Button {
+                            mailManager.markAsRead(id: mail.id)
+                        } label: {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                                .padding(4)
+                                .background(Circle().fill(Color.white.opacity(0.10)))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Tandai sudah dibaca")
 
-            // Quick Actions on Hover
-            if isHovered {
-                HStack(spacing: 6) {
-                    Button {
-                        mailManager.markAsRead(id: mail.id)
-                    } label: {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
-                            .padding(4)
-                            .background(Circle().fill(Color.white.opacity(0.10)))
+                        Button {
+                            mailManager.openInMailApp(id: mail.id)
+                        } label: {
+                            Image(systemName: "arrow.up.right.circle.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(themeColor)
+                                .padding(4)
+                                .background(Circle().fill(Color.white.opacity(0.10)))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Buka email di Apple Mail")
                     }
-                    .buttonStyle(.plain)
-                    .help("Tandai sudah dibaca")
-
-                    Button {
-                        mailManager.openInMailApp(id: mail.id)
-                    } label: {
-                        Image(systemName: "arrow.up.right.circle.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(themeColor)
-                            .padding(4)
-                            .background(Circle().fill(Color.white.opacity(0.10)))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Buka email di Apple Mail")
+                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
                 }
-                .transition(.opacity.combined(with: .scale(scale: 0.92)))
             }
+            .frame(width: 52, alignment: .trailing)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
@@ -426,36 +428,38 @@ private struct RetroCyberMailHUDContentView: View {
                     .lineLimit(2)
                     .lineSpacing(2)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer(minLength: 6)
+            // Fixed Action Slot: Prevents ANY text wrap shift or vertical jump on hover
+            ZStack(alignment: .trailing) {
+                if isHovered {
+                    HStack(spacing: 6) {
+                        Button {
+                            mailManager.markAsRead(id: mail.id)
+                        } label: {
+                            PixelIcon(glyph: .checkmark, color: Color(red: 0.12, green: 0.84, blue: 0.38), pixelSize: 1.25)
+                                .frame(width: 20, height: 20)
+                                .background(Color.black)
+                                .overlay(Rectangle().stroke(Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.5), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Tandai sudah dibaca")
 
-            // 8-Bit Pixel Hover Action Buttons
-            if isHovered {
-                HStack(spacing: 6) {
-                    Button {
-                        mailManager.markAsRead(id: mail.id)
-                    } label: {
-                        PixelIcon(glyph: .checkmark, color: Color(red: 0.12, green: 0.84, blue: 0.38), pixelSize: 1.25)
-                            .frame(width: 20, height: 20)
-                            .background(Color.black)
-                            .overlay(Rectangle().stroke(Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.5), lineWidth: 1))
+                        Button {
+                            mailManager.openInMailApp(id: mail.id)
+                        } label: {
+                            PixelIcon(glyph: .arrowUpRight, color: themeColor, pixelSize: 1.25)
+                                .frame(width: 20, height: 20)
+                                .background(Color.black)
+                                .overlay(Rectangle().stroke(themeColor.opacity(0.5), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Buka di Apple Mail")
                     }
-                    .buttonStyle(.plain)
-                    .help("Tandai sudah dibaca")
-
-                    Button {
-                        mailManager.openInMailApp(id: mail.id)
-                    } label: {
-                        PixelIcon(glyph: .arrowUpRight, color: themeColor, pixelSize: 1.25)
-                            .frame(width: 20, height: 20)
-                            .background(Color.black)
-                            .overlay(Rectangle().stroke(themeColor.opacity(0.5), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Buka di Apple Mail")
+                    .transition(.opacity)
                 }
-                .transition(.opacity)
             }
+            .frame(width: 48, alignment: .trailing)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
