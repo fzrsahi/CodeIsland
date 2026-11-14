@@ -10,8 +10,6 @@ final class PerfCounters: @unchecked Sendable {
     enum Name: String {
         /// Cleanup ticks that ran their sweep.
         case cleanupTickWork
-        /// Cleanup ticks that returned before sweeping.
-        case cleanupTickSkipped
         /// Session discovery scans started.
         case discoveryScan
         /// Buddy (ESP32) flush attempts, connected or not.

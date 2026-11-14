@@ -33,6 +33,11 @@ NOISE = {
     "footprintPeakMB": 5.0,
 }
 COUNTER_NOISE = 2.0             # per minute
+# Per-player AppleScript counters move by a whole probe per poll whenever a
+# browser opens or closes, so they get a floor of one player's worth of probes.
+# The regression this benchmark was built to catch is 20/min -> 4/min; a jump
+# back up still clears this floor.
+COUNTER_NOISE_BY_PREFIX = {"appleScriptExec.": 10.0}
 
 # Metrics shown and compared, in order. Report-only metrics have no noise floor.
 METRICS = [
@@ -255,7 +260,11 @@ def is_regression(key, value, base):
     if value is None or base is None:
         return False
     if key.startswith("counters."):
-        noise = COUNTER_NOISE
+        name = key[len("counters."):]
+        noise = next(
+            (floor for prefix, floor in COUNTER_NOISE_BY_PREFIX.items() if name.startswith(prefix)),
+            COUNTER_NOISE,
+        )
     elif key in NOISE:
         noise = NOISE[key]
     else:

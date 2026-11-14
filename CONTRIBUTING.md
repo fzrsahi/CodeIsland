@@ -110,7 +110,7 @@ scripts/perf/bench.sh --soak 24          # footprint every 10 min for 24 h, then
 | Counter | Counts |
 | --- | --- |
 | `appleScriptExec.<target>` | NowPlaying AppleScript probes per player/browser |
-| `cleanupTickWork` / `cleanupTickSkipped` | cleanup ticks that swept / returned early |
+| `cleanupTickWork` | cleanup ticks that ran their sweep |
 | `discoveryScan` | session discovery scans |
 | `publishESP32` / `publishCompanion` | device flush attempts, connected or not |
 | `hostingLayoutPass` | layout passes of the panel's hosting view (≈ SwiftUI frames) |

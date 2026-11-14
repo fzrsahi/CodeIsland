@@ -119,12 +119,18 @@ pinned_defaults() {
 
 # Players and browsers NowPlaying would probe; part of the environment because
 # each running one costs an AppleScript per poll.
+#
+# `lsappinfo list` (running apps), not `lsappinfo find bundleid=` (registered
+# apps): `find` also answers for an app that is installed but not running, which
+# put Safari in the baseline's environment while it was contributing nothing —
+# and then a run with Safari actually playing looked like a regression.
 running_players() {
   local ids=(com.spotify.client com.apple.Music com.apple.Safari com.brave.Browser
              com.google.Chrome company.thebrowser.Browser com.microsoft.edgemac)
-  local found=()
+  local running found=()
+  running="$(lsappinfo list 2>/dev/null)"
   for id in "${ids[@]}"; do
-    [[ -n "$(lsappinfo find bundleid="$id" 2>/dev/null)" ]] && found+=("$id")
+    [[ "$running" == *"bundleID=\"$id\""* ]] && found+=("$id")
   done
   printf '%s\n' "${found[@]+"${found[@]}"}"
 }
