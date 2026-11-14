@@ -648,8 +648,13 @@ struct SubNotchFloatingLyricCapsuleView: View {
     @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @State private var isHovered = false
     @State private var capsuleWidth: CGFloat = 180
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
 
     private var activePreset: FloatingLyricPreset {
         FloatingLyricPreset(rawValue: floatingLyricPreset) ?? .pureText
@@ -663,6 +668,7 @@ struct SubNotchFloatingLyricCapsuleView: View {
     }
 
     private var activeFontDesign: Font.Design {
+        if isPixel || activePreset == .retroPixel { return .monospaced }
         switch FloatingLyricFontDesign(rawValue: floatingLyricFontDesign) ?? .rounded {
         case .rounded: return .rounded
         case .monospaced: return .monospaced
@@ -671,9 +677,13 @@ struct SubNotchFloatingLyricCapsuleView: View {
     }
 
     private var activeNSFont: NSFont {
-        let size = CGFloat(floatingLyricFontSize)
+        let baseSize = CGFloat(floatingLyricFontSize)
+        let size = (activePreset == .retroPixel || isPixel) ? max(baseSize * 1.25, 12.5) : baseSize
         switch FloatingLyricFontDesign(rawValue: floatingLyricFontDesign) ?? .rounded {
         case .rounded:
+            if isPixel || activePreset == .retroPixel {
+                return NSFont.monospacedSystemFont(ofSize: size, weight: .bold)
+            }
             if let desc = NSFont.systemFont(ofSize: size, weight: .bold).fontDescriptor.withDesign(.rounded) {
                 return NSFont(descriptor: desc, size: size) ?? NSFont.boldSystemFont(ofSize: size)
             }
@@ -681,7 +691,7 @@ struct SubNotchFloatingLyricCapsuleView: View {
         case .monospaced:
             return NSFont.monospacedSystemFont(ofSize: size, weight: .bold)
         case .system:
-            return NSFont.boldSystemFont(ofSize: size)
+            return (isPixel || activePreset == .retroPixel) ? NSFont.monospacedSystemFont(ofSize: size, weight: .bold) : NSFont.boldSystemFont(ofSize: size)
         }
     }
 
@@ -942,16 +952,18 @@ struct SubNotchFloatingLyricCapsuleView: View {
 
         case .retroPixel:
             // Preset 6: 8-Bit Retro Arcade — stepped pixel typography & live pixel audio spectrum
+            let lyricFontSize: CGFloat = max(CGFloat(floatingLyricFontSize) * 1.25, 12.5)
             HStack(spacing: 6) {
                 Text("▶")
-                    .font(.system(size: 8, weight: .black, design: .monospaced))
+                    .font(.system(size: 10, weight: .black, design: .monospaced))
                     .foregroundStyle((MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme).color)
-                    .frame(width: 10)
+                    .frame(width: 12)
 
                 ZStack {
                     Text(activeDisplayText)
-                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .bold, design: .monospaced))
+                        .font(.system(size: lyricFontSize, weight: .bold, design: .monospaced))
                         .foregroundStyle(activeTextColor)
+                        .shadow(color: activeTextColor.opacity(0.4), radius: 3)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .id(activeDisplayText)
@@ -965,15 +977,15 @@ struct SubNotchFloatingLyricCapsuleView: View {
                 CyberAudioSpectrumView(
                     barCount: 3,
                     isPlaying: nowPlaying.isPlaying,
-                    barWidth: 1.8,
-                    segmentHeight: 1.4,
-                    segmentSpacing: 0.6,
+                    barWidth: 2.0,
+                    segmentHeight: 1.6,
+                    segmentSpacing: 0.7,
                     palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
                 )
-                .frame(width: 14)
+                .frame(width: 16)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4.5)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
 
         case .liquidAurora:
             // Preset 7: Liquid Aurora — translucent pill with flowing multi-color ambient glow behind lyrics
@@ -1936,18 +1948,18 @@ struct RetroCyberMusicHUDContentView: View {
                             LazyVStack(alignment: .leading, spacing: 4) {
                                 ForEach(nowPlaying.lyrics) { line in
                                     let isCurrent = (line.id == nowPlaying.currentLyricIndex)
-                                    HStack(alignment: .top, spacing: 4) {
+                                    HStack(alignment: .top, spacing: 5) {
                                         Text(isCurrent ? "▶" : " ")
-                                            .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                                            .font(.system(size: 10, weight: .black, design: .monospaced))
                                             .foregroundStyle(activeProgressColor)
                                         Text(line.text)
-                                            .font(.system(size: 8.5, weight: isCurrent ? .bold : .medium, design: .monospaced))
-                                            .foregroundStyle(isCurrent ? activeProgressColor : Color.white.opacity(0.38))
-                                            .shadow(color: isCurrent ? activeProgressColor.opacity(0.6) : Color.clear, radius: 4)
+                                            .font(.system(size: isCurrent ? 11.5 : 9.5, weight: isCurrent ? .bold : .medium, design: .monospaced))
+                                            .foregroundStyle(isCurrent ? activeProgressColor : Color.white.opacity(0.42))
+                                            .shadow(color: isCurrent ? activeProgressColor.opacity(0.65) : Color.clear, radius: 5)
                                             .lineLimit(2)
                                     }
-                                    .padding(.horizontal, 2)
-                                    .padding(.vertical, 1)
+                                    .padding(.horizontal, 3)
+                                    .padding(.vertical, 1.5)
                                     .contentShape(Rectangle())
                                     .onTapGesture {
                                         nowPlaying.seek(to: line.timestamp)

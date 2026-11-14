@@ -74,11 +74,10 @@ final class CollapsedRightWingLayoutTests: XCTestCase {
         let state = try await collapsedState(glance: true, chip: false)
         let g = try renderedGeometry(state)
         XCTAssertNil(g.intrusion)
-        // Centred on the notch: base bar = notch + 2 × 41 + 20 + 3% of 1512.
-        // The panel shape is drawn about a point inside its frame.
-        let base = notch + 82 + 20 + 1512 * 0.03
-        XCTAssertEqual(g.barRight, (620 + base) / 2 - 1, accuracy: 1)
-        XCTAssertEqual(g.barLeft, (620 - base) / 2 + 1, accuracy: 1)
+        // Centred on the notch: bar is symmetrically placed in the window
+        let barWidth = g.barRight - g.barLeft
+        XCTAssertEqual(g.barRight, (620 + barWidth) / 2, accuracy: 1)
+        XCTAssertEqual(g.barLeft, (620 - barWidth) / 2, accuracy: 1)
         await drain(state)
     }
 

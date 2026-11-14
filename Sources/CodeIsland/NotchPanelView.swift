@@ -366,20 +366,29 @@ struct NotchPanelView: View {
         return max(148, mascotSize + chipWidth + 32)
     }
 
-    /// Symmetrical wing width calculated dynamically — ultra-compact, sleek, and balanced
+    /// Symmetrical wing width calculated dynamically — guarantees zero clipping against notch corner curves
     private var symmetricWingWidth: CGFloat {
-        if isThinking && !shouldShowExpanded {
+        guard !shouldShowExpanded else { return expandedWingWidth }
+
+        if isThinking {
             return 148
         }
-        if isHoveringRightWing && !shouldShowExpanded {
+        if isHoveringRightWing {
             return 154
         }
-        if prayerManager.isPrayerPrioritized && !shouldShowExpanded {
-            let needed = rightWingWidth > 0 ? (rightWingWidth + 18) : 80
-            return max(80, needed)
+        if prayerManager.isPrayerPrioritized {
+            let needed = rightWingWidth > 0 ? (rightWingWidth + 18) : 124
+            return max(124, needed)
         }
-        if signals.isPlaying && !shouldShowExpanded {
+        if signals.isPlaying {
             var width: CGFloat = 68
+            let isToolOrThinkingActive = isThinking || (showToolStatus && showAgentDetails && appState.status != .idle)
+            if isToolOrThinkingActive {
+                width = max(width, 142)
+            }
+            if isHoveringRightWing {
+                width = max(width, 124)
+            }
             if appState.glanceCompletionActive {
                 width += 26
             }
@@ -392,6 +401,10 @@ struct NotchPanelView: View {
             return width
         }
         var width: CGFloat = 88
+        let isToolActive = showToolStatus && showAgentDetails && appState.status != .idle
+        if isToolActive {
+            width = max(width, 142)
+        }
         if hasQuotaChip {
             width = max(width, quotaWingWidth)
         }
@@ -522,7 +535,7 @@ struct NotchPanelView: View {
                             expandedTab: expandedTabBinding,
                             workspaceManager: workspaceManager
                         )
-                            .padding(.leading, 12)
+                            .padding(.leading, shouldShowExpanded ? 12 : 14)
                             .frame(
                                 width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
                                 alignment: .leading
@@ -541,11 +554,9 @@ struct NotchPanelView: View {
                         if hasNotch || shouldShowExpanded {
                             Spacer(minLength: 0)
                                 .frame(width: shouldShowExpanded ? expandedNotchCutoutWidth : effectiveNotchW)
-                        } else if showToolStatus {
-                            CompactToolStatus(appState: appState)
-                            Spacer(minLength: 0)
                         } else {
                             Spacer(minLength: 0)
+                                .frame(width: effectiveNotchW)
                         }
 
                         // Right Wing: Strictly isolated to Music Player & Token HUD (aligned snug against notch)
@@ -558,7 +569,7 @@ struct NotchPanelView: View {
                             workspaceManager: workspaceManager,
                             expandedWingWidth: expandedWingWidth
                         )
-                            .padding(.trailing, 12)
+                            .padding(.trailing, shouldShowExpanded ? 12 : 14)
                             .frame(
                                 width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
                                 alignment: .trailing
@@ -1115,6 +1126,11 @@ private struct CompactLeftWing: View {
     // Bound via @AppStorage so flipping the default mascot in Settings rerenders this view
     // even when AppState.primarySource wasn't recomputed (no session mutations in flight).
     @AppStorage(SettingsKey.defaultSource) private var settingsDefaultSource = SettingsDefaults.defaultSource
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
     @AppStorage(SettingsKey.showClaudeQuota) private var showClaudeQuota = SettingsDefaults.showClaudeQuota
     @AppStorage(SettingsKey.claudeQuotaChip) private var claudeQuotaChip = SettingsDefaults.claudeQuotaChip
     @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
@@ -1187,13 +1203,21 @@ private struct CompactLeftWing: View {
                         Image(systemName: "wrench.and.screwdriver.fill")
                             .font(.system(size: 7, weight: .bold))
                             .foregroundStyle(toolStatusColor(tool))
-                        Text(ToolNameDisplay.compact(tool))
-                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                            .foregroundStyle(toolStatusColor(tool))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        if isPixel {
+                            PixelText(
+                                text: ToolNameDisplay.compact(tool, maxCharacters: 18).uppercased(),
+                                color: toolStatusColor(tool),
+                                pixelSize: 1.05
+                            )
+                        } else {
+                            Text(ToolNameDisplay.compact(tool))
+                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(toolStatusColor(tool))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
                     }
-                    .frame(maxWidth: 82, alignment: .leading)
+                    .frame(maxWidth: isPixel ? 110 : 86, alignment: .leading)
                     .transition(.asymmetric(
                         insertion: .opacity.combined(with: .scale(scale: 0.9)),
                         removal: .opacity
@@ -1356,6 +1380,10 @@ private struct CompactRightWing: View {
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
     @State private var hoveredAction: String? = nil
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
 
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -1570,12 +1598,16 @@ private struct CompactRightWing: View {
                                             .font(.system(size: 7.5, weight: .bold))
                                             .foregroundStyle(Color(red: 0.20, green: 0.88, blue: 0.65))
 
-                                        Text(branch)
-                                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.92))
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                                        if isPixel {
+                                            PixelText(text: branch.uppercased(), color: Color(red: 0.20, green: 0.88, blue: 0.65), pixelSize: 1.0, maxChars: 8)
+                                        } else {
+                                            Text(branch)
+                                                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                                .foregroundStyle(Color.white.opacity(0.92))
+                                                .lineLimit(1)
+                                                .truncationMode(.middle)
+                                                .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                                        }
                                     }
                                 } else if let proj = projectName, !proj.isEmpty {
                                     HStack(spacing: 3) {
@@ -1583,12 +1615,16 @@ private struct CompactRightWing: View {
                                             .font(.system(size: 7, weight: .bold))
                                             .foregroundStyle(Color.white.opacity(0.60))
 
-                                        Text(proj)
-                                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.90))
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                                        if isPixel {
+                                            PixelText(text: proj.uppercased(), color: Color.white.opacity(0.90), pixelSize: 1.0, maxChars: 8)
+                                        } else {
+                                            Text(proj)
+                                                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                                .foregroundStyle(Color.white.opacity(0.90))
+                                                .lineLimit(1)
+                                                .truncationMode(.middle)
+                                                .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                                        }
                                     }
                                 } else {
                                     HStack(spacing: 3) {
@@ -1596,11 +1632,15 @@ private struct CompactRightWing: View {
                                             .font(.system(size: 7, weight: .bold))
                                             .foregroundStyle(Color.white.opacity(0.60))
 
-                                        Text(agentDisplayLabel.lowercased())
-                                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.90))
-                                            .lineLimit(1)
-                                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                                        if isPixel {
+                                            PixelText(text: agentDisplayLabel.uppercased(), color: Color.white.opacity(0.90), pixelSize: 1.0, maxChars: 8)
+                                        } else {
+                                            Text(agentDisplayLabel.lowercased())
+                                                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                                .foregroundStyle(Color.white.opacity(0.90))
+                                                .lineLimit(1)
+                                                .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                                        }
                                     }
                                 }
 
@@ -1622,17 +1662,28 @@ private struct CompactRightWing: View {
                                             .foregroundStyle(Color.white.opacity(0.40))
                                     }
 
-                                    Text("\(active)/\(total)")
-                                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(active > 0 ? Color.white : Color.white.opacity(0.65))
+                                    if isPixel {
+                                        PixelText(text: "\(active)/\(total)", color: active > 0 ? Color.white : Color.white.opacity(0.65), pixelSize: 1.0)
+                                    } else {
+                                        Text("\(active)/\(total)")
+                                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(active > 0 ? Color.white : Color.white.opacity(0.65))
+                                    }
                                 }
                             }
                             .padding(.horizontal, 6.5)
                             .padding(.vertical, 3)
                             .background(
-                                Capsule()
-                                    .fill(Color.white.opacity(0.08))
-                                    .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+                                Group {
+                                    if isPixel {
+                                        RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                                            .fill(Color.white.opacity(0.08))
+                                    } else {
+                                        Capsule()
+                                            .fill(Color.white.opacity(0.08))
+                                            .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+                                    }
+                                }
                             )
                             .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
                             .transition(.opacity.combined(with: .scale(scale: 0.95)))
@@ -1644,44 +1695,67 @@ private struct CompactRightWing: View {
                                 Image(systemName: "arrow.triangle.branch")
                                     .font(.system(size: 7.5, weight: .bold))
                                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                Text(branch)
-                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color.white.opacity(0.92))
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                                    .frame(maxWidth: 48)
+                                if isPixel {
+                                    PixelText(text: branch.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: 6)
+                                } else {
+                                    Text(branch)
+                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(Color.white.opacity(0.92))
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                        .frame(maxWidth: 48)
+                                }
                             } else if let proj = projectName, !proj.isEmpty {
                                 Image(systemName: "folder.fill")
                                     .font(.system(size: 7, weight: .bold))
                                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                Text(proj)
-                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color.white.opacity(0.92))
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                                    .frame(maxWidth: 48)
+                                if isPixel {
+                                    PixelText(text: proj.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: 6)
+                                } else {
+                                    Text(proj)
+                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(Color.white.opacity(0.92))
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                        .frame(maxWidth: 48)
+                                }
                             } else {
                                 Circle()
                                     .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
                                     .frame(width: 4, height: 4)
                                     .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), radius: 2)
                                 TimelineView(.periodic(from: .now, by: 10.0)) { _ in
-                                    Text(currentTimeString)
-                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color.white.opacity(0.92))
+                                    if isPixel {
+                                        PixelText(text: currentTimeString, color: Color.white.opacity(0.92), pixelSize: 1.0)
+                                    } else {
+                                        Text(currentTimeString)
+                                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(Color.white.opacity(0.92))
+                                    }
                                 }
                             }
 
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 6.5, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.50))
+                            if isPixel {
+                                PixelText(text: "▾", color: Color.white.opacity(0.50), pixelSize: 0.9)
+                            } else {
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 6.5, weight: .bold))
+                                    .foregroundStyle(Color.white.opacity(0.50))
+                            }
                         }
                         .padding(.horizontal, 6.5)
                         .padding(.vertical, 3)
                         .background(
-                            Capsule()
-                                .fill(Color.white.opacity(0.08))
-                                .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+                            Group {
+                                if isPixel {
+                                    RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                                        .fill(Color.white.opacity(0.08))
+                                } else {
+                                    Capsule()
+                                        .fill(Color.white.opacity(0.08))
+                                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+                                }
+                            }
                         )
                         .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
                         .contentShape(Rectangle())
@@ -2617,10 +2691,10 @@ private struct IdleIndicatorBar: View {
     var onExpand: (() -> Void)? = nil
     @AppStorage(SettingsKey.defaultSource) private var defaultSource = SettingsDefaults.defaultSource
 
-    static let idlePrayerWingMinWidth: CGFloat = 80
+    static let idlePrayerWingMinWidth: CGFloat = 124
 
     private var effectiveWingWidth: CGFloat {
-        let base = hovered ? (compactWingWidth + 6) : compactWingWidth
+        let base = hovered ? (compactWingWidth + 8) : compactWingWidth
         return PrayerTimeManager.shared.isEnabled ? max(base, Self.idlePrayerWingMinWidth) : base
     }
 
@@ -2644,22 +2718,24 @@ private struct IdleIndicatorBar: View {
                 .contentShape(Rectangle())
                 .onTapGesture { onExpand?() }
 
-            // Right Wing: sleek, ultra-compact expand indicator & living clock
+            // Right Wing: sleek, lineless prayer pill or expand indicator
             let prayerManager = PrayerTimeManager.shared
             HStack(spacing: 4) {
                 Spacer(minLength: 0)
                 if prayerManager.isEnabled {
                     PrayerCompactWingView(isHovered: hovered, onExpand: onExpand)
+                        .padding(.trailing, 8)
+                } else {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: hovered ? 8 : 7.5, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(hovered ? 0.9 : 0.45))
+                        .frame(width: 18, height: 18)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(hovered ? 0.12 : 0))
+                        )
+                        .padding(.trailing, 8)
                 }
-                Image(systemName: "chevron.down")
-                    .font(.system(size: hovered ? 8 : 7.5, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(hovered ? 0.9 : 0.45))
-                    .frame(width: 18, height: 18)
-                    .background(
-                        Circle()
-                            .fill(Color.white.opacity(hovered ? 0.12 : 0))
-                    )
-                    .padding(.trailing, 8)
             }
             .frame(width: effectiveWingWidth, alignment: .trailing)
             .contentShape(Rectangle())
@@ -6957,67 +7033,90 @@ private struct TypingIndicator: View {
     @State private var dotPulse: Double = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.animationGates) private var animationGates
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
 
     var body: some View {
         HStack(spacing: 5) {
             if showDots {
-                // Cyberpunk / Dynamic Island 3 bouncing neon dots
+                // Cyberpunk / Dynamic Island 3 bouncing neon dots / 16-bit pixel blocks
                 HStack(spacing: 3) {
                     ForEach(0..<3, id: \.self) { index in
                         let offsetFactor = Double(index) * 1.05
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        color ?? Color(red: 0.25, green: 0.9, blue: 0.8),
-                                        Color(red: 0.4, green: 0.75, blue: 1.0)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: max(3.5, fontSize * 0.32), height: max(3.5, fontSize * 0.32))
-                            .offset(y: reduceMotion ? 0 : -1.8 * sin(dotPulse + offsetFactor))
-                            .scaleEffect(reduceMotion ? 1.0 : (0.75 + 0.35 * sin(dotPulse + offsetFactor)))
-                            .opacity(reduceMotion ? 0.8 : (0.4 + 0.6 * (0.5 + 0.5 * sin(dotPulse + offsetFactor))))
-                            .shadow(
-                                color: (color ?? Color(red: 0.25, green: 0.9, blue: 0.8)).opacity(bright ? 0.75 : 0.45),
-                                radius: 2.5
-                            )
+                        let dotColor = color ?? (isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 0.25, green: 0.9, blue: 0.8))
+
+                        Group {
+                            if isPixel {
+                                Rectangle()
+                                    .fill(dotColor)
+                                    .frame(width: max(3.5, fontSize * 0.35), height: max(3.5, fontSize * 0.35))
+                            } else {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                dotColor,
+                                                Color(red: 0.4, green: 0.75, blue: 1.0)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: max(3.5, fontSize * 0.32), height: max(3.5, fontSize * 0.32))
+                            }
+                        }
+                        .offset(y: reduceMotion ? 0 : -1.8 * sin(dotPulse + offsetFactor))
+                        .scaleEffect(reduceMotion ? 1.0 : (0.75 + 0.35 * sin(dotPulse + offsetFactor)))
+                        .opacity(reduceMotion ? 0.8 : (0.4 + 0.6 * (0.5 + 0.5 * sin(dotPulse + offsetFactor))))
+                        .shadow(
+                            color: dotColor.opacity(bright ? 0.75 : 0.45),
+                            radius: 2.5
+                        )
                     }
                 }
             }
 
             if let label {
-                let baseColor: Color = color ?? Color(red: 0.3, green: 0.9, blue: 0.85)
+                let baseColor: Color = color ?? (isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 0.3, green: 0.9, blue: 0.85))
                 let baseOpacity: Double = bright ? 0.75 : 0.5
                 let peakOpacity: Double = bright ? 1.0 : 0.8
                 let midOpacity: Double = bright ? 0.8 : 0.6
                 let bandWidth: CGFloat = bright ? 90 : 70
 
-                Text(label)
-                    .font(.system(size: fontSize, weight: .bold, design: .monospaced))
-                    .foregroundStyle(baseColor.opacity(baseOpacity))
-                    .fixedSize(horizontal: true, vertical: false)
-                    .overlay(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .clear, location: 0),
-                                .init(color: .white.opacity(midOpacity), location: bright ? 0.35 : 0.4),
-                                .init(color: .white.opacity(peakOpacity), location: 0.5),
-                                .init(color: .white.opacity(midOpacity), location: bright ? 0.65 : 0.6),
-                                .init(color: .clear, location: 1),
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                        .frame(width: bandWidth)
-                        .offset(x: phase)
-                        .mask(
-                            Text(label)
-                                .font(.system(size: fontSize, weight: .medium, design: .monospaced))
-                        )
+                if isPixel {
+                    PixelText(
+                        text: label.uppercased(),
+                        color: baseColor,
+                        pixelSize: 1.05
                     )
+                } else {
+                    Text(label)
+                        .font(.system(size: fontSize, weight: .bold, design: .monospaced))
+                        .foregroundStyle(baseColor.opacity(baseOpacity))
+                        .fixedSize(horizontal: true, vertical: false)
+                        .overlay(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .clear, location: 0),
+                                    .init(color: .white.opacity(midOpacity), location: bright ? 0.35 : 0.4),
+                                    .init(color: .white.opacity(peakOpacity), location: 0.5),
+                                    .init(color: .white.opacity(midOpacity), location: bright ? 0.65 : 0.6),
+                                    .init(color: .clear, location: 1),
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                            .frame(width: bandWidth)
+                            .offset(x: phase)
+                            .mask(
+                                Text(label)
+                                    .font(.system(size: fontSize, weight: .medium, design: .monospaced))
+                            )
+                        )
+                }
             }
         }
         .fixedSize(horizontal: true, vertical: false)
