@@ -374,14 +374,7 @@ struct PixelRetroSessionCardView: View {
                 }
             }
         } else if cardStatus == .thinking {
-            HStack(spacing: 4) {
-                Text("■ ■ ■")
-                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(accentColor)
-                Text("THINKING...")
-                    .font(.system(size: 8, weight: .black, design: .monospaced))
-                    .foregroundStyle(accentColor)
-            }
+            Pixel16ThinkingDots(color: accentColor)
         }
     }
 
@@ -523,9 +516,7 @@ struct PixelRetroSessionCardView: View {
                         .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                         .foregroundStyle(statusColor)
                 } else if cardStatus == .thinking {
-                    Text("■ ■ ■")
-                        .font(.system(size: 7, weight: .bold, design: .monospaced))
-                        .foregroundStyle(accentColor)
+                    Pixel16ThinkingDots(color: accentColor)
                 } else if let prompt = session.lastUserPrompt {
                     Text("› \(prompt)")
                         .font(.system(size: 8, design: .monospaced))
