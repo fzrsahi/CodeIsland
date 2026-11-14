@@ -18,6 +18,12 @@ final class IslandSignals {
     private(set) var showToast = false
     private(set) var hasTitle = false
     private(set) var hasLyrics = false
+    /// The track name, for the one `.onChange` that opens the Music tab when a
+    /// new track starts.
+    private(set) var musicTitle = ""
+    /// The collapsed bar's music tooltip, composed once per track instead of
+    /// on every render.
+    private(set) var musicTooltip = "Session & Token Usage"
 
     // Session / panel
     private(set) var tooltipText = ""
@@ -42,11 +48,17 @@ final class IslandSignals {
     // Each setter compares before assigning: with `@Observable`, an assignment
     // is a notification whether or not the value moved.
 
-    func setMusic(isPlaying: Bool, showToast: Bool, hasTitle: Bool, hasLyrics: Bool) {
+    func setMusic(isPlaying: Bool, showToast: Bool, hasTitle: Bool, hasLyrics: Bool,
+                  title: String, artist: String) {
         if self.isPlaying != isPlaying { self.isPlaying = isPlaying }
         if self.showToast != showToast { self.showToast = showToast }
         if self.hasTitle != hasTitle { self.hasTitle = hasTitle }
         if self.hasLyrics != hasLyrics { self.hasLyrics = hasLyrics }
+        if musicTitle != title { musicTitle = title }
+        let tooltip = isPlaying
+            ? "♫ \(title) - \(artist) (Click for Music HUD)"
+            : "Session & Token Usage"
+        if musicTooltip != tooltip { musicTooltip = tooltip }
     }
 
     func setTooltip(_ text: String) {

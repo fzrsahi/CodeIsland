@@ -153,11 +153,16 @@ struct NotchPanelView: View {
         }
     }
     @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
-    @ObservedObject private var nowPlaying = NowPlayingManager.shared
-    @ObservedObject private var workspaceManager = WorkspaceMonitorManager.shared
-    @ObservedObject private var sys = SystemMonitorManager.shared
-    @ObservedObject private var prayerManager = PrayerTimeManager.shared
-    @ObservedObject private var volumeManager = SystemVolumeManager.shared
+    /// Managers are plain references here: the root does not observe them.
+    /// Everything it *shows* comes from `signals`, so a track position or a
+    /// CPU sample no longer re-renders the whole bar. Leaf views still
+    /// observe their own manager fully.
+    private let nowPlaying = NowPlayingManager.shared
+    private let workspaceManager = WorkspaceMonitorManager.shared
+    private let sys = SystemMonitorManager.shared
+    private let prayerManager = PrayerTimeManager.shared
+    private let volumeManager = SystemVolumeManager.shared
+    private let signals = IslandSignals.shared
     /// The single source of truth for which animation classes may run. Read
     /// here, at the panel root, so every loop below inherits one decision.
     @ObservedObject private var animationGate = MascotAnimationGate.shared
@@ -198,7 +203,7 @@ struct NotchPanelView: View {
         self._expandedTab = State(initialValue: initialTab)
     }
 
-    private var isActive: Bool { !appState.sessions.isEmpty || nowPlaying.isPlaying }
+    private var isActive: Bool { !appState.sessions.isEmpty || signals.isPlaying }
     /// First launch / no-session state should still render a visible marker so the app
     /// doesn't disappear completely behind the physical notch.
     private var showIdleIndicator: Bool {
@@ -206,13 +211,13 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if nowPlaying.isPlaying { return true }
+        if signals.isPlaying { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
         if appState.surface.isExpanded { return true }
-        if nowPlaying.showToast && !showCompactLyrics { return showBar }
-        if prayerManager.showMiniPeekBanner { return showBar }
+        if signals.showToast && !showCompactLyrics { return showBar }
+        if signals.showMiniPeekBanner { return showBar }
         return false
     }
     /// Prehover acknowledgement is only rendered on the collapsed active bar —
@@ -222,22 +227,19 @@ struct NotchPanelView: View {
     }
 
     private var shouldShowSubNotchLyrics: Bool {
-        guard !volumeManager.isHUDVisible,
+        guard !signals.isVolumeHUDVisible,
               showCompactLyrics,
-              nowPlaying.isPlaying,
+              signals.isPlaying,
               !shouldShowExpanded,
               !appState.surface.isExpanded,
-              !nowPlaying.title.isEmpty
+              signals.hasTitle
         else { return false }
-        // If not currently fetching and no lyrics found for this track, hide capsule
-        if !nowPlaying.lyricsLoading && nowPlaying.lyrics.isEmpty {
-            return false
-        }
-        return true
+        // No lyrics for this track (and none on the way): hide the capsule.
+        return signals.hasLyrics
     }
 
     private var isToastOnly: Bool {
-        (nowPlaying.showToast || prayerManager.showMiniPeekBanner) && !appState.surface.isExpanded
+        (signals.showToast || signals.showMiniPeekBanner) && !appState.surface.isExpanded
     }
     private var currentTopExt: CGFloat {
         (shouldShowExpanded && !isToastOnly) ? 14 : 0
@@ -276,17 +278,9 @@ struct NotchPanelView: View {
         )
     }
 
-    private var isThinking: Bool {
-        if appState.status == .processing || appState.status == .running {
-            return true
-        }
-        for session in appState.sessions.values {
-            if session.status == .processing || session.status == .running || session.currentTool != nil {
-                return true
-            }
-        }
-        return false
-    }
+    /// Derived in `AppState.refreshDerivedState()`; walking every session here
+    /// ran on each render of the bar.
+    private var isThinking: Bool { appState.isThinking }
 
     /// Symmetrical wing width calculated dynamically — ultra-compact, sleek, and balanced
     private var symmetricWingWidth: CGFloat {
@@ -296,7 +290,7 @@ struct NotchPanelView: View {
         if isHoveringRightWing && !shouldShowExpanded {
             return 128
         }
-        if nowPlaying.isPlaying {
+        if signals.isPlaying {
             return 52
         }
         return 48
@@ -329,7 +323,7 @@ struct NotchPanelView: View {
         if shouldShowExpanded {
             let baseWidth = nw + 500
             let minWidth: CGFloat = 680
-            if expandedTab == .workspace && workspaceManager.isExpandedDetail {
+            if expandedTab == .workspace && signals.isDetailExpanded {
                 return min(max(baseWidth, 720), maxPanelWidth)
             }
             if expandedTab == .prayer {
@@ -342,11 +336,11 @@ struct NotchPanelView: View {
             return nw + wing * 2
         }
         if !isActive { return nw }
-        if sys.showChargingBanner && !appState.surface.isExpanded {
+        if signals.showChargingBanner && !appState.surface.isExpanded {
             return min(320, maxPanelWidth)
         }
         // Mini peek banner width: sleek ~330pt when toast is showing while collapsed
-        if (nowPlaying.showToast || prayerManager.showMiniPeekBanner) && !appState.surface.isExpanded {
+        if (signals.showToast || signals.showMiniPeekBanner) && !appState.surface.isExpanded {
             return min(330, maxPanelWidth)
         }
         let wing = symmetricWingWidth
@@ -475,7 +469,7 @@ struct NotchPanelView: View {
                             .onTapGesture {
                                 guard !shouldShowExpanded else { return }
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    if nowPlaying.isPlaying || !nowPlaying.title.isEmpty {
+                                    if signals.isPlaying || signals.hasTitle {
                                         expandedTab = .music
                                     } else {
                                         expandedTab = .agents
@@ -483,7 +477,7 @@ struct NotchPanelView: View {
                                     appState.surface = .sessionList
                                 }
                             }
-                            .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist) (Click for Music HUD)" : "Session & Token Usage")
+                            .help(signals.musicTooltip)
                     }
                     .frame(height: notchHeight)
                     // Recap on hover while collapsed — shows whenever hover
@@ -521,7 +515,7 @@ struct NotchPanelView: View {
                             withAnimation(NotchAnimation.open) {
                                 if PrayerTimeManager.shared.isEnabled {
                                     expandedTab = .prayer
-                                } else if nowPlaying.isPlaying {
+                                } else if signals.isPlaying {
                                     expandedTab = .music
                                 }
                                 appState.surface = .sessionList
@@ -535,15 +529,15 @@ struct NotchPanelView: View {
                 }
 
                 // Below-notch expanded content
-                if shouldShowExpanded || sys.showChargingBanner {
-                    if sys.showChargingBanner && !appState.surface.isExpanded {
+                if shouldShowExpanded || signals.showChargingBanner {
+                    if signals.showChargingBanner && !appState.surface.isExpanded {
                         // MagSafe Dynamic Island Charging Notification
-                        MagSafeChargingBanner(batteryLevel: sys.metrics.batteryLevel)
+                        MagSafeChargingBanner(batteryLevel: signals.batteryLevel)
                             .transition(.asymmetric(
                                 insertion: .move(edge: .top).combined(with: .opacity),
                                 removal: .move(edge: .top).combined(with: .opacity)
                             ))
-                    } else if prayerManager.showMiniPeekBanner && !appState.surface.isExpanded {
+                    } else if signals.showMiniPeekBanner && !appState.surface.isExpanded {
                         // PRAYER MINI PEEK BANNER: Buka tipis saat T-10m & saat masuk waktu salat
                         PrayerMiniPeekBannerView(manager: prayerManager) {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
@@ -555,7 +549,7 @@ struct NotchPanelView: View {
                             insertion: .move(edge: .top).combined(with: .opacity),
                             removal: .move(edge: .top).combined(with: .opacity)
                         ))
-                    } else if nowPlaying.showToast && !appState.surface.isExpanded {
+                    } else if signals.showToast && !appState.surface.isExpanded {
                         // MINI PEEK BANNER: Buka tipis-tipis saat lagu berganti / play
                         CyberMusicMiniPeekBanner(nowPlaying: nowPlaying) {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
@@ -672,13 +666,13 @@ struct NotchPanelView: View {
             .clipped()
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: panelWidth)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: shouldShowExpanded)
-            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: nowPlaying.showToast)
-            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: prayerManager.showMiniPeekBanner)
+            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showToast)
+            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showMiniPeekBanner)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: isThinking)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
-            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: nowPlaying.isPlaying)
+            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: signals.isPlaying)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: expandedTab)
-            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: workspaceManager.isExpandedDetail)
+            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: signals.isDetailExpanded)
             .background(
                 Group {
                     if appState.isFullscreenMode {
@@ -731,21 +725,21 @@ struct NotchPanelView: View {
                 displayedToolStatus = showToolStatus
                 prayerManager.appState = appState
             }
-            .onChange(of: nowPlaying.title) { _, newTitle in
-                if !newTitle.isEmpty && nowPlaying.isPlaying {
+            .onChange(of: signals.musicTitle) { _, newTitle in
+                if !newTitle.isEmpty && signals.isPlaying {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         expandedTab = .music
                     }
                 }
             }
-            .onChange(of: nowPlaying.isPlaying) { _, isPlaying in
+            .onChange(of: signals.isPlaying) { _, isPlaying in
                 if isPlaying {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         expandedTab = .music
                     }
                 }
             }
-            .onChange(of: nowPlaying.showToast) { _, isToast in
+            .onChange(of: signals.showToast) { _, isToast in
                 if isToast {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         expandedTab = .music
@@ -790,7 +784,7 @@ struct NotchPanelView: View {
                                     NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 }
                                 withAnimation(NotchAnimation.open) {
-                                    if nowPlaying.isPlaying {
+                                    if signals.isPlaying {
                                         expandedTab = .music
                                     }
                                     appState.surface = .sessionList
@@ -952,7 +946,7 @@ struct NotchPanelView: View {
             }
 
             // NOTCH VOLUME HUD: Sleek dynamic island pill when scrolling volume
-            if volumeManager.isHUDVisible {
+            if signals.isVolumeHUDVisible {
                 NotchVolumeHUDView(volumeManager: volumeManager)
                     .padding(.top, 4)
                     .transition(.asymmetric(
@@ -997,7 +991,8 @@ private struct CompactLeftWing: View {
     let showToolStatus: Bool
     @Binding var expandedTab: ExpandedContentTab
     @Environment(\.animationGates) private var animationGates
-    @ObservedObject private var nowPlaying = NowPlayingManager.shared
+    private let nowPlaying = NowPlayingManager.shared
+    private let signals = IslandSignals.shared
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
     // Bound via @AppStorage so flipping the default mascot in Settings rerenders this view
     // even when AppState.primarySource wasn't recomputed (no session mutations in flight).
@@ -1030,9 +1025,7 @@ private struct CompactLeftWing: View {
     /// `.running` pose here, which spent frames on a pose that said nothing.
     private var effectiveMascotStatus: MascotAgentStatus { displayStatus }
 
-    private var isThinking: Bool {
-        displayStatus == .processing || displayStatus == .running || appState.status == .processing || appState.status == .running
-    }
+    private var isThinking: Bool { appState.isThinking }
     private var liveTool: String? { displaySession?.currentTool }
     @State private var shownTool: String?
     @State private var lingerTimer: Timer?
@@ -1050,7 +1043,7 @@ private struct CompactLeftWing: View {
                 SessionGroupingTabs(mode: $groupingMode, expandedTab: $expandedTab)
             } else {
                 ZStack {
-                    if nowPlaying.isPlaying && displayStatus == .idle {
+                    if signals.isPlaying && displayStatus == .idle {
                         // Neon beat aura when music is vibing: a CA layer pulsed
                         // by the render server, gated on the Music class. Held
                         // at mid-beat when the class may not animate.
@@ -1228,12 +1221,10 @@ private struct CompactRightWing: View {
     var expandedWingWidth: CGFloat = 240
     @Environment(\.animationGates) private var animationGates
     @ObservedObject private var l10n = L10n.shared
-    @ObservedObject private var nowPlaying = NowPlayingManager.shared
+    private let nowPlaying = NowPlayingManager.shared
+    private let signals = IslandSignals.shared
     @AppStorage(SettingsKey.soundEnabled) private var soundEnabled = SettingsDefaults.soundEnabled
     @AppStorage(SettingsKey.showToolStatus) private var showToolStatus = SettingsDefaults.showToolStatus
-    @AppStorage(SettingsKey.quietHoursEnabled) private var quietHoursEnabled = SettingsDefaults.quietHoursEnabled
-    @AppStorage(SettingsKey.quietHoursStart) private var quietHoursStart = SettingsDefaults.quietHoursStart
-    @AppStorage(SettingsKey.quietHoursEnd) private var quietHoursEnd = SettingsDefaults.quietHoursEnd
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
@@ -1253,21 +1244,12 @@ private struct CompactRightWing: View {
     /// (a one-off follow-up bounce still marks a reminder).
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Re-evaluated on every re-render; the compact bar redraws often enough
-    /// that the moon appears/disappears close to the window edges.
-    private var inQuietHours: Bool {
-        guard soundEnabled, quietHoursEnabled else { return false }
-        let c = Calendar.current.dateComponents([.hour, .minute], from: Date())
-        return SoundManager.isInQuietHours(
-            minutesSinceMidnight: (c.hour ?? 0) * 60 + (c.minute ?? 0),
-            start: quietHoursStart,
-            end: quietHoursEnd
-        )
-    }
+    /// The moon used to be recomputed from `UserDefaults` and the calendar on
+    /// every render. `IslandSignalsSync` owns that clock now and arms a single
+    /// timer for the next boundary.
+    private var inQuietHours: Bool { signals.inQuietHours }
 
-    private var displaySessionId: String? {
-        appState.rotatingSessionId ?? appState.activeSessionId ?? appState.sessions.keys.sorted().first
-    }
+    private var displaySessionId: String? { appState.displaySessionId }
     private var projectName: String? {
         guard let sid = displaySessionId, let cwd = appState.sessions[sid]?.cwd, !cwd.isEmpty else { return nil }
         return (cwd as NSString).lastPathComponent
@@ -1285,17 +1267,9 @@ private struct CompactRightWing: View {
         guard let sid = displaySessionId else { return nil }
         return appState.sessions[sid]?.gitBranch
     }
-    private var isThinking: Bool {
-        if appState.status == .processing || appState.status == .running {
-            return true
-        }
-        for session in appState.sessions.values {
-            if session.status == .processing || session.status == .running || session.currentTool != nil {
-                return true
-            }
-        }
-        return false
-    }
+    /// Derived in `AppState.refreshDerivedState()`; walking every session here
+    /// ran on each render of the bar.
+    private var isThinking: Bool { appState.isThinking }
     private var shouldExpandRightWing: Bool {
         isHovered || isThinking
     }
@@ -1319,15 +1293,14 @@ private struct CompactRightWing: View {
                 }
                 .padding(.horizontal, 4)
             } else {
-                let prayerManager = PrayerTimeManager.shared
-                if prayerManager.isPrayerPrioritized {
+                if signals.isPrayerPrioritized {
                     // SMART PRIORITY: Prayer countdown takes active priority at T <= 15m
                     PrayerCompactWingView(isHovered: shouldExpandRightWing) {
                         expandedTab = .prayer
                         appState.surface = .sessionList
                     }
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                } else if nowPlaying.isPlaying {
+                } else if signals.isPlaying {
                     CyberMusicWingView(nowPlaying: nowPlaying, isHovered: shouldExpandRightWing)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else {
@@ -1544,9 +1517,7 @@ private struct CompactToolStatus: View {
     var appState: AppState
 
     /// Single source of truth: all fields derive from the same session.
-    private var displaySessionId: String? {
-        appState.rotatingSessionId ?? appState.activeSessionId ?? appState.sessions.keys.sorted().first
-    }
+    private var displaySessionId: String? { appState.displaySessionId }
     private var displaySession: SessionSnapshot? {
         guard let sid = displaySessionId else { return nil }
         return appState.sessions[sid]

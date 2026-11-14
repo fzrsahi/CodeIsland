@@ -32,6 +32,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let isolated = RuntimeEnvironment.isIsolated
         // Starts the benchmark's counter file when CODEISLAND_PERF_COUNTERS is set.
         _ = PerfCounters.shared
+        // Feeds the values the panel bar shows into `IslandSignals`, so the bar
+        // re-renders when something it displays changes — not on every manager
+        // publish.
+        IslandSignalsSync.shared.start()
         // One island per hook socket. A second one — `open -n`, a second copy
         // of the app — would take the socket from the first, which would go
         // on unheard, and remove its hosts' sockets. An island on a
