@@ -1836,6 +1836,7 @@ private struct WorkspaceSettingsPage: View {
     @ObservedObject private var l10n = L10n.shared
     @AppStorage(SettingsKey.workspaceEnabled) private var workspaceEnabled = SettingsDefaults.workspaceEnabled
     @AppStorage(SettingsKey.workspaceHUDTheme) private var workspaceHUDTheme = SettingsDefaults.workspaceHUDTheme
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
     @AppStorage(SettingsKey.showGitBranch) private var showGitBranch = SettingsDefaults.showGitBranch
 
@@ -1860,6 +1861,13 @@ private struct WorkspaceSettingsPage: View {
                         .pickerStyle(.menu)
 
                         Text(WorkspaceHUDTheme(rawValue: workspaceHUDTheme)?.description ?? "")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle("Adaptive Album Art Palette", isOn: $syncThemeWithAlbumArt)
+                        Text("Synchronizes Workspace accent color and git indicators with the currently playing album artwork.")
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                     }
