@@ -36,45 +36,79 @@ struct CyberMailHUDView: View {
     }
 }
 
-// MARK: - Dedicated Mail Refresh Button (Smooth Spin Animation)
+// MARK: - Modern Refresh Button (Smooth Single 360 Spin)
 
-private struct MailRefreshButton: View {
+private struct ModernRefreshButton: View {
     @ObservedObject var mailManager: MailManager
-    var isPixel: Bool = false
     var color: Color = .white
-
     @State private var spinDegrees: Double = 0
+    @State private var isSpinning: Bool = false
 
     var body: some View {
         Button {
-            mailManager.refresh()
+            triggerRefresh()
         } label: {
-            ZStack {
-                if isPixel {
-                    PixelIcon(glyph: .refresh, color: color, pixelSize: 1.35)
-                } else {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(mailManager.isRefreshing ? 0.95 : 0.55))
-                }
-            }
-            .frame(width: 22, height: 22)
-            .rotationEffect(.degrees(spinDegrees))
-            .animation(
-                mailManager.isRefreshing
-                    ? Animation.linear(duration: 0.85).repeatForever(autoreverses: false)
-                    : Animation.easeOut(duration: 0.35),
-                value: spinDegrees
-            )
-            .contentShape(Rectangle())
+            Image(systemName: "arrow.clockwise")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(isSpinning || mailManager.isRefreshing ? 0.95 : 0.55))
+                .rotationEffect(.degrees(spinDegrees))
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help("Refresh unread emails")
-        .onChange(of: mailManager.isRefreshing) { _, isRefreshing in
-            if isRefreshing {
-                spinDegrees += 360
-            } else {
-                spinDegrees = ceil(spinDegrees / 360) * 360
+    }
+
+    private func triggerRefresh() {
+        guard !isSpinning else { return }
+        isSpinning = true
+        mailManager.refresh()
+
+        withAnimation(.easeInOut(duration: 0.65)) {
+            spinDegrees += 360
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
+            isSpinning = false
+        }
+    }
+}
+
+// MARK: - Pixel Refresh Button (Crisp 8-Bit Discrete 90° Step Rotation)
+
+private struct PixelRefreshButton: View {
+    @ObservedObject var mailManager: MailManager
+    var color: Color = .white
+    @State private var discreteAngle: Double = 0
+    @State private var isSpinning: Bool = false
+
+    var body: some View {
+        Button {
+            triggerRefresh()
+        } label: {
+            PixelIcon(glyph: .refresh, color: color, pixelSize: 1.35)
+                .rotationEffect(.degrees(discreteAngle))
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Refresh unread emails")
+    }
+
+    private func triggerRefresh() {
+        guard !isSpinning else { return }
+        isSpinning = true
+        mailManager.refresh()
+
+        // 4-step discrete 90-degree 8-bit rotation: preserves razor-sharp pixel edges
+        let steps: [(step: Int, angle: Double)] = [(1, 90.0), (2, 180.0), (3, 270.0), (4, 360.0)]
+        for item in steps {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(item.step) * 0.11) {
+                discreteAngle = item.angle
+                if item.step == 4 {
+                    discreteAngle = 0
+                    isSpinning = false
+                }
             }
         }
     }
@@ -89,7 +123,7 @@ private struct ModernCleanMailHUDContentView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            // Header Bar (No Dot, No Boxed Pills)
+            // Header Bar (No Dot between INBOX and unread)
             HStack(alignment: .center, spacing: 8) {
                 HStack(spacing: 8) {
                     Image(systemName: "envelope.fill")
@@ -108,8 +142,8 @@ private struct ModernCleanMailHUDContentView: View {
 
                 Spacer()
 
-                // Minimal Refresh Icon Button
-                MailRefreshButton(mailManager: mailManager, isPixel: false, color: themeColor)
+                // Minimal Modern Refresh Icon Button
+                ModernRefreshButton(mailManager: mailManager, color: themeColor)
             }
             .padding(.horizontal, 16)
             .padding(.top, 4)
@@ -156,7 +190,7 @@ private struct ModernCleanMailHUDContentView: View {
             .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 0.8))
             .shadow(color: mail.avatarGradient.first?.opacity(0.28) ?? .clear, radius: 4, y: 1)
 
-            // Sender & Subject (No Dot next to Recent)
+            // Sender & Subject (Max Line: 2, No Dot next to Recent)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 8) {
                     Text(mail.senderName)
@@ -172,7 +206,8 @@ private struct ModernCleanMailHUDContentView: View {
                 Text(mail.subject)
                     .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(Color.white.opacity(0.72))
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .lineSpacing(2)
             }
 
             Spacer(minLength: 6)
@@ -327,8 +362,8 @@ private struct RetroCyberMailHUDContentView: View {
 
                 Spacer()
 
-                // 8-bit Pixel Refresh Button
-                MailRefreshButton(mailManager: mailManager, isPixel: true, color: themeColor)
+                // 8-bit Pixel Refresh Button (Discrete 90° Step Rotation)
+                PixelRefreshButton(mailManager: mailManager, color: themeColor)
             }
             .padding(.horizontal, 16)
             .padding(.top, 4)
@@ -372,7 +407,7 @@ private struct RetroCyberMailHUDContentView: View {
                     .stroke(themeColor.opacity(0.40), lineWidth: 1)
             )
 
-            // Sender & Subject in Clean Monospace (No Dot next to Recent)
+            // Sender & Subject (Max Line: 2, No Dot next to Recent)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 8) {
                     Text(mail.senderName)
@@ -388,7 +423,8 @@ private struct RetroCyberMailHUDContentView: View {
                 Text(mail.subject)
                     .font(.system(size: 10.5, weight: .regular, design: .monospaced))
                     .foregroundStyle(Color.white.opacity(0.80))
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .lineSpacing(2)
             }
 
             Spacer(minLength: 6)
