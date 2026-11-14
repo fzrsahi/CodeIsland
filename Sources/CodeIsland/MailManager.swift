@@ -63,6 +63,7 @@ public final class MailManager: ObservableObject {
     @AppStorage(SettingsKey.mailIntegrationEnabled) public var isEnabled: Bool = SettingsDefaults.mailIntegrationEnabled {
         didSet {
             if isEnabled {
+                ensureMailRunningInBackground()
                 startPolling()
                 refresh()
             } else {
@@ -86,11 +87,26 @@ public final class MailManager: ObservableObject {
 
     private init() {
         if isEnabled {
+            ensureMailRunningInBackground()
             startPolling()
             // Initial delayed fetch to avoid startup race
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                 self?.refresh()
             }
+        }
+    }
+
+    /// Ensures Apple Mail is running silently in the background without opening windows or stealing focus
+    public func ensureMailRunningInBackground() {
+        Task.detached(priority: .utility) {
+            let script = """
+            if not (application "Mail" is running) then
+                try
+                    tell application "Mail" to launch
+                end try
+            end if
+            """
+            _ = AppleScriptRunner.current.evaluate(script, 5.0)
         }
     }
 
@@ -117,26 +133,32 @@ public final class MailManager: ObservableObject {
 
         Task.detached(priority: .userInitiated) { [weak self] in
             let script = """
-            if application "Mail" is running then
-                tell application "Mail"
-                    set unreadTotal to unread count of inbox
-                    set mailList to ""
-                    repeat with i from 1 to 5
-                        try
-                            set m to message i of inbox
-                            if not (read status of m) then
-                                set msgId to id of m as string
-                                set msgSender to sender of m as string
-                                set msgSubj to subject of m as string
-                                set mailList to mailList & msgId & "<|>" & msgSender & "<|>" & msgSubj & "<|>" & "Recent" & "<#LINE#>"
-                            end if
-                        end try
-                    end repeat
-                    return (unreadTotal as string) & "<#HEADER#>" & mailList
-                end tell
-            else
-                return "0<#HEADER#>"
+            if not (application "Mail" is running) then
+                try
+                    tell application "Mail" to launch
+                    delay 0.5
+                end try
             end if
+
+            tell application "Mail"
+                set unreadTotal to 0
+                try
+                    set unreadTotal to unread count of inbox
+                end try
+                set mailList to ""
+                repeat with i from 1 to 5
+                    try
+                        set m to message i of inbox
+                        if not (read status of m) then
+                            set msgId to id of m as string
+                            set msgSender to sender of m as string
+                            set msgSubj to subject of m as string
+                            set mailList to mailList & msgId & "<|>" & msgSender & "<|>" & msgSubj & "<|>" & "Recent" & "<#LINE#>"
+                        end if
+                    end try
+                end repeat
+                return (unreadTotal as string) & "<#HEADER#>" & mailList
+            end tell
             """
 
             let rawOutput = AppleScriptRunner.current.evaluate(script, 25.0)
