@@ -28,6 +28,33 @@ echo "==> Compiling and installing swift-corelibs-xctest with @MainActor support
 rm -rf /tmp/xctest_clone /tmp/XCTest.framework
 git clone --branch swift-6.0.3-RELEASE --depth 1 https://github.com/swiftlang/swift-corelibs-xctest.git /tmp/xctest_clone
 
+# Set modern SwiftPM tools version and deployment platform to macOS 14
+cat << 'EOF' > /tmp/xctest_clone/Package.swift
+// swift-tools-version:5.9
+import PackageDescription
+
+let package = Package(
+    name: "XCTest",
+    platforms: [
+        .macOS(.v14)
+    ],
+    products: [
+        .library(
+            name: "XCTest",
+            type: .dynamic,
+            targets: ["XCTest"]
+        )
+    ],
+    targets: [
+        .target(
+            name: "XCTest",
+            dependencies: [],
+            path: "Sources"
+        )
+    ]
+)
+EOF
+
 # Fix RunLoop default mode compatibility
 sed -i '' 's/mode: \.default/mode: RunLoop.Mode.defaultRunLoopMode/g' /tmp/xctest_clone/Sources/XCTest/Public/Asynchronous/XCTWaiter.swift
 sed -i '' 's/forMode: \.default/forMode: RunLoop.Mode.defaultRunLoopMode/g' /tmp/xctest_clone/Sources/XCTest/Public/Asynchronous/XCTNSPredicateExpectation.swift
@@ -77,9 +104,33 @@ with open("/tmp/xctest_clone/Sources/XCTest/Private/XCTestCaseSuite.swift", "w")
 
 # Assemble framework bundle
 mkdir -p /tmp/XCTest.framework/Versions/A/Modules/XCTest.swiftmodule
-cp /tmp/xctest_clone/.build/debug/libXCTest.dylib /tmp/XCTest.framework/Versions/A/XCTest
-cp /tmp/xctest_clone/.build/debug/Modules/XCTest.swiftmodule /tmp/XCTest.framework/Versions/A/Modules/XCTest.swiftmodule/x86_64-apple-macos.swiftmodule
-cp /tmp/xctest_clone/.build/debug/Modules/XCTest.swiftdoc /tmp/XCTest.framework/Versions/A/Modules/XCTest.swiftmodule/x86_64-apple-macos.swiftdoc
+
+BUILD_OUT_DIR="/tmp/xctest_clone/.build/debug"
+if [ ! -f "$BUILD_OUT_DIR/libXCTest.dylib" ]; then
+    BUILD_OUT_DIR="$(find /tmp/xctest_clone/.build -type f -name "libXCTest.dylib" -exec dirname {} \; | head -n 1)"
+fi
+
+cp "$BUILD_OUT_DIR/libXCTest.dylib" /tmp/XCTest.framework/Versions/A/XCTest
+
+if [ -f "$BUILD_OUT_DIR/Modules/XCTest.swiftmodule" ]; then
+    cp "$BUILD_OUT_DIR/Modules/XCTest.swiftmodule" /tmp/XCTest.framework/Versions/A/Modules/XCTest.swiftmodule/x86_64-apple-macos.swiftmodule
+elif [ -d "$BUILD_OUT_DIR/Modules/XCTest.swiftmodule" ]; then
+    cp -R "$BUILD_OUT_DIR/Modules/XCTest.swiftmodule/"* /tmp/XCTest.framework/Versions/A/Modules/XCTest.swiftmodule/
+else
+    SWIFTMODULE_FILE="$(find /tmp/xctest_clone/.build -type f -name "*.swiftmodule" | head -n 1)"
+    if [ -n "$SWIFTMODULE_FILE" ]; then
+        cp "$SWIFTMODULE_FILE" /tmp/XCTest.framework/Versions/A/Modules/XCTest.swiftmodule/x86_64-apple-macos.swiftmodule
+    fi
+fi
+
+if [ -f "$BUILD_OUT_DIR/Modules/XCTest.swiftdoc" ]; then
+    cp "$BUILD_OUT_DIR/Modules/XCTest.swiftdoc" /tmp/XCTest.framework/Versions/A/Modules/XCTest.swiftmodule/x86_64-apple-macos.swiftdoc
+else
+    SWIFTDOC_FILE="$(find /tmp/xctest_clone/.build -type f -name "*.swiftdoc" | head -n 1)"
+    if [ -n "$SWIFTDOC_FILE" ]; then
+        cp "$SWIFTDOC_FILE" /tmp/XCTest.framework/Versions/A/Modules/XCTest.swiftmodule/x86_64-apple-macos.swiftdoc
+    fi
+fi
 
 cat << 'EOF' > /tmp/XCTest.framework/Versions/A/Modules/module.modulemap
 framework module XCTest {
