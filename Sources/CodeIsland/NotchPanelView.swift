@@ -1535,7 +1535,7 @@ private struct CompactRightWing: View {
                                     HStack(spacing: 2.5) {
                                         Image(systemName: (gitBranch != nil && !gitBranch!.isEmpty) ? "arrow.triangle.branch" : "folder.fill")
                                             .font(.system(size: 7, weight: .bold))
-                                            .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
                                         Text(gitBranch ?? projectName ?? "work")
                                             .font(.system(size: 8, weight: .bold, design: .monospaced))
                                             .foregroundStyle(Color.white.opacity(0.95))
@@ -1547,8 +1547,8 @@ private struct CompactRightWing: View {
                                     .padding(.vertical, 2.5)
                                     .background(
                                         Capsule()
-                                            .fill(hoveredAction == "workspace" ? Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.25) : Color.white.opacity(0.06))
-                                            .overlay(Capsule().strokeBorder(hoveredAction == "workspace" ? Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.6) : Color.white.opacity(0.10), lineWidth: 0.5))
+                                            .fill(hoveredAction == "workspace" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.25) : Color.white.opacity(0.06))
+                                            .overlay(Capsule().strokeBorder(hoveredAction == "workspace" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6) : Color.white.opacity(0.10), lineWidth: 0.5))
                                     )
                                 }
                                 .buttonStyle(.plain)
@@ -1703,7 +1703,7 @@ private struct CompactRightWing: View {
                             if let branch = gitBranch, !branch.isEmpty {
                                 Image(systemName: "arrow.triangle.branch")
                                     .font(.system(size: 7.5, weight: .bold))
-                                    .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
                                 Text(branch)
                                     .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                                     .foregroundStyle(Color.white.opacity(0.92))
@@ -1713,7 +1713,7 @@ private struct CompactRightWing: View {
                             } else if let proj = projectName, !proj.isEmpty {
                                 Image(systemName: "folder.fill")
                                     .font(.system(size: 7, weight: .bold))
-                                    .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
                                 Text(proj)
                                     .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                                     .foregroundStyle(Color.white.opacity(0.92))
@@ -1722,9 +1722,9 @@ private struct CompactRightWing: View {
                                     .frame(maxWidth: 48)
                             } else {
                                 Circle()
-                                    .fill(Color(red: 0.12, green: 0.84, blue: 0.38))
+                                    .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
                                     .frame(width: 4, height: 4)
-                                    .shadow(color: Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.8), radius: 2)
+                                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), radius: 2)
                                 TimelineView(.periodic(from: .now, by: 10.0)) { _ in
                                     Text(currentTimeString)
                                         .font(.system(size: 8.5, weight: .bold, design: .monospaced))
@@ -2163,9 +2163,9 @@ private struct HeaderNavigationMenuTabs: View {
             if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
                 return nowPlaying.albumPalette.primary
             }
-            return islandUITheme == IslandUITheme.modern.rawValue ? .white : Color(red: 0.12, green: 0.84, blue: 0.38)
+            return islandUITheme == IslandUITheme.modern.rawValue ? .white : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme:
-            return islandUITheme == IslandUITheme.modern.rawValue ? .white : Color(red: 0.12, green: 0.84, blue: 0.38)
+            return islandUITheme == IslandUITheme.modern.rawValue ? .white : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
@@ -2501,9 +2501,9 @@ private struct SessionGroupingTabs: View {
             if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
                 return nowPlaying.albumPalette.primary
             }
-            return isModern ? .white : Color(red: 0.12, green: 0.84, blue: 0.38)
+            return isModern ? .white : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme:
-            return isModern ? .white : Color(red: 0.12, green: 0.84, blue: 0.38)
+            return isModern ? .white : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
@@ -4215,12 +4215,34 @@ private struct SessionListView: View {
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Natural height of the session cards, scrolling or not.
     @State private var contentHeight: CGFloat = 0
     /// The order on screen is held while the pointer is over the list.
     @State private var orderFreeze = SessionOrderFreeze()
     @State private var thawTask: Task<Void, Never>?
+
+    private var accentColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
+        let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
+        switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .theme, .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .white: return .white
+        case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
+        case .green: return Color(red: 0.12, green: 0.84, blue: 0.38)
+        case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
+        }
+    }
 
     private var isPixelRetro: Bool {
         if islandUITheme == IslandUITheme.pixel.rawValue { return true }
@@ -4352,8 +4374,8 @@ private struct SessionListView: View {
             if totalSessionCount == 0 {
                 VStack(spacing: 5) {
                     if isPixelRetro {
-                        PixelIcon(glyph: .agents, color: Color(red: 0.12, green: 0.84, blue: 0.38), pixelSize: 1.6)
-                        PixelText(text: "NO ACTIVE AGENTS", color: Color(red: 0.12, green: 0.84, blue: 0.38), pixelSize: 1.1)
+                        PixelIcon(glyph: .agents, color: accentColor, pixelSize: 1.6)
+                        PixelText(text: "NO ACTIVE AGENTS", color: accentColor, pixelSize: 1.1)
                         Text("// RUN CLAUDE, CODEX, GEMINI, OR CURSOR IN TERMINAL")
                             .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                             .foregroundStyle(.white.opacity(0.45))
@@ -4378,10 +4400,10 @@ private struct SessionListView: View {
                     if !group.header.isEmpty {
                         HStack(spacing: 6) {
                             if isPixelRetro {
-                                PixelIcon(glyph: .agents, color: Color(red: 0.12, green: 0.84, blue: 0.38), pixelSize: 1.0)
+                                PixelIcon(glyph: .agents, color: accentColor, pixelSize: 1.0)
                                 Text("// \(group.header.uppercased())")
                                     .font(.system(size: 8.5, weight: .black, design: .monospaced))
-                                    .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                                    .foregroundStyle(accentColor)
                             } else {
                                 if let src = group.source, let icon = cliIcon(source: src) {
                                     Image(nsImage: icon)

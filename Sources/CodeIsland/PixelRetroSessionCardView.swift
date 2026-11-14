@@ -2,9 +2,11 @@ import SwiftUI
 import CodeIslandCore
 import AppKit
 
-/// Authentic 8-bit retro arcade session card for the Agents tab.
-/// Matches the cyber/retro aesthetics of Workspace HUD and Music HUD with dot-matrix typography,
-/// phosphor status rails, stepped task health-bars, and tactile controls.
+/// Authentic retro arcade session card for the Agents tab.
+/// Harmonizes 100% with Workspace HUD and Music HUD using a single unified accent
+/// (Cyber Cyan #00F5D4 by default, or Adaptive Album Palette when playing music).
+/// Designed according to anti-slop principles: zero clashing neon colors, zero boxy stroke borders,
+/// and high-contrast obsidian dark glass surfaces.
 struct PixelRetroSessionCardView: View {
     var appState: AppState
     let sessionId: String
@@ -48,6 +50,7 @@ struct PixelRetroSessionCardView: View {
             && appState.surface.questionSessionId != sessionId
     }
 
+    /// Single unified accent: Adaptive album palette or Cyber Cyan #00F5D4
     private var accentColor: Color {
         if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
             return nowPlaying.albumPalette.primary
@@ -58,30 +61,26 @@ struct PixelRetroSessionCardView: View {
             if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
                 return nowPlaying.albumPalette.primary
             }
-            return Color(red: 0.12, green: 0.84, blue: 0.38)
-        case .theme: return Color(red: 0.12, green: 0.84, blue: 0.38)
-        case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
+            return Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .theme, .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83) // Cyber Cyan
+        case .white: return .white
         case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
         case .green: return Color(red: 0.12, green: 0.84, blue: 0.38)
         case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
-        case .white: return .white
         }
     }
 
+    /// Strict single-accent palette hierarchy: No clashing green + cyan neons!
     private var statusColor: Color {
         switch cardStatus {
-        case .working:
+        case .working, .thinking:
             return accentColor
-        case .thinking:
-            return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .needsYou:
             return Color(red: 1.0, green: 0.72, blue: 0.20)
         case .done:
-            return Color(red: 0.20, green: 0.95, blue: 0.70)
-        case .stopped:
-            return Color(red: 1.0, green: 0.55, blue: 0.40)
-        case .error:
-            return Color(red: 1.0, green: 0.35, blue: 0.40)
+            return Color.white.opacity(0.85)
+        case .stopped, .error:
+            return Color(red: 0.95, green: 0.40, blue: 0.40)
         case .idle:
             return Color.white.opacity(0.40)
         }
@@ -107,7 +106,7 @@ struct PixelRetroSessionCardView: View {
         }
     }
 
-    // MARK: - 1. Comfortable View (Full Retro Arcade Card)
+    // MARK: - 1. Comfortable View (Seamless Arcade Card)
 
     private var comfortableView: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -134,7 +133,7 @@ struct PixelRetroSessionCardView: View {
                     retroQuestionWaitingRow
                 }
 
-                // Stepped 8-Bit Task Progress Bar
+                // Stepped Task Progress Bar
                 if showTaskProgress && !session.agentTasks.isEmpty {
                     retroTaskProgressBar
                 }
@@ -189,7 +188,7 @@ struct PixelRetroSessionCardView: View {
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
                     .background(
-                        RoundedRectangle(cornerRadius: 3)
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
                             .fill(Color.white.opacity(0.04))
                     )
                 }
@@ -197,24 +196,20 @@ struct PixelRetroSessionCardView: View {
         }
         .padding(.leading, 12)
         .padding(.trailing, 12)
-        .padding(.vertical, 9)
+        .padding(.vertical, 8)
         .background(
             ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(isHovered ? Color.white.opacity(0.07) : Color.white.opacity(0.03))
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.white.opacity(isHovered ? 0.06 : 0.025))
 
                 // Left 2px status rail
                 Rectangle()
                     .fill(statusColor)
                     .frame(width: 2)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 4))
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .stroke(isHovered ? statusColor.opacity(0.35) : Color.white.opacity(0.05), lineWidth: 0.8)
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         )
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 4)
     }
 
     // MARK: - Mascot Pedestal
@@ -222,13 +217,9 @@ struct PixelRetroSessionCardView: View {
     private var mascotPedestal: some View {
         VStack(spacing: 3) {
             ZStack {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color.black.opacity(0.65))
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(Color.white.opacity(0.04))
                     .frame(width: 34, height: 34)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 3)
-                            .stroke(isHovered ? statusColor.opacity(0.4) : Color.white.opacity(0.10), lineWidth: 0.8)
-                    )
 
                 MascotView(source: session.mascotSource, status: session.status, size: 28)
             }
@@ -238,7 +229,7 @@ struct PixelRetroSessionCardView: View {
                 HStack(spacing: 2) {
                     ForEach(0..<count, id: \.self) { _ in
                         Rectangle()
-                            .fill(Color(red: 0.65, green: 0.55, blue: 0.95))
+                            .fill(accentColor.opacity(0.8))
                             .frame(width: 3.5, height: 3.5)
                     }
                 }
@@ -251,8 +242,8 @@ struct PixelRetroSessionCardView: View {
 
     private var headerRow: some View {
         HStack(alignment: .center, spacing: 6) {
-            // 1. Status Chip (Sharp 8-Bit)
-            HStack(spacing: 3.5) {
+            // 1. Status Chip (Seamless Frosted)
+            HStack(spacing: 4) {
                 Rectangle()
                     .fill(statusColor)
                     .frame(width: 3.5, height: 3.5)
@@ -263,22 +254,18 @@ struct PixelRetroSessionCardView: View {
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
             .background(
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(statusColor.opacity(0.12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 2)
-                            .stroke(statusColor.opacity(0.45), lineWidth: 0.8)
-                    )
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(statusColor.opacity(0.14))
             )
 
             // 2. Source Badge
             Text(session.source.uppercased())
                 .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                 .foregroundStyle(Color.white.opacity(0.75))
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1.5)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
                 .background(
-                    RoundedRectangle(cornerRadius: 2)
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
                         .fill(Color.white.opacity(0.06))
                 )
 
@@ -309,17 +296,17 @@ struct PixelRetroSessionCardView: View {
                 if !session.subagents.isEmpty {
                     Text("+\(session.subagents.count) SUB")
                         .font(.system(size: 7, weight: .black, design: .monospaced))
-                        .foregroundStyle(Color(red: 0.65, green: 0.55, blue: 0.95))
-                        .padding(.horizontal, 3.5)
+                        .foregroundStyle(accentColor)
+                        .padding(.horizontal, 4)
                         .padding(.vertical, 1.5)
-                        .background(Color(red: 0.65, green: 0.55, blue: 0.95).opacity(0.12))
+                        .background(accentColor.opacity(0.14))
                 }
 
                 if session.isYoloMode == true {
                     Text("YOLO")
                         .font(.system(size: 7, weight: .black, design: .monospaced))
                         .foregroundStyle(Color(red: 1.0, green: 0.35, blue: 0.35))
-                        .padding(.horizontal, 3.5)
+                        .padding(.horizontal, 4)
                         .padding(.vertical, 1.5)
                         .background(Color(red: 1.0, green: 0.35, blue: 0.35).opacity(0.15))
                 }
@@ -328,7 +315,7 @@ struct PixelRetroSessionCardView: View {
                     Text(modelLabel.uppercased())
                         .font(.system(size: 7, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.50))
-                        .padding(.horizontal, 3.5)
+                        .padding(.horizontal, 4)
                         .padding(.vertical, 1.5)
                         .background(Color.white.opacity(0.04))
                 }
@@ -357,7 +344,7 @@ struct PixelRetroSessionCardView: View {
         }
     }
 
-    // MARK: - Stepped Task Health-Bar
+    // MARK: - Stepped Task Progress Bar
 
     private var retroTaskProgressBar: some View {
         let items = session.agentTasks.items
@@ -367,16 +354,16 @@ struct PixelRetroSessionCardView: View {
         return HStack(spacing: 6) {
             Text("[\(doneCount)/\(totalCount) TASKS]")
                 .font(.system(size: 7.5, weight: .black, design: .monospaced))
-                .foregroundStyle(doneCount == totalCount ? Color(red: 0.12, green: 0.84, blue: 0.38) : Color(red: 1.0, green: 0.72, blue: 0.20))
+                .foregroundStyle(doneCount == totalCount ? accentColor : Color.white.opacity(0.85))
 
-            // Stepped blocks
+            // Stepped blocks matching Music HUD scrubber
             HStack(spacing: 2) {
                 ForEach(0..<min(totalCount, 12), id: \.self) { i in
                     let isDone = i < doneCount
                     let isCurrent = (i == doneCount && session.status != .idle)
                     Rectangle()
-                        .fill(isDone ? Color(red: 0.12, green: 0.84, blue: 0.38) : (isCurrent ? Color(red: 1.0, green: 0.72, blue: 0.20) : Color.white.opacity(0.12)))
-                        .frame(height: 3)
+                        .fill(isDone ? accentColor : (isCurrent ? Color(red: 1.0, green: 0.72, blue: 0.20) : Color.white.opacity(0.12)))
+                        .frame(height: 2.5)
                 }
             }
             .frame(maxWidth: 80)
@@ -392,7 +379,7 @@ struct PixelRetroSessionCardView: View {
         .padding(.horizontal, 5)
         .padding(.vertical, 2)
         .background(
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
                 .fill(Color.white.opacity(0.03))
         )
     }
@@ -406,12 +393,11 @@ struct PixelRetroSessionCardView: View {
                 Text("▸ [\(tool.uppercased())]")
                     .font(.system(size: 8, weight: .black, design: .monospaced))
                     .foregroundStyle(statusColor)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1.5)
                     .background(
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(statusColor.opacity(0.12))
-                            .overlay(RoundedRectangle(cornerRadius: 2).stroke(statusColor.opacity(0.4), lineWidth: 0.6))
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(statusColor.opacity(0.14))
                     )
 
                 if let detail = session.toolDescription, !detail.isEmpty {
@@ -426,10 +412,10 @@ struct PixelRetroSessionCardView: View {
             HStack(spacing: 4) {
                 Text("■ ■ ■")
                     .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .foregroundStyle(accentColor)
                 Text("THINKING...")
                     .font(.system(size: 8, weight: .black, design: .monospaced))
-                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .foregroundStyle(accentColor)
             }
         }
     }
@@ -469,8 +455,8 @@ struct PixelRetroSessionCardView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(
-                        Rectangle()
-                            .fill(approveHovered ? Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.85) : Color(red: 0.12, green: 0.84, blue: 0.38))
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(approveHovered ? accentColor.opacity(0.85) : accentColor)
                     )
                 }
                 .buttonStyle(.plain)
@@ -490,7 +476,7 @@ struct PixelRetroSessionCardView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(
-                        Rectangle()
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
                             .fill(denyHovered ? Color(red: 0.95, green: 0.30, blue: 0.30) : Color(red: 0.80, green: 0.20, blue: 0.20))
                     )
                 }
@@ -500,12 +486,8 @@ struct PixelRetroSessionCardView: View {
         }
         .padding(6)
         .background(
-            RoundedRectangle(cornerRadius: 3)
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
                 .fill(Color(red: 1.0, green: 0.72, blue: 0.20).opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 3)
-                        .stroke(Color(red: 1.0, green: 0.72, blue: 0.20).opacity(0.4), lineWidth: 0.8)
-                )
         )
     }
 
@@ -519,15 +501,16 @@ struct PixelRetroSessionCardView: View {
                 .foregroundStyle(Color.white.opacity(0.85))
         }
         .padding(.horizontal, 6)
-        .padding(.vertical, 3)
+        .padding(.vertical, 2.5)
         .background(
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
                 .fill(Color(red: 1.0, green: 0.72, blue: 0.20).opacity(0.10))
         )
     }
 
     private var retroQuestionWaitingRow: some View {
         Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
             withAnimation(NotchAnimation.open) {
                 appState.surface = .questionCard(sessionId: sessionId)
             }
@@ -536,14 +519,18 @@ struct PixelRetroSessionCardView: View {
                 Text("[?]")
                     .font(.system(size: 8, weight: .black, design: .monospaced))
                     .foregroundStyle(Color(red: 1.0, green: 0.72, blue: 0.20))
-                Text("QUESTION WAITING — CLICK TO ANSWER")
+                Text("QUESTION PENDING — CLICK TO ANSWER")
                     .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(red: 1.0, green: 0.72, blue: 0.20))
+                Spacer()
+                Text("▸")
+                    .font(.system(size: 8, weight: .black, design: .monospaced))
                     .foregroundStyle(Color(red: 1.0, green: 0.72, blue: 0.20))
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(
-                RoundedRectangle(cornerRadius: 2)
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
                     .fill(Color(red: 1.0, green: 0.72, blue: 0.20).opacity(0.12))
             )
         }
@@ -569,7 +556,7 @@ struct PixelRetroSessionCardView: View {
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
                 .background(
-                    RoundedRectangle(cornerRadius: 2)
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
                         .fill(statusColor.opacity(0.12))
                 )
 
@@ -604,7 +591,7 @@ struct PixelRetroSessionCardView: View {
                 } else if cardStatus == .thinking {
                     Text("■ ■ ■")
                         .font(.system(size: 7, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                        .foregroundStyle(accentColor)
                 } else if let prompt = session.lastUserPrompt {
                     Text("› \(prompt)")
                         .font(.system(size: 8, design: .monospaced))
@@ -623,19 +610,15 @@ struct PixelRetroSessionCardView: View {
         .padding(.vertical, 4)
         .background(
             ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(isHovered ? Color.white.opacity(0.06) : Color.white.opacity(0.02))
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(Color.white.opacity(isHovered ? 0.06 : 0.02))
 
                 Rectangle()
                     .fill(statusColor)
                     .frame(width: 2)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 3))
-            .overlay(
-                RoundedRectangle(cornerRadius: 3)
-                    .stroke(isHovered ? statusColor.opacity(0.3) : Color.white.opacity(0.04), lineWidth: 0.8)
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
         )
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 4)
     }
 }

@@ -20,7 +20,28 @@ public struct PrayerExpandedCardView: View {
         prayerCardDisplayMode == PrayerCardDisplayMode.panoramic.rawValue
     }
 
-    private static let tabGreen = Color(red: 0.12, green: 0.84, blue: 0.38)
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @ObservedObject private var nowPlaying = NowPlayingManager.shared
+
+    private var accentColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
+        let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
+        switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : .white
+        case .theme, .cyan: return isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : .white
+        case .white: return .white
+        case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
+        case .green: return Color(red: 0.12, green: 0.84, blue: 0.38)
+        case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
+        }
+    }
 
     public init(manager: PrayerTimeManager) {
         self.manager = manager
@@ -115,7 +136,7 @@ public struct PrayerExpandedCardView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "mappin.and.ellipse")
                             .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(Self.tabGreen)
+                            .foregroundStyle(accentColor)
                         Text(manager.cityName.uppercased())
                             .font(.system(size: 8, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.white.opacity(0.95))
@@ -144,15 +165,14 @@ public struct PrayerExpandedCardView: View {
 
                                 Text(manager.formattedPrayerTime(next.date))
                                     .font(.system(size: 14, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Self.tabGreen)
+                                    .foregroundStyle(accentColor)
 
                                 Text(diffMins <= 0 ? "[NOW]" : "[-\(manager.formattedCountdown)]")
-                                    .font(.system(size: 10, weight: .black, design: .monospaced))
-                                    .foregroundStyle(Color.black)
-                                    .padding(.horizontal, 5)
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(accentColor)
+                                    .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
-                                    .background(RoundedRectangle(cornerRadius: 3).fill(Self.tabGreen))
-                                    .shadow(color: Self.tabGreen.opacity(0.6), radius: 4)
+                                    .background(RoundedRectangle(cornerRadius: 3).fill(accentColor.opacity(0.20)))
                             }
                         }
 
@@ -168,9 +188,8 @@ public struct PrayerExpandedCardView: View {
                     HStack(spacing: 8) {
                         ZStack {
                             Circle()
-                                .stroke(Self.tabGreen.opacity(0.40), lineWidth: 1)
+                                .fill(Color.black.opacity(0.50))
                                 .frame(width: 44, height: 44)
-                                .background(Circle().fill(Color.black.opacity(0.65)))
 
                             VStack {
                                 Text("N")
@@ -198,9 +217,9 @@ public struct PrayerExpandedCardView: View {
                                 VStack(spacing: 0) {
                                     Image(systemName: "triangle.fill")
                                         .font(.system(size: 6, weight: .bold))
-                                        .foregroundStyle(Self.tabGreen)
+                                        .foregroundStyle(accentColor)
                                     Rectangle()
-                                        .fill(Self.tabGreen)
+                                        .fill(accentColor)
                                         .frame(width: 1.2, height: 13)
                                     Spacer()
                                 }
@@ -208,7 +227,7 @@ public struct PrayerExpandedCardView: View {
                                 .rotationEffect(.degrees(deg))
 
                                 Circle()
-                                    .fill(Self.tabGreen)
+                                    .fill(accentColor)
                                     .frame(width: 4, height: 4)
                             }
 
@@ -221,7 +240,7 @@ public struct PrayerExpandedCardView: View {
                         VStack(alignment: .leading, spacing: 1) {
                             Text("QIBLA")
                                 .font(.system(size: 7, weight: .black, design: .monospaced))
-                                .foregroundStyle(Self.tabGreen)
+                                .foregroundStyle(accentColor)
 
                             Text("\(Int(deg))° \(dirShort)")
                                 .font(.system(size: 11, weight: .black, design: .monospaced))
@@ -321,27 +340,27 @@ public struct PrayerExpandedCardView: View {
                     // Next Prayer Spotlight Badge
                     if let next = upcoming {
                         let diffMins = manager.minutesUntilNextPrayer
-                        HStack(spacing: 4) {
+                        HStack(spacing: 5) {
                             Text(next.prayer.displayName.uppercased())
                                 .font(.system(size: 8.5, weight: .black, design: .monospaced))
                                 .foregroundStyle(Color.white)
 
                             Text(manager.formattedPrayerTime(next.date))
                                 .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Self.tabGreen)
+                                .foregroundStyle(accentColor)
 
                             Text(diffMins <= 0 ? "[NOW]" : "[-\(manager.formattedCountdown)]")
-                                .font(.system(size: 7.5, weight: .black, design: .monospaced))
-                                .foregroundStyle(Color.black)
+                                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(accentColor)
                                 .padding(.horizontal, 4)
-                                .padding(.vertical, 1.5)
-                                .background(RoundedRectangle(cornerRadius: 2).fill(Self.tabGreen))
+                                .padding(.vertical, 1)
+                                .background(RoundedRectangle(cornerRadius: 3).fill(accentColor.opacity(0.20)))
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2.5)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.black.opacity(0.65))
+                                .fill(Color.black.opacity(0.50))
                         )
                     }
 
@@ -349,16 +368,15 @@ public struct PrayerExpandedCardView: View {
                     HStack(spacing: 4) {
                         ZStack {
                             Circle()
-                                .stroke(Self.tabGreen.opacity(0.40), lineWidth: 0.8)
+                                .fill(Color.black.opacity(0.50))
                                 .frame(width: 17, height: 17)
-                                .background(Circle().fill(Color.black.opacity(0.65)))
 
                             VStack(spacing: 0) {
                                 Image(systemName: "triangle.fill")
                                     .font(.system(size: 4, weight: .bold))
-                                    .foregroundStyle(Self.tabGreen)
+                                    .foregroundStyle(accentColor)
                                 Rectangle()
-                                    .fill(Self.tabGreen)
+                                    .fill(accentColor)
                                     .frame(width: 1.0, height: 5.5)
                                 Spacer()
                             }
@@ -378,7 +396,7 @@ public struct PrayerExpandedCardView: View {
                     .padding(.vertical, 2.5)
                     .background(
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.black.opacity(0.65))
+                            .fill(Color.black.opacity(0.50))
                     )
                     .help("Qibla Direction: \(Int(deg))° \(dirFull) towards Kaaba")
                 }
@@ -460,7 +478,7 @@ public struct PrayerExpandedCardView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "location.fill")
                             .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(Self.tabGreen)
+                            .foregroundStyle(accentColor)
                         Text(manager.cityName)
                             .font(.system(size: 8.5, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.white.opacity(0.95))
@@ -486,14 +504,14 @@ public struct PrayerExpandedCardView: View {
 
                                 Text(manager.formattedPrayerTime(next.date))
                                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                                    .foregroundStyle(Self.tabGreen)
+                                    .foregroundStyle(accentColor)
 
                                 Text(diffMins <= 0 ? "Now" : "-\(manager.formattedCountdown)")
                                     .font(.system(size: 10, weight: .bold, design: .rounded))
-                                    .foregroundStyle(Color.white)
+                                    .foregroundStyle(accentColor)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2.5)
-                                    .background(Capsule().fill(Self.tabGreen.opacity(0.90)))
+                                    .background(Capsule().fill(accentColor.opacity(0.20)))
                             }
                         }
 
@@ -515,9 +533,9 @@ public struct PrayerExpandedCardView: View {
                             VStack(spacing: 0) {
                                 Image(systemName: "location.north.fill")
                                     .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(Self.tabGreen)
+                                    .foregroundStyle(accentColor)
                                 Rectangle()
-                                    .fill(Self.tabGreen)
+                                    .fill(accentColor)
                                     .frame(width: 1.2, height: 14)
                                 Spacer()
                             }
@@ -525,7 +543,7 @@ public struct PrayerExpandedCardView: View {
                             .rotationEffect(.degrees(deg))
 
                             Circle()
-                                .fill(Self.tabGreen)
+                                .fill(accentColor)
                                 .frame(width: 4, height: 4)
 
                             Text("🕋")
@@ -537,7 +555,7 @@ public struct PrayerExpandedCardView: View {
                         VStack(alignment: .leading, spacing: 1) {
                             Text("Qibla")
                                 .font(.system(size: 8, weight: .bold, design: .rounded))
-                                .foregroundStyle(Self.tabGreen)
+                                .foregroundStyle(accentColor)
 
                             Text("\(Int(deg))° \(dirShort)")
                                 .font(.system(size: 12, weight: .bold, design: .rounded))
@@ -635,14 +653,14 @@ public struct PrayerExpandedCardView: View {
 
                             Text(manager.formattedPrayerTime(next.date))
                                 .font(.system(size: 9, weight: .bold, design: .rounded))
-                                .foregroundStyle(Self.tabGreen)
+                                .foregroundStyle(accentColor)
 
                             Text(diffMins <= 0 ? "Now" : "-\(manager.formattedCountdown)")
                                 .font(.system(size: 8, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color.white)
+                                .foregroundStyle(accentColor)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(Capsule().fill(Self.tabGreen.opacity(0.90)))
+                                .background(Capsule().fill(accentColor.opacity(0.20)))
                         }
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
@@ -659,9 +677,9 @@ public struct PrayerExpandedCardView: View {
                             VStack(spacing: 0) {
                                 Image(systemName: "location.north.fill")
                                     .font(.system(size: 4.5, weight: .bold))
-                                    .foregroundStyle(Self.tabGreen)
+                                    .foregroundStyle(accentColor)
                                 Rectangle()
-                                    .fill(Self.tabGreen)
+                                    .fill(accentColor)
                                     .frame(width: 1.0, height: 6)
                                 Spacer()
                             }
@@ -723,7 +741,7 @@ public struct PrayerExpandedCardView: View {
                     let activeRatio = CGFloat(nextIndex) / totalSteps
                     let trackWidth = geo.size.width - 56
                     Rectangle()
-                        .fill(Self.tabGreen.opacity(0.85))
+                        .fill(accentColor.opacity(0.85))
                         .frame(width: max(0, trackWidth * activeRatio), height: isPixelTheme ? 1.5 : 2)
                         .padding(.leading, 28)
                         .offset(y: geo.size.height / 2 - 9)
@@ -743,21 +761,21 @@ public struct PrayerExpandedCardView: View {
                         ZStack {
                             if isNext {
                                 Circle()
-                                    .fill(Self.tabGreen)
+                                    .fill(accentColor)
                                     .frame(width: 10, height: 10)
-                                    .shadow(color: Self.tabGreen.opacity(0.8), radius: 4)
+                                    .shadow(color: accentColor.opacity(0.8), radius: 4)
 
                                 Circle()
                                     .fill(Color.black)
                                     .frame(width: 4, height: 4)
                             } else if isPassed {
                                 Circle()
-                                    .fill(Self.tabGreen.opacity(0.35))
+                                    .fill(accentColor.opacity(0.35))
                                     .frame(width: 8, height: 8)
 
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 4.5, weight: .black))
-                                    .foregroundStyle(Self.tabGreen)
+                                    .foregroundStyle(accentColor)
                             } else {
                                 Circle()
                                     .fill(Color.white.opacity(0.25))
@@ -776,9 +794,9 @@ public struct PrayerExpandedCardView: View {
                                 .background(
                                     Group {
                                         if isPixelTheme {
-                                            Rectangle().fill(Self.tabGreen)
+                                            Rectangle().fill(accentColor)
                                         } else {
-                                            Capsule().fill(Self.tabGreen)
+                                            Capsule().fill(accentColor)
                                         }
                                     }
                                 )
@@ -800,7 +818,7 @@ public struct PrayerExpandedCardView: View {
                         // 4. Formatted Time
                         Text(manager.formattedPrayerTime(item.date))
                             .font(.system(size: 11, weight: isNext ? .black : .bold, design: isPixelTheme ? .monospaced : .rounded))
-                            .foregroundStyle(isNext ? Self.tabGreen : (isPassed ? Color.white.opacity(0.50) : Color.white))
+                            .foregroundStyle(isNext ? accentColor : (isPassed ? Color.white.opacity(0.50) : Color.white))
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 2)

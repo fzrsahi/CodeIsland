@@ -12,8 +12,8 @@ struct AlbumArtPalette: Equatable, Sendable {
         secondary: Color(red: 1.0, green: 0.72, blue: 0.20), // Sunset Amber
         spectrum: RetroSpectrumPalette(
             base: Color(red: 0.0, green: 0.96, blue: 0.83),
-            mid: Color(red: 0.96, green: 0.62, blue: 0.04),
-            peak: Color(red: 1.0, green: 0.16, blue: 0.53)
+            mid: Color(red: 0.0, green: 0.82, blue: 0.88),
+            peak: Color(red: 0.70, green: 0.96, blue: 1.0)
         )
     )
 }

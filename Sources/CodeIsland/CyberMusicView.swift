@@ -52,11 +52,11 @@ struct RetroSpectrumPalette: Equatable, Sendable {
                 peak: Color(red: 0.0, green: 0.96, blue: 0.83)
             )
         case .cyan, .theme:
-            // Base = Electric Cyan, Mid = Neon Amber, Peak = Neon Pink
+            // Base = Electric Cyan, Mid = Deep Aqua, Peak = Ice White
             return RetroSpectrumPalette(
                 base: Color(red: 0.0, green: 0.96, blue: 0.83),
-                mid: Color(red: 0.96, green: 0.62, blue: 0.04),
-                peak: Color(red: 1.0, green: 0.16, blue: 0.53)
+                mid: Color(red: 0.0, green: 0.82, blue: 0.88),
+                peak: Color(red: 0.70, green: 0.96, blue: 1.0)
             )
         }
     }
@@ -684,9 +684,9 @@ struct SubNotchFloatingLyricCapsuleView: View {
             HStack(spacing: 6) {
                 Image(systemName: iconName)
                     .font(.system(size: 8.5, weight: .bold))
-                    .foregroundStyle(isHovered ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .foregroundStyle(isHovered ? activeTextColor : activeTextColor.opacity(0.85))
                     .shadow(color: Color.black.opacity(0.85), radius: 2, x: 0, y: 1)
-                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.75), radius: 4, x: 0, y: 0)
+                    .shadow(color: activeTextColor.opacity(isHovered ? 0.9 : 0.6), radius: 4, x: 0, y: 0)
                     .frame(width: 12)
 
                 ZStack {
@@ -726,7 +726,7 @@ struct SubNotchFloatingLyricCapsuleView: View {
             HStack(spacing: 7) {
                 Image(systemName: iconName)
                     .font(.system(size: 8.5, weight: .bold))
-                    .foregroundStyle(isHovered ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .foregroundStyle(isHovered ? activeTextColor : activeTextColor.opacity(0.85))
                     .frame(width: 12)
 
                 ZStack {
@@ -936,9 +936,9 @@ struct SubNotchFloatingLyricCapsuleView: View {
             HStack(spacing: 7) {
                 HStack(spacing: 3) {
                     Circle()
-                        .fill(nowPlaying.isPlaying ? Color(red: 0.12, green: 0.84, blue: 0.38) : Color.white.opacity(0.3))
+                        .fill(nowPlaying.isPlaying ? activeTextColor : Color.white.opacity(0.3))
                         .frame(width: 4.5, height: 4.5)
-                        .shadow(color: nowPlaying.isPlaying ? Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.8) : Color.clear, radius: 2)
+                        .shadow(color: nowPlaying.isPlaying ? activeTextColor.opacity(0.8) : Color.clear, radius: 2)
                     Text("LIVE")
                         .font(.system(size: 6.5, weight: .black, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.75))
@@ -1828,11 +1828,11 @@ struct RetroCyberMusicHUDContentView: View {
                     } else if !nowPlaying.lyrics.isEmpty {
                         HStack(spacing: 3) {
                             Circle()
-                                .fill(Color(red: 0.12, green: 0.84, blue: 0.38))
+                                .fill(activeProgressColor)
                                 .frame(width: 3.5, height: 3.5)
                             Text("SYNCED")
                                 .font(.system(size: 7, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                                .foregroundStyle(activeProgressColor)
                         }
                     }
                 }

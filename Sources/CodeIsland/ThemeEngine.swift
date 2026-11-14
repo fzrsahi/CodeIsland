@@ -12,7 +12,7 @@ public enum AppColorTheme {
             }
             return isModern ? .white : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme:
-            return isModern ? .white : Color(red: 0.12, green: 0.84, blue: 0.38)
+            return isModern ? .white : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)

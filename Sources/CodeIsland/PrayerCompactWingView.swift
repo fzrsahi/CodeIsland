@@ -24,7 +24,7 @@ public struct PrayerCompactWingView: View {
             // Phase icon
             Image(systemName: manager.currentPhase.systemImage)
                 .font(.system(size: 9.5, weight: .semibold))
-                .foregroundStyle(isPixel ? Color(red: 0.12, green: 0.84, blue: 0.38) : manager.currentPhase.accentColor)
+                .foregroundStyle(isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : manager.currentPhase.accentColor)
 
             // Current timestamp
             Text(manager.currentTimeString)
@@ -47,14 +47,14 @@ public struct PrayerCompactWingView: View {
                     Group {
                         if isPixel {
                             Rectangle()
-                                .fill(Color(red: 0.12, green: 0.84, blue: 0.38).opacity(diffMins <= 15 ? 0.3 : 0.15))
+                                .fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(diffMins <= 15 ? 0.3 : 0.15))
                         } else {
                             Capsule()
                                 .fill(manager.currentPhase.accentColor.opacity(diffMins <= 15 ? 0.25 : 0.12))
                         }
                     }
                 )
-                .foregroundStyle(isPixel ? Color(red: 0.12, green: 0.84, blue: 0.38) : (diffMins <= 15 ? manager.currentPhase.accentColor : Color.white.opacity(0.8)))
+                .foregroundStyle(isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : (diffMins <= 15 ? manager.currentPhase.accentColor : Color.white.opacity(0.8)))
             }
         }
         .padding(.horizontal, 4)

@@ -1569,7 +1569,7 @@ private struct AppearancePage: View {
                                         } else if col == .theme {
                                             Circle()
                                                 .fill(LinearGradient(
-                                                    colors: [Color(red: 0.0, green: 0.96, blue: 0.83), Color(red: 0.12, green: 0.84, blue: 0.38)],
+                                                    colors: [Color(red: 0.0, green: 0.96, blue: 0.83), Color(red: 0.0, green: 0.75, blue: 0.95)],
                                                     startPoint: .topLeading,
                                                     endPoint: .bottomTrailing
                                                 ))

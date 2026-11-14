@@ -39,16 +39,16 @@ public struct PrayerMiniPeekBannerView: View {
             // 8-bit Mosque / Crescent Icon Box
             ZStack {
                 Rectangle()
-                    .fill(Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.18))
+                    .fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18))
                     .frame(width: 26, height: 26)
                     .overlay(
                         Rectangle()
-                            .stroke(Color(red: 0.12, green: 0.84, blue: 0.38), lineWidth: 1)
+                            .stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6), lineWidth: 1)
                     )
 
                 Image(systemName: "moon.stars.fill")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
             }
 
             // Text Info
@@ -61,9 +61,9 @@ public struct PrayerMiniPeekBannerView: View {
 
                     if manager.upcomingPrayer != nil {
                         let diffMins = manager.minutesUntilNextPrayer
-                        Text(diffMins <= 0 ? "[TIBA]" : "[-\(diffMins)M]")
+                        Text(diffMins <= 0 ? "[NOW]" : "[-\(diffMins)M]")
                             .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
                     }
                 }
 
@@ -85,17 +85,17 @@ public struct PrayerMiniPeekBannerView: View {
                     HStack(spacing: 3) {
                         Image(systemName: "arrow.up.right.square")
                             .font(.system(size: 8, weight: .bold))
-                        Text("BUKA")
+                        Text("OPEN")
                             .font(.system(size: 8, weight: .bold, design: .monospaced))
                     }
                     .padding(.horizontal, 5)
                     .padding(.vertical, 3)
                     .background(
                         Rectangle()
-                            .fill(hoveredButton == "open" ? Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.35) : Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.18))
-                            .overlay(Rectangle().stroke(Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.8), lineWidth: 0.8))
+                            .fill(hoveredButton == "open" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.35) : Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18))
+                            .overlay(Rectangle().stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), lineWidth: 0.8))
                     )
-                    .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
                 }
                 .buttonStyle(.plain)
                 .onHover { if $0 { hoveredButton = "open" } else if hoveredButton == "open" { hoveredButton = nil } }
@@ -149,7 +149,7 @@ public struct PrayerMiniPeekBannerView: View {
                 .fill(Color(red: 0.05, green: 0.07, blue: 0.10))
                 .overlay(
                     Rectangle()
-                        .stroke(Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.55), lineWidth: 1)
+                        .stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.55), lineWidth: 1)
                 )
         )
         .padding(.horizontal, 8)
