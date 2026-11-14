@@ -173,7 +173,11 @@ public struct DioramaSkyView: View {
                 ? Color(red: 0.08, green: 0.07, blue: 0.16).opacity(0.40)
                 : Color.white.opacity(0.35 * (1.0 - night))
 
-            for (baseX, baseY, cw, ch) in [(0.44, 0.22, 48.0, 10.0), (0.68, 0.30, 56.0, 11.0)] {
+            let clouds: [(CGFloat, CGFloat, CGFloat, CGFloat)] = [
+                (0.44, 0.22, 48.0, 10.0),
+                (0.68, 0.30, 56.0, 11.0),
+            ]
+            for (baseX, baseY, cw, ch) in clouds {
                 let cx = (baseX * size.width + CGFloat(hour) * 3).truncatingRemainder(dividingBy: size.width + 80) - 40
                 let cy = baseY * size.height
                 let rect = CGRect(x: snap(cx), y: snap(cy), width: snap(cw), height: snap(ch))
