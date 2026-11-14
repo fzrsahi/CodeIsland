@@ -292,7 +292,7 @@ extension AppState {
                 status: .waitingApproval,
                 tool: pending.event.toolName ?? pendingSession?.currentTool,
                 workspace: pendingSession?.projectDisplayName,
-                messages: Array(messages.suffix(3)),
+                messages: Array(messages.suffix(3))
             )
         }
 
@@ -313,7 +313,7 @@ extension AppState {
                 status: .waitingQuestion,
                 tool: pending.event.toolName ?? "AskUserQuestion",
                 workspace: pendingSession?.projectDisplayName,
-                messages: Array(messages.suffix(3)),
+                messages: Array(messages.suffix(3))
             )
         }
 
@@ -332,7 +332,7 @@ extension AppState {
                 ? session?.currentTool
                 : nil,
             workspace: session?.projectDisplayName,
-            messages: Self.companionMessages(Array((session?.recentMessages ?? []).suffix(3))),
+            messages: Self.companionMessages(Array((session?.recentMessages ?? []).suffix(3)))
         )
     }
 

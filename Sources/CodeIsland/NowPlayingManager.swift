@@ -183,7 +183,12 @@ final class NowPlayingManager: ObservableObject {
     @Published var album: String = ""
     @Published var player: String = "" // "Spotify", "Music", "SPOTIFY · BRAVE", "YT MUSIC · CHROME", etc.
     @Published var artworkURL: String = ""
-    @Published var artworkImage: NSImage?
+    @Published var artworkImage: NSImage? {
+        didSet {
+            updateAlbumPalette(from: artworkImage)
+        }
+    }
+    @Published var albumPalette: AlbumArtPalette = .fallback
     /// Bumped per artwork request so a slow load cannot land on a newer track.
     private var artworkToken = 0
     /// Where the track was, when, and how fast it is moving from there.
@@ -490,8 +495,12 @@ final class NowPlayingManager: ObservableObject {
         return nil
     }
 
+    private var isMusicFeatureEnabled: Bool {
+        UserDefaults.standard.object(forKey: SettingsKey.musicEnabled) as? Bool ?? SettingsDefaults.musicEnabled
+    }
+
     private func handleAppleMusicNotification(_ notification: Notification) {
-        guard !isSimulated, let info = notification.userInfo else { return }
+        guard !isSimulated, isMusicFeatureEnabled, let info = notification.userInfo else { return }
         let state = info["Player State"] as? String ?? ""
         let playing = (state == "Playing")
 
@@ -524,7 +533,7 @@ final class NowPlayingManager: ObservableObject {
     }
 
     private func handleSpotifyNotification(_ notification: Notification) {
-        guard !isSimulated, let info = notification.userInfo else { return }
+        guard !isSimulated, isMusicFeatureEnabled, let info = notification.userInfo else { return }
         let state = info["Player State"] as? String ?? ""
         let playing = (state == "Playing")
 
@@ -1380,6 +1389,7 @@ final class NowPlayingManager: ObservableObject {
         artworkURL = ""
         artworkImage = nil
         setAnchor(position: 0, playing: false)
+        albumPalette = .fallback
         trackDuration = 0
         lyrics = []
         currentLyricIndex = 0
@@ -1468,6 +1478,19 @@ final class NowPlayingManager: ObservableObject {
             return NSImage(data: data)
         }
         return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+    }
+
+    private func updateAlbumPalette(from image: NSImage?) {
+        guard let image else {
+            self.albumPalette = .fallback
+            return
+        }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let palette = AlbumColorExtractor.extractPalette(from: image)
+            Task { @MainActor in
+                self?.albumPalette = palette
+            }
+        }
     }
 
     // MARK: - Lyrics Engine

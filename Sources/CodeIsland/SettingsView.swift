@@ -8,12 +8,17 @@ import CodeIslandCore
 
 enum SettingsPage: String, Identifiable, Hashable {
     case general
-    case behavior
     case appearance
     case mascots
     case sound
     case shortcuts
+    // Features & HUD
+    case agents
+    case workspace
+    case music
     case prayer
+    // System & Tools
+    case behavior
     case remote
     case hooks
     case buddy
@@ -24,12 +29,15 @@ enum SettingsPage: String, Identifiable, Hashable {
     var icon: String {
         switch self {
         case .general: return "gearshape.fill"
-        case .behavior: return "slider.horizontal.3"
         case .appearance: return "paintbrush.fill"
         case .mascots: return "person.2.fill"
         case .sound: return "speaker.wave.2.fill"
         case .shortcuts: return "command.circle.fill"
+        case .agents: return "cpu.fill"
+        case .workspace: return "folder.fill.badge.gearshape"
+        case .music: return "music.note.list"
         case .prayer: return "moon.stars.fill"
+        case .behavior: return "slider.horizontal.3"
         case .remote: return "network"
         case .hooks: return "link.circle.fill"
         case .buddy: return "dot.radiowaves.left.and.right"
@@ -40,12 +48,15 @@ enum SettingsPage: String, Identifiable, Hashable {
     var color: Color {
         switch self {
         case .general: return .gray
-        case .behavior: return .orange
         case .appearance: return .blue
         case .mascots: return .pink
         case .sound: return .green
         case .shortcuts: return .indigo
-        case .prayer: return .teal
+        case .agents: return .mint
+        case .workspace: return .teal
+        case .music: return Color(red: 1.0, green: 0.16, blue: 0.53)
+        case .prayer: return Color(red: 0.12, green: 0.84, blue: 0.38)
+        case .behavior: return .orange
         case .remote: return .mint
         case .hooks: return .purple
         case .buddy: return .red
@@ -60,8 +71,9 @@ private struct SidebarGroup: Hashable {
 }
 
 private let sidebarGroups: [SidebarGroup] = [
-    SidebarGroup(title: nil, pages: [.general, .behavior, .appearance, .mascots, .sound, .shortcuts]),
-    SidebarGroup(title: "CodeIsland", pages: [.prayer, .remote, .hooks, .buddy, .about]),
+    SidebarGroup(title: "System", pages: [.general, .appearance, .mascots, .sound, .shortcuts]),
+    SidebarGroup(title: "Features & HUD", pages: [.agents, .workspace, .music, .prayer]),
+    SidebarGroup(title: "CodeIsland", pages: [.behavior, .remote, .hooks, .buddy, .about]),
 ]
 
 // MARK: - Main View
@@ -100,12 +112,15 @@ struct SettingsView: View {
             Group {
                 switch selectedPage {
                 case .general: GeneralPage()
-                case .behavior: BehaviorPage(appState: appState)
                 case .appearance: AppearancePage()
                 case .mascots: MascotsPage()
                 case .sound: SoundPage()
                 case .shortcuts: ShortcutsPage()
+                case .agents: AgentsSettingsPage()
+                case .workspace: WorkspaceSettingsPage()
+                case .music: MusicSettingsPage()
                 case .prayer: PrayerSettingsPage()
+                case .behavior: BehaviorPage(appState: appState)
                 case .remote: RemoteHostsPage()
                 case .hooks: HooksPage(appState: appState)
                 case .buddy: BuddyPage()
@@ -1478,32 +1493,11 @@ enum ContentFontSize {
 
 private struct AppearancePage: View {
     @ObservedObject private var l10n = L10n.shared
-    @AppStorage(SettingsKey.maxVisibleSessions) private var maxVisibleSessions = SettingsDefaults.maxVisibleSessions
-    @AppStorage(SettingsKey.sessionListDensity) private var sessionListDensityRaw = SettingsDefaults.sessionListDensity
-    @AppStorage(SettingsKey.contentFontSize) private var contentFontSize = SettingsDefaults.contentFontSize
-    @AppStorage(SettingsKey.aiMessageLines) private var aiMessageLines = SettingsDefaults.aiMessageLines
-    @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
-    @AppStorage(SettingsKey.showToolStatus) private var showToolStatus = SettingsDefaults.showToolStatus
-    @AppStorage(SettingsKey.showGitBranch) private var showGitBranch = SettingsDefaults.showGitBranch
-    @AppStorage(SettingsKey.showTaskProgress) private var showTaskProgress = SettingsDefaults.showTaskProgress
-    @AppStorage(SettingsKey.showSessionRecap) private var showSessionRecap = SettingsDefaults.showSessionRecap
-    @AppStorage(SettingsKey.showModelLabel) private var showModelLabel = SettingsDefaults.showModelLabel
-    @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
-    @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.workspaceHUDTheme) private var workspaceHUDTheme = SettingsDefaults.workspaceHUDTheme
-    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
-    @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
-    @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
-    @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
-    @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
-    @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
-    @AppStorage(SettingsKey.lyricSyncOffset) private var lyricSyncOffset = SettingsDefaults.lyricSyncOffset
-    @AppStorage(SettingsKey.detectSpotifyWebInBrowsers) private var detectSpotifyWebInBrowsers = SettingsDefaults.detectSpotifyWebInBrowsers
-    @AppStorage(SettingsKey.showUsageStats) private var showUsageStats = SettingsDefaults.showUsageStats
-    @AppStorage(SettingsKey.showClaudeQuota) private var showClaudeQuota = SettingsDefaults.showClaudeQuota
-    @AppStorage(SettingsKey.claudeQuotaChip) private var claudeQuotaChip = SettingsDefaults.claudeQuotaChip
     @AppStorage(SettingsKey.collapsedWidthScale) private var collapsedWidthScale = SettingsDefaults.collapsedWidthScale
     @AppStorage(SettingsKey.notchHeightMode) private var notchHeightModeRaw = SettingsDefaults.notchHeightMode
     @AppStorage(SettingsKey.customNotchHeight) private var customNotchHeight = SettingsDefaults.customNotchHeight
@@ -1518,13 +1512,6 @@ private struct AppearancePage: View {
         )
     }
 
-    private var sessionListDensityBinding: Binding<SessionListDensity> {
-        Binding(
-            get: { SessionListDensity(storedValue: sessionListDensityRaw) },
-            set: { sessionListDensityRaw = $0.rawValue }
-        )
-    }
-
     private var notchAnimationSpeedBinding: Binding<Double> {
         Binding(
             get: { NotchAnimationSpeed.clamped(notchAnimationSpeed) },
@@ -1534,15 +1521,6 @@ private struct AppearancePage: View {
 
     var body: some View {
         Form {
-            Section(l10n["preview"]) {
-                AppearancePreview(
-                    fontSize: contentFontSize,
-                    lineLimit: aiMessageLines,
-                    showDetails: showAgentDetails,
-                    density: sessionListDensityBinding.wrappedValue
-                )
-            }
-
             Section("Cyber Theme Engine") {
                 VStack(alignment: .leading, spacing: 3) {
                     Picker("Island UI Theme", selection: $islandUITheme) {
@@ -1551,11 +1529,15 @@ private struct AppearancePage: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .onChange(of: islandUITheme) { _, newTheme in
-                        if newTheme == IslandUITheme.pixel.rawValue {
+                    .onChange(of: islandUITheme) {
+                        if islandUITheme == IslandUITheme.pixel.rawValue {
                             musicHUDTheme = MusicHUDTheme.retroCyber.rawValue
+                            workspaceHUDTheme = WorkspaceHUDTheme.pixelRetro.rawValue
+                            agentsHUDTheme = AgentsHUDTheme.pixelRetro.rawValue
                         } else {
                             musicHUDTheme = MusicHUDTheme.modernClean.rawValue
+                            workspaceHUDTheme = WorkspaceHUDTheme.modern.rawValue
+                            agentsHUDTheme = AgentsHUDTheme.modern.rawValue
                         }
                     }
 
@@ -1576,10 +1558,18 @@ private struct AppearancePage: View {
                                     musicHUDProgressColor = col.rawValue
                                 }) {
                                     ZStack {
-                                        if col == .theme {
+                                        if col == .album {
+                                            Circle()
+                                                .fill(AngularGradient(
+                                                    colors: [Color.pink, Color.purple, Color.blue, Color.cyan, Color.green, Color.yellow, Color.orange, Color.pink],
+                                                    center: .center
+                                                ))
+                                                .frame(width: 14, height: 14)
+                                                .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                                        } else if col == .theme {
                                             Circle()
                                                 .fill(LinearGradient(
-                                                    colors: [Color(red: 0.0, green: 0.96, blue: 0.83), Color(red: 0.12, green: 0.84, blue: 0.38)],
+                                                    colors: [Color(red: 0.0, green: 0.96, blue: 0.83), Color(red: 0.0, green: 0.75, blue: 0.95)],
                                                     startPoint: .topLeading,
                                                     endPoint: .bottomTrailing
                                                 ))
@@ -1632,26 +1622,6 @@ private struct AppearancePage: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Picker(selection: $maxVisibleSessions) {
-                    Text("3").tag(3)
-                    Text("5").tag(5)
-                    Text("8").tag(8)
-                    Text("10").tag(10)
-                    Text(l10n["unlimited"]).tag(99)
-                } label: {
-                    Text(l10n["max_visible_sessions"])
-                    // Compact scrolls by height, not by count.
-                    Text(l10n[sessionListDensityBinding.wrappedValue == .compact
-                        ? "max_visible_sessions_desc_compact" : "max_visible_sessions_desc"])
-                }
-                Picker(selection: sessionListDensityBinding) {
-                    ForEach(SessionListDensity.allCases, id: \.self) { density in
-                        Text(l10n[density.titleKey]).tag(density)
-                    }
-                } label: {
-                    Text(l10n["session_list_density"])
-                    Text(l10n["session_list_density_desc"])
-                }
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(l10n["collapsed_width_scale"])
@@ -1691,79 +1661,7 @@ private struct AppearancePage: View {
                 }
             }
 
-            Section(l10n["content"]) {
-                Picker(l10n["content_font_size"], selection: $contentFontSize) {
-                    ForEach(ContentFontSize.choices, id: \.self) { size in
-                        Text(size == SettingsDefaults.contentFontSize ? l10n["11pt_default"] : "\(size)pt")
-                            .tag(size)
-                    }
-                }
-                Picker(selection: $aiMessageLines) {
-                    Text(l10n["1_line_default"]).tag(1)
-                    Text(l10n["2_lines"]).tag(2)
-                    Text(l10n["3_lines"]).tag(3)
-                    Text(l10n["5_lines"]).tag(5)
-                    Text(l10n["unlimited"]).tag(0)
-                } label: {
-                    Text(l10n["ai_reply_lines"])
-                    Text(l10n["ai_reply_lines_desc"])
-                }
-                Toggle(l10n["show_agent_details"], isOn: $showAgentDetails)
-                Toggle(l10n["show_tool_status"], isOn: $showToolStatus)
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle(l10n["show_project_name"], isOn: $showProjectName)
-                    Text(l10n["show_project_name_desc"])
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle(l10n["show_git_branch"], isOn: $showGitBranch)
-                    Text(l10n["show_git_branch_desc"])
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle(l10n["show_task_progress"], isOn: $showTaskProgress)
-                    Text(l10n["show_task_progress_desc"])
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle(l10n["show_session_recap"], isOn: $showSessionRecap)
-                    Text(l10n["show_session_recap_desc"])
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle(l10n["show_model_label"], isOn: $showModelLabel)
-                    Text(l10n["show_model_label_desc"])
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-
-            Section("Music & Synced Lyrics") {
-                // Music HUD Theme Selector (Modern Clean Island vs Retro Cyber Pixel)
-                VStack(alignment: .leading, spacing: 3) {
-                    Picker("Music HUD Theme", selection: $musicHUDTheme) {
-                        ForEach(MusicHUDTheme.allCases) { theme in
-                            Text(theme.title).tag(theme.rawValue)
-                        }
-                    }
-                    .pickerStyle(.menu)
-
-                    Text(MusicHUDTheme(rawValue: musicHUDTheme)?.description ?? "")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle("Detect Web Music Players in Browsers", isOn: $detectSpotifyWebInBrowsers)
-                    Text("Automatically detect Spotify Web, YouTube Music, and Apple Music Web in Safari, Brave, Chrome, Arc, and Edge. Enable 'Allow JavaScript from Apple Events' in your browser's Developer menu for exact lyric sync and controls.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-
+            Section("Notch Gestures") {
                 VStack(alignment: .leading, spacing: 2) {
                     Toggle("Scroll on Notch for Volume Control", isOn: $notchScrollVolumeControl)
                     Text("Adjust macOS system volume by scrolling with trackpad or mouse wheel over the notch.")
@@ -1772,66 +1670,354 @@ private struct AppearancePage: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Toggle("Horizontal Scroll on Notch to Switch Features", isOn: $notchScrollTabSwitch)
-                    Text("Swipe left or right over the notch with trackpad or mouse wheel to switch between Agents, Workspace, and Music tabs.")
+                    Toggle("Horizontal Swipe on Notch to Switch Features", isOn: $notchScrollTabSwitch)
+                    Text("Swipe left or right over the notch with trackpad or mouse wheel to switch between Agents, Workspace, Music, and Sholat tabs.")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                 }
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle("Show Synced Lyrics Below Notch", isOn: $showCompactLyrics)
-                    Text("Display a floating lyric ticker directly beneath the notch cutout during playback.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
+// MARK: - Dedicated Feature Setting Pages
+
+private struct AgentsSettingsPage: View {
+    @ObservedObject private var l10n = L10n.shared
+    @AppStorage(SettingsKey.agentsEnabled) private var agentsEnabled = SettingsDefaults.agentsEnabled
+    @AppStorage(SettingsKey.maxVisibleSessions) private var maxVisibleSessions = SettingsDefaults.maxVisibleSessions
+    @AppStorage(SettingsKey.sessionListDensity) private var sessionListDensityRaw = SettingsDefaults.sessionListDensity
+    @AppStorage(SettingsKey.contentFontSize) private var contentFontSize = SettingsDefaults.contentFontSize
+    @AppStorage(SettingsKey.aiMessageLines) private var aiMessageLines = SettingsDefaults.aiMessageLines
+    @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
+    @AppStorage(SettingsKey.showToolStatus) private var showToolStatus = SettingsDefaults.showToolStatus
+    @AppStorage(SettingsKey.showTaskProgress) private var showTaskProgress = SettingsDefaults.showTaskProgress
+    @AppStorage(SettingsKey.showSessionRecap) private var showSessionRecap = SettingsDefaults.showSessionRecap
+    @AppStorage(SettingsKey.showModelLabel) private var showModelLabel = SettingsDefaults.showModelLabel
+    @AppStorage(SettingsKey.showUsageStats) private var showUsageStats = SettingsDefaults.showUsageStats
+    @AppStorage(SettingsKey.showClaudeQuota) private var showClaudeQuota = SettingsDefaults.showClaudeQuota
+    @AppStorage(SettingsKey.claudeQuotaChip) private var claudeQuotaChip = SettingsDefaults.claudeQuotaChip
+    @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
+
+    private var sessionListDensityBinding: Binding<SessionListDensity> {
+        Binding(
+            get: { SessionListDensity(storedValue: sessionListDensityRaw) },
+            set: { sessionListDensityRaw = $0.rawValue }
+        )
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Enable AI Agents Feature", isOn: $agentsEnabled)
+                    .font(.system(size: 13, weight: .semibold))
+                Text("Enables agent session tracking, live tool execution HUD, and multi-agent workflow cards. Turn off to save memory and hide the Agents tab.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Group {
+                Section(l10n["preview"]) {
+                    AppearancePreview(
+                        fontSize: contentFontSize,
+                        lineLimit: aiMessageLines,
+                        showDetails: showAgentDetails,
+                        density: sessionListDensityBinding.wrappedValue
+                    )
                 }
 
-                if showCompactLyrics {
-                    // Preset Layout Selector
+                Section("Agents Tab Theme") {
                     VStack(alignment: .leading, spacing: 3) {
-                        Picker("Floating Lyric Style", selection: $floatingLyricPreset) {
-                            ForEach(FloatingLyricPreset.allCases) { preset in
-                                Text(preset.title).tag(preset.rawValue)
+                        Picker("Card Theme", selection: $agentsHUDTheme) {
+                            ForEach(AgentsHUDTheme.allCases) { theme in
+                                Text(theme.title).tag(theme.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        Text(AgentsHUDTheme(rawValue: agentsHUDTheme)?.description ?? "")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
+                Section("Display & Typography") {
+                    Picker(l10n["content_font_size"], selection: $contentFontSize) {
+                        ForEach(ContentFontSize.choices, id: \.self) { size in
+                            Text(size == SettingsDefaults.contentFontSize ? l10n["11pt_default"] : "\(size)pt")
+                                .tag(size)
+                        }
+                    }
+                    Picker(selection: $aiMessageLines) {
+                        Text(l10n["1_line_default"]).tag(1)
+                        Text(l10n["2_lines"]).tag(2)
+                        Text(l10n["3_lines"]).tag(3)
+                        Text(l10n["5_lines"]).tag(5)
+                        Text(l10n["unlimited"]).tag(0)
+                    } label: {
+                        Text(l10n["ai_reply_lines"])
+                        Text(l10n["ai_reply_lines_desc"])
+                    }
+                    Picker(selection: sessionListDensityBinding) {
+                        ForEach(SessionListDensity.allCases, id: \.self) { density in
+                            Text(l10n[density.titleKey]).tag(density)
+                        }
+                    } label: {
+                        Text(l10n["session_list_density"])
+                        Text(l10n["session_list_density_desc"])
+                    }
+                    Picker(selection: $maxVisibleSessions) {
+                        Text("3").tag(3)
+                        Text("5").tag(5)
+                        Text("8").tag(8)
+                        Text("10").tag(10)
+                        Text(l10n["unlimited"]).tag(99)
+                    } label: {
+                        Text(l10n["max_visible_sessions"])
+                        Text(l10n[sessionListDensityBinding.wrappedValue == .compact
+                            ? "max_visible_sessions_desc_compact" : "max_visible_sessions_desc"])
+                    }
+                }
+
+                Section("Agent Details & Cards") {
+                    Toggle(l10n["show_agent_details"], isOn: $showAgentDetails)
+                    Toggle(l10n["show_tool_status"], isOn: $showToolStatus)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle(l10n["show_model_label"], isOn: $showModelLabel)
+                        Text(l10n["show_model_label_desc"])
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle(l10n["show_task_progress"], isOn: $showTaskProgress)
+                        Text(l10n["show_task_progress_desc"])
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle(l10n["show_session_recap"], isOn: $showSessionRecap)
+                        Text(l10n["show_session_recap_desc"])
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
+                Section("Claude Plan Limits & Quota") {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle(l10n["show_usage_stats"], isOn: $showUsageStats)
+                        Text(l10n["show_usage_stats_desc"])
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle(l10n["show_claude_quota"], isOn: $showClaudeQuota)
+                        Text(l10n["show_claude_quota_desc"])
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                    Picker(l10n["claude_quota_chip"], selection: $claudeQuotaChip) {
+                        Text(l10n["quota_chip_off"]).tag(ClaudeQuotaChipMode.off.rawValue)
+                        Text(l10n["quota_chip_auto"]).tag(ClaudeQuotaChipMode.auto.rawValue)
+                        Text(l10n["quota_chip_session"]).tag(ClaudeQuotaChipMode.session.rawValue)
+                        Text(l10n["quota_chip_weekly"]).tag(ClaudeQuotaChipMode.weeklyAll.rawValue)
+                        Text(l10n["quota_chip_weekly_model"]).tag(ClaudeQuotaChipMode.weeklyScoped.rawValue)
+                    }
+                    .disabled(!showClaudeQuota)
+                }
+            }
+            .disabled(!agentsEnabled)
+        }
+        .formStyle(.grouped)
+    }
+}
+
+private struct WorkspaceSettingsPage: View {
+    @ObservedObject private var l10n = L10n.shared
+    @AppStorage(SettingsKey.workspaceEnabled) private var workspaceEnabled = SettingsDefaults.workspaceEnabled
+    @AppStorage(SettingsKey.workspaceHUDTheme) private var workspaceHUDTheme = SettingsDefaults.workspaceHUDTheme
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
+    @AppStorage(SettingsKey.showGitBranch) private var showGitBranch = SettingsDefaults.showGitBranch
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Enable Workspace & Git Feature", isOn: $workspaceEnabled)
+                    .font(.system(size: 13, weight: .semibold))
+                Text("Monitors git branches, changed files, and project repositories. Disable to completely stop background git scans and save CPU and memory.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Group {
+                Section("Workspace HUD") {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Picker("Workspace HUD Theme", selection: $workspaceHUDTheme) {
+                            ForEach(WorkspaceHUDTheme.allCases) { theme in
+                                Text(theme.title).tag(theme.rawValue)
                             }
                         }
                         .pickerStyle(.menu)
 
-                        Text(FloatingLyricPreset(rawValue: floatingLyricPreset)?.description ?? "")
+                        Text(WorkspaceHUDTheme(rawValue: workspaceHUDTheme)?.description ?? "")
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                     }
 
-                    // Font Typography Style
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle("Adaptive Album Art Palette", isOn: $syncThemeWithAlbumArt)
+                        Text("Synchronizes Workspace accent color and git indicators with the currently playing album artwork.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle(l10n["show_project_name"], isOn: $showProjectName)
+                        Text(l10n["show_project_name_desc"])
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle(l10n["show_git_branch"], isOn: $showGitBranch)
+                        Text(l10n["show_git_branch_desc"])
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
+                Section("Monitored Repositories & Files") {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("CodeIsland automatically synchronizes with the active terminal working directory. When you switch projects in your terminal or IDE, the Workspace tab automatically discovers git branches, staged/modified files, and recent commits.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .disabled(!workspaceEnabled)
+        }
+        .formStyle(.grouped)
+    }
+}
+
+private struct MusicSettingsPage: View {
+    @ObservedObject private var l10n = L10n.shared
+    @AppStorage(SettingsKey.musicEnabled) private var musicEnabled = SettingsDefaults.musicEnabled
+    @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
+    @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
+    @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
+    @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
+    @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
+    @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
+    @AppStorage(SettingsKey.lyricSyncOffset) private var lyricSyncOffset = SettingsDefaults.lyricSyncOffset
+    @AppStorage(SettingsKey.detectSpotifyWebInBrowsers) private var detectSpotifyWebInBrowsers = SettingsDefaults.detectSpotifyWebInBrowsers
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Enable Music & Synced Lyrics Feature", isOn: $musicEnabled)
+                    .font(.system(size: 13, weight: .semibold))
+                Text("Connects to Apple Music, Spotify, and browser web players. Disable to turn off playback polling and lyrics fetching to save memory.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Group {
+                Section("Music Player HUD") {
                     VStack(alignment: .leading, spacing: 3) {
-                        Picker("Font Typography", selection: $floatingLyricFontDesign) {
-                            ForEach(FloatingLyricFontDesign.allCases) { style in
-                                Text(style.title).tag(style.rawValue)
+                        Picker("Music HUD Theme", selection: $musicHUDTheme) {
+                            ForEach(MusicHUDTheme.allCases) { theme in
+                                Text(theme.title).tag(theme.rawValue)
                             }
                         }
                         .pickerStyle(.menu)
 
-                        Text("Choose font family: Modern Rounded, Monospaced code, Clean System, or Elegant Serif.")
+                        Text(MusicHUDTheme(rawValue: musicHUDTheme)?.description ?? "")
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                     }
 
-                    // Text Highlight Color (macOS Accent Color Swatches Style)
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack {
-                            Text("Lyric Highlight Color (Below Notch)")
-                            Spacer()
-                            HStack(spacing: 8) {
-                                ForEach(FloatingLyricTextColor.allCases) { col in
-                                    let isSelected = (floatingLyricTextColor == col.rawValue)
-                                    Button(action: {
-                                        floatingLyricTextColor = col.rawValue
-                                    }) {
-                                        ZStack {
-                                            Circle()
-                                                .fill(col.color)
-                                                .frame(width: 14, height: 14)
-                                                .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle("Adaptive Album Art Palette", isOn: $syncThemeWithAlbumArt)
+                        Text("Automatically extracts vibrant colors from the playing album artwork and synchronizes Music HUD, Workspace HUD, and Floating Lyrics.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
 
-                                            if isSelected {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle("Detect Web Music Players in Browsers", isOn: $detectSpotifyWebInBrowsers)
+                        Text("Automatically detect Spotify Web, YouTube Music, and Apple Music Web in Safari, Brave, Chrome, Arc, and Edge. Enable 'Allow JavaScript from Apple Events' in your browser's Developer menu for exact lyric sync and controls.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
+                Section("Floating Synced Lyrics (Below Notch)") {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle("Show Synced Lyrics Below Notch", isOn: $showCompactLyrics)
+                        Text("Display a floating lyric ticker directly beneath the notch cutout during playback.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    if showCompactLyrics {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Picker("Floating Lyric Style", selection: $floatingLyricPreset) {
+                                ForEach(FloatingLyricPreset.allCases) { preset in
+                                    Text(preset.title).tag(preset.rawValue)
+                                }
+                            }
+                            .pickerStyle(.menu)
+
+                            Text(FloatingLyricPreset(rawValue: floatingLyricPreset)?.description ?? "")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                        }
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Picker("Font Typography", selection: $floatingLyricFontDesign) {
+                                ForEach(FloatingLyricFontDesign.allCases) { style in
+                                    Text(style.title).tag(style.rawValue)
+                                }
+                            }
+                            .pickerStyle(.menu)
+
+                            Text("Choose font family: Modern Rounded, Monospaced code, Clean System, or Elegant Serif.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                        }
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack {
+                                Text("Lyric Highlight Color (Below Notch)")
+                                Spacer()
+                                HStack(spacing: 8) {
+                                    ForEach(FloatingLyricTextColor.allCases) { col in
+                                        let isSelected = (floatingLyricTextColor == col.rawValue)
+                                        Button(action: {
+                                            floatingLyricTextColor = col.rawValue
+                                        }) {
+                                            ZStack {
+                                                if col == .album {
+                                                    Circle()
+                                                        .fill(AngularGradient(
+                                                            colors: [Color.pink, Color.purple, Color.blue, Color.cyan, Color.green, Color.yellow, Color.orange, Color.pink],
+                                                            center: .center
+                                                        ))
+                                                        .frame(width: 14, height: 14)
+                                                        .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                                                } else {
+                                                    Circle()
+                                                        .fill(col.color)
+                                                        .frame(width: 14, height: 14)
+                                                        .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                                                }
+
+                                                if isSelected {
                                                 Circle()
                                                     .stroke(Color.white, lineWidth: 2)
                                                     .frame(width: 20, height: 20)
@@ -1850,7 +2036,6 @@ private struct AppearancePage: View {
                             .foregroundStyle(.tertiary)
                     }
 
-                    // Font Size Slider (Continuous smooth track, no dots)
                     VStack(alignment: .leading, spacing: 3) {
                         HStack {
                             Text("Lyric Font Size")
@@ -1879,7 +2064,6 @@ private struct AppearancePage: View {
                             .foregroundStyle(.tertiary)
                     }
 
-                    // Vertical Gap (Continuous smooth track, no dots)
                     VStack(alignment: .leading, spacing: 3) {
                         HStack {
                             Text("Distance from Notch")
@@ -1909,7 +2093,6 @@ private struct AppearancePage: View {
                     }
                 }
 
-                // Timing Offset (Continuous smooth track, no barcode dots)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text("Lyric Timing Offset")
@@ -1964,44 +2147,8 @@ private struct AppearancePage: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-
-            Section("Workspace HUD") {
-                VStack(alignment: .leading, spacing: 3) {
-                    Picker("Workspace HUD Theme", selection: $workspaceHUDTheme) {
-                        ForEach(WorkspaceHUDTheme.allCases) { theme in
-                            Text(theme.title).tag(theme.rawValue)
-                        }
-                    }
-                    .pickerStyle(.menu)
-
-                    Text(WorkspaceHUDTheme(rawValue: workspaceHUDTheme)?.description ?? "")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
             }
-
-            Section("Usage & Quota") {
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle(l10n["show_usage_stats"], isOn: $showUsageStats)
-                    Text(l10n["show_usage_stats_desc"])
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Toggle(l10n["show_claude_quota"], isOn: $showClaudeQuota)
-                    Text(l10n["show_claude_quota_desc"])
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                Picker(l10n["claude_quota_chip"], selection: $claudeQuotaChip) {
-                    Text(l10n["quota_chip_off"]).tag(ClaudeQuotaChipMode.off.rawValue)
-                    Text(l10n["quota_chip_auto"]).tag(ClaudeQuotaChipMode.auto.rawValue)
-                    Text(l10n["quota_chip_session"]).tag(ClaudeQuotaChipMode.session.rawValue)
-                    Text(l10n["quota_chip_weekly"]).tag(ClaudeQuotaChipMode.weeklyAll.rawValue)
-                    Text(l10n["quota_chip_weekly_model"]).tag(ClaudeQuotaChipMode.weeklyScoped.rawValue)
-                }
-                .disabled(!showClaudeQuota)
-            }
+            .disabled(!musicEnabled)
         }
         .formStyle(.grouped)
     }
@@ -3668,6 +3815,7 @@ private struct PrayerSettingsPage: View {
     @AppStorage(SettingsKey.prayerSoundEnabled) private var soundEnabled = SettingsDefaults.prayerSoundEnabled
     @AppStorage(SettingsKey.prayerSystemNotificationEnabled) private var systemNotificationEnabled = SettingsDefaults.prayerSystemNotificationEnabled
     @AppStorage(SettingsKey.prayerUsePreciseLocation) private var usePreciseLocation = SettingsDefaults.prayerUsePreciseLocation
+    @AppStorage(SettingsKey.prayerCardDisplayMode) private var prayerCardDisplayMode = SettingsDefaults.prayerCardDisplayMode
 
     var body: some View {
         Form {
@@ -3680,6 +3828,19 @@ private struct PrayerSettingsPage: View {
             }
 
             if prayerEnabled {
+                Section(header: Text("Card Display Mode")) {
+                    Picker("Display Layout", selection: $prayerCardDisplayMode) {
+                        ForEach(PrayerCardDisplayMode.allCases) { mode in
+                            Text(mode.title).tag(mode.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Text(PrayerCardDisplayMode(rawValue: prayerCardDisplayMode)?.description ?? "Choose between compact ribbon and full diorama.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section(header: Text("Calculation Method")) {
                     Picker("Method", selection: $calculationMethod) {
                         Text("Ministry of Religious Affairs (Fajr -20°, +2m safety margin)").tag("kemenag")

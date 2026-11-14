@@ -134,10 +134,19 @@ struct NotchPanelView: View {
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
 
     private var modernMusicAccent: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return Color(red: 1.0, green: 0.65, blue: 0.45)
         case .theme: return Color(red: 1.0, green: 0.65, blue: 0.45)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
@@ -230,7 +239,7 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if signals.isPlaying || signals.showToast || signals.showMiniPeekBanner { return true }
+        if signals.isPlaying || signals.showToast || signals.showMiniPeekBanner || signals.showChargingBanner { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
@@ -255,7 +264,7 @@ struct NotchPanelView: View {
     }
 
     private var isToastOnly: Bool {
-        (signals.showToast || signals.showMiniPeekBanner) && !appState.surface.isExpanded
+        (signals.showToast || signals.showMiniPeekBanner || signals.showChargingBanner) && !appState.surface.isExpanded
     }
 
     private func triggerMusicAutoPeek() {
@@ -323,7 +332,7 @@ struct NotchPanelView: View {
     private var mascotSize: CGFloat { min(27, notchHeight - 6) }
 
     /// Minimum wing width needed to display compact bar content
-    private var compactWingWidth: CGFloat { mascotSize + 8 }
+    private var compactWingWidth: CGFloat { mascotSize + 17 }
 
     /// Effective island width — on notched screens the scale can only widen past the notch.
     private var effectiveNotchW: CGFloat {
@@ -338,18 +347,58 @@ struct NotchPanelView: View {
     /// ran on each render of the bar.
     private var isThinking: Bool { appState.isThinking }
 
+    private var hasQuotaChip: Bool {
+        guard showAgentDetails, showClaudeQuota, !shouldShowExpanded, !nowPlaying.isPlaying,
+              let _ = QuotaChip.limit(appState: appState, enabled: showClaudeQuota, modeRaw: claudeQuotaChip),
+              appState.claudeQuota.snapshot != nil
+        else { return false }
+        return true
+    }
+
+    private var hasLeftWingExtraContent: Bool {
+        hasQuotaChip || displayedToolStatus || isThinking
+    }
+
+    private var quotaWingWidth: CGFloat {
+        guard hasQuotaChip else { return 88 }
+        let limit = QuotaChip.limit(appState: appState, enabled: showClaudeQuota, modeRaw: claudeQuotaChip)
+        let chipWidth = quotaChipWidth > 0 ? quotaChipWidth : (limit.map { QuotaChip.estimatedWidth(for: $0) } ?? 90)
+        return max(148, mascotSize + chipWidth + 32)
+    }
+
     /// Symmetrical wing width calculated dynamically — ultra-compact, sleek, and balanced
     private var symmetricWingWidth: CGFloat {
         if isThinking && !shouldShowExpanded {
-            return 118
+            return 148
         }
         if isHoveringRightWing && !shouldShowExpanded {
-            return 128
+            return 154
         }
-        if signals.isPlaying {
-            return 52
+        if prayerManager.isPrayerPrioritized && !shouldShowExpanded {
+            let needed = rightWingWidth > 0 ? (rightWingWidth + 18) : 80
+            return max(80, needed)
         }
-        return 48
+        if signals.isPlaying && !shouldShowExpanded {
+            var width: CGFloat = 68
+            if appState.glanceCompletionActive {
+                width += 26
+            }
+            if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion {
+                width += 26
+            }
+            if rightWingWidth > 0 {
+                width = max(width, rightWingWidth + 24)
+            }
+            return width
+        }
+        var width: CGFloat = 88
+        if hasQuotaChip {
+            width = max(width, quotaWingWidth)
+        }
+        if rightWingWidth > 0 {
+            width = max(width, rightWingWidth + 18)
+        }
+        return width
     }
 
     /// Notch cutout reserved in the center of the expanded header.
@@ -382,13 +431,11 @@ struct NotchPanelView: View {
             if expandedTab == .workspace && signals.isDetailExpanded {
                 return min(max(baseWidth, 720), maxPanelWidth)
             }
-            if expandedTab == .prayer {
-                return min(max(baseWidth, 720), maxPanelWidth)
-            }
             return min(max(baseWidth, minWidth), maxPanelWidth)
         }
         if showIdleIndicator {
-            let wing = idleHovered ? (compactWingWidth + 6) : compactWingWidth
+            let baseWing = idleHovered ? (compactWingWidth + 6) : compactWingWidth
+            let wing = prayerManager.isEnabled ? max(baseWing, IdleIndicatorBar.idlePrayerWingMinWidth) : baseWing
             return nw + wing * 2
         }
         if !isActive { return nw }
@@ -438,7 +485,7 @@ struct NotchPanelView: View {
     /// Room for the plan-limit chip in the collapsed bar; `.none` whenever the
     /// chip isn't shown, which leaves the bar exactly as it is without it.
     private var quotaReserve: QuotaChipLayout.Reserve {
-        guard showBar, !shouldShowExpanded,
+        guard showAgentDetails, showBar, !shouldShowExpanded,
               let limit = QuotaChip.limit(appState: appState, enabled: showClaudeQuota, modeRaw: claudeQuotaChip)
         else { return .none }
         // Measured once laid out; the label-length estimate covers the first frame.
@@ -475,10 +522,10 @@ struct NotchPanelView: View {
                             expandedTab: expandedTabBinding,
                             workspaceManager: workspaceManager
                         )
-                            .padding(.leading, (isThinking && !shouldShowExpanded) ? 8 : (shouldShowExpanded ? 8 : 0))
+                            .padding(.leading, 12)
                             .frame(
                                 width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
-                                alignment: shouldShowExpanded ? .leading : (isThinking ? .leading : .center)
+                                alignment: .leading
                             )
                             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
                             .contentShape(Rectangle())
@@ -511,10 +558,10 @@ struct NotchPanelView: View {
                             workspaceManager: workspaceManager,
                             expandedWingWidth: expandedWingWidth
                         )
-                            .padding(.trailing, (isThinking || isHoveringRightWing || shouldShowExpanded) ? 8 : 0)
+                            .padding(.trailing, 12)
                             .frame(
                                 width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
-                                alignment: (isThinking || isHoveringRightWing || shouldShowExpanded) ? .trailing : .center
+                                alignment: .trailing
                             )
                             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
                             .contentShape(Rectangle())
@@ -1070,6 +1117,7 @@ private struct CompactLeftWing: View {
     @AppStorage(SettingsKey.defaultSource) private var settingsDefaultSource = SettingsDefaults.defaultSource
     @AppStorage(SettingsKey.showClaudeQuota) private var showClaudeQuota = SettingsDefaults.showClaudeQuota
     @AppStorage(SettingsKey.claudeQuotaChip) private var claudeQuotaChip = SettingsDefaults.claudeQuotaChip
+    @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
 
     private var displaySession: SessionSnapshot? {
         let sid = appState.rotatingSessionId ?? appState.activeSessionId ?? appState.sessions.keys.sorted().first
@@ -1134,18 +1182,23 @@ private struct CompactLeftWing: View {
                 }
 
                 // Tool name or thinking indicator
-                if let tool = shownTool, showToolStatus {
-                    Text(ToolNameDisplay.compact(tool))
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(toolStatusColor(tool))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .frame(maxWidth: 65, alignment: .leading)
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .scale(scale: 0.9)),
-                            removal: .opacity
-                        ))
-                        .help(tool)
+                if let tool = shownTool, showToolStatus && showAgentDetails {
+                    HStack(spacing: 3) {
+                        Image(systemName: "wrench.and.screwdriver.fill")
+                            .font(.system(size: 7, weight: .bold))
+                            .foregroundStyle(toolStatusColor(tool))
+                        Text(ToolNameDisplay.compact(tool))
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(toolStatusColor(tool))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .frame(maxWidth: 82, alignment: .leading)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 0.9)),
+                        removal: .opacity
+                    ))
+                    .help(tool)
                 } else if isThinking {
                     TypingIndicator(
                         fontSize: 9,
@@ -1159,7 +1212,8 @@ private struct CompactLeftWing: View {
                         insertion: .opacity.combined(with: .scale(scale: 0.9)),
                         removal: .opacity
                     ))
-                } else if let limit = QuotaChip.limit(appState: appState, enabled: showClaudeQuota, modeRaw: claudeQuotaChip),
+                } else if !nowPlaying.isPlaying && showAgentDetails,
+                          let limit = QuotaChip.limit(appState: appState, enabled: showClaudeQuota, modeRaw: claudeQuotaChip),
                           let snapshot = appState.claudeQuota.snapshot {
                     // Plan-limit chip takes the tool slot while no tool is
                     // running: window label + ring + percent, all windows in
@@ -1299,10 +1353,31 @@ private struct CompactRightWing: View {
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
+    @State private var hoveredAction: String? = nil
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    private var currentTimeString: String {
+        Self.timeFormatter.string(from: Date())
+    }
 
     private var modernMusicAccent: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return Color(red: 1.0, green: 0.65, blue: 0.45)
         case .theme: return Color(red: 1.0, green: 0.65, blue: 0.45)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
@@ -1376,90 +1451,248 @@ private struct CompactRightWing: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else {
                     // AGENT / STANDBY MODE:
+                    let extraBadgeCount: Int = {
+                        var count = 0
+                        if inQuietHours { count += 1 }
+                        if appState.glanceCompletionActive { count += 1 }
+                        if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion { count += 1 }
+                        return count
+                    }()
+                    let maxBranchWidth: CGFloat = extraBadgeCount > 0 ? 54 : 76
+
                     if shouldExpandRightWing {
-                        // "KECIL KEDUA / THINKING EXPANDED" - Agent Mode: Project + Git Branch + Sessions (Ultra-Compact)
+                        if isHovered {
+                            // "INTERACTIVE QUICK-ACTION DOCK" - Tactile Micro Controls
+                            HStack(spacing: 3) {
+                                // 1. Workspace Button
+                                Button(action: {
+                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                                    withAnimation(NotchAnimation.open) {
+                                        expandedTab = .workspace
+                                        appState.surface = .sessionList
+                                    }
+                                }) {
+                                    HStack(spacing: 2.5) {
+                                        Image(systemName: (gitBranch != nil && !gitBranch!.isEmpty) ? "arrow.triangle.branch" : "folder.fill")
+                                            .font(.system(size: 7, weight: .bold))
+                                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                                        Text(gitBranch ?? projectName ?? "work")
+                                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(Color.white.opacity(0.95))
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                            .frame(maxWidth: 44)
+                                    }
+                                    .padding(.horizontal, 4.5)
+                                    .padding(.vertical, 2.5)
+                                    .background(
+                                        Capsule()
+                                            .fill(hoveredAction == "workspace" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.25) : Color.white.opacity(0.06))
+                                            .overlay(Capsule().strokeBorder(hoveredAction == "workspace" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6) : Color.white.opacity(0.10), lineWidth: 0.5))
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .onHover { if $0 { hoveredAction = "workspace" } else if hoveredAction == "workspace" { hoveredAction = nil } }
+                                .help("Open Workspace (Git & Files)")
+
+                                // 2. Agents Button
+                                Button(action: {
+                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                                    withAnimation(NotchAnimation.open) {
+                                        expandedTab = .agents
+                                        appState.surface = .sessionList
+                                    }
+                                }) {
+                                    let active = appState.activeSessionCount
+                                    let total = appState.totalSessionCount
+                                    HStack(spacing: 2.5) {
+                                        if active > 0 {
+                                            Circle()
+                                                .fill(Color(red: 0.20, green: 0.88, blue: 0.65))
+                                                .frame(width: 3.5, height: 3.5)
+                                                .shadow(color: Color(red: 0.20, green: 0.88, blue: 0.65).opacity(0.8), radius: 2)
+                                        } else {
+                                            Image(systemName: "terminal.fill")
+                                                .font(.system(size: 6, weight: .bold))
+                                                .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                                        }
+                                        Text("\(active)/\(total)")
+                                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(Color.white.opacity(0.95))
+                                    }
+                                    .padding(.horizontal, 4.5)
+                                    .padding(.vertical, 2.5)
+                                    .background(
+                                        Capsule()
+                                            .fill(hoveredAction == "agents" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.25) : Color.white.opacity(0.06))
+                                            .overlay(Capsule().strokeBorder(hoveredAction == "agents" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6) : Color.white.opacity(0.10), lineWidth: 0.5))
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .onHover { if $0 { hoveredAction = "agents" } else if hoveredAction == "agents" { hoveredAction = nil } }
+                                .help("Open Agents & Sessions")
+
+                                // 3. Expand Chevron Button
+                                Button(action: {
+                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                                    withAnimation(NotchAnimation.open) {
+                                        appState.surface = .sessionList
+                                    }
+                                }) {
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 6.5, weight: .bold))
+                                        .foregroundStyle(Color.white.opacity(hoveredAction == "expand" ? 1.0 : 0.6))
+                                        .frame(width: 15, height: 15)
+                                        .background(
+                                            Circle()
+                                                .fill(hoveredAction == "expand" ? Color.white.opacity(0.2) : Color.white.opacity(0.06))
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                                .onHover { if $0 { hoveredAction = "expand" } else if hoveredAction == "expand" { hoveredAction = nil } }
+                                .help("Expand Dynamic Island")
+                            }
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2.5)
+                            .background(
+                                Capsule()
+                                    .fill(Color.white.opacity(0.09))
+                                    .overlay(Capsule().strokeBorder(Color.white.opacity(0.16), lineWidth: 0.6))
+                            )
+                            .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        } else {
+                            // "THINKING ACTIVE" - Sleek Dynamic Island Capsule
+                            HStack(spacing: 4.5) {
+                                if let branch = gitBranch, !branch.isEmpty {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "arrow.triangle.branch")
+                                            .font(.system(size: 7.5, weight: .bold))
+                                            .foregroundStyle(Color(red: 0.20, green: 0.88, blue: 0.65))
+
+                                        Text(branch)
+                                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                            .foregroundStyle(Color.white.opacity(0.92))
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                                    }
+                                } else if let proj = projectName, !proj.isEmpty {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "folder.fill")
+                                            .font(.system(size: 7, weight: .bold))
+                                            .foregroundStyle(Color.white.opacity(0.60))
+
+                                        Text(proj)
+                                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                            .foregroundStyle(Color.white.opacity(0.90))
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                                    }
+                                } else {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "cpu")
+                                            .font(.system(size: 7, weight: .bold))
+                                            .foregroundStyle(Color.white.opacity(0.60))
+
+                                        Text(agentDisplayLabel.lowercased())
+                                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                            .foregroundStyle(Color.white.opacity(0.90))
+                                            .lineLimit(1)
+                                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                                    }
+                                }
+
+                                Rectangle()
+                                    .fill(Color.white.opacity(0.18))
+                                    .frame(width: 1, height: 9)
+
+                                let active = appState.activeSessionCount
+                                let total = appState.totalSessionCount
+                                HStack(spacing: 3) {
+                                    if active > 0 {
+                                        Circle()
+                                            .fill(Color(red: 0.20, green: 0.88, blue: 0.65))
+                                            .frame(width: 4, height: 4)
+                                            .shadow(color: Color(red: 0.20, green: 0.88, blue: 0.65).opacity(0.7), radius: 2)
+                                    } else {
+                                        Image(systemName: "terminal")
+                                            .font(.system(size: 6.5, weight: .semibold))
+                                            .foregroundStyle(Color.white.opacity(0.40))
+                                    }
+
+                                    Text("\(active)/\(total)")
+                                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(active > 0 ? Color.white : Color.white.opacity(0.65))
+                                }
+                            }
+                            .padding(.horizontal, 6.5)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill(Color.white.opacity(0.08))
+                                    .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+                            )
+                            .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        }
+                    } else {
+                        // "STANDBY DYNAMIC ISLAND PILL" - Interactive & Alive
                         HStack(spacing: 3.5) {
                             if let branch = gitBranch, !branch.isEmpty {
-                                HStack(spacing: 2) {
-                                    Image(systemName: "arrow.triangle.branch")
-                                        .font(.system(size: 6.5, weight: .bold))
-                                    Text(branch)
-                                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                                        .lineLimit(1)
-                                        .frame(maxWidth: 58, alignment: .leading)
-                                }
-                                .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                            } else {
-                                HStack(spacing: 2) {
-                                    Image(systemName: "cpu")
-                                        .font(.system(size: 6.5, weight: .bold))
-                                    Text("agents")
-                                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color.white.opacity(0.85))
-                                        .lineLimit(1)
-                                }
-                            }
-
-                            // Session badge
-                            let active = appState.activeSessionCount
-                            let total = appState.totalSessionCount
-                            HStack(spacing: 2) {
-                                if active > 0 {
-                                    Circle()
-                                        .fill(Color(red: 0.96, green: 0.62, blue: 0.04))
-                                        .frame(width: 3.5, height: 3.5)
-                                } else {
-                                    Image(systemName: "terminal")
-                                        .font(.system(size: 6.5, weight: .bold))
-                                        .foregroundStyle(Color.white.opacity(0.55))
-                                }
-                                Text("\(active)/\(total)")
-                                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color.white.opacity(0.85))
-                            }
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 1)
-                            .background(
-                                RoundedRectangle(cornerRadius: 2.5)
-                                    .fill(Color(white: 0.12))
-                            )
-                        }
-                        .padding(.horizontal, 4.5)
-                        .padding(.vertical, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 3.5)
-                                .fill(Color(white: 0.07))
-                                .overlay(RoundedRectangle(cornerRadius: 3.5).stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.35), lineWidth: 0.6))
-                        )
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                    } else {
-                        // "KECIL AWAL" - Agent Mode: Minimal Machined Pill (Ultra-Compact)
-                        HStack(spacing: 3) {
-                            if appState.status == .idle {
-                                Image(systemName: "terminal")
+                                Image(systemName: "arrow.triangle.branch")
+                                    .font(.system(size: 7.5, weight: .bold))
+                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                                Text(branch)
+                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color.white.opacity(0.92))
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                    .frame(maxWidth: 48)
+                            } else if let proj = projectName, !proj.isEmpty {
+                                Image(systemName: "folder.fill")
                                     .font(.system(size: 7, weight: .bold))
-                                    .foregroundStyle(Color.white.opacity(0.65))
+                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                                Text(proj)
+                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color.white.opacity(0.92))
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                    .frame(maxWidth: 48)
                             } else {
                                 Circle()
-                                    .fill(Color(red: 0.96, green: 0.62, blue: 0.04))
-                                    .frame(width: 3.5, height: 3.5)
-                                    .shadow(color: Color(red: 0.96, green: 0.62, blue: 0.04).opacity(0.6), radius: 1.5)
+                                    .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
+                                    .frame(width: 4, height: 4)
+                                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), radius: 2)
+                                TimelineView(.periodic(from: .now, by: 10.0)) { _ in
+                                    Text(currentTimeString)
+                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(Color.white.opacity(0.92))
+                                }
                             }
 
-                            // Session count pill
-                            let active = appState.activeSessionCount
-                            let total = appState.totalSessionCount
-                            Text("\(active)/\(total)")
-                                .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.white.opacity(0.85))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 6.5, weight: .bold))
+                                .foregroundStyle(Color.white.opacity(0.50))
                         }
-                        .padding(.horizontal, 3.5)
-                        .padding(.vertical, 1.5)
+                        .padding(.horizontal, 6.5)
+                        .padding(.vertical, 3)
                         .background(
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(Color(white: 0.06))
-                                .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color(white: 0.14), lineWidth: 0.5))
+                            Capsule()
+                                .fill(Color.white.opacity(0.08))
+                                .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
                         )
+                        .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                            withAnimation(NotchAnimation.open) {
+                                expandedTab = .agents
+                                appState.surface = .sessionList
+                            }
+                        }
+                        .help("Click to expand island")
                     }
                 }
 
@@ -1502,7 +1735,8 @@ private struct CompactRightWing: View {
                 }
             }
         }
-        .padding(.horizontal, expanded ? 10 : 3)
+        .padding(.leading, 8)
+        .padding(.trailing, expanded ? 10 : 3)
         // Its natural width, reported so the collapsed bar can make room for
         // it clear of the notch (CompactRightWingLayout).
         .fixedSize(horizontal: true, vertical: false)
@@ -1742,23 +1976,73 @@ struct NotchIconButton: View {
     }
 }
 
+struct PixelHeaderIconButton: View {
+    let glyph: PixelIconGlyph
+    var tint: Color = .white
+    var tooltip: String? = nil
+    let action: () -> Void
+    @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    static let boxSize: CGFloat = 20
+    static let hitSize: CGFloat = 24
+
+    var body: some View {
+        Button(action: action) {
+            PixelIcon(glyph: glyph, color: tint.opacity(hovering ? 1.0 : 0.85), pixelSize: 1.35)
+                .frame(width: Self.boxSize, height: Self.boxSize)
+                .background(
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(tint.opacity(hovering ? 0.22 : 0.08))
+                )
+                .scaleEffect(hovering && !reduceMotion ? 1.08 : 1.0)
+                .frame(width: Self.hitSize, height: Self.hitSize)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { h in withAnimation(NotchAnimation.micro) { hovering = h } }
+        .help(tooltip ?? "")
+        .accessibilityLabel(tooltip ?? glyph.rawValue)
+    }
+}
+
 /// The expanded header's buttons: sound, Settings, and Quit, which asks once.
 private struct ExpandedHeaderControls: View {
     @Binding var soundEnabled: Bool
     @StateObject private var quit = QuitConfirmation()
     @ObservedObject private var l10n = L10n.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
 
     var body: some View {
-        // 4pt between 24pt hit targets keeps the 6pt gap between the circles.
         HStack(spacing: 4) {
-            NotchIconButton(icon: soundEnabled ? "speaker.wave.2" : "speaker.slash", tooltip: soundEnabled ? l10n["mute"] : l10n["enable_sound_tooltip"]) {
-                soundEnabled.toggle()
+            if isPixel {
+                PixelHeaderIconButton(
+                    glyph: soundEnabled ? .volume : .volumeMute,
+                    tooltip: soundEnabled ? l10n["mute"] : l10n["enable_sound_tooltip"]
+                ) {
+                    soundEnabled.toggle()
+                }
+                PixelHeaderIconButton(
+                    glyph: .settings,
+                    tooltip: l10n["settings"]
+                ) {
+                    SettingsWindowController.shared.show()
+                }
+                QuitConfirmButton(confirmation: quit)
+            } else {
+                NotchIconButton(icon: soundEnabled ? "speaker.wave.2" : "speaker.slash", tooltip: soundEnabled ? l10n["mute"] : l10n["enable_sound_tooltip"]) {
+                    soundEnabled.toggle()
+                }
+                NotchIconButton(icon: "gearshape", tooltip: l10n["settings"]) {
+                    SettingsWindowController.shared.show()
+                }
+                QuitConfirmButton(confirmation: quit)
             }
-            NotchIconButton(icon: "gearshape", tooltip: l10n["settings"]) {
-                SettingsWindowController.shared.show()
-            }
-            QuitConfirmButton(confirmation: quit)
         }
         // The pill is wider than the icon: the other buttons slide over to
         // make room, or with Reduce Motion simply move.
@@ -1775,7 +2059,12 @@ struct QuitConfirmButton: View {
     @ObservedObject var confirmation: QuitConfirmation
     @ObservedObject private var l10n = L10n.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @State private var hovering = false
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
 
     static let tint = Color(red: 1.0, green: 0.4, blue: 0.4)
     /// The pill's text: lighter than `tint`, for contrast on its red fill.
@@ -1801,23 +2090,47 @@ struct QuitConfirmButton: View {
         } label: {
             ZStack(alignment: .trailing) {
                 if armed {
-                    Text(l10n["quit_confirm"])
-                        .font(.system(size: Self.pillFontSize, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Self.pillText)
-                        .lineLimit(1)
-                        .fixedSize()
-                        .padding(.horizontal, Self.pillPadding)
-                        .frame(height: NotchIconButton.circleSize)
-                        .background(Capsule().fill(Self.tint.opacity(hovering ? 0.26 : 0.18)))
-                        .transition(.opacity)
+                    if isPixel {
+                        PixelText(text: "QUIT?", color: Self.pillText, pixelSize: 1.15)
+                            .lineLimit(1)
+                            .fixedSize()
+                            .padding(.horizontal, 6)
+                            .frame(height: NotchIconButton.circleSize)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(Self.tint.opacity(hovering ? 0.32 : 0.22))
+                            )
+                            .transition(.opacity)
+                    } else {
+                        Text(l10n["quit_confirm"])
+                            .font(.system(size: Self.pillFontSize, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Self.pillText)
+                            .lineLimit(1)
+                            .fixedSize()
+                            .padding(.horizontal, Self.pillPadding)
+                            .frame(height: NotchIconButton.circleSize)
+                            .background(Capsule().fill(Self.tint.opacity(hovering ? 0.26 : 0.18)))
+                            .transition(.opacity)
+                    }
                 } else {
-                    Image(systemName: "power")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Self.tint.opacity(hovering ? 1.0 : 0.85))
-                        .frame(width: NotchIconButton.circleSize, height: NotchIconButton.circleSize)
-                        .background(Circle().fill(Self.tint.opacity(hovering ? 0.2 : 0.08)))
-                        .scaleEffect(hovering && !reduceMotion ? 1.1 : 1.0)
-                        .transition(.opacity)
+                    if isPixel {
+                        PixelIcon(glyph: .power, color: Self.tint.opacity(hovering ? 1.0 : 0.85), pixelSize: 1.35)
+                            .frame(width: PixelHeaderIconButton.boxSize, height: PixelHeaderIconButton.boxSize)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(Self.tint.opacity(hovering ? 0.22 : 0.08))
+                            )
+                            .scaleEffect(hovering && !reduceMotion ? 1.08 : 1.0)
+                            .transition(.opacity)
+                    } else {
+                        Image(systemName: "power")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Self.tint.opacity(hovering ? 1.0 : 0.85))
+                            .frame(width: NotchIconButton.circleSize, height: NotchIconButton.circleSize)
+                            .background(Circle().fill(Self.tint.opacity(hovering ? 0.2 : 0.08)))
+                            .scaleEffect(hovering && !reduceMotion ? 1.1 : 1.0)
+                            .transition(.opacity)
+                    }
                 }
             }
             .frame(minWidth: NotchIconButton.hitSize, minHeight: NotchIconButton.hitSize, alignment: .trailing)
@@ -1847,6 +2160,10 @@ private struct HeaderNavigationMenuTabs: View {
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.agentsEnabled) private var agentsEnabled = SettingsDefaults.agentsEnabled
+    @AppStorage(SettingsKey.workspaceEnabled) private var workspaceEnabled = SettingsDefaults.workspaceEnabled
+    @AppStorage(SettingsKey.musicEnabled) private var musicEnabled = SettingsDefaults.musicEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var activeLabelTab: ExpandedContentTab? {
@@ -1856,10 +2173,18 @@ private struct HeaderNavigationMenuTabs: View {
     static let inactiveColor = Color.white.opacity(0.55)
 
     private var activeAccentColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return islandUITheme == IslandUITheme.modern.rawValue ? .white : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme:
-            return islandUITheme == IslandUITheme.modern.rawValue ? .white : Color(red: 0.12, green: 0.84, blue: 0.38)
+            return islandUITheme == IslandUITheme.modern.rawValue ? .white : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
@@ -1879,97 +2204,103 @@ private struct HeaderNavigationMenuTabs: View {
             // Modern Clean SF Symbols - borderless, backgroundless container with leading-revealing text
             HStack(spacing: 4) {
                 // AGENTS TAB
-                let isAgentsActive = expandedTab == .agents
-                let showAgentsLabel = isAgentsActive && (activeLabelTab == .agents || !appState.isTabTransitioning)
-                Button {
-                    switchToTab(.agents)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "cpu.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                        if showAgentsLabel {
-                            Text("Agents")
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                                .lineLimit(1)
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
+                if agentsEnabled {
+                    let isAgentsActive = expandedTab == .agents
+                    let showAgentsLabel = isAgentsActive && (activeLabelTab == .agents || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.agents)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "cpu.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                            if showAgentsLabel {
+                                Text("Agents")
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .lineLimit(1)
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .leading).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            }
                         }
+                        .foregroundStyle(isAgentsActive ? activeAccentColor : Self.inactiveColor)
+                        .padding(.horizontal, isAgentsActive ? 8 : 6)
+                        .frame(height: 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(isAgentsActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .foregroundStyle(isAgentsActive ? activeAccentColor : Self.inactiveColor)
-                    .padding(.horizontal, isAgentsActive ? 8 : 6)
-                    .frame(height: 20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(isAgentsActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .help("AI Agents")
                 }
-                .buttonStyle(.plain)
-                .help("AI Agents")
 
                 // WORKSPACE TAB
-                let isWorkActive = expandedTab == .workspace
-                let showWorkLabel = isWorkActive && (activeLabelTab == .workspace || !appState.isTabTransitioning)
-                Button {
-                    switchToTab(.workspace)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "folder.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                        if showWorkLabel {
-                            Text("Workspace")
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                                .lineLimit(1)
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
+                if workspaceEnabled {
+                    let isWorkActive = expandedTab == .workspace
+                    let showWorkLabel = isWorkActive && (activeLabelTab == .workspace || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.workspace)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "folder.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                            if showWorkLabel {
+                                Text("Workspace")
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .lineLimit(1)
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .leading).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            }
                         }
+                        .foregroundStyle(isWorkActive ? activeAccentColor : Self.inactiveColor)
+                        .padding(.horizontal, isWorkActive ? 8 : 6)
+                        .frame(height: 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(isWorkActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .foregroundStyle(isWorkActive ? activeAccentColor : Self.inactiveColor)
-                    .padding(.horizontal, isWorkActive ? 8 : 6)
-                    .frame(height: 20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(isWorkActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .help(workspaceManager.projectName.isEmpty ? "Workspace View" : "Workspace: \(workspaceManager.projectName)")
                 }
-                .buttonStyle(.plain)
-                .help(workspaceManager.projectName.isEmpty ? "Workspace View" : "Workspace: \(workspaceManager.projectName)")
 
                 // MUSIC TAB
-                let isMusicActive = expandedTab == .music
-                let showMusicLabel = isMusicActive && (activeLabelTab == .music || !appState.isTabTransitioning)
-                Button {
-                    switchToTab(.music)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 11, weight: .semibold))
-                        if showMusicLabel {
-                            Text("Music")
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                                .lineLimit(1)
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
+                if musicEnabled {
+                    let isMusicActive = expandedTab == .music
+                    let showMusicLabel = isMusicActive && (activeLabelTab == .music || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.music)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "music.note")
+                                .font(.system(size: 11, weight: .semibold))
+                            if showMusicLabel {
+                                Text("Music")
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .lineLimit(1)
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .leading).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            }
                         }
+                        .foregroundStyle(isMusicActive ? activeAccentColor : Self.inactiveColor)
+                        .padding(.horizontal, isMusicActive ? 8 : 6)
+                        .frame(height: 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(isMusicActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .foregroundStyle(isMusicActive ? activeAccentColor : Self.inactiveColor)
-                    .padding(.horizontal, isMusicActive ? 8 : 6)
-                    .frame(height: 20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(isMusicActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist)" : "Music HUD")
                 }
-                .buttonStyle(.plain)
-                .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist)" : "Music HUD")
 
                 // PRAYER TAB
                 if PrayerTimeManager.shared.isEnabled {
@@ -2009,109 +2340,115 @@ private struct HeaderNavigationMenuTabs: View {
             // Retro Cyber Pixel Tabs - borderless, backgroundless container with leading-revealing text
             HStack(spacing: 4) {
                 // AGENTS PIXEL TAB
-                let isAgentsActive = expandedTab == .agents
-                let showAgentsLabel = isAgentsActive && (activeLabelTab == .agents || !appState.isTabTransitioning)
-                Button {
-                    switchToTab(.agents)
-                } label: {
-                    HStack(spacing: 4) {
-                        PixelIcon(
-                            glyph: .agents,
-                            color: isAgentsActive ? activeAccentColor : Self.inactiveColor,
-                            pixelSize: 1.35
-                        )
-                        if showAgentsLabel {
-                            PixelText(
-                                text: "AGENTS",
-                                color: activeAccentColor,
-                                pixelSize: 1.15
+                if agentsEnabled {
+                    let isAgentsActive = expandedTab == .agents
+                    let showAgentsLabel = isAgentsActive && (activeLabelTab == .agents || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.agents)
+                    } label: {
+                        HStack(spacing: 4) {
+                            PixelIcon(
+                                glyph: .agents,
+                                color: isAgentsActive ? activeAccentColor : Self.inactiveColor,
+                                pixelSize: 1.35
                             )
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .leading).combined(with: .opacity),
-                                removal: .move(edge: .leading).combined(with: .opacity)
-                            ))
+                            if showAgentsLabel {
+                                PixelText(
+                                    text: "AGENTS",
+                                    color: activeAccentColor,
+                                    pixelSize: 1.15
+                                )
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .leading).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                ))
+                            }
                         }
+                        .padding(.horizontal, isAgentsActive ? 7 : 5)
+                        .frame(height: 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(isAgentsActive ? activeAccentColor.opacity(0.18) : Color.clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .padding(.horizontal, isAgentsActive ? 7 : 5)
-                    .frame(height: 18)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(isAgentsActive ? activeAccentColor.opacity(0.20) : .clear)
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .help("AI Agents")
                 }
-                .buttonStyle(.plain)
-                .help("AI Agents")
 
                 // WORKSPACE PIXEL TAB
-                let isWorkActive = expandedTab == .workspace
-                let showWorkLabel = isWorkActive && (activeLabelTab == .workspace || !appState.isTabTransitioning)
-                Button {
-                    switchToTab(.workspace)
-                } label: {
-                    HStack(spacing: 4) {
-                        PixelIcon(
-                            glyph: .workspace,
-                            color: isWorkActive ? activeAccentColor : Self.inactiveColor,
-                            pixelSize: 1.35
-                        )
-                        if showWorkLabel {
-                            PixelText(
-                                text: "WORK",
-                                color: activeAccentColor,
-                                pixelSize: 1.15
+                if workspaceEnabled {
+                    let isWorkActive = expandedTab == .workspace
+                    let showWorkLabel = isWorkActive && (activeLabelTab == .workspace || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.workspace)
+                    } label: {
+                        HStack(spacing: 4) {
+                            PixelIcon(
+                                glyph: .workspace,
+                                color: isWorkActive ? activeAccentColor : Self.inactiveColor,
+                                pixelSize: 1.35
                             )
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .leading).combined(with: .opacity),
-                                removal: .move(edge: .leading).combined(with: .opacity)
-                            ))
+                            if showWorkLabel {
+                                PixelText(
+                                    text: "WORK",
+                                    color: activeAccentColor,
+                                    pixelSize: 1.15
+                                )
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .leading).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                ))
+                            }
                         }
+                        .padding(.horizontal, isWorkActive ? 7 : 5)
+                        .frame(height: 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(isWorkActive ? activeAccentColor.opacity(0.18) : Color.clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .padding(.horizontal, isWorkActive ? 7 : 5)
-                    .frame(height: 18)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(isWorkActive ? activeAccentColor.opacity(0.20) : .clear)
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .help(workspaceManager.projectName.isEmpty ? "Workspace View" : "Workspace: \(workspaceManager.projectName)")
                 }
-                .buttonStyle(.plain)
-                .help(workspaceManager.projectName.isEmpty ? "Workspace View" : "Workspace: \(workspaceManager.projectName)")
 
                 // MUSIC PIXEL TAB
-                let isMusicActive = expandedTab == .music
-                let showMusicLabel = isMusicActive && (activeLabelTab == .music || !appState.isTabTransitioning)
-                Button {
-                    switchToTab(.music)
-                } label: {
-                    HStack(spacing: 4) {
-                        PixelIcon(
-                            glyph: .music,
-                            color: isMusicActive ? activeAccentColor : Self.inactiveColor,
-                            pixelSize: 1.35
-                        )
-                        if showMusicLabel {
-                            PixelText(
-                                text: "MUSIC",
-                                color: activeAccentColor,
-                                pixelSize: 1.15
+                if musicEnabled {
+                    let isMusicActive = expandedTab == .music
+                    let showMusicLabel = isMusicActive && (activeLabelTab == .music || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.music)
+                    } label: {
+                        HStack(spacing: 4) {
+                            PixelIcon(
+                                glyph: .music,
+                                color: isMusicActive ? activeAccentColor : Self.inactiveColor,
+                                pixelSize: 1.35
                             )
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .leading).combined(with: .opacity),
-                                removal: .move(edge: .leading).combined(with: .opacity)
-                            ))
+                            if showMusicLabel {
+                                PixelText(
+                                    text: "MUSIC",
+                                    color: activeAccentColor,
+                                    pixelSize: 1.15
+                                )
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .leading).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                ))
+                            }
                         }
+                        .padding(.horizontal, isMusicActive ? 7 : 5)
+                        .frame(height: 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(isMusicActive ? activeAccentColor.opacity(0.18) : Color.clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .padding(.horizontal, isMusicActive ? 7 : 5)
-                    .frame(height: 18)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(isMusicActive ? activeAccentColor.opacity(0.20) : .clear)
-                    )
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist)" : "Music HUD")
                 }
-                .buttonStyle(.plain)
-                .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist)" : "Music HUD")
 
                 // PRAYER PIXEL TAB
                 if PrayerTimeManager.shared.isEnabled {
@@ -2141,8 +2478,8 @@ private struct HeaderNavigationMenuTabs: View {
                         .padding(.horizontal, isPrayerActive ? 7 : 5)
                         .frame(height: 18)
                         .background(
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(isPrayerActive ? activeAccentColor.opacity(0.20) : .clear)
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(isPrayerActive ? activeAccentColor.opacity(0.18) : Color.clear)
                         )
                         .contentShape(Rectangle())
                     }
@@ -2163,12 +2500,29 @@ private struct SessionGroupingTabs: View {
     @ObservedObject private var l10n = L10n.shared
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
+    @ObservedObject private var nowPlaying = NowPlayingManager.shared
+
+    private var isModern: Bool {
+        if islandUITheme == IslandUITheme.pixel.rawValue { return false }
+        if islandUITheme == IslandUITheme.modern.rawValue { return true }
+        return agentsHUDTheme == AgentsHUDTheme.modern.rawValue
+    }
 
     private var activeAccentColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return isModern ? .white : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme:
-            return islandUITheme == IslandUITheme.modern.rawValue ? .white : Color(red: 0.12, green: 0.84, blue: 0.38)
+            return isModern ? .white : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
@@ -2180,8 +2534,6 @@ private struct SessionGroupingTabs: View {
     static let inactiveColor = Color.white.opacity(0.62)
 
     var body: some View {
-        let isModern = islandUITheme == IslandUITheme.modern.rawValue
-
         if isModern {
             // Modern segmented capsule styling
             HStack(spacing: 2) {
@@ -2233,8 +2585,8 @@ private struct SessionGroupingTabs: View {
                         .padding(.horizontal, 5)
                         .frame(height: 16)
                         .background(
-                            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                .fill(selected ? activeAccentColor.opacity(0.18) : .clear)
+                            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                                .fill(selected ? activeAccentColor.opacity(0.18) : Color.clear)
                         )
                         .contentShape(Rectangle())
                     }
@@ -2246,12 +2598,8 @@ private struct SessionGroupingTabs: View {
             }
             .padding(2)
             .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(Color.white.opacity(0.05))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .stroke(expandedTab == .agents ? activeAccentColor.opacity(0.4) : .white.opacity(0.12), lineWidth: 1)
-                    )
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(Color.white.opacity(0.04))
             )
         }
     }
@@ -2269,22 +2617,23 @@ private struct IdleIndicatorBar: View {
     var onExpand: (() -> Void)? = nil
     @AppStorage(SettingsKey.defaultSource) private var defaultSource = SettingsDefaults.defaultSource
 
-    private static let idlePrayerWingMinWidth: CGFloat = 126
+    static let idlePrayerWingMinWidth: CGFloat = 80
 
-    private var wingWidth: CGFloat {
-        hovered ? (compactWingWidth + 6) : compactWingWidth
+    private var effectiveWingWidth: CGFloat {
+        let base = hovered ? (compactWingWidth + 6) : compactWingWidth
+        return PrayerTimeManager.shared.isEnabled ? max(base, Self.idlePrayerWingMinWidth) : base
     }
 
     var body: some View {
         HStack(spacing: 0) {
             // Left Wing: mascot with precise positioning
             HStack {
+                Spacer(minLength: 0)
                 MascotView(source: defaultSource, status: .idle, size: mascotSize)
                     .opacity(hovered ? 0.95 : 0.65)
-                    .padding(.leading, hovered ? 7 : 5)
                 Spacer(minLength: 0)
             }
-            .frame(width: wingWidth, alignment: .leading)
+            .frame(width: effectiveWingWidth, alignment: .center)
             .contentShape(Rectangle())
             .onTapGesture { onExpand?() }
             .help("Click to expand tabs (Agents / Workspace / Music)")
@@ -2312,7 +2661,7 @@ private struct IdleIndicatorBar: View {
                     )
                     .padding(.trailing, 8)
             }
-            .frame(width: prayerManager.isEnabled ? max(wingWidth, Self.idlePrayerWingMinWidth) : wingWidth, alignment: .trailing)
+            .frame(width: effectiveWingWidth, alignment: .trailing)
             .contentShape(Rectangle())
             .onTapGesture { onExpand?() }
             .help(prayerManager.isEnabled ? "Prayer Times & Living Clock (Click to open Prayer tab)" : "Click to expand tabs (Agents / Workspace / Music)")
@@ -3880,12 +4229,41 @@ private struct SessionListView: View {
     @AppStorage(SettingsKey.contentFontSize) private var contentFontSize = SettingsDefaults.contentFontSize
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Natural height of the session cards, scrolling or not.
     @State private var contentHeight: CGFloat = 0
     /// The order on screen is held while the pointer is over the list.
     @State private var orderFreeze = SessionOrderFreeze()
     @State private var thawTask: Task<Void, Never>?
+
+    private var accentColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
+        let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
+        switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .theme, .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .white: return .white
+        case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
+        case .green: return Color(red: 0.12, green: 0.84, blue: 0.38)
+        case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
+        }
+    }
+
+    private var isPixelRetro: Bool {
+        if islandUITheme == IslandUITheme.pixel.rawValue { return true }
+        if islandUITheme == IslandUITheme.modern.rawValue { return false }
+        return agentsHUDTheme == AgentsHUDTheme.pixelRetro.rawValue
+    }
 
     private var density: SessionListDensity {
         // The completion card is one full card whatever the setting.
@@ -4010,17 +4388,25 @@ private struct SessionListView: View {
         let content = VStack(spacing: density == .compact ? CompactSessionRowMetrics.spacing : 6) {
             if totalSessionCount == 0 {
                 VStack(spacing: 5) {
-                    Image(systemName: "cpu")
-                        .font(.system(size: 16))
-                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7))
-                    Text("NO ACTIVE AGENT SESSIONS")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.85))
-                    Text("Run Claude Code, Gemini CLI, Cursor, or Codex in Terminal to monitor live status.")
-                        .font(.system(size: 7.5, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.45))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
+                    if isPixelRetro {
+                        PixelIcon(glyph: .agents, color: accentColor, pixelSize: 1.6)
+                        PixelText(text: "NO ACTIVE AGENTS", color: accentColor, pixelSize: 1.1)
+                        Text("// RUN CLAUDE, CODEX, GEMINI, OR CURSOR IN TERMINAL")
+                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.45))
+                    } else {
+                        Image(systemName: "cpu")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7))
+                        Text("NO ACTIVE AGENT SESSIONS")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.85))
+                        Text("Run Claude Code, Gemini CLI, Cursor, or Codex in Terminal to monitor live status.")
+                            .font(.system(size: 7.5, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.45))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                    }
                 }
                 .frame(maxWidth: .infinity, minHeight: 65)
                 .padding(.vertical, 8)
@@ -4028,14 +4414,19 @@ private struct SessionListView: View {
                 ForEach(groups, id: \.header) { group in
                     if !group.header.isEmpty {
                         HStack(spacing: 6) {
-                            if let src = group.source, let icon = cliIcon(source: src) {
-                                Image(nsImage: icon)
-                                    .resizable()
-                                    .frame(width: 14, height: 14)
+                            if isPixelRetro {
+                                PixelIcon(glyph: .agents, color: accentColor, pixelSize: 1.1)
+                                PixelText(text: "// \(group.header.uppercased())", color: accentColor, pixelSize: 1.1)
+                            } else {
+                                if let src = group.source, let icon = cliIcon(source: src) {
+                                    Image(nsImage: icon)
+                                        .resizable()
+                                        .frame(width: 14, height: 14)
+                                }
+                                Text(group.header)
+                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(.white.opacity(0.5))
                             }
-                            Text(group.header)
-                                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                                .foregroundStyle(.white.opacity(0.5))
                             Spacer()
                         }
                         .padding(.horizontal, 12)
@@ -5146,6 +5537,8 @@ private struct SessionCard: View {
     var compactProjectWidth: CGFloat = 150
     var compactStatusWidth: CGFloat = 64
     @State private var hovering = false
+    @State private var deleteHovered = false
+    @State private var dragOffset: CGFloat = 0
     @State private var failureShakeOffset: CGFloat = 0
     @State private var jumpValidationTask: Task<Void, Never>?
     @State private var showApprovalDetails = false
@@ -5157,12 +5550,20 @@ private struct SessionCard: View {
     @AppStorage(SettingsKey.showSessionRecap) private var showSessionRecap = SettingsDefaults.showSessionRecap
     @AppStorage(SettingsKey.showModelLabel) private var showModelLabel = SettingsDefaults.showModelLabel
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
     private var fontSize: CGFloat { CGFloat(contentFontSize) }
     private var aiLineLimit: Int? { aiMessageLines > 0 ? aiMessageLines : nil }
     private var approvalQueueIndex: Int? {
         appState.permissionQueue.firstIndex { ($0.event.sessionId ?? "default") == sessionId }
     }
     private var isActiveApproval: Bool { approvalQueueIndex == 0 }
+
+    private var isPixelRetro: Bool {
+        if islandUITheme == IslandUITheme.pixel.rawValue { return true }
+        if islandUITheme == IslandUITheme.modern.rawValue { return false }
+        return agentsHUDTheme == AgentsHUDTheme.pixelRetro.rawValue
+    }
     /// Cursor is blocked on a question answered inside its own UI (#265) —
     /// a display-only wait with no in-panel answer flow.
     private var showsExternalCursorQuestion: Bool {
@@ -5207,16 +5608,79 @@ private struct SessionCard: View {
     }
 
     var body: some View {
-        Group {
-            if isCompactRow {
-                compactBody
-            } else {
-                comfortableBody
+        ZStack(alignment: .leading) {
+            // Swipe right delete indicator
+            if dragOffset > 0 {
+                RoundedRectangle(cornerRadius: isCompactRow ? 8 : 10)
+                    .fill(Color(red: 0.85, green: 0.25, blue: 0.25).opacity(min(0.85, Double(dragOffset) / 80.0)))
+                    .overlay(
+                        HStack {
+                            Image(systemName: "trash.fill")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.leading, 14)
+                            Spacer()
+                        }
+                    )
+                    .padding(.horizontal, 6)
             }
+
+            Group {
+                if isPixelRetro {
+                    PixelRetroSessionCardView(
+                        appState: appState,
+                        sessionId: sessionId,
+                        session: session,
+                        isCompletion: isCompletion,
+                        isCompactRow: isCompactRow,
+                        compactProjectWidth: compactProjectWidth,
+                        compactStatusWidth: compactStatusWidth,
+                        isHovered: hovering,
+                        fontSize: fontSize
+                    )
+                } else if isCompactRow {
+                    compactBody
+                } else {
+                    comfortableBody
+                }
+            }
+            .offset(x: dragOffset + failureShakeOffset)
         }
         .modifier(ReplyLinks())
-        .offset(x: failureShakeOffset)
         .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 15)
+                .onChanged { value in
+                    if value.translation.width > 0 {
+                        dragOffset = value.translation.width
+                    }
+                }
+                .onEnded { value in
+                    if value.translation.width > 80 {
+                        withAnimation(.easeOut(duration: 0.18)) {
+                            dragOffset = 350
+                        }
+                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+                            appState.removeSession(sessionId)
+                        }
+                    } else {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            dragOffset = 0
+                        }
+                    }
+                }
+        )
+        .contextMenu {
+            Button(role: .destructive) {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                withAnimation(NotchAnimation.micro) {
+                    appState.removeSession(sessionId)
+                }
+            } label: {
+                Label("Remove Agent Session", systemImage: "trash")
+            }
+        }
         .onTapGesture { handleSessionClick() }
         .onHover { h in withAnimation(NotchAnimation.micro) { hovering = h } }
         .onDisappear {
@@ -5344,6 +5808,26 @@ private struct SessionCard: View {
                 }
                 SessionTag(timeAgo(session.startTime))
                 TerminalBadge(session: session)
+
+                // Minimal Delete Icon Button
+                Button(action: {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    withAnimation(NotchAnimation.micro) {
+                        appState.removeSession(sessionId)
+                    }
+                }) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(deleteHovered ? Color(red: 1.0, green: 0.38, blue: 0.38) : Color.white.opacity(hovering ? 0.45 : 0.18))
+                        .frame(width: 16, height: 16)
+                        .background(
+                            Circle()
+                                .fill(deleteHovered ? Color(red: 1.0, green: 0.38, blue: 0.38).opacity(0.15) : Color.white.opacity(hovering ? 0.05 : 0))
+                        )
+                }
+                .buttonStyle(.plain)
+                .onHover { deleteHovered = $0 }
+                .help("Dismiss / remove agent session from list")
             }
         }
     }
@@ -5589,6 +6073,26 @@ private struct SessionCard: View {
                     .frame(width: compactStatusWidth, alignment: .leading)
                 compactActivity
                     .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Minimal Delete Icon Button
+                Button(action: {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    withAnimation(NotchAnimation.micro) {
+                        appState.removeSession(sessionId)
+                    }
+                }) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 7.5, weight: .medium))
+                        .foregroundStyle(deleteHovered ? Color(red: 1.0, green: 0.38, blue: 0.38) : Color.white.opacity(hovering ? 0.45 : 0.12))
+                        .frame(width: 15, height: 15)
+                        .background(
+                            Circle()
+                                .fill(deleteHovered ? Color(red: 1.0, green: 0.38, blue: 0.38).opacity(0.15) : Color.clear)
+                        )
+                }
+                .buttonStyle(.plain)
+                .onHover { deleteHovered = $0 }
+                .help("Dismiss / remove agent session from list")
             }
             .frame(minHeight: CompactSessionRowMetrics.rowHeight)
 
@@ -5688,9 +6192,11 @@ private struct SessionCard: View {
             if let tint {
                 shape.fill(tint)
             }
-            Rectangle()
-                .fill(cardStatus.railColor)
-                .frame(width: 3)
+            if !isCompactRow {
+                Rectangle()
+                    .fill(cardStatus.railColor)
+                    .frame(width: 3)
+            }
         }
         .clipShape(shape)
         .accessibilityHidden(true)
@@ -6277,95 +6783,6 @@ private struct TerminalBadge: View {
 }
 
 /// Collapsed single-line row for idle sessions >15 min
-// MARK: - Pixel Text (5×7 dot matrix style)
-
-struct PixelText: View {
-    let text: String
-    let color: Color
-    var pixelSize: CGFloat = 2
-
-    private static let W = 5  // glyph width
-    private static let H = 7  // glyph height
-    /// Rows any glyph draws in: the bottom two are always blank, and framing
-    /// them too set the letters high in a centred strip.
-    private static let inkRows = 5
-
-    // 5×7 bitmaps — each row is 5 bits, 7 rows per glyph
-    static let glyphs: [Character: [UInt8]] = [
-        "0": [0,1,1,1,0, 1,0,0,1,1, 1,0,1,0,1, 1,1,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "1": [0,0,1,0,0, 0,1,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "2": [0,1,1,1,0, 1,0,0,0,1, 0,0,1,1,0, 0,1,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0],
-        "3": [0,1,1,1,0, 1,0,0,0,1, 0,0,1,1,0, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "4": [0,0,0,1,0, 0,0,1,1,0, 0,1,0,1,0, 1,1,1,1,1, 0,0,0,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "5": [1,1,1,1,1, 1,0,0,0,0, 1,1,1,1,0, 0,0,0,0,1, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "6": [0,1,1,1,0, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "7": [1,1,1,1,1, 0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "8": [0,1,1,1,0, 1,0,0,0,1, 0,1,1,1,0, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "9": [0,1,1,1,0, 1,0,0,0,1, 0,1,1,1,1, 0,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "A": [0,0,1,0,0, 0,1,0,1,0, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "B": [1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "C": [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,0, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "D": [1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "E": [1,1,1,1,1, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0],
-        "F": [1,1,1,1,1, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "G": [0,1,1,1,0, 1,0,0,0,0, 1,0,0,1,1, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "H": [1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "I": [0,1,1,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "J": [0,0,0,0,1, 0,0,0,0,1, 0,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "K": [1,0,0,1,0, 1,0,1,0,0, 1,1,0,0,0, 1,0,1,0,0, 1,0,0,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "L": [1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0],
-        "M": [1,0,0,0,1, 1,1,0,1,1, 1,0,1,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "N": [1,0,0,0,1, 1,1,0,0,1, 1,0,1,0,1, 1,0,0,1,1, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "O": [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "P": [1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "Q": [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,1,0, 0,1,1,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "R": [1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0, 1,0,0,1,0, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "S": [0,1,1,1,1, 1,0,0,0,0, 0,1,1,1,0, 0,0,0,0,1, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "T": [1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "U": [1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "V": [1,0,0,0,1, 1,0,0,0,1, 0,1,0,1,0, 0,1,0,1,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "W": [1,0,0,0,1, 1,0,0,0,1, 1,0,1,0,1, 1,0,1,0,1, 0,1,0,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "X": [1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0, 0,1,0,1,0, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "Y": [1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "Z": [1,1,1,1,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0],
-        "•": [0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "/": [0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "-": [0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        " ": [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-    ]
-
-    var body: some View {
-        let chars = Array(text.uppercased())
-        let px = pixelSize
-        let gap: CGFloat = px
-
-        Canvas { ctx, size in
-            var xOff: CGFloat = 0
-            for ch in chars {
-                guard let glyph = Self.glyphs[ch] else {
-                    xOff += 3 * px
-                    continue
-                }
-                for row in 0..<Self.H {
-                    for col in 0..<Self.W {
-                        if glyph[row * Self.W + col] == 1 {
-                            let rect = CGRect(x: xOff + CGFloat(col) * px, y: CGFloat(row) * px, width: px, height: px)
-                            ctx.fill(Path(rect), with: .color(color))
-                        }
-                    }
-                }
-                xOff += CGFloat(Self.W) * px + gap
-            }
-        }
-        .frame(width: charWidth(chars.count), height: CGFloat(Self.inkRows) * pixelSize)
-    }
-
-    private func charWidth(_ count: Int) -> CGFloat {
-        guard count > 0 else { return 0 }
-        let px = pixelSize
-        return CGFloat(count) * (CGFloat(Self.W) * px + px) - px
-    }
-}
 
 private struct Line: Shape {
     func path(in rect: CGRect) -> Path {

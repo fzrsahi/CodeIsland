@@ -8,6 +8,10 @@ public enum PixelIconGlyph: String, CaseIterable, Sendable {
     case prayer
     case calendar
     case email
+    case volume
+    case volumeMute
+    case settings
+    case power
 }
 
 // Crisp Canvas-based vector pixel icon renderer
@@ -91,6 +95,54 @@ public struct PixelIcon: View {
                 1,1,0,0,0,0,0,1,1,
                 1,1,1,1,1,1,1,1,1
             ])
+        case .volume:
+            return (9, 9, [
+                0,0,0,1,0,0,0,0,0,
+                0,0,1,1,0,1,0,0,0,
+                0,1,1,1,0,0,1,0,1,
+                1,1,1,1,0,0,0,1,0,
+                1,1,1,1,0,0,0,1,0,
+                1,1,1,1,0,0,0,1,0,
+                0,1,1,1,0,0,1,0,1,
+                0,0,1,1,0,1,0,0,0,
+                0,0,0,1,0,0,0,0,0
+            ])
+        case .volumeMute:
+            return (9, 9, [
+                0,0,0,1,0,0,0,0,0,
+                0,0,1,1,0,0,0,0,0,
+                0,1,1,1,0,1,0,0,1,
+                1,1,1,1,0,0,1,1,0,
+                1,1,1,1,0,0,1,1,0,
+                1,1,1,1,0,0,1,1,0,
+                0,1,1,1,0,1,0,0,1,
+                0,0,1,1,0,0,0,0,0,
+                0,0,0,1,0,0,0,0,0
+            ])
+        case .settings:
+            return (9, 9, [
+                0,0,1,1,0,1,1,0,0,
+                0,1,1,1,1,1,1,1,0,
+                1,1,0,1,1,1,0,1,1,
+                1,1,1,0,0,0,1,1,1,
+                0,1,1,0,0,0,1,1,0,
+                1,1,1,0,0,0,1,1,1,
+                1,1,0,1,1,1,0,1,1,
+                0,1,1,1,1,1,1,1,0,
+                0,0,1,1,0,1,1,0,0
+            ])
+        case .power:
+            return (9, 9, [
+                0,0,0,0,1,0,0,0,0,
+                0,1,1,0,1,0,1,1,0,
+                1,1,0,0,1,0,0,1,1,
+                1,1,0,0,1,0,0,1,1,
+                1,1,0,0,0,0,0,1,1,
+                1,1,0,0,0,0,0,1,1,
+                0,1,1,0,0,0,1,1,0,
+                0,0,1,1,1,1,1,0,0,
+                0,0,0,1,1,1,0,0,0
+            ])
         }
     }
 
@@ -101,19 +153,20 @@ public struct PixelIcon: View {
         let totalH = CGFloat(h) * px
 
         Canvas { ctx, _ in
+            var path = Path()
             for row in 0..<h {
                 for col in 0..<w {
                     if data[row * w + col] == 1 {
-                        let rect = CGRect(
+                        path.addRect(CGRect(
                             x: CGFloat(col) * px,
                             y: CGFloat(row) * px,
                             width: px,
                             height: px
-                        )
-                        ctx.fill(Path(rect), with: .color(color))
+                        ))
                     }
                 }
             }
+            ctx.fill(path, with: .color(color))
         }
         .frame(width: totalW, height: totalH)
     }

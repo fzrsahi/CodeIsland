@@ -4,18 +4,29 @@ import AppKit
 
 // MARK: - Retro Spectrum Dynamic Palette (Color Theme as Base, Harmonious Gradient on Top)
 
-struct RetroSpectrumPalette: Equatable {
+struct RetroSpectrumPalette: Equatable, Sendable {
     var base: Color
     var mid: Color
     var peak: Color
 
+    @MainActor
     static func forThemeKey(_ key: String) -> RetroSpectrumPalette {
+        let syncAlbum = UserDefaults.standard.bool(forKey: SettingsKey.syncThemeWithAlbumArt)
+        if (syncAlbum || key == MusicProgressColor.album.rawValue) && NowPlayingManager.shared.isPlaying && NowPlayingManager.shared.artworkImage != nil {
+            return NowPlayingManager.shared.albumPalette.spectrum
+        }
         let pc = MusicProgressColor(rawValue: key) ?? .theme
         return forProgressColor(pc)
     }
 
+    @MainActor
     static func forProgressColor(_ pc: MusicProgressColor) -> RetroSpectrumPalette {
         switch pc {
+        case .album:
+            if NowPlayingManager.shared.isPlaying && NowPlayingManager.shared.artworkImage != nil {
+                return NowPlayingManager.shared.albumPalette.spectrum
+            }
+            return forProgressColor(.cyan)
         case .pink:
             // Base = Neon Pink/Merah, Mid = Warm Sunset Orange, Peak = Electric Yellow
             return RetroSpectrumPalette(
@@ -45,11 +56,11 @@ struct RetroSpectrumPalette: Equatable {
                 peak: Color(red: 0.0, green: 0.96, blue: 0.83)
             )
         case .cyan, .theme:
-            // Base = Electric Cyan, Mid = Neon Amber, Peak = Neon Pink
+            // Base = Electric Cyan, Mid = Deep Aqua, Peak = Ice White
             return RetroSpectrumPalette(
                 base: Color(red: 0.0, green: 0.96, blue: 0.83),
-                mid: Color(red: 0.96, green: 0.62, blue: 0.04),
-                peak: Color(red: 1.0, green: 0.16, blue: 0.53)
+                mid: Color(red: 0.0, green: 0.82, blue: 0.88),
+                peak: Color(red: 0.70, green: 0.96, blue: 1.0)
             )
         }
     }
@@ -320,8 +331,9 @@ struct ModernMarqueeText: View {
                 self.textWidth = width
             }
         }
-        .onChange(of: text) {
+        .onChange(of: text) { _, _ in
             startDate = Date()
+            textWidth = 0
         }
     }
 
@@ -378,6 +390,7 @@ struct CyberMusicWingView: View {
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
 
     init(nowPlaying: NowPlayingManager, isHovered: Bool = false) {
         self.nowPlaying = nowPlaying
@@ -391,8 +404,16 @@ struct CyberMusicWingView: View {
     }
 
     private var accentColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == MusicProgressColor.album.rawValue) && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return isModernClean ? Color(red: 1.0, green: 0.65, blue: 0.45) : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme: return isModernClean ? Color(red: 1.0, green: 0.65, blue: 0.45) : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
@@ -405,7 +426,7 @@ struct CyberMusicWingView: View {
     var body: some View {
         if isModernClean {
             // MODERN CLEAN: Langsung album cover, marquee title (saat di-hover), dan visualizer tanpa border
-            HStack(alignment: .center, spacing: 5) {
+            HStack(alignment: .center, spacing: 4) {
                 if let art = nowPlaying.artworkImage {
                     Image(nsImage: art)
                         .resizable()
@@ -426,10 +447,8 @@ struct CyberMusicWingView: View {
                 if isHovered {
                     ModernMarqueeText(
                         text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
-                        maxWidth: 64,
-                        centerShortText: true
+                        maxWidth: 64
                     )
-                    .frame(height: 17)
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
 
@@ -441,11 +460,12 @@ struct CyberMusicWingView: View {
                     color: accentColor
                 )
             }
+            .fixedSize()
             .padding(.horizontal, 2)
             .padding(.vertical, 1)
         } else {
             // RETRO CYBER: Seamless Frameless, Sharp 17x17 Album Art, Marquee Monospaced Title saat hover, Dancing Spectrum
-            HStack(alignment: .center, spacing: 5) {
+            HStack(alignment: .center, spacing: 4) {
                 // Album Art (17x17, crisp rounded corner, no outer bounding pill)
                 if let art = nowPlaying.artworkImage {
                     Image(nsImage: art)
@@ -471,10 +491,8 @@ struct CyberMusicWingView: View {
                         text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
                         font: .system(size: 8.5, weight: .bold, design: .monospaced),
                         color: .white,
-                        maxWidth: 64,
-                        centerShortText: true
+                        maxWidth: 64
                     )
-                    .frame(height: 17)
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
 
@@ -488,6 +506,7 @@ struct CyberMusicWingView: View {
                     palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
                 )
             }
+            .fixedSize()
             .padding(.horizontal, 2)
             .padding(.vertical, 1)
         }
@@ -502,6 +521,7 @@ struct CyberMusicMiniPeekBanner: View {
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
 
     private var isModernClean: Bool {
         if islandUITheme == IslandUITheme.modern.rawValue { return true }
@@ -510,8 +530,16 @@ struct CyberMusicMiniPeekBanner: View {
     }
 
     private var accentColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return isModernClean ? Color(red: 1.0, green: 0.65, blue: 0.45) : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme: return isModernClean ? Color(red: 1.0, green: 0.65, blue: 0.45) : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
@@ -576,23 +604,29 @@ struct CyberMusicMiniPeekBanner: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
             .background(
-                RoundedRectangle(cornerRadius: isModernClean ? 8 : 5, style: .continuous)
-                    .fill(Color(red: 0.06, green: 0.07, blue: 0.09))
-                    .overlay(RoundedRectangle(cornerRadius: isModernClean ? 8 : 5, style: .continuous).stroke(isModernClean ? Color.white.opacity(0.18) : Color(red: 0.16, green: 0.19, blue: 0.24), lineWidth: 1))
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.white.opacity(0.06))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 0.8))
             )
-            .padding(.horizontal, 6)
-            .padding(.bottom, 3)
+            .padding(.horizontal, 8)
+            .padding(.bottom, 5)
         }
         .buttonStyle(.plain)
     }
 }
 
 extension FloatingLyricTextColor {
+    @MainActor
     var color: Color {
         switch self {
+        case .album:
+            if NowPlayingManager.shared.isPlaying && NowPlayingManager.shared.artworkImage != nil {
+                return NowPlayingManager.shared.albumPalette.primary
+            }
+            return Color.white
         case .white: return Color.white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
@@ -613,6 +647,7 @@ struct SubNotchFloatingLyricCapsuleView: View {
     @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
     @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @State private var isHovered = false
     @State private var capsuleWidth: CGFloat = 180
 
@@ -621,7 +656,10 @@ struct SubNotchFloatingLyricCapsuleView: View {
     }
 
     private var activeTextColor: Color {
-        FloatingLyricTextColor(rawValue: floatingLyricTextColor)?.color ?? .white
+        if (syncThemeWithAlbumArt || floatingLyricTextColor == "album" || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
+        return FloatingLyricTextColor(rawValue: floatingLyricTextColor)?.color ?? .white
     }
 
     private var activeFontDesign: Font.Design {
@@ -702,6 +740,15 @@ struct SubNotchFloatingLyricCapsuleView: View {
         case .seamlessGlass:
             chromeWidth = 44
             minWidth = 200
+        case .retroPixel:
+            chromeWidth = 68
+            minWidth = 135
+        case .liquidAurora:
+            chromeWidth = 72
+            minWidth = 140
+        case .minimalBraun:
+            chromeWidth = 76
+            minWidth = 145
         }
 
         let textWidth = (text as NSString).size(withAttributes: [.font: font]).width
@@ -718,9 +765,9 @@ struct SubNotchFloatingLyricCapsuleView: View {
             HStack(spacing: 6) {
                 Image(systemName: iconName)
                     .font(.system(size: 8.5, weight: .bold))
-                    .foregroundStyle(isHovered ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .foregroundStyle(isHovered ? activeTextColor : activeTextColor.opacity(0.85))
                     .shadow(color: Color.black.opacity(0.85), radius: 2, x: 0, y: 1)
-                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.75), radius: 4, x: 0, y: 0)
+                    .shadow(color: activeTextColor.opacity(isHovered ? 0.9 : 0.6), radius: 4, x: 0, y: 0)
                     .frame(width: 12)
 
                 ZStack {
@@ -760,7 +807,7 @@ struct SubNotchFloatingLyricCapsuleView: View {
             HStack(spacing: 7) {
                 Image(systemName: iconName)
                     .font(.system(size: 8.5, weight: .bold))
-                    .foregroundStyle(isHovered ? Color(red: 1.0, green: 0.16, blue: 0.53) : Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .foregroundStyle(isHovered ? activeTextColor : activeTextColor.opacity(0.85))
                     .frame(width: 12)
 
                 ZStack {
@@ -892,6 +939,121 @@ struct SubNotchFloatingLyricCapsuleView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 4.5)
+
+        case .retroPixel:
+            // Preset 6: 8-Bit Retro Arcade — stepped pixel typography & live pixel audio spectrum
+            HStack(spacing: 6) {
+                Text("▶")
+                    .font(.system(size: 8, weight: .black, design: .monospaced))
+                    .foregroundStyle((MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme).color)
+                    .frame(width: 10)
+
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .bold, design: .monospaced))
+                        .foregroundStyle(activeTextColor)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id(activeDisplayText)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 4)),
+                            removal: .opacity.combined(with: .offset(y: -4))
+                        ))
+                }
+                .frame(maxWidth: .infinity)
+
+                CyberAudioSpectrumView(
+                    barCount: 3,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: 1.8,
+                    segmentHeight: 1.4,
+                    segmentSpacing: 0.6,
+                    palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
+                )
+                .frame(width: 14)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4.5)
+
+        case .liquidAurora:
+            // Preset 7: Liquid Aurora — translucent pill with flowing multi-color ambient glow behind lyrics
+            HStack(spacing: 7) {
+                Image(systemName: "music.note.sparkles")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), radius: 3)
+                    .frame(width: 12)
+
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .bold, design: activeFontDesign))
+                        .foregroundStyle(Color.white)
+                        .shadow(color: Color.black.opacity(0.85), radius: 2.5, y: 1.2)
+                        .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.4), radius: 5)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id(activeDisplayText)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 4)),
+                            removal: .opacity.combined(with: .offset(y: -4))
+                        ))
+                }
+                .frame(maxWidth: .infinity)
+
+                ModernAudioSpectrumView(
+                    barCount: 3,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: 1.8,
+                    maxHeight: 9.0,
+                    color: Color(red: 0.0, green: 0.96, blue: 0.83)
+                )
+                .frame(width: 14)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+
+        case .minimalBraun:
+            // Preset 8: Braun Industrial — studio monitor strip with live recording status dot & Swiss typography
+            HStack(spacing: 7) {
+                HStack(spacing: 3) {
+                    Circle()
+                        .fill(nowPlaying.isPlaying ? activeTextColor : Color.white.opacity(0.3))
+                        .frame(width: 4.5, height: 4.5)
+                        .shadow(color: nowPlaying.isPlaying ? activeTextColor.opacity(0.8) : Color.clear, radius: 2)
+                    Text("LIVE")
+                        .font(.system(size: 6.5, weight: .black, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.75))
+                }
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1.5)
+                .background(Color.white.opacity(0.06))
+                .clipShape(Capsule())
+
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .semibold, design: activeFontDesign))
+                        .foregroundStyle(Color.white.opacity(0.95))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id(activeDisplayText)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 3)),
+                            removal: .opacity.combined(with: .offset(y: -3))
+                        ))
+                }
+                .frame(maxWidth: .infinity)
+
+                ModernAudioSpectrumView(
+                    barCount: 3,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: 1.6,
+                    maxHeight: 8.5,
+                    color: Color.white.opacity(0.8)
+                )
+                .frame(width: 12)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4.5)
         }
     }
 
@@ -965,6 +1127,79 @@ struct SubNotchFloatingLyricCapsuleView: View {
             Capsule()
                 .fill(Color.black.opacity(isHovered ? 0.45 : 0.32))
                 .shadow(color: Color.black.opacity(0.40), radius: 6, x: 0, y: 2)
+
+        case .retroPixel:
+            // 8-bit stepped pixel box with theme color hairline stroke
+            Rectangle()
+                .fill(Color(red: 0.04, green: 0.05, blue: 0.07).opacity(0.95))
+                .overlay(
+                    Rectangle()
+                        .stroke(
+                            (MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme).color.opacity(isHovered ? 0.95 : 0.60),
+                            lineWidth: 1.0
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.90), radius: 6, y: 3)
+
+        case .liquidAurora:
+            // Translucent glass capsule with animated liquid aurora glow
+            TimelineView(.animation(minimumInterval: 0.04)) { timeline in
+                let t = timeline.date.timeIntervalSinceReferenceDate
+                let shift = CGFloat(sin(t * 1.5) * 15.0)
+                Capsule()
+                    .fill(Color.black.opacity(0.75))
+                    .overlay(
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.20),
+                                        Color(red: 1.0, green: 0.16, blue: 0.53).opacity(0.18),
+                                        Color(red: 0.58, green: 0.20, blue: 1.0).opacity(0.22)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .offset(x: shift)
+                            .blur(radius: 6)
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(isHovered ? 0.50 : 0.30),
+                                        Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.40 : 0.15)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                lineWidth: 0.8
+                            )
+                    )
+                    .shadow(color: Color.black.opacity(0.85), radius: 8, y: 3)
+            }
+
+        case .minimalBraun:
+            // Studio monitor matte graphite capsule with subtle specular edge
+            Capsule()
+                .fill(Color(red: 0.07, green: 0.08, blue: 0.09).opacity(0.96))
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(isHovered ? 0.28 : 0.16),
+                                    Color.white.opacity(0.04)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 0.75
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.8), radius: 6, y: 2.5)
         }
     }
 
@@ -1069,8 +1304,14 @@ struct CyberMusicHUDView: View {
 // MARK: - Modern Clean Dynamic Island Music HUD Theme (Apple Music / Spotify Partial Flow)
 
 extension MusicProgressColor {
+    @MainActor
     var color: Color {
         switch self {
+        case .album:
+            if NowPlayingManager.shared.isPlaying && NowPlayingManager.shared.artworkImage != nil {
+                return NowPlayingManager.shared.albumPalette.primary
+            }
+            return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme: return Color(red: 1.0, green: 0.65, blue: 0.45)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
@@ -1080,8 +1321,20 @@ extension MusicProgressColor {
         }
     }
 
+    @MainActor
     var gradient: LinearGradient {
         switch self {
+        case .album:
+            if NowPlayingManager.shared.isPlaying && NowPlayingManager.shared.artworkImage != nil {
+                return LinearGradient(
+                    colors: [NowPlayingManager.shared.albumPalette.primary, NowPlayingManager.shared.albumPalette.secondary],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            }
+            return LinearGradient(
+                colors: [Color(red: 0.0, green: 0.96, blue: 0.83), Color(red: 0.0, green: 0.75, blue: 0.95)],
+                startPoint: .leading, endPoint: .trailing
+            )
         case .theme, .amber:
             return LinearGradient(
                 colors: [Color(red: 1.0, green: 0.68, blue: 0.48), Color(red: 1.0, green: 0.58, blue: 0.38)],
@@ -1259,10 +1512,8 @@ struct ModernCleanMusicHUDContentView: View {
 
                     Spacer(minLength: 2)
 
-                    // Di bawah: Tombol aksi (⏮, ▶/⏸, ⏭) terpusat horizontal di tengah-tengah (kanan-kiri)
-                    HStack(spacing: 20) {
-                        Spacer()
-
+                    // Di bawah: Tombol aksi (⏮, ▶/⏸, ⏭) & Modern Animated Spectrum
+                    HStack(spacing: 14) {
                         Button(action: { nowPlaying.previousTrack() }) {
                             Image(systemName: "backward.fill")
                                 .font(.system(size: 11, weight: .semibold))
@@ -1296,6 +1547,19 @@ struct ModernCleanMusicHUDContentView: View {
                         .buttonStyle(.plain)
 
                         Spacer()
+
+                        // Modern dynamic dancing audio wave
+                        ModernAudioSpectrumView(
+                            barCount: 4,
+                            isPlaying: nowPlaying.isPlaying,
+                            barWidth: 2.2,
+                            maxHeight: 12.0,
+                            color: (MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme).color
+                        )
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(Color.white.opacity(0.06))
+                        .clipShape(Capsule())
                     }
                     .frame(height: 26)
                 }
@@ -1303,18 +1567,9 @@ struct ModernCleanMusicHUDContentView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.trailing, 6)
             }
-            .frame(width: 250, alignment: .leading)
+            .frame(width: 255, alignment: .leading)
 
-            // Soft vertical separator line (subtle gradient fade)
-            Rectangle()
-                .fill(LinearGradient(
-                    colors: [Color.clear, Color.white.opacity(0.12), Color.white.opacity(0.12), Color.clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                ))
-                .frame(width: 1, height: 74)
-
-            // RIGHT COLUMN: Multi-Line Interactive Synced Lyrics (Scrollable, Selectable, Centered Focus)
+            // RIGHT COLUMN: Multi-Line Interactive Synced Lyrics (Seamless, Borderless, Scrollable)
             VStack(alignment: .leading, spacing: 0) {
                 if nowPlaying.lyrics.isEmpty {
                     VStack(spacing: 4) {
@@ -1368,9 +1623,10 @@ struct ModernCleanMusicHUDContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.leading, 12)
         }
-        .frame(height: 106)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 4)
+        .frame(height: 114)
+        .padding(.horizontal, 18)
+        .padding(.top, 4)
+        .padding(.bottom, 16)
     }
 }
 
@@ -1405,6 +1661,7 @@ struct RetroCyberMusicHUDContentView: View {
     @ObservedObject var nowPlaying: NowPlayingManager
     var appState: AppState
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @State private var dragPosition: Double?
 
     init(nowPlaying: NowPlayingManager, appState: AppState) {
@@ -1413,8 +1670,16 @@ struct RetroCyberMusicHUDContentView: View {
     }
 
     private var activeProgressColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme: return Color(red: 0.0, green: 0.96, blue: 0.83) // Iconic Cyber Cyan by default
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
@@ -1425,8 +1690,25 @@ struct RetroCyberMusicHUDContentView: View {
     }
 
     private var activeProgressGradient: LinearGradient {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return LinearGradient(
+                colors: [nowPlaying.albumPalette.primary, nowPlaying.albumPalette.secondary],
+                startPoint: .leading, endPoint: .trailing
+            )
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return LinearGradient(
+                    colors: [nowPlaying.albumPalette.primary, nowPlaying.albumPalette.secondary],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            }
+            return LinearGradient(
+                colors: [Color(red: 0.0, green: 0.96, blue: 0.83), Color(red: 0.0, green: 0.75, blue: 0.95)],
+                startPoint: .leading, endPoint: .trailing
+            )
         case .theme:
             return LinearGradient(
                 colors: [Color(red: 0.0, green: 0.96, blue: 0.83), Color(red: 0.0, green: 0.75, blue: 0.95)],
@@ -1446,57 +1728,61 @@ struct RetroCyberMusicHUDContentView: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            // LEFT COLUMN: Album Art, Track info, Scrubber & Controls (185pt fixed width)
+        HStack(alignment: .center, spacing: 16) {
+            // LEFT COLUMN: Retro 8-Bit Audio Deck
             VStack(alignment: .leading, spacing: 5) {
+                // Deck Header: Title & Player source badge (clean, uncrowded)
+                HStack(spacing: 6) {
+                    PixelText(text: "AUDIO DECK", color: activeProgressColor, pixelSize: 1.1)
+                    Spacer()
+                    HStack(spacing: 3.5) {
+                        Circle()
+                            .fill(activeProgressColor)
+                            .frame(width: 3.5, height: 3.5)
+                            .opacity(nowPlaying.isPlaying ? 1.0 : 0.4)
+                        Text(nowPlaying.player.isEmpty ? "SPOTIFY" : nowPlaying.player.uppercased())
+                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.85))
+                    }
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1.5)
+                    .pixel16Bevel(raised: false, cornerRadius: 2.5, fillColor: Pixel16Palette.slot)
+                }
+
+                // Track & Album Info (Clean, open layout)
                 Button(action: { nowPlaying.activateCurrentPlayer() }) {
                     HStack(spacing: 8) {
-                        // Album Cover (48x48)
+                        // 16-Bit Recessed Cartridge Album Bay (44x44)
                         ZStack {
                             if let art = nowPlaying.artworkImage {
                                 Image(nsImage: art)
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
-                                    .frame(width: 48, height: 48)
-                                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                                    .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).stroke(Color.white.opacity(0.18), lineWidth: 0.8))
-                                    .shadow(color: Color.black.opacity(0.5), radius: 3, y: 2)
+                                    .frame(width: 44, height: 44)
+                                    .clipped()
                             } else {
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .fill(Color(red: 0.08, green: 0.09, blue: 0.12))
-                                    .frame(width: 48, height: 48)
-                                    .overlay(Image(systemName: "music.note").font(.system(size: 18)).foregroundColor(activeProgressColor))
+                                Rectangle()
+                                    .fill(Pixel16Palette.slot)
+                                    .frame(width: 44, height: 44)
+                                    .overlay(Image(systemName: "music.note").font(.system(size: 14)).foregroundColor(activeProgressColor))
                             }
                         }
+                        .pixel16Bevel(raised: false, cornerRadius: 3.5, fillColor: Pixel16Palette.slot)
                         .id(nowPlaying.title + nowPlaying.artist)
 
-                        // Track Title & Artist
+                        // Title & Artist
                         VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 4) {
-                                Text(nowPlaying.player.isEmpty ? "SPOTIFY" : nowPlaying.player.uppercased())
-                                    .font(.system(size: 7, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(activeProgressColor)
-                                    .lineLimit(1)
-
-                                if nowPlaying.isBrowserJSHintVisible {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(.system(size: 6.5))
-                                        .foregroundStyle(Color(red: 0.96, green: 0.62, blue: 0.04))
-                                        .help(nowPlaying.browserJSHintText)
-                                }
-                            }
-
                             ModernMarqueeText(
-                                text: nowPlaying.title.isEmpty ? "No track" : nowPlaying.title,
+                                text: nowPlaying.title.isEmpty ? "NO AUDIO" : nowPlaying.title,
                                 font: .system(size: 11, weight: .bold, design: .monospaced),
                                 color: .white
                             )
                             .frame(height: 15)
                             .id(nowPlaying.title)
 
-                            Text(nowPlaying.artist.isEmpty ? "Idle" : nowPlaying.artist)
-                                .font(.system(size: 9, design: .monospaced))
-                                .foregroundStyle(Color(white: 0.65))
+                            Text(nowPlaying.artist.isEmpty ? "IDLE" : nowPlaying.artist)
+                                .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.60))
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         }
@@ -1504,163 +1790,164 @@ struct RetroCyberMusicHUDContentView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(nowPlaying.isBrowserJSHintVisible ? nowPlaying.browserJSHintText : "Click to focus active music player or browser tab")
+                .help(nowPlaying.isBrowserJSHintVisible ? nowPlaying.browserJSHintText : "Click to focus active music player")
 
-                // Interactive Scrubber
+                // Segmented 8-Bit Pixel Scrubber
                 TimelineView(.periodic(from: .now, by: 0.5)) { timeline in
-                VStack(spacing: 2) {
+                let totalSegments = 18
+                let effectivePosition = dragPosition ?? nowPlaying.position(at: timeline.date)
+                let progressFraction = nowPlaying.trackDuration > 0
+                    ? min(1.0, max(0.0, effectivePosition / nowPlaying.trackDuration))
+                    : 0.0
+                let activeSegments = Int(progressFraction * Double(totalSegments))
+
+                VStack(spacing: 2.5) {
                     GeometryReader { geo in
-                        let totalWidth = geo.size.width
-                        let effectivePosition = dragPosition ?? nowPlaying.playerPosition
-                        let progressFraction: CGFloat = nowPlaying.trackDuration > 0
-                            ? min(1.0, max(0.0, CGFloat(effectivePosition / nowPlaying.trackDuration)))
-                            : 0.0
-
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.white.opacity(0.14))
-                                .frame(height: 3)
-
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(activeProgressGradient)
-                                .frame(width: totalWidth * progressFraction, height: 3)
+                        let segW = max(2.5, (geo.size.width - CGFloat(totalSegments - 1) * 2) / CGFloat(totalSegments))
+                        HStack(spacing: 2) {
+                            ForEach(0..<totalSegments, id: \.self) { idx in
+                                Rectangle()
+                                    .fill(idx < activeSegments ? activeProgressColor : (idx == activeSegments ? Color.white : Color.white.opacity(0.12)))
+                                    .frame(width: segW, height: 4.5)
+                            }
                         }
                         .contentShape(Rectangle())
                         .gesture(
                             DragGesture(minimumDistance: 0)
                                 .onChanged { value in
                                     guard nowPlaying.trackDuration > 0 else { return }
-                                    let fraction = min(1.0, max(0.0, value.location.x / totalWidth))
-                                    dragPosition = Double(fraction) * nowPlaying.trackDuration
+                                    let fraction = min(1.0, max(0.0, Double(value.location.x / geo.size.width)))
+                                    dragPosition = fraction * nowPlaying.trackDuration
                                 }
                                 .onEnded { value in
                                     guard nowPlaying.trackDuration > 0 else {
                                         dragPosition = nil
                                         return
                                     }
-                                    let fraction = min(1.0, max(0.0, value.location.x / totalWidth))
-                                    let targetTime = Double(fraction) * nowPlaying.trackDuration
+                                    let fraction = min(1.0, max(0.0, Double(value.location.x / geo.size.width)))
+                                    let target = fraction * nowPlaying.trackDuration
                                     dragPosition = nil
-                                    nowPlaying.seek(to: targetTime)
+                                    nowPlaying.seek(to: target)
                                 }
                         )
                     }
-                    .frame(height: 4)
+                    .frame(height: 5)
 
                     HStack {
-                        let effectivePosition = dragPosition ?? nowPlaying.playerPosition
                         Text(formatTime(effectivePosition))
-                            .font(.system(size: 7.5, weight: .medium, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.45))
+                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(activeProgressColor.opacity(0.85))
+                        Spacer()
+                        Text("//")
+                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.25))
                         Spacer()
                         Text(formatTime(nowPlaying.trackDuration))
-                            .font(.system(size: 7.5, weight: .medium, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.45))
+                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.50))
                     }
                 }
                 }
 
-                // Playback Controls + Mini Disco
+                // Transport Controls + STEREO EQUALIZER INTEGRATED SIDE-BY-SIDE
                 HStack(spacing: 8) {
-                    Button(action: { nowPlaying.previousTrack() }) {
-                        Image(systemName: "backward.fill")
-                            .font(.system(size: 8.5, weight: .bold))
-                            .foregroundStyle(Color(white: 0.85))
-                            .frame(width: 20, height: 20)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.10)))
-                    }
-                    .buttonStyle(.plain)
+                    // Tactile 16-Bit Cyberdeck Transport Buttons
+                    HStack(spacing: 4) {
+                        Button(action: { nowPlaying.previousTrack() }) {
+                            Text("◀◀")
+                                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.90))
+                                .frame(width: 25, height: 18)
+                                .pixel16Bevel(raised: true, cornerRadius: 2.5, fillColor: Pixel16Palette.surfaceRaised)
+                        }
+                        .buttonStyle(.plain)
 
-                    Button(action: { nowPlaying.togglePlayPause() }) {
-                        Image(systemName: nowPlaying.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 9.5, weight: .bold))
-                            .foregroundStyle(activeProgressColor)
-                            .frame(width: 22, height: 20)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(activeProgressColor.opacity(0.18)))
-                    }
-                    .buttonStyle(.plain)
+                        Button(action: { nowPlaying.togglePlayPause() }) {
+                            Text(nowPlaying.isPlaying ? "❚❚" : "▶")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .foregroundStyle(activeProgressColor)
+                                .frame(width: 29, height: 18)
+                                .pixel16Bevel(raised: true, cornerRadius: 2.5, fillColor: activeProgressColor.opacity(0.22))
+                        }
+                        .buttonStyle(.plain)
 
-                    Button(action: { nowPlaying.nextTrack() }) {
-                        Image(systemName: "forward.fill")
-                            .font(.system(size: 8.5, weight: .bold))
-                            .foregroundStyle(Color(white: 0.85))
-                            .frame(width: 20, height: 20)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.10)))
+                        Button(action: { nowPlaying.nextTrack() }) {
+                            Text("▶▶")
+                                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.90))
+                                .frame(width: 25, height: 18)
+                                .pixel16Bevel(raised: true, cornerRadius: 2.5, fillColor: Pixel16Palette.surfaceRaised)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
 
                     Spacer()
 
-                    // Retro Disco Visualizer (compact 6 bars, Color Theme base with vibrant gradient)
-                    CyberDiscoVisualizer(
-                        isPlaying: nowPlaying.isPlaying,
-                        barCount: 6,
-                        maxHeight: 16,
-                        palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
-                    )
+                    // THE 16-BIT EQUALIZER - Integrated in recessed bay beside controls
+                    HStack(spacing: 2) {
+                        CyberDiscoVisualizer(
+                            isPlaying: nowPlaying.isPlaying,
+                            barCount: 8,
+                            maxHeight: 14,
+                            palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
+                        )
+                    }
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .pixel16Bevel(raised: false, cornerRadius: 2.5, fillColor: Pixel16Palette.slot)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(width: 255, alignment: .leading)
 
-            // Divider Rule (subtle vertical line, blends cleanly with dark backdrop)
-            Rectangle()
-                .fill(Color.white.opacity(0.12))
-                .frame(width: 1, height: 90)
-
-            // RIGHT COLUMN: Synced Real-Time Lyrics View (clean, full-height lyrics only)
+            // RIGHT COLUMN: Retro CRT Lyrics (Seamless, Borderless, Floating Stream)
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Text("LYRICS")
-                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(activeProgressColor)
-
+                    PixelText(text: "LYRICS", color: activeProgressColor, pixelSize: 1.1)
                     Spacer()
-
                     if nowPlaying.lyricsLoading {
                         Text("LOADING...")
-                            .font(.system(size: 7, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.45))
+                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            .foregroundStyle(activeProgressColor.opacity(0.7))
+                    } else if !nowPlaying.lyrics.isEmpty {
+                        HStack(spacing: 3) {
+                            Circle()
+                                .fill(activeProgressColor)
+                                .frame(width: 3.5, height: 3.5)
+                            Text("SYNCED")
+                                .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                .foregroundStyle(activeProgressColor)
+                        }
                     }
                 }
 
+                // Borderless, Floating Synced Lyrics Stream
                 if nowPlaying.lyrics.isEmpty {
                     VStack(spacing: 4) {
-                        Image(systemName: "waveform")
-                            .font(.system(size: 16))
-                            .foregroundColor(activeProgressColor.opacity(0.6))
-                        Text(nowPlaying.lyricsLoading ? "Fetching lyrics..." : "No lyrics found")
-                            .font(.system(size: 8.5, design: .monospaced))
-                            .foregroundStyle(Color(white: 0.45))
+                        Spacer()
+                        Text(nowPlaying.lyricsLoading ? "[ SCANNING MATRIX... ]" : "[ NO LYRIC FEED ]")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.40))
+                        Spacer()
                     }
-                    .frame(maxWidth: .infinity, minHeight: 82, maxHeight: 82, alignment: .center)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView(.vertical, showsIndicators: false) {
-                            LazyVStack(alignment: .leading, spacing: 3.5) {
-                                let currentLine = nowPlaying.lyrics.first(where: { $0.id == nowPlaying.currentLyricIndex })
-                                let nextLine = nowPlaying.lyrics.first(where: { $0.id == (nowPlaying.currentLyricIndex + 1) })
-                                let duration = max(1.0, (nextLine?.timestamp ?? ((currentLine?.timestamp ?? 0) + 3.8)) - (currentLine?.timestamp ?? 0))
-                                let elapsed = max(0.0, nowPlaying.playerPosition - (currentLine?.timestamp ?? 0))
-                                let currentFraction = min(1.0, elapsed / duration)
-
+                            LazyVStack(alignment: .leading, spacing: 4) {
                                 ForEach(nowPlaying.lyrics) { line in
                                     let isCurrent = (line.id == nowPlaying.currentLyricIndex)
-
-                                    HStack(spacing: 4) {
-                                        if isCurrent {
-                                            Circle()
-                                                .fill(activeProgressColor)
-                                                .frame(width: 3.5, height: 3.5)
-                                        }
-                                        KaraokeLyricLineView(
-                                            text: line.text,
-                                            isCurrent: isCurrent,
-                                            currentFraction: isCurrent ? currentFraction : 0.0,
-                                            primaryColor: activeProgressColor,
-                                            fontSize: isCurrent ? 9.5 : 8.0
-                                        )
-                                        .lineLimit(2)
+                                    HStack(alignment: .top, spacing: 4) {
+                                        Text(isCurrent ? "▶" : " ")
+                                            .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                                            .foregroundStyle(activeProgressColor)
+                                        Text(line.text)
+                                            .font(.system(size: 8.5, weight: isCurrent ? .bold : .medium, design: .monospaced))
+                                            .foregroundStyle(isCurrent ? activeProgressColor : Color.white.opacity(0.38))
+                                            .shadow(color: isCurrent ? activeProgressColor.opacity(0.6) : Color.clear, radius: 4)
+                                            .lineLimit(2)
                                     }
+                                    .padding(.horizontal, 2)
+                                    .padding(.vertical, 1)
                                     .contentShape(Rectangle())
                                     .onTapGesture {
                                         nowPlaying.seek(to: line.timestamp)
@@ -1668,31 +1955,39 @@ struct RetroCyberMusicHUDContentView: View {
                                     .id(line.id)
                                 }
                             }
-                            .padding(.trailing, 4)
+                            .padding(.vertical, 8)
                         }
-                        .frame(height: 82)
-                        .simultaneousGesture(
-                            DragGesture(minimumDistance: 4)
-                                .onChanged { _ in
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                                }
+                        .frame(height: 84)
+                        .mask(
+                            LinearGradient(
+                                gradient: Gradient(stops: [
+                                    .init(color: .clear, location: 0.0),
+                                    .init(color: .black, location: 0.18),
+                                    .init(color: .black, location: 0.82),
+                                    .init(color: .clear, location: 1.0)
+                                ]),
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
                         )
                         .onAppear {
                             proxy.scrollTo(nowPlaying.currentLyricIndex, anchor: .center)
                         }
                         .onChange(of: nowPlaying.currentLyricIndex) { _, newIndex in
-                            withAnimation(.easeInOut(duration: 0.25)) {
+                            withAnimation(.easeInOut(duration: 0.22)) {
                                 proxy.scrollTo(newIndex, anchor: .center)
                             }
                         }
                     }
                 }
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 4)
         }
-        .frame(height: 104)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 4)
+        .frame(height: 114)
+        .padding(.horizontal, 18)
+        .padding(.top, 4)
+        .padding(.bottom, 16)
     }
 }
 

@@ -282,13 +282,15 @@ struct ClineView: View {
 }
 
 #if DEBUG
-#Preview("ClineView") {
-    HStack(spacing: 20) {
-        ClineView(status: .idle,            size: 54)
-        ClineView(status: .running,         size: 54)
-        ClineView(status: .waitingApproval, size: 54)
+struct ClineView_Previews: PreviewProvider {
+    static var previews: some View {
+        HStack(spacing: 20) {
+            ClineView(status: .idle,            size: 54)
+            ClineView(status: .running,         size: 54)
+            ClineView(status: .waitingApproval, size: 54)
+        }
+        .padding(24)
+        .background(Color(white: 0.15))
     }
-    .padding(24)
-    .background(Color(white: 0.15))
 }
 #endif
