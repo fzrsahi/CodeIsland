@@ -30,12 +30,12 @@ final class AppleCompanionPublisher: NSObject, ObservableObject {
 
     private weak var appState: AppState?
     private let peerID: MCPeerID
-    private lazy var session = MCSession(peer: peerID, securityIdentity: nil, encryptionPreference: .required)
-    private lazy var advertiser = MCNearbyServiceAdvertiser(
-        peer: peerID,
-        discoveryInfo: ["protocol": "1"],
-        serviceType: Self.serviceType
-    )
+    /// Created only while the companion is on. Touching them at launch (which
+    /// `configure(enabled: false)` used to do, to stop and disconnect) spins up
+    /// an MCSession and a service advertiser — and their background threads —
+    /// for a feature that is off by default.
+    private var session: MCSession?
+    private var advertiser: MCNearbyServiceAdvertiser?
     private var heartbeatTimer: Timer?
     private var sequence: UInt64 = 0
     private var lastSentContentKey: String?
@@ -58,8 +58,6 @@ final class AppleCompanionPublisher: NSObject, ObservableObject {
         let displayName = "CodeIsland \(hostName)"
         self.peerID = MCPeerID(displayName: String(displayName.prefix(63)))
         super.init()
-        self.session.delegate = self
-        self.advertiser.delegate = self
     }
 
     func attach(_ appState: AppState) {
@@ -72,16 +70,15 @@ final class AppleCompanionPublisher: NSObject, ObservableObject {
         heartbeatTimer = nil
 
         guard enabled else {
-            advertiser.stopAdvertisingPeer()
+            stopMultipeer()
             bluetooth.configure(enabled: false)
             advertising = false
             connectedPeerNames = []
-            session.disconnect()
             return
         }
 
         lastError = nil
-        advertiser.startAdvertisingPeer()
+        startMultipeer()
         bluetooth.configure(enabled: true)
         advertising = true
         let heartbeat = max(1.0, heartbeatSeconds)
@@ -102,13 +99,40 @@ final class AppleCompanionPublisher: NSObject, ObservableObject {
 
     func reconnect() {
         guard enabled else { return }
-        advertiser.stopAdvertisingPeer()
-        session.disconnect()
+        stopMultipeer()
         connectedPeerNames = []
-        advertiser.startAdvertisingPeer()
+        startMultipeer()
         advertising = true
         bluetooth.configure(enabled: true)
         flush(reason: "reconnect")
+    }
+
+    /// Build the Multipeer objects the first time the companion is switched on.
+    private func startMultipeer() {
+        if session == nil {
+            let session = MCSession(peer: peerID, securityIdentity: nil, encryptionPreference: .required)
+            session.delegate = self
+            self.session = session
+        }
+        if advertiser == nil {
+            let advertiser = MCNearbyServiceAdvertiser(
+                peer: peerID,
+                discoveryInfo: ["protocol": "1"],
+                serviceType: Self.serviceType
+            )
+            advertiser.delegate = self
+            self.advertiser = advertiser
+        }
+        advertiser?.startAdvertisingPeer()
+    }
+
+    /// Tear them down and let them go. Does nothing when they were never built,
+    /// so switching the companion off costs nothing.
+    private func stopMultipeer() {
+        advertiser?.stopAdvertisingPeer()
+        session?.disconnect()
+        advertiser = nil
+        session = nil
     }
 
     private func flush(reason: String) {
@@ -127,11 +151,11 @@ final class AppleCompanionPublisher: NSObject, ObservableObject {
 
         bluetooth.publish(payload)
 
-        guard !session.connectedPeers.isEmpty else { return }
+        guard let session, !session.connectedPeers.isEmpty else { return }
         do {
             let data = try encoder.encode(payload)
             try session.send(data, toPeers: session.connectedPeers, with: .reliable)
-            Self.log.debug("push(\(reason)): seq=\(payload.sequence) source=\(payload.source) status=\(payload.status.rawValue) peers=\(self.session.connectedPeers.count)")
+            Self.log.debug("push(\(reason)): seq=\(payload.sequence) source=\(payload.source) status=\(payload.status.rawValue) peers=\(session.connectedPeers.count)")
         } catch {
             lastError = error.localizedDescription
             Self.log.error("push failed: \(error.localizedDescription)")
@@ -164,7 +188,7 @@ final class AppleCompanionPublisher: NSObject, ObservableObject {
     }
 
     private func refreshConnectedPeers() {
-        connectedPeerNames = session.connectedPeers.map(\.displayName).sorted()
+        connectedPeerNames = (session?.connectedPeers ?? []).map(\.displayName).sorted()
     }
 }
 
@@ -180,8 +204,12 @@ extension AppleCompanionPublisher: MCNearbyServiceAdvertiserDelegate {
                 invitationHandler(false, nil)
                 return
             }
+            guard let session = self.session else {
+                invitationHandler(false, nil)
+                return
+            }
             Self.log.info("accepted invitation from \(peerID.displayName)")
-            invitationHandler(true, self.session)
+            invitationHandler(true, session)
         }
     }
 
