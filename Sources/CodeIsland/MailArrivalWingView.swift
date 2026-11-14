@@ -158,7 +158,7 @@ public struct MailArrivalWingView: View {
 
             TimelineView(.animation) { timeline in
                 let elapsed = max(0.0, timeline.date.timeIntervalSince(mailManager.arrivalAnimStartTime))
-                let duration: Double = isCompact ? 0.85 : 1.25
+                let duration: Double = isCompact ? 0.95 : 1.50
                 let rawProgress = min(max(CGFloat(elapsed / duration), 0.0), 1.0)
                 let progress = smoothProgress(rawProgress)
 
@@ -166,8 +166,8 @@ public struct MailArrivalWingView: View {
                 let mailboxRecoil = progress >= 0.88 && progress < 0.98
                 let showBadge = progress >= 0.92
 
-                ZStack(alignment: .trailing) {
-                    // 1. Dynamic Real-time Trailing Wake
+                ZStack(alignment: .topLeading) {
+                    // 1. Dynamic Real-time Trailing Wake (Layer 1 - Background)
                     let trailOpacity: Double = {
                         if progress < 0.02 { return 0.0 }
                         if progress > 0.88 {
@@ -184,6 +184,7 @@ public struct MailArrivalWingView: View {
                                 style: StrokeStyle(lineWidth: 1.2, dash: [2.0, 2.0])
                             )
                             .opacity(trailOpacity)
+                            .zIndex(1)
                     } else {
                         // Luminous Gradient Vapor Trail
                         RollerCoasterTrailPath(progress: progress, width: w, isCompact: isCompact)
@@ -201,36 +202,10 @@ public struct MailArrivalWingView: View {
                             )
                             .shadow(color: accentColor.opacity(0.45), radius: 1.5)
                             .opacity(trailOpacity)
+                            .zIndex(1)
                     }
 
-                    // 2. Flying Envelope (Sampled along exact same spline, 100% visible from start at x=4)
-                    let sample = RollerCoasterGeometry.sample(at: progress, for: w, isCompact: isCompact)
-                    let letterScale: CGFloat = {
-                        if progress >= 0.88 {
-                            return max(0.2, 1.0 - (progress - 0.88) / 0.12 * 0.8)
-                        }
-                        return 1.0
-                    }()
-                    let letterOpacity: Double = {
-                        if progress >= 0.94 {
-                            return max(0.0, 1.0 - Double((progress - 0.94) / 0.06))
-                        }
-                        return 1.0
-                    }()
-
-                    Group {
-                        if isRetro {
-                            PixelMiniEnvelopeView(accentColor: accentColor)
-                        } else {
-                            ModernMiniEnvelopeView(accentColor: accentColor)
-                        }
-                    }
-                    .scaleEffect(letterScale)
-                    .rotationEffect(.degrees(sample.angle))
-                    .position(sample.point)
-                    .opacity(letterOpacity)
-
-                    // 3. Mailbox Anchor at far right (Pinned with 6pt safe corner clearance, perfectly inside notch 32pt height)
+                    // 2. Mailbox Anchor at far right (Layer 2 - Middle, Pinned with 6pt safe corner clearance)
                     HStack(spacing: 0) {
                         Spacer(minLength: 0)
 
@@ -269,8 +244,38 @@ public struct MailArrivalWingView: View {
                         .padding(.trailing, 6)
                     }
                     .frame(width: w, height: h, alignment: .trailing)
+                    .zIndex(2)
+
+                    // 3. Flying Envelope (Layer 3 - FOREGROUND / IN FRONT, strictly starts from notch center x=4 and flies to mailbox x=entryX)
+                    let sample = RollerCoasterGeometry.sample(at: progress, for: w, isCompact: isCompact)
+                    let letterScale: CGFloat = {
+                        if progress >= 0.88 {
+                            return max(0.2, 1.0 - (progress - 0.88) / 0.12 * 0.8)
+                        }
+                        return 1.0
+                    }()
+                    let letterOpacity: Double = {
+                        if progress >= 0.96 {
+                            return max(0.0, 1.0 - Double((progress - 0.96) / 0.04))
+                        }
+                        return 1.0
+                    }()
+
+                    Group {
+                        if isRetro {
+                            PixelMiniEnvelopeView(accentColor: accentColor)
+                        } else {
+                            ModernMiniEnvelopeView(accentColor: accentColor)
+                        }
+                    }
+                    .scaleEffect(letterScale)
+                    .rotationEffect(.degrees(sample.angle))
+                    .position(sample.point)
+                    .opacity(letterOpacity)
+                    .zIndex(10)
                 }
-                .frame(width: w, height: h, alignment: .trailing)
+                .frame(width: w, height: h, alignment: .topLeading)
+                .transaction { $0.animation = nil }
             }
         }
         .frame(height: 32)

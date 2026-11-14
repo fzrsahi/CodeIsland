@@ -145,10 +145,11 @@ private struct ModernCleanMailHUDContentView: View {
 
                 HStack(spacing: 6) {
                     Button {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                        mailManager.dismissMailArrival()
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
                             appState.surface = .collapsed
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
                             mailManager.triggerTestPeek()
                         }
                     } label: {
@@ -384,10 +385,11 @@ private struct RetroCyberMailHUDContentView: View {
 
                 HStack(spacing: 8) {
                     Button {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                        mailManager.dismissMailArrival()
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
                             appState.surface = .collapsed
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
                             mailManager.triggerTestPeek()
                         }
                     } label: {

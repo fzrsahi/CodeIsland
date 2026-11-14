@@ -3865,7 +3865,10 @@ private struct MailSettingsPage: View {
                         .foregroundStyle(.secondary)
 
                     Button {
-                        mailManager.triggerTestPeek()
+                        mailManager.dismissMailArrival()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                            mailManager.triggerTestPeek()
+                        }
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "bell.badge")
