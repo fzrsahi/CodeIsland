@@ -1661,6 +1661,81 @@ private struct AppearancePage: View {
                 }
             }
 
+            Section("Dynamic Island Notification Previews") {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Test and preview all Dynamic Island notification banners rolling down from under the notch. All notifications automatically adapt to your active theme (Pixel Retro 16-Bit vs. Modern Clean).")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+
+                    Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
+                        GridRow {
+                            Button(action: {
+                                SystemMonitorManager.shared.triggerChargingBanner()
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "battery.100.bolt")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(Color(red: 0.19, green: 0.82, blue: 0.35))
+                                    Text("Test MagSafe Charging")
+                                        .font(.system(size: 11, weight: .medium))
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3.5)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button(action: {
+                                PrayerTimeManager.shared.triggerTestBanner()
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "moon.stars.fill")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                                    Text("Test Prayer Reminder")
+                                        .font(.system(size: 11, weight: .medium))
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3.5)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+
+                        GridRow {
+                            Button(action: {
+                                SystemVolumeManager.shared.presentHUD()
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "speaker.wave.2.fill")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(Color(red: 1.0, green: 0.8, blue: 0.15))
+                                    Text("Test Volume HUD")
+                                        .font(.system(size: 11, weight: .medium))
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3.5)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button(action: {
+                                NowPlayingManager.shared.triggerTestToast()
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "music.note")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(Color(red: 1.0, green: 0.16, blue: 0.53))
+                                    Text("Test Music Track Change")
+                                        .font(.system(size: 11, weight: .medium))
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3.5)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+            }
+
             Section("Notch Gestures") {
                 VStack(alignment: .leading, spacing: 2) {
                     Toggle("Scroll on Notch for Volume Control", isOn: $notchScrollVolumeControl)
@@ -1909,6 +1984,7 @@ private struct MusicSettingsPage: View {
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
     @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
+    @AppStorage(SettingsKey.floatingLyricIconStyle) private var floatingLyricIconStyle = SettingsDefaults.floatingLyricIconStyle
     @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
     @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
     @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
@@ -1979,6 +2055,19 @@ private struct MusicSettingsPage: View {
                         }
 
                         VStack(alignment: .leading, spacing: 3) {
+                            Picker("Lyric Lead Icon", selection: $floatingLyricIconStyle) {
+                                ForEach(FloatingLyricIconStyle.allCases) { iconStyle in
+                                    Text(iconStyle.title).tag(iconStyle.rawValue)
+                                }
+                            }
+                            .pickerStyle(.menu)
+
+                            Text(FloatingLyricIconStyle(rawValue: floatingLyricIconStyle)?.description ?? "")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                        }
+
+                        VStack(alignment: .leading, spacing: 3) {
                             Picker("Font Typography", selection: $floatingLyricFontDesign) {
                                 ForEach(FloatingLyricFontDesign.allCases) { style in
                                     Text(style.title).tag(style.rawValue)
@@ -1986,7 +2075,7 @@ private struct MusicSettingsPage: View {
                             }
                             .pickerStyle(.menu)
 
-                            Text("Choose font family: Modern Rounded, Monospaced code, Clean System, or Elegant Serif.")
+                            Text("Choose font typography: Modern Rounded, Monospaced Cyber, System Clean, Elegant Serif, or 8-Bit Arcade Pixel.")
                                 .font(.system(size: 11))
                                 .foregroundStyle(.tertiary)
                         }
@@ -3973,6 +4062,19 @@ private struct PrayerSettingsPage: View {
                                 }
                             }
                         }
+
+                    Button(action: {
+                        PrayerTimeManager.shared.triggerTestBanner()
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "bell.badge")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                            Text("Test Prayer Notification Banner")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                    }
+                    .buttonStyle(.bordered)
                 }
             }
         }

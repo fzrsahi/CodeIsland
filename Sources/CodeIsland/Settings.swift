@@ -141,6 +141,10 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
     case retroPixel = "retroPixel"
     case liquidAurora = "liquidAurora"
     case minimalBraun = "minimalBraun"
+    case tapeReel = "tapeReel"
+    case vinylGroove = "vinylGroove"
+    case fluidKaraoke = "fluidKaraoke"
+    case connectedChin = "connectedChin"
 
     public var id: String { rawValue }
 
@@ -154,6 +158,10 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .retroPixel: return "8-Bit Retro Arcade (Pixel Strip)"
         case .liquidAurora: return "Liquid Aurora (Dynamic Glow)"
         case .minimalBraun: return "Braun Industrial (Studio Strip)"
+        case .tapeReel: return "Teenage Engineering TP-7 (Tape Reel)"
+        case .vinylGroove: return "Vinyl Groove (Spinning Record & Tonearm)"
+        case .fluidKaraoke: return "Fluid Shimmer (Spatial Silk Wave)"
+        case .connectedChin: return "Unified Notch Chin (Contiguous Extension)"
         }
     }
 
@@ -167,6 +175,10 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .retroPixel: return "8-BIT"
         case .liquidAurora: return "AURORA"
         case .minimalBraun: return "STUDIO"
+        case .tapeReel: return "TAPE"
+        case .vinylGroove: return "VINYL"
+        case .fluidKaraoke: return "FLUID"
+        case .connectedChin: return "NOTCH CHIN"
         }
     }
 
@@ -180,6 +192,10 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .retroPixel: return "Authentic 8-bit stepped pixel frame, monospaced typography, and dancing retro spectrum visualizer."
         case .liquidAurora: return "Luxurious translucent glass with animated shifting multi-color aurora ambient glow behind lyrics."
         case .minimalBraun: return "Ultra-clean Dieter Rams / Teenage Engineering audio monitor strip with live emerald recording dot."
+        case .tapeReel: return "Tactile hardware tape recorder with dual rotating reels, amber phosphor VFD luminescence, and peak VU meter."
+        case .vinylGroove: return "Audiophile micro vinyl record with concentric grooves, angled tonearm needle, and Swiss editorial typography."
+        case .fluidKaraoke: return "VisionOS spatial glass capsule with liquid iridescent shimmer sweeping across syllables and silk oscilloscope ribbon."
+        case .connectedChin: return "The notch seamlessly extends downwards under the MacBook notch, housing synced lyrics with enlarged wing icons."
         }
     }
 }
@@ -188,6 +204,8 @@ public enum FloatingLyricFontDesign: String, CaseIterable, Identifiable, Sendabl
     case rounded = "rounded"
     case monospaced = "monospaced"
     case system = "system"
+    case serif = "serif"
+    case pixel = "pixel"
 
     public var id: String { rawValue }
 
@@ -196,6 +214,47 @@ public enum FloatingLyricFontDesign: String, CaseIterable, Identifiable, Sendabl
         case .rounded: return "Modern Rounded"
         case .monospaced: return "Monospaced Cyber"
         case .system: return "System Clean"
+        case .serif: return "Elegant Serif"
+        case .pixel: return "8-Bit Arcade Pixel"
+        }
+    }
+}
+
+public enum FloatingLyricIconStyle: String, CaseIterable, Identifiable, Sendable {
+    case spinningVinyl = "spinningVinyl"
+    case albumTurntable = "albumTurntable"
+    case dancingWave = "dancingWave"
+    case pulsingNote = "pulsingNote"
+    case retroCassette = "retroCassette"
+    case studioMic = "studioMic"
+    case hapticBubble = "hapticBubble"
+    case none = "none"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .spinningVinyl: return "Spinning Micro Vinyl"
+        case .albumTurntable: return "Rotating Album Disc"
+        case .dancingWave: return "Harmonic Waveform"
+        case .pulsingNote: return "Pulsing Neon Note"
+        case .retroCassette: return "Retro Cassette Spool"
+        case .studioMic: return "Live Studio Microphone"
+        case .hapticBubble: return "Tactile Lyric Bubble"
+        case .none: return "Hidden (Text Only)"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .spinningVinyl: return "Realistic micro vinyl record with concentric grooves that smoothly spins while music plays (Tap to play/pause)."
+        case .albumTurntable: return "Live spinning miniature album art disc with glowing grooved rim (Tap to play/pause)."
+        case .dancingWave: return "Dynamic harmonic soundwave node with rhythmically dancing peak bars."
+        case .pulsingNote: return "Vibrant neon musical eighth note with ambient breathing glow."
+        case .retroCassette: return "Miniature cassette tape spool with counter-rotating mechanical gears."
+        case .studioMic: return "Broadcast studio condenser mic with live luminescence ring."
+        case .hapticBubble: return "Frosted glass capsule with pulsating audio syllable dots."
+        case .none: return "No leading icon — pure minimalist floating typography."
         }
     }
 }
@@ -293,6 +352,7 @@ enum SettingsKey {
     static let floatingLyricPreset = "floatingLyricPreset"
     static let floatingLyricFontSize = "floatingLyricFontSize"
     static let floatingLyricFontDesign = "floatingLyricFontDesign"
+    static let floatingLyricIconStyle = "floatingLyricIconStyle"
     static let floatingLyricTextColor = "floatingLyricTextColor"
     static let floatingLyricVerticalGap = "floatingLyricVerticalGap"
     static let lyricSyncOffset = "lyricSyncOffset"
@@ -391,7 +451,7 @@ enum SettingsKey {
     // Tool status display
     static let showToolStatus = "showToolStatus"              // true = detailed, false = simple
 
-    // Island collapsed width scale (percentage: 50–150, default 100)
+    // Island collapsed width scale (percentage: 0–200, default 100)
     static let collapsedWidthScale = "collapsedWidthScale"
 
     // Default mascot source when no sessions exist (falls back to this instead of always "claude")
@@ -477,6 +537,7 @@ struct SettingsDefaults {
     static let floatingLyricPreset = FloatingLyricPreset.pureText.rawValue
     static let floatingLyricFontSize: Double = 10.0
     static let floatingLyricFontDesign = FloatingLyricFontDesign.rounded.rawValue
+    static let floatingLyricIconStyle = FloatingLyricIconStyle.spinningVinyl.rawValue
     static let floatingLyricTextColor = FloatingLyricTextColor.white.rawValue
     static let floatingLyricVerticalGap: Double = 2.5
     static let lyricSyncOffset = 0.0
@@ -620,6 +681,7 @@ class SettingsManager {
             SettingsKey.floatingLyricPreset: SettingsDefaults.floatingLyricPreset,
             SettingsKey.floatingLyricFontSize: SettingsDefaults.floatingLyricFontSize,
             SettingsKey.floatingLyricFontDesign: SettingsDefaults.floatingLyricFontDesign,
+            SettingsKey.floatingLyricIconStyle: SettingsDefaults.floatingLyricIconStyle,
             SettingsKey.floatingLyricTextColor: SettingsDefaults.floatingLyricTextColor,
             SettingsKey.floatingLyricVerticalGap: SettingsDefaults.floatingLyricVerticalGap,
             SettingsKey.lyricSyncOffset: SettingsDefaults.lyricSyncOffset,
