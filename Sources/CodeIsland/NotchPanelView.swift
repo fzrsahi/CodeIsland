@@ -229,7 +229,7 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if nowPlaying.isPlaying || nowPlaying.showToast || prayerManager.showMiniPeekBanner || mailManager.showMiniPeekBanner { return true }
+        if nowPlaying.isPlaying || nowPlaying.showToast || prayerManager.showMiniPeekBanner || mailManager.showMailArrivalAnimation { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
@@ -257,7 +257,7 @@ struct NotchPanelView: View {
     }
 
     private var isToastOnly: Bool {
-        (prayerManager.showMiniPeekBanner || mailManager.showMiniPeekBanner) && !appState.surface.isExpanded
+        prayerManager.showMiniPeekBanner && !appState.surface.isExpanded
     }
 
     private func triggerMusicAutoPeek() {
@@ -378,6 +378,9 @@ struct NotchPanelView: View {
         if isThinking && !shouldShowExpanded {
             return 118
         }
+        if mailManager.showMailArrivalAnimation && !shouldShowExpanded {
+            return isActive ? 118 : 62
+        }
         if isHoveringRightWing && !shouldShowExpanded {
             return 128
         }
@@ -423,15 +426,12 @@ struct NotchPanelView: View {
             return min(max(baseWidth, minWidth), maxPanelWidth)
         }
         if showIdleIndicator {
-            let wing = idleHovered ? (compactWingWidth + 6) : compactWingWidth
-            if mailManager.showMiniPeekBanner && !appState.surface.isExpanded {
-                return max(nw + wing * 2, 355)
-            }
+            let wing = mailManager.showMailArrivalAnimation ? 62 : (idleHovered ? (compactWingWidth + 6) : compactWingWidth)
             return nw + wing * 2
         }
         if !isActive {
-            if mailManager.showMiniPeekBanner && !appState.surface.isExpanded {
-                return min(355, maxPanelWidth)
+            if mailManager.showMailArrivalAnimation {
+                return nw + 62 * 2
             }
             return nw
         }
@@ -445,10 +445,6 @@ struct NotchPanelView: View {
         let wing = symmetricWingWidth
         let clearance: CGFloat = 0
         let normalWidth = nw + wing * 2 + clearance
-        if mailManager.showMiniPeekBanner && !appState.surface.isExpanded {
-            // Keep wide top notch intact when agents or music are active; never shrink the top bar!
-            return max(normalWidth, 355)
-        }
         return normalWidth
     }
 
@@ -559,10 +555,10 @@ struct NotchPanelView: View {
                             workspaceManager: workspaceManager,
                             expandedWingWidth: expandedWingWidth
                         )
-                            .padding(.trailing, (isThinking || isHoveringRightWing || shouldShowExpanded) ? 8 : 0)
+                            .padding(.trailing, (isThinking || isHoveringRightWing || shouldShowExpanded || mailManager.showMailArrivalAnimation) ? 8 : 0)
                             .frame(
                                 width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
-                                alignment: (isThinking || isHoveringRightWing || shouldShowExpanded) ? .trailing : .center
+                                alignment: (isThinking || isHoveringRightWing || shouldShowExpanded || mailManager.showMailArrivalAnimation) ? .trailing : .center
                             )
                             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
                             .contentShape(Rectangle())
@@ -652,29 +648,6 @@ struct NotchPanelView: View {
                                 appState.surface = .sessionList
                             }
                         }
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .top).combined(with: .opacity),
-                            removal: .move(edge: .top).combined(with: .opacity)
-                        ))
-                    } else if mailManager.showMiniPeekBanner && !appState.surface.isExpanded, let mail = mailManager.latestMailForPeek {
-                        // MAIL MINI PEEK BANNER: Buka tipis saat email baru masuk
-                        MailMiniPeekBannerView(
-                            mail: mail,
-                            isRetro: islandUITheme == IslandUITheme.pixel.rawValue,
-                            accentColor: mailAccentColor,
-                            onOpenFull: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    mailManager.dismissMiniPeekBanner()
-                                    appState.transitionToTab(.mail)
-                                    appState.surface = .sessionList
-                                }
-                            },
-                            onDismiss: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    mailManager.dismissMiniPeekBanner()
-                                }
-                            }
-                        )
                         .transition(.asymmetric(
                             insertion: .move(edge: .top).combined(with: .opacity),
                             removal: .move(edge: .top).combined(with: .opacity)
@@ -792,7 +765,7 @@ struct NotchPanelView: View {
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: shouldShowExpanded)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: nowPlaying.showToast)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: prayerManager.showMiniPeekBanner)
-            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: mailManager.showMiniPeekBanner)
+            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: mailManager.showMailArrivalAnimation)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: isThinking)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: nowPlaying.isPlaying)
@@ -1440,6 +1413,11 @@ private struct CompactRightWing: View {
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @ObservedObject private var mailManager = MailManager.shared
+
+    private var mailAccentColor: Color {
+        AppColorTheme.accent(for: musicHUDProgressColor, isModern: islandUITheme != IslandUITheme.pixel.rawValue)
+    }
 
     private var modernMusicAccent: Color {
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
@@ -1523,7 +1501,23 @@ private struct CompactRightWing: View {
                 .padding(.horizontal, 4)
             } else {
                 let prayerManager = PrayerTimeManager.shared
-                if prayerManager.isPrayerPrioritized {
+                if mailManager.showMailArrivalAnimation {
+                    // MAIL ARRIVAL MICRO-INTERACTION: 360° Loop-de-loop roller coaster into suburban mailbox
+                    MailArrivalWingView(
+                        isRetro: islandUITheme == IslandUITheme.pixel.rawValue,
+                        accentColor: mailAccentColor,
+                        isCompact: false,
+                        onTap: {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                mailManager.dismissMailArrival()
+                                expandedTab = .mail
+                                appState.surface = .sessionList
+                            }
+                        }
+                    )
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
+                } else if prayerManager.isPrayerPrioritized {
                     // SMART PRIORITY: Prayer countdown takes active priority at T <= 15m
                     PrayerCompactWingView(isHovered: shouldExpandRightWing) {
                         expandedTab = .prayer
@@ -2518,11 +2512,21 @@ private struct IdleIndicatorBar: View {
     let hovered: Bool
     var onExpand: (() -> Void)? = nil
     @AppStorage(SettingsKey.defaultSource) private var defaultSource = SettingsDefaults.defaultSource
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @ObservedObject private var mailManager = MailManager.shared
+
+    private var mailAccentColor: Color {
+        AppColorTheme.accent(for: musicHUDProgressColor, isModern: islandUITheme != IslandUITheme.pixel.rawValue)
+    }
 
     private static let idlePrayerWingMinWidth: CGFloat = 126
 
     private var wingWidth: CGFloat {
-        hovered ? (compactWingWidth + 6) : compactWingWidth
+        if mailManager.showMailArrivalAnimation {
+            return 62
+        }
+        return hovered ? (compactWingWidth + 6) : compactWingWidth
     }
 
     var body: some View {
@@ -2549,20 +2553,39 @@ private struct IdleIndicatorBar: View {
             let prayerManager = PrayerTimeManager.shared
             HStack(spacing: 4) {
                 Spacer(minLength: 0)
-                if prayerManager.isEnabled {
-                    PrayerCompactWingView(isHovered: hovered, onExpand: onExpand)
-                }
-                Image(systemName: "chevron.down")
-                    .font(.system(size: hovered ? 8 : 7.5, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(hovered ? 0.9 : 0.45))
-                    .frame(width: 18, height: 18)
-                    .background(
-                        Circle()
-                            .fill(Color.white.opacity(hovered ? 0.12 : 0))
+                if mailManager.showMailArrivalAnimation {
+                    MailArrivalWingView(
+                        isRetro: islandUITheme == IslandUITheme.pixel.rawValue,
+                        accentColor: mailAccentColor,
+                        isCompact: true,
+                        onTap: {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                mailManager.dismissMailArrival()
+                                onExpand?()
+                            }
+                        }
                     )
-                    .padding(.trailing, 8)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
+                } else {
+                    if prayerManager.isEnabled {
+                        PrayerCompactWingView(isHovered: hovered, onExpand: onExpand)
+                    }
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: hovered ? 8 : 7.5, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(hovered ? 0.9 : 0.45))
+                        .frame(width: 18, height: 18)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(hovered ? 0.12 : 0))
+                        )
+                        .padding(.trailing, 8)
+                }
             }
-            .frame(width: prayerManager.isEnabled ? max(wingWidth, Self.idlePrayerWingMinWidth) : wingWidth, alignment: .trailing)
+            .frame(
+                width: mailManager.showMailArrivalAnimation ? 62 : (prayerManager.isEnabled ? max(wingWidth, Self.idlePrayerWingMinWidth) : wingWidth),
+                alignment: .trailing
+            )
             .contentShape(Rectangle())
             .onTapGesture { onExpand?() }
             .help(prayerManager.isEnabled ? "Prayer Times & Living Clock (Click to open Prayer tab)" : "Click to expand tabs (Agents / Workspace / Music)")

@@ -26,9 +26,9 @@ struct CyberMailHUDView: View {
     var body: some View {
         Group {
             if isRetroTheme {
-                RetroCyberMailHUDContentView(mailManager: mailManager, themeColor: themeColor)
+                RetroCyberMailHUDContentView(mailManager: mailManager, themeColor: themeColor, appState: appState)
             } else {
-                ModernCleanMailHUDContentView(mailManager: mailManager, themeColor: themeColor)
+                ModernCleanMailHUDContentView(mailManager: mailManager, themeColor: themeColor, appState: appState)
             }
         }
         .animation(.easeInOut(duration: 0.22), value: isRetroTheme)
@@ -119,6 +119,7 @@ private struct PixelRefreshButton: View {
 private struct ModernCleanMailHUDContentView: View {
     @ObservedObject var mailManager: MailManager
     let themeColor: Color
+    var appState: AppState
     @State private var hoveredMailId: Int? = nil
 
     var body: some View {
@@ -142,8 +143,27 @@ private struct ModernCleanMailHUDContentView: View {
 
                 Spacer()
 
-                // Minimal Modern Refresh Icon Button
-                ModernRefreshButton(mailManager: mailManager, color: themeColor)
+                HStack(spacing: 6) {
+                    Button {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            appState.surface = .collapsed
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                            mailManager.triggerTestPeek()
+                        }
+                    } label: {
+                        Image(systemName: "bell.badge")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.55))
+                            .frame(width: 22, height: 22)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Test animasi email masuk di notch kanan")
+
+                    // Minimal Modern Refresh Icon Button
+                    ModernRefreshButton(mailManager: mailManager, color: themeColor)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 4)
@@ -343,11 +363,12 @@ private struct ModernCleanMailHUDContentView: View {
 private struct RetroCyberMailHUDContentView: View {
     @ObservedObject var mailManager: MailManager
     let themeColor: Color
+    var appState: AppState
     @State private var hoveredMailId: Int? = nil
 
     var body: some View {
         VStack(spacing: 8) {
-            // Header Bar: Clean Pixel Typography (No Brackets, No Border, No Dot)
+            // Header Bar: Clean Pixel Typography (No Brackets, No Dot)
             HStack(alignment: .center, spacing: 8) {
                 HStack(spacing: 8) {
                     PixelIcon(glyph: .email, color: themeColor, pixelSize: 1.35)
@@ -361,8 +382,29 @@ private struct RetroCyberMailHUDContentView: View {
 
                 Spacer()
 
-                // 8-bit Pixel Refresh Button (Discrete 90° Step Rotation)
-                PixelRefreshButton(mailManager: mailManager, color: themeColor)
+                HStack(spacing: 8) {
+                    Button {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            appState.surface = .collapsed
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                            mailManager.triggerTestPeek()
+                        }
+                    } label: {
+                        Text("[TEST]")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(themeColor.opacity(0.70))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(Color.white.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Test animasi email masuk di notch kanan")
+
+                    // 8-bit Pixel Refresh Button (Discrete 90° Step Rotation)
+                    PixelRefreshButton(mailManager: mailManager, color: themeColor)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 4)

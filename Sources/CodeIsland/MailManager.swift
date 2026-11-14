@@ -127,9 +127,14 @@ public final class MailManager: ObservableObject {
     @Published public var showNewMailPeek: Bool = false
     @Published public var showMiniPeekBanner: Bool = false
     @Published public var latestMailForPeek: MailItem? = nil
+    @Published public var showMailArrivalAnimation: Bool = false
+    @Published public var latestArrivalMail: MailItem? = nil
+    @Published public var arrivalAnimId: Int = 0
+    @Published public var arrivalAnimStartTime: Date = Date()
 
     private var pollingTimer: Timer?
     private var peekDismissTimer: Timer?
+    private var mailArrivalDismissTimer: Timer?
     private var knownLatestMailId: Int? = nil
 
     private init() {
@@ -293,7 +298,7 @@ public final class MailManager: ObservableObject {
         // Detect new mail arrival for auto-peek
         if let topItem = parsedItems.first {
             if let lastKnown = self.knownLatestMailId, topItem.id > lastKnown {
-                self.triggerNewMailPeek(topItem)
+                self.triggerNewMailArrival(topItem)
             }
             self.knownLatestMailId = topItem.id
         }
@@ -301,32 +306,55 @@ public final class MailManager: ObservableObject {
         self.recentMails = parsedItems
     }
 
-    /// Triggers a brief 4.5-second mini-peek banner notification for incoming mail
-    public func triggerNewMailPeek(_ item: MailItem) {
-        guard UserDefaults.standard.bool(forKey: SettingsKey.mailAutoPeekNewEmail) else { return }
-        self.latestMailForPeek = item
+    /// Triggers a brief 3.8-second roller coaster mail arrival animation in the notch right wing
+    public func triggerNewMailArrival(_ item: MailItem) {
+        let isAutoPeek = UserDefaults.standard.object(forKey: SettingsKey.mailAutoPeekNewEmail) as? Bool ?? SettingsDefaults.mailAutoPeekNewEmail
+        guard isAutoPeek else { return }
+        self.latestArrivalMail = item
+        self.arrivalAnimStartTime = Date()
+        self.arrivalAnimId += 1
+        mailArrivalDismissTimer?.invalidate()
         withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-            self.showMiniPeekBanner = true
-            self.showNewMailPeek = true
+            self.showMailArrivalAnimation = true
         }
-        peekDismissTimer?.invalidate()
-        peekDismissTimer = Timer.scheduledTimer(withTimeInterval: 4.5, repeats: false) { [weak self] _ in
+        mailArrivalDismissTimer = Timer.scheduledTimer(withTimeInterval: 4.5, repeats: false) { [weak self] _ in
             Task { @MainActor in
                 withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-                    self?.showMiniPeekBanner = false
-                    self?.showNewMailPeek = false
+                    self?.showMailArrivalAnimation = false
                 }
             }
         }
     }
 
-    /// Dismisses the incoming mail mini-peek banner immediately
-    public func dismissMiniPeekBanner() {
-        peekDismissTimer?.invalidate()
+    /// Triggers a test incoming mail animation for live UI preview
+    public func triggerTestPeek() {
+        let mockMail = MailItem(
+            id: -999,
+            senderRaw: "Fazrul Sahi <notifications@github.com>",
+            senderName: "Fazrul Sahi",
+            senderEmail: "notifications@github.com",
+            subject: "Re: [fzrsahi/CodeIsland] Roller coaster mail arrival animation",
+            dateReceived: "just now",
+            isRead: false
+        )
+        self.triggerNewMailArrival(mockMail)
+    }
+
+    /// Dismisses the incoming mail animation immediately
+    public func dismissMailArrival() {
+        mailArrivalDismissTimer?.invalidate()
         withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-            self.showMiniPeekBanner = false
-            self.showNewMailPeek = false
+            self.showMailArrivalAnimation = false
         }
+    }
+
+    /// Legacy mini-peek methods for backwards compatibility
+    public func triggerNewMailPeek(_ item: MailItem) {
+        triggerNewMailArrival(item)
+    }
+
+    public func dismissMiniPeekBanner() {
+        dismissMailArrival()
     }
 
     /// Marks an email as read both optimistically in local state and in Apple Mail.app
