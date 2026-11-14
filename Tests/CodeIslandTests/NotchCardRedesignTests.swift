@@ -21,24 +21,20 @@ final class NotchCardRedesignTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        MainActor.assumeIsolated {
-            _ = NSApplication.shared
-            sandbox = DefaultsSandbox(keys: DefaultsSandbox.allSettingsKeys)
-            savedLanguage = L10n.shared.language
-            L10n.shared.language = "en"
-            cardSuiteName = "CodeIsland.NotchCardRedesignTests.\(UUID().uuidString)"
-            cardDefaults = UserDefaults(suiteName: cardSuiteName) ?? .standard
-            MascotAnimationGate.shared.setPanelVisible(false)
-        }
+        _ = NSApplication.shared
+        sandbox = DefaultsSandbox(keys: DefaultsSandbox.allSettingsKeys)
+        savedLanguage = L10n.shared.language
+        L10n.shared.language = "en"
+        cardSuiteName = "CodeIsland.NotchCardRedesignTests.\(UUID().uuidString)"
+        cardDefaults = UserDefaults(suiteName: cardSuiteName) ?? .standard
+        MascotAnimationGate.shared.setPanelVisible(false)
     }
 
     override func tearDown() {
-        MainActor.assumeIsolated {
-            MascotAnimationGate.shared.setPanelVisible(true)
-            L10n.shared.language = savedLanguage
-            cardDefaults.removePersistentDomain(forName: cardSuiteName)
-            sandbox?.restore()
-        }
+        MascotAnimationGate.shared.setPanelVisible(true)
+        L10n.shared.language = savedLanguage
+        cardDefaults.removePersistentDomain(forName: cardSuiteName)
+        sandbox?.restore()
         super.tearDown()
     }
 
