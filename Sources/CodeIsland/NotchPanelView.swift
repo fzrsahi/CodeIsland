@@ -1286,7 +1286,7 @@ private struct CompactRightWing: View {
     let hasNotch: Bool
     @Binding var isHovered: Bool
     @Binding var expandedTab: ExpandedContentTab
-    @ObservedObject var workspaceManager: WorkspaceMonitorManager
+    let workspaceManager: WorkspaceMonitorManager
     var expandedWingWidth: CGFloat = 240
     @Environment(\.animationGates) private var animationGates
     @ObservedObject private var l10n = L10n.shared
