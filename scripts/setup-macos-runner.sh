@@ -55,10 +55,6 @@ let package = Package(
 )
 EOF
 
-# Fix RunLoop default mode compatibility
-sed -i '' 's/mode: \.default/mode: RunLoop.Mode.defaultRunLoopMode/g' /tmp/xctest_clone/Sources/XCTest/Public/Asynchronous/XCTWaiter.swift
-sed -i '' 's/forMode: \.default/forMode: RunLoop.Mode.defaultRunLoopMode/g' /tmp/xctest_clone/Sources/XCTest/Public/Asynchronous/XCTNSPredicateExpectation.swift
-
 # Align open-source XCTestCase with Apple SDK @MainActor isolation for Swift 6
 python3 -c '
 with open("/tmp/xctest_clone/Sources/XCTest/Public/XCAbstractTest.swift", "r") as f:
