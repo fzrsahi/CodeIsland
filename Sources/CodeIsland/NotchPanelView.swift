@@ -2131,6 +2131,7 @@ private struct HeaderNavigationMenuTabs: View {
                 if MailManager.shared.isEnabled {
                     let isMailActive = expandedTab == .mail
                     let showMailLabel = isMailActive && (activeLabelTab == .mail || !appState.isTabTransitioning)
+                    let mailColor = Color(red: 0.12, green: 0.53, blue: 1.0)
                     Button {
                         switchToTab(.mail)
                     } label: {
@@ -2152,15 +2153,15 @@ private struct HeaderNavigationMenuTabs: View {
                                     .foregroundStyle(Color.white)
                                     .padding(.horizontal, 4)
                                     .padding(.vertical, 1)
-                                    .background(Capsule().fill(Color(red: 0.25, green: 0.52, blue: 0.96)))
+                                    .background(Capsule().fill(mailColor))
                             }
                         }
-                        .foregroundStyle(isMailActive ? activeAccentColor : Self.inactiveColor)
+                        .foregroundStyle(isMailActive ? mailColor : Self.inactiveColor)
                         .padding(.horizontal, isMailActive ? 8 : 6)
                         .frame(height: 20)
                         .background(
                             RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(isMailActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
+                                .fill(isMailActive ? mailColor.opacity(0.20) : .clear)
                         )
                         .contentShape(Rectangle())
                     }
@@ -2318,19 +2319,20 @@ private struct HeaderNavigationMenuTabs: View {
                 if MailManager.shared.isEnabled {
                     let isMailActive = expandedTab == .mail
                     let showMailLabel = isMailActive && (activeLabelTab == .mail || !appState.isTabTransitioning)
+                    let cyberMailColor = Color(red: 0.0, green: 0.88, blue: 1.0)
                     Button {
                         switchToTab(.mail)
                     } label: {
                         HStack(spacing: 4) {
                             PixelIcon(
                                 glyph: .email,
-                                color: isMailActive ? activeAccentColor : Self.inactiveColor,
+                                color: isMailActive ? cyberMailColor : Self.inactiveColor,
                                 pixelSize: 1.35
                             )
                             if showMailLabel {
                                 PixelText(
                                     text: "MAIL",
-                                    color: activeAccentColor,
+                                    color: cyberMailColor,
                                     pixelSize: 1.15
                                 )
                                 .transition(.asymmetric(
@@ -2344,7 +2346,7 @@ private struct HeaderNavigationMenuTabs: View {
                                     .foregroundStyle(Color.black)
                                     .padding(.horizontal, 3)
                                     .padding(.vertical, 1)
-                                    .background(Color(red: 0.0, green: 0.96, blue: 0.83))
+                                    .background(cyberMailColor)
                                     .cornerRadius(2)
                             }
                         }
@@ -2352,7 +2354,7 @@ private struct HeaderNavigationMenuTabs: View {
                         .frame(height: 18)
                         .background(
                             RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(isMailActive ? activeAccentColor.opacity(0.20) : .clear)
+                                .fill(isMailActive ? cyberMailColor.opacity(0.22) : .clear)
                         )
                         .contentShape(Rectangle())
                     }

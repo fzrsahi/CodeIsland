@@ -121,15 +121,16 @@ public final class MailManager: ObservableObject {
                 tell application "Mail"
                     set unreadTotal to unread count of inbox
                     set mailList to ""
-                    set msgs to (messages 1 thru 8 of inbox)
-                    repeat with m in msgs
-                        if not (read status of m) then
-                            set msgId to id of m as string
-                            set msgSender to sender of m as string
-                            set msgSubj to subject of m as string
-                            set msgDate to date received of m as string
-                            set mailList to mailList & msgId & "<|>" & msgSender & "<|>" & msgSubj & "<|>" & msgDate & "<#LINE#>"
-                        end if
+                    repeat with i from 1 to 5
+                        try
+                            set m to message i of inbox
+                            if not (read status of m) then
+                                set msgId to id of m as string
+                                set msgSender to sender of m as string
+                                set msgSubj to subject of m as string
+                                set mailList to mailList & msgId & "<|>" & msgSender & "<|>" & msgSubj & "<|>" & "Recent" & "<#LINE#>"
+                            end if
+                        end try
                     end repeat
                     return (unreadTotal as string) & "<#HEADER#>" & mailList
                 end tell
@@ -138,7 +139,7 @@ public final class MailManager: ObservableObject {
             end if
             """
 
-            let rawOutput = AppleScriptRunner.current.evaluate(script, 10.0)
+            let rawOutput = AppleScriptRunner.current.evaluate(script, 25.0)
 
             await MainActor.run { [weak self] in
                 guard let self = self else { return }
