@@ -563,15 +563,29 @@ struct CyberMusicMiniPeekBanner: View {
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: 26, height: 26)
-                        .clipShape(RoundedRectangle(cornerRadius: isModernClean ? 6 : 4, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: isModernClean ? 6 : 4, style: .continuous).stroke(Color(white: 0.3), lineWidth: 0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: isModernClean ? 6 : 2, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: isModernClean ? 6 : 2, style: .continuous)
+                                .stroke(isModernClean ? Color(white: 0.3) : Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), lineWidth: isModernClean ? 0.5 : 1)
+                        )
                         .shadow(color: Color.black.opacity(0.4), radius: 3)
                 } else {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(isModernClean ? accentColor : Color(red: 0.0, green: 0.96, blue: 0.83))
-                        .frame(width: 26, height: 26)
-                        .background(RoundedRectangle(cornerRadius: isModernClean ? 6 : 4, style: .continuous).fill(Color(white: 0.12)))
+                    ZStack {
+                        if isModernClean {
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(Color(white: 0.12))
+                                .frame(width: 26, height: 26)
+                        } else {
+                            Rectangle()
+                                .fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.16))
+                                .frame(width: 26, height: 26)
+                                .overlay(Rectangle().stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), lineWidth: 1))
+                        }
+
+                        Image(systemName: "music.note")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(isModernClean ? accentColor : Color(red: 0.0, green: 0.96, blue: 0.83))
+                    }
                 }
 
                 // Track Title & Artist
@@ -583,7 +597,7 @@ struct CyberMusicMiniPeekBanner: View {
 
                     Text(nowPlaying.artist.isEmpty ? "Now Playing" : nowPlaying.artist)
                         .font(.system(size: 8.5, design: isModernClean ? .default : .monospaced))
-                        .foregroundStyle(Color(white: 0.65))
+                        .foregroundStyle(isModernClean ? Color(white: 0.65) : Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.75))
                         .lineLimit(1)
                 }
 
@@ -602,19 +616,35 @@ struct CyberMusicMiniPeekBanner: View {
                         nowPlaying.showToast = false
                     }
                 }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 7.5, weight: .bold))
-                        .foregroundColor(Color(white: 0.4))
-                        .frame(width: 14, height: 14)
+                    ZStack {
+                        if !isModernClean {
+                            Rectangle()
+                                .fill(Color.white.opacity(0.08))
+                                .frame(width: 16, height: 16)
+                                .overlay(Rectangle().stroke(Color.white.opacity(0.25), lineWidth: 0.6))
+                        }
+                        Image(systemName: "xmark")
+                            .font(.system(size: 7.5, weight: .bold))
+                            .foregroundColor(Color.white.opacity(0.65))
+                            .frame(width: 14, height: 14)
+                    }
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 11)
             .padding(.vertical, 7)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.white.opacity(0.06))
-                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 0.8))
+                Group {
+                    if isModernClean {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.white.opacity(0.06))
+                            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 0.8))
+                    } else {
+                        Rectangle()
+                            .fill(Color(red: 0.05, green: 0.07, blue: 0.10))
+                            .overlay(Rectangle().stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.55), lineWidth: 1))
+                    }
+                }
             )
             .padding(.horizontal, 8)
             .padding(.bottom, 5)

@@ -555,6 +555,14 @@ public final class PrayerTimeManager: ObservableObject {
         enqueueOrPresentBanner(title: title, subtitle: subtitle, appState: appState)
     }
 
+    public func triggerTestBanner() {
+        presentBanner(
+            title: "WAKTU MAGHRIB TIBA",
+            subtitle: "Saatnya Menunaikan Ibadah Salat Maghrib"
+        )
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+    }
+
     private func presentBanner(title: String, subtitle: String) {
         miniPeekBannerTitle = title
         miniPeekBannerSubtitle = subtitle

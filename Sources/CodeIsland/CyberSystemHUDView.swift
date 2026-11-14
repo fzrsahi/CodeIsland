@@ -5,7 +5,13 @@ import AppKit
 
 public struct MagSafeChargingBanner: View {
     let batteryLevel: Int
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @State private var pulseRing = false
+    @State private var pixelPulse = false
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
 
     public init(batteryLevel: Int) {
         self.batteryLevel = batteryLevel
@@ -15,7 +21,123 @@ public struct MagSafeChargingBanner: View {
         Color(red: 0.19, green: 0.82, blue: 0.35) // Apple MagSafe Emerald (#30D158)
     }
 
+    private var cyberCyan: Color {
+        Color(red: 0.0, green: 0.96, blue: 0.83) // Cyberpunk Neon Cyan
+    }
+
     public var body: some View {
+        Group {
+            if isPixel {
+                pixelChargingBanner
+            } else {
+                modernChargingBanner
+            }
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) {
+                pulseRing = true
+            }
+            withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
+                pixelPulse = true
+            }
+        }
+    }
+
+    // MARK: - 1. Pixel Retro 16-Bit Cyber Cartridge Banner
+
+    private var pixelChargingBanner: some View {
+        let filledBlocks = max(1, min(10, Int(ceil(Double(batteryLevel) / 10.0))))
+
+        return HStack(spacing: 9) {
+            // 8-Bit Pixel Lightning Bolt Box
+            ZStack {
+                Rectangle()
+                    .fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.16))
+                    .frame(width: 26, height: 26)
+                    .overlay(
+                        Rectangle()
+                            .stroke(cyberCyan.opacity(0.7), lineWidth: 1)
+                    )
+
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 11, weight: .black))
+                    .foregroundStyle(chargingGreen)
+                    .shadow(color: chargingGreen.opacity(0.8), radius: 3)
+                    .scaleEffect(pixelPulse ? 1.15 : 0.92)
+            }
+
+            // Monospace Dot-Matrix Telemetry
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Text("POWER: AC_CONNECTED")
+                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(cyberCyan)
+                        .tracking(0.5)
+
+                    Text(batteryLevel >= 100 ? "[FULL]" : "[CHARGING]")
+                        .font(.system(size: 8, weight: .black, design: .monospaced))
+                        .foregroundStyle(chargingGreen)
+                }
+
+                Text(batteryLevel >= 100 ? "BATTERY FULL // TRICKLE_MODE" : "FAST_CHARGE // STATUS: OPTIMAL")
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.65))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 6)
+
+            // 10-Segment Discrete Pixel Battery Meter & Readout
+            VStack(alignment: .trailing, spacing: 3) {
+                Text("\(batteryLevel)%")
+                    .font(.system(size: 12.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.white)
+
+                // 10-Block Discrete Pixel Cells
+                HStack(spacing: 1.8) {
+                    ForEach(0..<10, id: \.self) { idx in
+                        let isFilled = idx < filledBlocks
+                        let isHead = idx == (filledBlocks - 1)
+                        Rectangle()
+                            .fill(
+                                isFilled
+                                    ? (isHead && pixelPulse ? cyberCyan : chargingGreen)
+                                    : Color.white.opacity(0.12)
+                            )
+                            .frame(width: 3.5, height: 6.5)
+                            .overlay(
+                                Rectangle()
+                                    .stroke(isFilled ? chargingGreen.opacity(0.6) : Color.clear, lineWidth: 0.4)
+                            )
+                            .shadow(color: isFilled ? chargingGreen.opacity(0.6) : Color.clear, radius: 1)
+                    }
+                }
+                .padding(.horizontal, 2.5)
+                .padding(.vertical, 1.5)
+                .background(Color.black.opacity(0.5))
+                .overlay(
+                    Rectangle()
+                        .stroke(Color.white.opacity(0.25), lineWidth: 0.6)
+                )
+            }
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 6)
+        .background(
+            Rectangle()
+                .fill(Color(red: 0.05, green: 0.07, blue: 0.10))
+                .overlay(
+                    Rectangle()
+                        .stroke(cyberCyan.opacity(0.55), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 8)
+        .padding(.bottom, 5)
+    }
+
+    // MARK: - 2. Modern Clean Dynamic Island Fluid Glass Banner
+
+    private var modernChargingBanner: some View {
         HStack(spacing: 11) {
             // Glowing MagSafe Energy Puck
             ZStack {
@@ -48,11 +170,6 @@ public struct MagSafeChargingBanner: View {
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(chargingGreen)
                     .scaleEffect(pulseRing ? 1.12 : 0.92)
-            }
-            .onAppear {
-                withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) {
-                    pulseRing = true
-                }
             }
 
             // Power Details

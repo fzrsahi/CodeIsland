@@ -175,7 +175,7 @@ final class SystemVolumeManager: ObservableObject {
     }
 
     // Show temporary volume pill HUD
-    private func presentHUD() {
+    func presentHUD() {
         withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
             self.isHUDVisible = true
         }

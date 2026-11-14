@@ -637,6 +637,15 @@ final class NowPlayingManager: ObservableObject {
         }
     }
 
+    public func triggerTestToast() {
+        if title.isEmpty {
+            title = "Midnight City"
+            artist = "M83"
+        }
+        triggerToast()
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+    }
+
     // MARK: - Playback Progress & Adaptive Polling
 
 
