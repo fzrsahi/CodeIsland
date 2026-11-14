@@ -42,6 +42,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // CODEISLAND_SOCKET_PATH of its own is another socket's.
         if let other = HookSocketListener.islandListening(at: HookServer.socketPath) {
             Self.log.error("Another CodeIsland (pid \(other)) already serves \(HookServer.socketPath, privacy: .public): this one quits and leaves it alone")
+            if #available(macOS 14.0, *) {
+                NSRunningApplication(processIdentifier: other)?.activate()
+            } else {
+                NSRunningApplication(processIdentifier: other)?.activate(options: .activateIgnoringOtherApps)
+            }
             standingAside = true
             NSApp.terminate(nil)
             return
@@ -240,17 +245,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         setupGlobalShortcut()
 
-        // Boot animation: brief expand to confirm app is running
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            guard appState.surface == .collapsed else { return }
-            withAnimation(NotchAnimation.pop) {
-                appState.surface = .sessionList
-            }
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
-            if case .sessionList = appState.surface {
-                withAnimation(NotchAnimation.close) {
-                    appState.surface = .collapsed
+        // Boot animation: expand on manual launch so user sees the island
+        if !isLoginLaunch {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                guard appState.surface == .collapsed else { return }
+                withAnimation(NotchAnimation.pop) {
+                    appState.surface = .sessionList
                 }
             }
         }

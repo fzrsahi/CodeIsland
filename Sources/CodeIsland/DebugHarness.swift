@@ -39,6 +39,7 @@ enum PreviewScenario: String, CaseIterable {
     case completion
     case multi
     case busy
+    case workspace
     // CLI-specific scenarios
     case claude
     case codex
@@ -90,6 +91,8 @@ enum DebugHarness {
         case .completion:
             applyCompletion(to: appState)
         case .multi:
+            applyMulti(to: appState)
+        case .workspace:
             applyMulti(to: appState)
         case .busy:
             applyBusy(to: appState)
