@@ -227,65 +227,69 @@ struct ModernMarqueeText: View {
     let text: String
     var font: Font = .system(size: 9.5, weight: .bold, design: .rounded)
     var color: Color = .white
-    var maxWidth: CGFloat? = nil
-    var centerShortText: Bool = false
+    var maxWidth: CGFloat = 64
     @State private var textWidth: CGFloat = 0
     @State private var startDate = Date()
 
-    var body: some View {
-        GeometryReader { geo in
-            let containerWidth = maxWidth ?? geo.size.width
-            let excess = max(0, textWidth - containerWidth)
-            TimelineView(.animation(minimumInterval: 0.03)) { timeline in
-                let offset: CGFloat = {
-                    guard excess > 0 else { return 0 }
-                    let scrollDuration = max(2.5, Double(excess) / 22.0)
-                    let pauseStart = 1.2
-                    let pauseEnd = 1.2
-                    let resetDuration = 1.0
-                    let totalCycle = pauseStart + scrollDuration + pauseEnd + resetDuration
-
-                    let time = max(0, timeline.date.timeIntervalSince(startDate))
-                    let t = time.truncatingRemainder(dividingBy: totalCycle)
-
-                    if t < pauseStart {
-                        return 0
-                    } else if t < pauseStart + scrollDuration {
-                        let progress = (t - pauseStart) / scrollDuration
-                        let smooth = (1.0 - cos(progress * .pi)) / 2.0
-                        return CGFloat(smooth) * excess
-                    } else if t < pauseStart + scrollDuration + pauseEnd {
-                        return excess
-                    } else {
-                        let progress = (t - (pauseStart + scrollDuration + pauseEnd)) / resetDuration
-                        let smooth = (1.0 - cos(progress * .pi)) / 2.0
-                        return (1.0 - CGFloat(smooth)) * excess
-                    }
-                }()
-
-                Text(text)
-                    .font(font)
-                    .foregroundStyle(color)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .background(
-                        GeometryReader { textGeo in
-                            Color.clear.preference(key: ModernMarqueeTextWidthKey.self, value: textGeo.size.width)
-                        }
-                    )
-                    .offset(x: -offset)
-                    .frame(width: containerWidth, height: geo.size.height, alignment: (centerShortText && excess == 0) ? .center : .leading)
-                    .clipped()
-            }
+    private var contentWidth: CGFloat {
+        if textWidth > 0 {
+            return min(maxWidth, textWidth)
         }
-        .frame(width: maxWidth)
+        return min(maxWidth, CGFloat(text.count) * 7.0)
+    }
+
+    var body: some View {
+        let excess = max(0, textWidth - maxWidth)
+        TimelineView(.animation(minimumInterval: 0.03)) { timeline in
+            let offset: CGFloat = {
+                guard excess > 0 else { return 0 }
+                let scrollDuration = max(2.5, Double(excess) / 22.0)
+                let pauseStart = 1.2
+                let pauseEnd = 1.2
+                let resetDuration = 1.0
+                let totalCycle = pauseStart + scrollDuration + pauseEnd + resetDuration
+
+                let time = max(0, timeline.date.timeIntervalSince(startDate))
+                let t = time.truncatingRemainder(dividingBy: totalCycle)
+
+                if t < pauseStart {
+                    return 0
+                } else if t < pauseStart + scrollDuration {
+                    let progress = (t - pauseStart) / scrollDuration
+                    let smooth = (1.0 - cos(progress * .pi)) / 2.0
+                    return CGFloat(smooth) * excess
+                } else if t < pauseStart + scrollDuration + pauseEnd {
+                    return excess
+                } else {
+                    let progress = (t - (pauseStart + scrollDuration + pauseEnd)) / resetDuration
+                    let smooth = (1.0 - cos(progress * .pi)) / 2.0
+                    return (1.0 - CGFloat(smooth)) * excess
+                }
+            }()
+
+            Text(text)
+                .font(font)
+                .foregroundStyle(color)
+                .lineLimit(1)
+                .fixedSize()
+                .background(
+                    GeometryReader { textGeo in
+                        Color.clear.preference(key: ModernMarqueeTextWidthKey.self, value: textGeo.size.width)
+                    }
+                )
+                .offset(x: -offset)
+                .frame(width: contentWidth, alignment: .leading)
+                .clipped()
+        }
+        .frame(width: contentWidth, height: 17)
         .onPreferenceChange(ModernMarqueeTextWidthKey.self) { width in
             if abs(self.textWidth - width) > 1 {
                 self.textWidth = width
             }
         }
-        .onChange(of: text) {
+        .onChange(of: text) { _, _ in
             startDate = Date()
+            textWidth = 0
         }
     }
 }
@@ -325,7 +329,7 @@ struct CyberMusicWingView: View {
     var body: some View {
         if isModernClean {
             // MODERN CLEAN: Langsung album cover, marquee title (saat di-hover), dan visualizer tanpa border
-            HStack(alignment: .center, spacing: 5) {
+            HStack(alignment: .center, spacing: 4) {
                 if let art = nowPlaying.artworkImage {
                     Image(nsImage: art)
                         .resizable()
@@ -346,10 +350,8 @@ struct CyberMusicWingView: View {
                 if isHovered {
                     ModernMarqueeText(
                         text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
-                        maxWidth: 64,
-                        centerShortText: true
+                        maxWidth: 64
                     )
-                    .frame(height: 17)
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
 
@@ -361,11 +363,12 @@ struct CyberMusicWingView: View {
                     color: accentColor
                 )
             }
+            .fixedSize()
             .padding(.horizontal, 2)
             .padding(.vertical, 1)
         } else {
             // RETRO CYBER: Seamless Frameless, Sharp 17x17 Album Art, Marquee Monospaced Title saat hover, Dancing Spectrum
-            HStack(alignment: .center, spacing: 5) {
+            HStack(alignment: .center, spacing: 4) {
                 // Album Art (17x17, crisp rounded corner, no outer bounding pill)
                 if let art = nowPlaying.artworkImage {
                     Image(nsImage: art)
@@ -391,10 +394,8 @@ struct CyberMusicWingView: View {
                         text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
                         font: .system(size: 8.5, weight: .bold, design: .monospaced),
                         color: .white,
-                        maxWidth: 64,
-                        centerShortText: true
+                        maxWidth: 64
                     )
-                    .frame(height: 17)
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
 
@@ -408,6 +409,7 @@ struct CyberMusicWingView: View {
                     palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
                 )
             }
+            .fixedSize()
             .padding(.horizontal, 2)
             .padding(.vertical, 1)
         }
@@ -1482,9 +1484,10 @@ struct ModernCleanMusicHUDContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.leading, 12)
         }
-        .frame(height: 106)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 4)
+        .frame(height: 114)
+        .padding(.horizontal, 18)
+        .padding(.top, 4)
+        .padding(.bottom, 16)
     }
 }
 
@@ -1819,9 +1822,10 @@ struct RetroCyberMusicHUDContentView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.leading, 4)
         }
-        .frame(height: 104)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 4)
+        .frame(height: 114)
+        .padding(.horizontal, 18)
+        .padding(.top, 4)
+        .padding(.bottom, 16)
     }
 }
 
