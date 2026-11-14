@@ -138,6 +138,23 @@ struct NotchPanelView: View {
     }
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
+
+    private var activeFloatingPreset: FloatingLyricPreset {
+        FloatingLyricPreset(rawValue: floatingLyricPreset) ?? .pureText
+    }
+    private var isConnectedChinLyricActive: Bool {
+        shouldShowSubNotchLyrics && activeFloatingPreset == .connectedChin
+    }
+    private var effectiveNotchHeight: CGFloat {
+        isConnectedChinLyricActive ? (notchHeight + 26) : notchHeight
+    }
+    private var effectiveMascotSize: CGFloat {
+        if isConnectedChinLyricActive {
+            return min(33, effectiveNotchHeight - 8)
+        }
+        return mascotSize
+    }
 
     private var modernMusicAccent: Color {
         if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
@@ -188,6 +205,8 @@ struct NotchPanelView: View {
     /// Measured width of the plan-limit chip (0 until first laid out) — the
     /// bar reserves exactly this instead of guessing from the label length.
     @State private var quotaChipWidth: CGFloat = 0
+    /// Measured width of the collapsed left wing (0 until first laid out).
+    @State private var leftWingWidth: CGFloat = 0
     /// Measured width of the collapsed right wing (0 until first laid out).
     @State private var rightWingWidth: CGFloat = 0
     @State private var isHoveringRightWing = false
@@ -378,46 +397,39 @@ struct NotchPanelView: View {
         }
         let isToolVisible = showToolStatus && showAgentDetails && (isAgentActive || appState.currentTool != nil)
 
-        if isThinking || isToolVisible {
-            return isPixel ? 156 : 148
+        // 1. Calculate required width for Left Wing (Agent Mascot + Tool / Thinking / Quota)
+        var baseLeft: CGFloat = compactWingWidth
+        if isThinking {
+            baseLeft = max(baseLeft, isPixel ? 168 : 156)
+        } else if isToolVisible {
+            baseLeft = max(baseLeft, isPixel ? 176 : 162)
+        } else if hasQuotaChip {
+            baseLeft = max(baseLeft, quotaWingWidth)
+        }
+        let neededLeft = max(baseLeft, leftWingWidth > 0 ? (leftWingWidth + 24) : 0)
+
+        // 2. Calculate required width for Right Wing (Music / Prayer / Actions)
+        var baseRight: CGFloat = compactWingWidth
+        if prayerManager.isPrayerPrioritized {
+            baseRight = max(baseRight, 130)
+        } else if signals.isPlaying {
+            baseRight = max(baseRight, 120)
         }
         if isHoveringRightWing {
-            return 154
+            baseRight = max(baseRight, 160)
         }
-        if prayerManager.isPrayerPrioritized {
-            let needed = rightWingWidth > 0 ? (rightWingWidth + 18) : 124
-            return max(124, needed)
+        if appState.glanceCompletionActive {
+            baseRight += 26
         }
-        if signals.isPlaying {
-            var width: CGFloat = 68
-            if isAgentActive || isToolVisible {
-                width = max(width, isPixel ? 156 : 148)
-            }
-            if isHoveringRightWing {
-                width = max(width, 124)
-            }
-            if appState.glanceCompletionActive {
-                width += 26
-            }
-            if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion {
-                width += 26
-            }
-            if rightWingWidth > 0 {
-                width = max(width, rightWingWidth + 24)
-            }
-            return width
+        if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion {
+            baseRight += 26
         }
-        var width: CGFloat = 88
-        if isAgentActive || isToolVisible {
-            width = max(width, isPixel ? 156 : 148)
-        }
-        if hasQuotaChip {
-            width = max(width, quotaWingWidth)
-        }
-        if rightWingWidth > 0 {
-            width = max(width, rightWingWidth + 18)
-        }
-        return width
+        let neededRight = max(baseRight, rightWingWidth > 0 ? (rightWingWidth + 24) : 0)
+
+        // 3. Take the maximum to preserve balanced Dynamic Island symmetry while guaranteeing ZERO clipping
+        let targetWingWidth = max(neededLeft, neededRight)
+        let maxSingleWingWidth = max(0, (maxPanelWidth - effectiveNotchW) / 2)
+        return min(targetWingWidth, maxSingleWingWidth)
     }
 
     /// Notch cutout reserved in the center of the expanded header.
@@ -523,105 +535,182 @@ struct NotchPanelView: View {
         }
     }
 
+    private func handleLeftWingTap() {
+        guard !shouldShowExpanded else { return }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            expandedTab = .agents
+            appState.surface = .sessionList
+        }
+    }
+
+    private func handleRightWingTap() {
+        guard !shouldShowExpanded else { return }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            expandedTab = (signals.isPlaying || signals.hasTitle) ? .music : .agents
+            appState.surface = .sessionList
+        }
+    }
+
+    private func handleChinLyricTap() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            expandedTab = .music
+            appState.surface = .sessionList
+        }
+    }
+
+    private func handleSurfaceChange(_ newSurface: IslandSurface) {
+        if newSurface == .collapsed && !isHovered {
+            hoverPhase = .collapsed
+        } else if newSurface.isExpanded && hoverPhase != .expanded {
+            hoverPhase = .expanded
+        }
+
+        switch newSurface {
+        case .completionCard, .approvalCard, .questionCard:
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                expandedTab = .agents
+            }
+        default:
+            break
+        }
+    }
+
+    private func handleStatusTransition(oldStatus: AgentStatus, newStatus: AgentStatus) {
+        let wasWorking = (oldStatus == .processing || oldStatus == .running)
+        let isNowIdle = (newStatus == .idle)
+        if wasWorking && isNowIdle {
+            let isSecondaryTab = (expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer)
+            if isSecondaryTab {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                    expandedTab = .agents
+                }
+            }
+        }
+    }
+
+    private func handleCompletedSession(_ completedId: String?) {
+        guard completedId != nil else { return }
+        if expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                expandedTab = .agents
+            }
+        }
+    }
+
+    private func handleExpandedTabChange(_ newTab: ExpandedContentTab) {
+        if newTab != .music {
+            musicAutoCollapseTimer?.invalidate()
+            musicAutoCollapseTimer = nil
+            musicDeferCollapseOnMouseLeave = false
+        }
+        if newTab == .workspace {
+            workspaceManager.resolveAndRefreshWorkspace(appState: appState)
+        }
+    }
+
+    @ViewBuilder
+    private var activeCompactBar: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                // Left Wing: Strictly isolated to Agents & Terminal status (aligned snug against notch)
+                CompactLeftWing(
+                    appState: appState,
+                    expanded: shouldShowExpanded,
+                    mascotSize: effectiveMascotSize,
+                    hasNotch: hasNotch,
+                    showToolStatus: showToolStatus,
+                    expandedTab: expandedTabBinding,
+                    workspaceManager: workspaceManager
+                )
+                    .padding(.leading, shouldShowExpanded ? 12 : 14)
+                    .frame(
+                        width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
+                        alignment: .leading
+                    )
+                    .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
+                    .contentShape(Rectangle())
+                    .onTapGesture { handleLeftWingTap() }
+                    .help("Agents & Terminal Sessions (Click to view)")
+
+                if hasNotch || shouldShowExpanded {
+                    Spacer(minLength: 0)
+                        .frame(width: shouldShowExpanded ? expandedNotchCutoutWidth : effectiveNotchW)
+                } else {
+                    Spacer(minLength: 0)
+                        .frame(width: effectiveNotchW)
+                }
+
+                // Right Wing: Strictly isolated to Music Player & Token HUD (aligned snug against notch)
+                CompactRightWing(
+                    appState: appState,
+                    expanded: shouldShowExpanded,
+                    hasNotch: hasNotch,
+                    isHovered: $isHoveringRightWing,
+                    expandedTab: expandedTabBinding,
+                    workspaceManager: workspaceManager,
+                    expandedWingWidth: expandedWingWidth,
+                    isEnlarged: isConnectedChinLyricActive
+                )
+                    .padding(.trailing, shouldShowExpanded ? 12 : 14)
+                    .frame(
+                        width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
+                        alignment: .trailing
+                    )
+                    .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
+                    .contentShape(Rectangle())
+                    .onHover { hovering in
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            isHoveringRightWing = hovering
+                        }
+                    }
+                    .onTapGesture { handleRightWingTap() }
+                    .help(signals.musicTooltip)
+            }
+            .frame(height: notchHeight)
+
+            // Integrated contiguous notch chin: seamlessly housing synced lyrics directly under MacBook notch
+            if isConnectedChinLyricActive && !shouldShowExpanded {
+                HStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                        .frame(width: symmetricWingWidth)
+                    IntegratedNotchChinLyricView(nowPlaying: nowPlaying, width: effectiveNotchW) {
+                        handleChinLyricTap()
+                    }
+                    Spacer(minLength: 0)
+                        .frame(width: symmetricWingWidth)
+                }
+                .frame(height: 26)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .opacity),
+                    removal: .move(edge: .top).combined(with: .opacity)
+                ))
+            }
+        }
+        .frame(height: shouldShowExpanded ? notchHeight : effectiveNotchHeight)
+        // Recap on hover while collapsed — shows whenever hover
+        // doesn't expand the panel (smart suppress with the
+        // terminal frontmost); expanded cards show it inline.
+        .help(collapsedRecapTooltip)
+        .contentShape(Rectangle())
+        .gesture(
+            TapGesture().onEnded {
+                hoverTimer?.invalidate()
+                hoverTimer = nil
+                appState.openPendingQuestionCard()
+            },
+            including: !shouldShowExpanded && appState.hiddenPendingQuestionSessionId != nil
+                ? .all : .subviews
+        )
+        .onPreferenceChange(QuotaChipWidthKey.self) { if $0 > 0 { quotaChipWidth = $0 } }
+        .onPreferenceChange(CompactLeftWingWidthKey.self) { if $0 > 0 { leftWingWidth = $0 } }
+        .onPreferenceChange(CompactRightWingWidthKey.self) { if $0 > 0 { rightWingWidth = $0 } }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
                 if showBar || shouldShowExpanded {
-                    // Active: compact bar — wider version when expanded
-                    HStack(spacing: 0) {
-                        // Left Wing: Strictly isolated to Agents & Terminal status (aligned snug against notch)
-                        CompactLeftWing(
-                            appState: appState,
-                            expanded: shouldShowExpanded,
-                            mascotSize: mascotSize,
-                            hasNotch: hasNotch,
-                            showToolStatus: showToolStatus,
-                            expandedTab: expandedTabBinding,
-                            workspaceManager: workspaceManager
-                        )
-                            .padding(.leading, shouldShowExpanded ? 12 : 14)
-                            .frame(
-                                width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
-                                alignment: .leading
-                            )
-                            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                guard !shouldShowExpanded else { return }
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    expandedTab = .agents
-                                    appState.surface = .sessionList
-                                }
-                            }
-                            .help("Agents & Terminal Sessions (Click to view)")
-
-                        if hasNotch || shouldShowExpanded {
-                            Spacer(minLength: 0)
-                                .frame(width: shouldShowExpanded ? expandedNotchCutoutWidth : effectiveNotchW)
-                        } else {
-                            Spacer(minLength: 0)
-                                .frame(width: effectiveNotchW)
-                        }
-
-                        // Right Wing: Strictly isolated to Music Player & Token HUD (aligned snug against notch)
-                        CompactRightWing(
-                            appState: appState,
-                            expanded: shouldShowExpanded,
-                            hasNotch: hasNotch,
-                            isHovered: $isHoveringRightWing,
-                            expandedTab: expandedTabBinding,
-                            workspaceManager: workspaceManager,
-                            expandedWingWidth: expandedWingWidth
-                        )
-                            .padding(.trailing, shouldShowExpanded ? 12 : 14)
-                            .frame(
-                                width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
-                                alignment: .trailing
-                            )
-                            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
-                            .contentShape(Rectangle())
-                            .onHover { hovering in
-                                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                                    isHoveringRightWing = hovering
-                                }
-                            }
-                            .onTapGesture {
-                                guard !shouldShowExpanded else { return }
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    if signals.isPlaying || signals.hasTitle {
-                                        expandedTab = .music
-                                    } else {
-                                        expandedTab = .agents
-                                    }
-                                    appState.surface = .sessionList
-                                }
-                            }
-                            .help(signals.musicTooltip)
-                    }
-                    .frame(height: notchHeight)
-                    // Recap on hover while collapsed — shows whenever hover
-                    // doesn't expand the panel (smart suppress with the
-                    // terminal frontmost); expanded cards show it inline.
-                    .help(collapsedRecapTooltip)
-                    // With a question waiting off-screen, a click on the collapsed
-                    // bar opens its card. Otherwise the gesture is off entirely so
-                    // the bar keeps behaving exactly as before.
-                    .contentShape(Rectangle())
-                    .gesture(
-                        TapGesture().onEnded {
-                            hoverTimer?.invalidate()
-                            hoverTimer = nil
-                            appState.openPendingQuestionCard()
-                        },
-                        including: !shouldShowExpanded && appState.hiddenPendingQuestionSessionId != nil
-                            ? .all : .subviews
-                    )
-                    // 0 means the chip isn't drawn right now (a tool name holds
-                    // the slot) — keep the last width so the bar doesn't twitch.
-                    .onPreferenceChange(QuotaChipWidthKey.self) { if $0 > 0 { quotaChipWidth = $0 } }
-                    // 0 while expanded (only the collapsed wing reports) — keep
-                    // the last width for the next collapse.
-                    .onPreferenceChange(CompactRightWingWidthKey.self) { if $0 > 0 { rightWingWidth = $0 } }
+                    activeCompactBar
                 } else if showIdleIndicator {
                     IdleIndicatorBar(
                         mascotSize: mascotSize,
@@ -783,6 +872,8 @@ struct NotchPanelView: View {
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: isThinking)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: signals.isPlaying)
+            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: isConnectedChinLyricActive)
+            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: effectiveNotchHeight)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: expandedTab)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: signals.isDetailExpanded)
             .background(
@@ -799,14 +890,14 @@ struct NotchPanelView: View {
                         NotchPanelShape(
                             topExtension: currentTopExt,
                             bottomRadius: currentBottomRadius,
-                            minHeight: notchHeight
+                            minHeight: effectiveNotchHeight
                         )
                         .fill(Color.black)
                         .overlay(
                             NotchPanelShape(
                                 topExtension: currentTopExt,
                                 bottomRadius: currentBottomRadius,
-                                minHeight: notchHeight
+                                minHeight: effectiveNotchHeight
                             )
                             .stroke(currentStrokeColor, lineWidth: currentStrokeWidth)
                         )
@@ -1014,40 +1105,13 @@ struct NotchPanelView: View {
                 }
             }
             .onChange(of: appState.surface) { _, newSurface in
-                // The surface can change from outside the hover flow (auto-expand
-                // cards, click-to-close, …) — keep the phase from going stale.
-                if newSurface == .collapsed && !isHovered {
-                    hoverPhase = .collapsed
-                } else if newSurface.isExpanded && hoverPhase != .expanded {
-                    hoverPhase = .expanded
-                }
-
-                // Switch expanded tab to .agents when attention or completion is required
-                switch newSurface {
-                case .completionCard, .approvalCard, .questionCard:
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                        expandedTab = .agents
-                    }
-                default:
-                    break
-                }
+                handleSurfaceChange(newSurface)
             }
             .onChange(of: appState.status) { oldStatus, newStatus in
-                // Switch to .agents if task completes while viewing secondary tabs
-                if (oldStatus == .processing || oldStatus == .running) && newStatus == .idle {
-                    if expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                            expandedTab = .agents
-                        }
-                    }
-                }
+                handleStatusTransition(oldStatus: oldStatus, newStatus: newStatus)
             }
             .onChange(of: appState.justCompletedSessionId) { _, completedId in
-                if completedId != nil && (expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                        expandedTab = .agents
-                    }
-                }
+                handleCompletedSession(completedId)
             }
             .onChange(of: appState.expandedTab) { _, newTab in
                 if newTab != .music {
@@ -1062,8 +1126,8 @@ struct NotchPanelView: View {
             // Outside onHover on purpose: the hover region moves with the bar.
             .offset(x: 0)
 
-            // SUB-NOTCH FLOATING LYRIC CAPSULE: Floats freely beneath the notch cutout
-            if shouldShowSubNotchLyrics {
+            // SUB-NOTCH FLOATING LYRIC CAPSULE: Floats freely beneath the notch cutout (when not using unified chin mode)
+            if shouldShowSubNotchLyrics && !isConnectedChinLyricActive {
                 SubNotchFloatingLyricCapsuleView(nowPlaying: nowPlaying) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         expandedTab = .music
@@ -1138,6 +1202,41 @@ private struct CompactLeftWing: View {
     @AppStorage(SettingsKey.showClaudeQuota) private var showClaudeQuota = SettingsDefaults.showClaudeQuota
     @AppStorage(SettingsKey.claudeQuotaChip) private var claudeQuotaChip = SettingsDefaults.claudeQuotaChip
     @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+
+    private var musicPaletteAccent: Color? {
+        guard signals.isPlaying else { return nil }
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album"),
+           nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
+        let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
+        switch pc {
+        case .album:
+            return nowPlaying.artworkImage != nil ? nowPlaying.albumPalette.primary : Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .theme: return Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .white: return .white
+        case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
+        case .green: return Color(red: 0.12, green: 0.84, blue: 0.38)
+        case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
+        }
+    }
+
+    private func effectiveToolColor(_ tool: String) -> Color {
+        if let musicAccent = musicPaletteAccent {
+            return musicAccent
+        }
+        return toolStatusColor(tool)
+    }
+
+    private var effectiveThinkingColor: Color {
+        if let musicAccent = musicPaletteAccent {
+            return musicAccent
+        }
+        return isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 0.0, green: 0.96, blue: 0.83)
+    }
 
     private var displaySession: SessionSnapshot? {
         if let sid = appState.rotatingSessionId, let s = appState.sessions[sid] {
@@ -1229,18 +1328,18 @@ private struct CompactLeftWing: View {
                     HStack(spacing: 3) {
                         Image(systemName: "wrench.and.screwdriver.fill")
                             .font(.system(size: 7, weight: .bold))
-                            .foregroundStyle(toolStatusColor(tool))
+                            .foregroundStyle(effectiveToolColor(tool))
                             .fixedSize()
                         if isPixel {
                             PixelText(
                                 text: ToolNameDisplay.compact(tool, maxCharacters: 16).uppercased(),
-                                color: toolStatusColor(tool),
+                                color: effectiveToolColor(tool),
                                 pixelSize: 1.05
                             )
                         } else {
                             Text(ToolNameDisplay.compact(tool))
                                 .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                .foregroundStyle(toolStatusColor(tool))
+                                .foregroundStyle(effectiveToolColor(tool))
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                         }
@@ -1256,7 +1355,7 @@ private struct CompactLeftWing: View {
                         fontSize: 9,
                         label: L10n.shared["typing_thinking"],
                         bright: true,
-                        color: Color(red: 0.0, green: 0.96, blue: 0.83),
+                        color: effectiveThinkingColor,
                         showDots: true
                     )
                     .fixedSize(horizontal: true, vertical: false)
@@ -1285,6 +1384,10 @@ private struct CompactLeftWing: View {
             }
         }
         .padding(.horizontal, expanded ? 10 : 3)
+        .fixedSize(horizontal: true, vertical: false)
+        .background(GeometryReader { geo in
+            Color.clear.preference(key: CompactLeftWingWidthKey.self, value: expanded ? 0 : geo.size.width)
+        })
         .onChange(of: liveTool) { _, newTool in
             lingerTimer?.invalidate()
             if let newTool {
@@ -1394,6 +1497,7 @@ private struct CompactRightWing: View {
     @Binding var expandedTab: ExpandedContentTab
     let workspaceManager: WorkspaceMonitorManager
     var expandedWingWidth: CGFloat = 240
+    var isEnlarged: Bool = false
     @Environment(\.animationGates) private var animationGates
     @ObservedObject private var l10n = L10n.shared
     private let nowPlaying = NowPlayingManager.shared
@@ -1503,7 +1607,7 @@ private struct CompactRightWing: View {
                     }
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if signals.isPlaying {
-                    CyberMusicWingView(nowPlaying: nowPlaying, isHovered: shouldExpandRightWing)
+                    CyberMusicWingView(nowPlaying: nowPlaying, isHovered: shouldExpandRightWing, isEnlarged: isEnlarged)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else {
                     // AGENT / STANDBY MODE:
@@ -1954,6 +2058,31 @@ private struct CompactToolStatus: View {
 
     /// Whether the current session is doing any work (not idle)
     private var isWorking: Bool { displayStatus != .idle }
+    private let nowPlaying = NowPlayingManager.shared
+    private let signals = IslandSignals.shared
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+
+    private func effectiveToolColor(_ tool: String) -> Color {
+        if signals.isPlaying {
+            if (syncThemeWithAlbumArt || musicHUDProgressColor == "album"),
+               nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
+            switch pc {
+            case .album:
+                return nowPlaying.artworkImage != nil ? nowPlaying.albumPalette.primary : Color(red: 0.0, green: 0.96, blue: 0.83)
+            case .theme: return Color(red: 0.0, green: 0.96, blue: 0.83)
+            case .white: return .white
+            case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
+            case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
+            case .green: return Color(red: 0.12, green: 0.84, blue: 0.38)
+            case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
+            }
+        }
+        return toolStatusColor(tool)
+    }
 
     var body: some View {
         HStack(spacing: 5) {
@@ -1966,7 +2095,7 @@ private struct CompactToolStatus: View {
 
             // Tool status or thinking indicator
             if let tool = shownTool {
-                TypingIndicator(fontSize: 11, label: ToolNameDisplay.compact(tool, maxCharacters: 32), bright: true, color: toolStatusColor(tool))
+                TypingIndicator(fontSize: 11, label: ToolNameDisplay.compact(tool, maxCharacters: 32), bright: true, color: effectiveToolColor(tool))
                     .id("tool-\(tool)-\(appState.rotatingSessionId ?? "")")
                     .help(tool)
                 if let desc = shownDesc {
@@ -4767,6 +4896,14 @@ enum CompactRightWingLayout {
     static func missing(contentWidth: CGFloat, wing: CGFloat, statusExtra: CGFloat, hasNotch: Bool) -> CGFloat {
         guard hasNotch, contentWidth > 0 else { return 0 }
         return Swift.max(0, contentWidth + QuotaChipLayout.notchGap - (wing + statusExtra / 2))
+    }
+}
+
+/// Reports the collapsed left wing's laid-out width up to the bar.
+struct CompactLeftWingWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = Swift.max(value, nextValue())
     }
 }
 

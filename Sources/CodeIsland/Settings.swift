@@ -141,6 +141,10 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
     case retroPixel = "retroPixel"
     case liquidAurora = "liquidAurora"
     case minimalBraun = "minimalBraun"
+    case tapeReel = "tapeReel"
+    case vinylGroove = "vinylGroove"
+    case fluidKaraoke = "fluidKaraoke"
+    case connectedChin = "connectedChin"
 
     public var id: String { rawValue }
 
@@ -154,6 +158,10 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .retroPixel: return "8-Bit Retro Arcade (Pixel Strip)"
         case .liquidAurora: return "Liquid Aurora (Dynamic Glow)"
         case .minimalBraun: return "Braun Industrial (Studio Strip)"
+        case .tapeReel: return "Teenage Engineering TP-7 (Tape Reel)"
+        case .vinylGroove: return "Vinyl Groove (Spinning Record & Tonearm)"
+        case .fluidKaraoke: return "Fluid Shimmer (Spatial Silk Wave)"
+        case .connectedChin: return "Unified Notch Chin (Contiguous Extension)"
         }
     }
 
@@ -167,6 +175,10 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .retroPixel: return "8-BIT"
         case .liquidAurora: return "AURORA"
         case .minimalBraun: return "STUDIO"
+        case .tapeReel: return "TAPE"
+        case .vinylGroove: return "VINYL"
+        case .fluidKaraoke: return "FLUID"
+        case .connectedChin: return "NOTCH CHIN"
         }
     }
 
@@ -180,6 +192,10 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .retroPixel: return "Authentic 8-bit stepped pixel frame, monospaced typography, and dancing retro spectrum visualizer."
         case .liquidAurora: return "Luxurious translucent glass with animated shifting multi-color aurora ambient glow behind lyrics."
         case .minimalBraun: return "Ultra-clean Dieter Rams / Teenage Engineering audio monitor strip with live emerald recording dot."
+        case .tapeReel: return "Tactile hardware tape recorder with dual rotating reels, amber phosphor VFD luminescence, and peak VU meter."
+        case .vinylGroove: return "Audiophile micro vinyl record with concentric grooves, angled tonearm needle, and Swiss editorial typography."
+        case .fluidKaraoke: return "VisionOS spatial glass capsule with liquid iridescent shimmer sweeping across syllables and silk oscilloscope ribbon."
+        case .connectedChin: return "The notch seamlessly extends downwards under the MacBook notch, housing synced lyrics with enlarged wing icons."
         }
     }
 }
@@ -188,6 +204,7 @@ public enum FloatingLyricFontDesign: String, CaseIterable, Identifiable, Sendabl
     case rounded = "rounded"
     case monospaced = "monospaced"
     case system = "system"
+    case serif = "serif"
 
     public var id: String { rawValue }
 
@@ -196,6 +213,7 @@ public enum FloatingLyricFontDesign: String, CaseIterable, Identifiable, Sendabl
         case .rounded: return "Modern Rounded"
         case .monospaced: return "Monospaced Cyber"
         case .system: return "System Clean"
+        case .serif: return "Elegant Serif"
         }
     }
 }
