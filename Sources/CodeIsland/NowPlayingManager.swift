@@ -183,7 +183,12 @@ final class NowPlayingManager: ObservableObject {
     @Published var album: String = ""
     @Published var player: String = "" // "Spotify", "Music", "SPOTIFY · BRAVE", "YT MUSIC · CHROME", etc.
     @Published var artworkURL: String = ""
-    @Published var artworkImage: NSImage?
+    @Published var artworkImage: NSImage? {
+        didSet {
+            updateAlbumPalette(from: artworkImage)
+        }
+    }
+    @Published var albumPalette: AlbumArtPalette = .fallback
     @Published var playerPosition: Double = 0
     @Published var trackDuration: Double = 0
     @Published var showToast: Bool = false
@@ -308,7 +313,12 @@ final class NowPlayingManager: ObservableObject {
         return nil
     }
 
+    private var isMusicFeatureEnabled: Bool {
+        UserDefaults.standard.object(forKey: SettingsKey.musicEnabled) as? Bool ?? SettingsDefaults.musicEnabled
+    }
+
     private func handleAppleMusicNotification(_ notification: Notification) {
+        guard isMusicFeatureEnabled else { return }
         guard let info = notification.userInfo else { return }
         let state = info["Player State"] as? String ?? ""
         let playing = (state == "Playing")
@@ -342,6 +352,7 @@ final class NowPlayingManager: ObservableObject {
     }
 
     private func handleSpotifyNotification(_ notification: Notification) {
+        guard isMusicFeatureEnabled else { return }
         guard let info = notification.userInfo else { return }
         let state = info["Player State"] as? String ?? ""
         let playing = (state == "Playing")
@@ -1156,6 +1167,7 @@ final class NowPlayingManager: ObservableObject {
         player = ""
         artworkURL = ""
         artworkImage = nil
+        albumPalette = .fallback
         playerPosition = 0
         trackDuration = 0
         lyrics = []
@@ -1186,6 +1198,19 @@ final class NowPlayingManager: ObservableObject {
         } else if FileManager.default.fileExists(atPath: pathOrUrl) {
             if let img = NSImage(contentsOfFile: pathOrUrl) {
                 self.artworkImage = img
+            }
+        }
+    }
+
+    private func updateAlbumPalette(from image: NSImage?) {
+        guard let image else {
+            self.albumPalette = .fallback
+            return
+        }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let palette = AlbumColorExtractor.extractPalette(from: image)
+            Task { @MainActor in
+                self?.albumPalette = palette
             }
         }
     }

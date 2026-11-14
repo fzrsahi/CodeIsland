@@ -132,6 +132,51 @@ public final class PrayerTimeManager: ObservableObject {
         return String(format: "%02d:%02d", comps.hour ?? 0, comps.minute ?? 0)
     }
 
+    /// Qibla Direction towards Kaaba (Makkah: 21.4225° N, 39.8262° E)
+    public var qiblaDegrees: Double {
+        let kaabaLat = 21.4225 * .pi / 180.0
+        let kaabaLon = 39.8262 * .pi / 180.0
+        let coords = locationService.effectiveCoordinates
+        let userLat = coords.latitude * .pi / 180.0
+        let userLon = coords.longitude * .pi / 180.0
+        let deltaLon = kaabaLon - userLon
+        let y = sin(deltaLon)
+        let x = cos(userLat) * tan(kaabaLat) - sin(userLat) * cos(deltaLon)
+        var deg = atan2(y, x) * 180.0 / .pi
+        if deg < 0 { deg += 360.0 }
+        return deg
+    }
+
+    public var qiblaCompassDirection: String {
+        let deg = qiblaDegrees
+        let cardinals = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                         "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+        let index = Int(round(deg.truncatingRemainder(dividingBy: 360) / 22.5)) % 16
+        return cardinals[index]
+    }
+
+    public var qiblaCompassDirectionFull: String {
+        let deg = qiblaDegrees
+        let cardinals = [
+            "North", "North-Northeast", "Northeast", "East-Northeast",
+            "East", "East-Southeast", "Southeast", "South-Southeast",
+            "South", "South-Southwest", "Southwest", "West-Southwest",
+            "West", "West-Northwest", "Northwest", "North-Northwest"
+        ]
+        let index = Int(round(deg.truncatingRemainder(dividingBy: 360) / 22.5)) % 16
+        return cardinals[index]
+    }
+
+    /// Snoozes the approaching prayer reminder banner for N minutes
+    public func snoozeMiniPeekBanner(minutes: Int = 5) {
+        dismissMiniPeekBanner()
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(minutes) * 60 * 1_000_000_000)
+            guard self.isPrayerPrioritized else { return }
+            self.showMiniPeekBanner = true
+        }
+    }
+
     private var cancellables = Set<AnyCancellable>()
     private var timerCancellable: AnyCancellable?
     private var lastCalculatedDay: YearMonthDay?
@@ -355,7 +400,7 @@ public final class PrayerTimeManager: ObservableObject {
             let key = "\(next.prayer.rawValue)-\(alertBeforeMinutes)"
             if !triggeredAlerts.contains(key) {
                 triggeredAlerts.insert(key)
-                let title = "\(alertBeforeMinutes) Minutes Until \(next.prayer.displayName)"
+                let title = "\(alertBeforeMinutes) Minutes to \(next.prayer.displayName)"
                 let subtitle = "\(currentTimeString) · \(locationService.displayName)"
                 enqueueOrPresentBanner(title: title, subtitle: subtitle, appState: appState)
             }
@@ -366,7 +411,7 @@ public final class PrayerTimeManager: ObservableObject {
             let key = "\(next.prayer.rawValue)-0"
             if !triggeredAlerts.contains(key) {
                 triggeredAlerts.insert(key)
-                let title = "Time for \(next.prayer.displayName)"
+                let title = "\(next.prayer.displayName) Time Has Arrived"
                 let subtitle = "\(currentTimeString) · \(locationService.displayName)"
                 enqueueOrPresentBanner(title: title, subtitle: subtitle, appState: appState)
             }

@@ -86,12 +86,61 @@ public enum WorkspaceHUDTheme: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+public enum AgentsHUDTheme: String, CaseIterable, Identifiable, Sendable {
+    case modern = "modern"
+    case pixelRetro = "pixelRetro"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .modern: return "Modern Clean (Island)"
+        case .pixelRetro: return "Pixel Retro 8-Bit (Arcade)"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .modern:
+            return "Sleek Apple SF Symbols, smooth continuous squircles, and dynamic island glass."
+        case .pixelRetro:
+            return "Authentic 8-bit arcade terminal with dot-matrix pixel headers, phosphor accents, and sharp stepped frames."
+        }
+    }
+}
+
+public enum PrayerCardDisplayMode: String, CaseIterable, Identifiable, Sendable {
+    case compact = "compact"
+    case panoramic = "panoramic"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .compact: return "Compact Ribbon (120pt)"
+        case .panoramic: return "Panoramic Diorama (242pt)"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .compact:
+            return "Minimal single-strip timeline matching Music HUD height for distraction-free glance."
+        case .panoramic:
+            return "Immersive landscape diorama featuring authentic mosque architecture, sun/moon arch, and rich details."
+        }
+    }
+}
+
 public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
     case pureText = "pureText"
     case capsule = "capsule"
     case frostedGlass = "frostedGlass"
     case neonHud = "neonHud"
     case seamlessGlass = "seamlessGlass"
+    case retroPixel = "retroPixel"
+    case liquidAurora = "liquidAurora"
+    case minimalBraun = "minimalBraun"
 
     public var id: String { rawValue }
 
@@ -102,6 +151,9 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .frostedGlass: return "Frosted Glass (Blur Pill)"
         case .neonHud: return "Cyberpunk HUD (Brackets)"
         case .seamlessGlass: return "Seamless Glass (No Border)"
+        case .retroPixel: return "8-Bit Retro Arcade (Pixel Strip)"
+        case .liquidAurora: return "Liquid Aurora (Dynamic Glow)"
+        case .minimalBraun: return "Braun Industrial (Studio Strip)"
         }
     }
 
@@ -112,6 +164,9 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .frostedGlass: return "GLASS"
         case .neonHud: return "HUD"
         case .seamlessGlass: return "SEAMLESS"
+        case .retroPixel: return "8-BIT"
+        case .liquidAurora: return "AURORA"
+        case .minimalBraun: return "STUDIO"
         }
     }
 
@@ -122,6 +177,9 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .frostedGlass: return "Apple-style translucent frosted blur pill."
         case .neonHud: return "Futuristic HUD with bracket accents and monospace telemetry."
         case .seamlessGlass: return "Borderless translucent frosted glass with smooth vertical roll-up lyrics and pure text focus."
+        case .retroPixel: return "Authentic 8-bit stepped pixel frame, monospaced typography, and dancing retro spectrum visualizer."
+        case .liquidAurora: return "Luxurious translucent glass with animated shifting multi-color aurora ambient glow behind lyrics."
+        case .minimalBraun: return "Ultra-clean Dieter Rams / Teenage Engineering audio monitor strip with live emerald recording dot."
         }
     }
 }
@@ -143,6 +201,7 @@ public enum FloatingLyricFontDesign: String, CaseIterable, Identifiable, Sendabl
 }
 
 public enum FloatingLyricTextColor: String, CaseIterable, Identifiable, Sendable {
+    case album = "album"
     case white = "white"
     case cyan = "cyan"
     case pink = "pink"
@@ -153,6 +212,7 @@ public enum FloatingLyricTextColor: String, CaseIterable, Identifiable, Sendable
 
     public var title: String {
         switch self {
+        case .album: return "Adaptive Album"
         case .white: return "Pure White"
         case .cyan: return "Cyber Cyan"
         case .pink: return "Neon Pink"
@@ -163,6 +223,7 @@ public enum FloatingLyricTextColor: String, CaseIterable, Identifiable, Sendable
 }
 
 public enum MusicProgressColor: String, CaseIterable, Identifiable, Sendable {
+    case album = "album"
     case theme = "theme"
     case white = "white"
     case cyan = "cyan"
@@ -174,6 +235,7 @@ public enum MusicProgressColor: String, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
+        case .album: return "Adaptive Album"
         case .theme: return "Match Theme"
         case .white: return "Pure White"
         case .cyan: return "Cyber Cyan"
@@ -225,7 +287,9 @@ enum SettingsKey {
     static let showCompactLyrics = "showCompactLyrics"
     static let musicHUDTheme = "musicHUDTheme"
     static let workspaceHUDTheme = "workspaceHUDTheme"
+    static let agentsHUDTheme = "agentsHUDTheme"
     static let musicHUDProgressColor = "musicHUDProgressColor"
+    static let syncThemeWithAlbumArt = "syncThemeWithAlbumArt"
     static let floatingLyricPreset = "floatingLyricPreset"
     static let floatingLyricFontSize = "floatingLyricFontSize"
     static let floatingLyricFontDesign = "floatingLyricFontDesign"
@@ -280,8 +344,14 @@ enum SettingsKey {
     // boolean autoExpandOnCompletion — see AppState.completionStyle migration.
     static let completionNotificationStyle = "completionNotificationStyle"
 
+    // Master Feature Toggles (Memory & Energy Optimization)
+    static let agentsEnabled = "agentsEnabled"
+    static let workspaceEnabled = "workspaceEnabled"
+    static let musicEnabled = "musicEnabled"
+
     // Prayer & Living Diorama Clock
     static let prayerEnabled = "prayerEnabled"
+    static let prayerCardDisplayMode = "prayerCardDisplayMode"
     static let prayerCalculationMethod = "prayerCalculationMethod"
     static let prayerHijriCalendarSource = "prayerHijriCalendarSource"
     static let prayerHijriDayOffset = "prayerHijriDayOffset"
@@ -401,7 +471,9 @@ struct SettingsDefaults {
     static let showCompactLyrics = true
     static let musicHUDTheme = MusicHUDTheme.modernClean.rawValue
     static let workspaceHUDTheme = WorkspaceHUDTheme.modern.rawValue
+    static let agentsHUDTheme = AgentsHUDTheme.pixelRetro.rawValue
     static let musicHUDProgressColor = MusicProgressColor.theme.rawValue
+    static let syncThemeWithAlbumArt = false
     static let floatingLyricPreset = FloatingLyricPreset.pureText.rawValue
     static let floatingLyricFontSize: Double = 10.0
     static let floatingLyricFontDesign = FloatingLyricFontDesign.rounded.rawValue
@@ -482,8 +554,14 @@ struct SettingsDefaults {
     static let pushSummaryLength = PushMessageFormatter.defaultSummaryLimit
     static let pushChannels = ""
 
+    // Master Feature Toggles (Memory & Energy Optimization)
+    static let agentsEnabled = true
+    static let workspaceEnabled = true
+    static let musicEnabled = true
+
     // Prayer & Living Diorama Clock
     static let prayerEnabled = false
+    static let prayerCardDisplayMode = PrayerCardDisplayMode.compact.rawValue
     static let prayerCalculationMethod = "kemenag"
     static let prayerHijriCalendarSource = "neoMABIMS"
     static let prayerHijriDayOffset = 0
@@ -536,7 +614,9 @@ class SettingsManager {
             SettingsKey.showCompactLyrics: SettingsDefaults.showCompactLyrics,
             SettingsKey.musicHUDTheme: SettingsDefaults.musicHUDTheme,
             SettingsKey.workspaceHUDTheme: SettingsDefaults.workspaceHUDTheme,
+            SettingsKey.agentsHUDTheme: SettingsDefaults.agentsHUDTheme,
             SettingsKey.musicHUDProgressColor: SettingsDefaults.musicHUDProgressColor,
+            SettingsKey.syncThemeWithAlbumArt: SettingsDefaults.syncThemeWithAlbumArt,
             SettingsKey.floatingLyricPreset: SettingsDefaults.floatingLyricPreset,
             SettingsKey.floatingLyricFontSize: SettingsDefaults.floatingLyricFontSize,
             SettingsKey.floatingLyricFontDesign: SettingsDefaults.floatingLyricFontDesign,
@@ -595,6 +675,10 @@ class SettingsManager {
             SettingsKey.pushSummaryLength: SettingsDefaults.pushSummaryLength,
             SettingsKey.pushChannels: SettingsDefaults.pushChannels,
             SettingsKey.prayerEnabled: SettingsDefaults.prayerEnabled,
+            SettingsKey.prayerCardDisplayMode: SettingsDefaults.prayerCardDisplayMode,
+            SettingsKey.agentsEnabled: SettingsDefaults.agentsEnabled,
+            SettingsKey.workspaceEnabled: SettingsDefaults.workspaceEnabled,
+            SettingsKey.musicEnabled: SettingsDefaults.musicEnabled,
             SettingsKey.prayerCalculationMethod: SettingsDefaults.prayerCalculationMethod,
             SettingsKey.prayerHijriCalendarSource: SettingsDefaults.prayerHijriCalendarSource,
             SettingsKey.prayerHijriDayOffset: SettingsDefaults.prayerHijriDayOffset,
