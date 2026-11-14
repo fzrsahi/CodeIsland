@@ -53,6 +53,52 @@ public struct MailItem: Identifiable, Equatable, Sendable {
         }
         return (trimmed, trimmed)
     }
+
+    /// Formats an ISO8601 date string from Apple Mail into relative English time (e.g. "2m ago", "1h ago", "yesterday")
+    public static func parseDateRelative(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed.lowercased() == "recent" { return "just now" }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]
+        var parsedDate = formatter.date(from: trimmed)
+
+        if parsedDate == nil {
+            let df = DateFormatter()
+            df.locale = Locale(identifier: "en_US_POSIX")
+            df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+            parsedDate = df.date(from: trimmed)
+        }
+
+        if parsedDate == nil {
+            let df2 = DateFormatter()
+            df2.locale = Locale(identifier: "en_US_POSIX")
+            df2.dateFormat = "yyyy-MM-dd HH:mm:ss"
+            parsedDate = df2.date(from: trimmed)
+        }
+
+        guard let date = parsedDate else {
+            return "just now"
+        }
+
+        let seconds = Int(Date().timeIntervalSince(date))
+        if seconds < 60 {
+            return "just now"
+        } else if seconds < 3600 {
+            let mins = max(1, seconds / 60)
+            return "\(mins)m ago"
+        } else if seconds < 86400 {
+            let hours = seconds / 3600
+            return "\(hours)h ago"
+        } else {
+            let days = seconds / 86400
+            if days == 1 {
+                return "yesterday"
+            } else {
+                return "\(days)d ago"
+            }
+        }
+    }
 }
 
 /// Central manager for Apple Mail integration via asynchronous AppleScript execution
@@ -172,7 +218,11 @@ public final class MailManager: ObservableObject {
                             set msgId to id of m as string
                             set msgSender to sender of m as string
                             set msgSubj to subject of m as string
-                            set mailList to mailList & msgId & "<|>" & msgSender & "<|>" & msgSubj & "<|>" & "Recent" & "<#LINE#>"
+                            set msgDate to "Recent"
+                            try
+                                set msgDate to (date received of m) as «class isot» as string
+                            end try
+                            set mailList to mailList & msgId & "<|>" & msgSender & "<|>" & msgSubj & "<|>" & msgDate & "<#LINE#>"
                         end if
                     end try
                 end repeat
@@ -220,7 +270,8 @@ public final class MailManager: ObservableObject {
             }
             let senderRaw = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
             let subject = fields[2].trimmingCharacters(in: .whitespacesAndNewlines)
-            let dateReceived = fields[3].trimmingCharacters(in: .whitespacesAndNewlines)
+            let rawDate = fields[3].trimmingCharacters(in: .whitespacesAndNewlines)
+            let dateReceived = MailItem.parseDateRelative(rawDate)
             let (name, email) = MailItem.parseSender(senderRaw)
 
             let item = MailItem(
