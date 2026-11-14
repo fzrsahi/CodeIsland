@@ -341,6 +341,62 @@ private struct ModernCleanMailHUDContentView: View {
     }
 }
 
+// MARK: - Pixel Circle Shape (Stepped 8-Bit Discrete Contour)
+
+/// An authentic 8-bit stepped pixel circle shape.
+/// Replaces continuous Bezier curves with discrete orthogonal staircase pixel steps.
+struct PixelCircleShape: Shape {
+    var step: CGFloat = 2.0
+
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width
+        let h = rect.height
+        let s = min(step, min(w, h) / 6.0)
+        let s2 = s * 2.0
+
+        var path = Path()
+        // Top edge
+        path.move(to: CGPoint(x: s2, y: 0))
+        path.addLine(to: CGPoint(x: w - s2, y: 0))
+
+        // Top-right corner steps
+        path.addLine(to: CGPoint(x: w - s2, y: s))
+        path.addLine(to: CGPoint(x: w - s, y: s))
+        path.addLine(to: CGPoint(x: w - s, y: s2))
+        path.addLine(to: CGPoint(x: w, y: s2))
+
+        // Right edge
+        path.addLine(to: CGPoint(x: w, y: h - s2))
+
+        // Bottom-right corner steps
+        path.addLine(to: CGPoint(x: w - s, y: h - s2))
+        path.addLine(to: CGPoint(x: w - s, y: h - s))
+        path.addLine(to: CGPoint(x: w - s2, y: h - s))
+        path.addLine(to: CGPoint(x: w - s2, y: h))
+
+        // Bottom edge
+        path.addLine(to: CGPoint(x: s2, y: h))
+
+        // Bottom-left corner steps
+        path.addLine(to: CGPoint(x: s2, y: h - s))
+        path.addLine(to: CGPoint(x: s, y: h - s))
+        path.addLine(to: CGPoint(x: s, y: h - s2))
+        path.addLine(to: CGPoint(x: 0, y: h - s2))
+
+        // Left edge
+        path.addLine(to: CGPoint(x: 0, y: s2))
+
+        // Top-left corner steps
+        path.addLine(to: CGPoint(x: s, y: s2))
+        path.addLine(to: CGPoint(x: s, y: s))
+        path.addLine(to: CGPoint(x: s2, y: s))
+        path.addLine(to: CGPoint(x: s2, y: 0))
+
+        path.closeSubpath()
+        return path
+    }
+}
+
 // MARK: - Retro Cyber Pixel Mail HUD Theme
 
 private struct RetroCyberMailHUDContentView: View {
@@ -396,17 +452,22 @@ private struct RetroCyberMailHUDContentView: View {
         let isHovered = hoveredMailId == mail.id
 
         return HStack(alignment: .center, spacing: 10) {
-            // 8-bit Pixel Profile Photo Avatar (Square with 1px border)
+            // 8-bit Stepped Pixel Circle Profile Avatar
             ZStack {
-                Color(red: 0.08, green: 0.10, blue: 0.14)
+                LinearGradient(
+                    colors: mail.avatarGradient,
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
                 Text(mail.avatarInitials)
                     .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(themeColor)
+                    .foregroundStyle(.white)
             }
             .frame(width: 22, height: 22)
+            .clipShape(PixelCircleShape(step: 2.2))
             .overlay(
-                Rectangle()
-                    .stroke(themeColor.opacity(0.40), lineWidth: 1)
+                PixelCircleShape(step: 2.2)
+                    .stroke(Color.white.opacity(0.30), lineWidth: 1.0)
             )
 
             // Sender & Subject (Max Line: 2, No Dot next to Recent)
@@ -439,8 +500,12 @@ private struct RetroCyberMailHUDContentView: View {
                         } label: {
                             PixelIcon(glyph: .checkmark, color: Color(red: 0.12, green: 0.84, blue: 0.38), pixelSize: 1.25)
                                 .frame(width: 20, height: 20)
-                                .background(Color.black)
-                                .overlay(Rectangle().stroke(Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.5), lineWidth: 1))
+                                .background(Color.black.opacity(0.85))
+                                .clipShape(PixelCircleShape(step: 2.0))
+                                .overlay(
+                                    PixelCircleShape(step: 2.0)
+                                        .stroke(Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.65), lineWidth: 1.0)
+                                )
                         }
                         .buttonStyle(.plain)
                         .help("Tandai sudah dibaca")
@@ -450,8 +515,12 @@ private struct RetroCyberMailHUDContentView: View {
                         } label: {
                             PixelIcon(glyph: .arrowUpRight, color: themeColor, pixelSize: 1.25)
                                 .frame(width: 20, height: 20)
-                                .background(Color.black)
-                                .overlay(Rectangle().stroke(themeColor.opacity(0.5), lineWidth: 1))
+                                .background(Color.black.opacity(0.85))
+                                .clipShape(PixelCircleShape(step: 2.0))
+                                .overlay(
+                                    PixelCircleShape(step: 2.0)
+                                        .stroke(themeColor.opacity(0.65), lineWidth: 1.0)
+                                )
                         }
                         .buttonStyle(.plain)
                         .help("Buka di Apple Mail")
