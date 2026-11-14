@@ -392,6 +392,9 @@ struct NotchPanelView: View {
     private var symmetricWingWidth: CGFloat {
         guard !shouldShowExpanded else { return expandedWingWidth }
 
+        let widthScaleMultiplier = CGFloat(Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))) / 100.0
+        let idleClearance: CGFloat = widthScaleMultiplier < 0.85 ? 16 : 22
+
         let isAgentActive = isThinking || appState.status != .idle || appState.currentTool != nil || appState.sessions.values.contains {
             $0.status == .processing || $0.status == .running || $0.currentTool != nil
         }
@@ -405,18 +408,28 @@ struct NotchPanelView: View {
             baseLeft = max(baseLeft, isPixel ? 176 : 162)
         } else if hasQuotaChip {
             baseLeft = max(baseLeft, quotaWingWidth)
+        } else {
+            baseLeft = compactWingWidth * min(1.0, max(0.85, widthScaleMultiplier))
         }
-        let neededLeft = max(baseLeft, leftWingWidth > 0 ? (leftWingWidth + 24) : 0)
+        let leftClearance: CGFloat = (isThinking || isToolVisible || hasQuotaChip) ? 24 : idleClearance
+        let neededLeft = max(baseLeft, leftWingWidth > 0 ? (leftWingWidth + leftClearance) : 0)
 
         // 2. Calculate required width for Right Wing (Music / Prayer / Actions)
         var baseRight: CGFloat = compactWingWidth
         if prayerManager.isPrayerPrioritized {
-            baseRight = max(baseRight, 130)
+            baseRight = max(baseRight, isHoveringRightWing ? 140 : 110)
         } else if signals.isPlaying {
-            baseRight = max(baseRight, 120)
+            if isHoveringRightWing {
+                baseRight = max(baseRight, isPixel ? 154 : 142)
+            } else {
+                let musicBase = isConnectedChinLyricActive ? 56.0 : 48.0
+                baseRight = max(baseRight, musicBase * min(1.0, max(0.85, widthScaleMultiplier)))
+            }
+        } else {
+            baseRight = compactWingWidth * min(1.0, max(0.85, widthScaleMultiplier))
         }
         if isHoveringRightWing {
-            baseRight = max(baseRight, 160)
+            baseRight = max(baseRight, 154)
         }
         if appState.glanceCompletionActive {
             baseRight += 26
@@ -424,7 +437,8 @@ struct NotchPanelView: View {
         if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion {
             baseRight += 26
         }
-        let neededRight = max(baseRight, rightWingWidth > 0 ? (rightWingWidth + 24) : 0)
+        let rightClearance: CGFloat = (isHoveringRightWing || isThinking || isToolVisible) ? 24 : idleClearance
+        let neededRight = max(baseRight, rightWingWidth > 0 ? (rightWingWidth + rightClearance) : 0)
 
         // 3. Take the maximum to preserve balanced Dynamic Island symmetry while guaranteeing ZERO clipping
         let targetWingWidth = max(neededLeft, neededRight)
@@ -610,6 +624,9 @@ struct NotchPanelView: View {
 
     @ViewBuilder
     private var activeCompactBar: some View {
+        let widthScaleMultiplier = CGFloat(Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))) / 100.0
+        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : (widthScaleMultiplier < 0.85 ? 10 : 14)
+
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 // Left Wing: Strictly isolated to Agents & Terminal status (aligned snug against notch)
@@ -622,7 +639,7 @@ struct NotchPanelView: View {
                     expandedTab: expandedTabBinding,
                     workspaceManager: workspaceManager
                 )
-                    .padding(.leading, shouldShowExpanded ? 12 : 14)
+                    .padding(.leading, wingOuterPadding)
                     .frame(
                         width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
                         alignment: .leading
@@ -651,7 +668,7 @@ struct NotchPanelView: View {
                     expandedWingWidth: expandedWingWidth,
                     isEnlarged: isConnectedChinLyricActive
                 )
-                    .padding(.trailing, shouldShowExpanded ? 12 : 14)
+                    .padding(.trailing, wingOuterPadding)
                     .frame(
                         width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
                         alignment: .trailing
