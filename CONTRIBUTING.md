@@ -89,6 +89,44 @@ When adding or modifying UI components:
 
 ---
 
+## 🔋 Performance benchmark
+
+CodeIsland stays on screen all day, so idle CPU, wakeups and memory matter as much as features. `scripts/perf/bench.sh` measures them against `scripts/perf/baseline.json`.
+
+**When to run it:** before opening a PR that touches views, animations, timers, polling or discovery. Put the before/after tables in the PR description.
+
+```bash
+scripts/perf/bench.sh                    # quick suite, ~6 min: idle, idle-prayer, working, music
+scripts/perf/bench.sh full               # + multi, stress, working-expanded, waiting-long
+scripts/perf/bench.sh --scenario music   # one scenario (repeatable)
+scripts/perf/bench.sh --no-build         # reuse .build/release/CodeIsland.app
+scripts/perf/bench.sh --soak 24          # footprint every 10 min for 24 h, then `leaks`
+```
+
+**What it does:** builds the release app, quits a running CodeIsland (it is relaunched at the end; `--keep-installed` skips this), then for each scenario launches an isolated instance (`CODEISLAND_ISOLATED=1`, its own hook socket, no hooks, no discovery) with `--preview <scenario>` and settings pinned on the command line. After a 15 s warm-up (65 s for `waiting-long`) it measures a 60 s window: CPU from the process's CPU time, idle wakeups and POWER from two `top` samples, memory from `vmmap`, the app's internal counters, then a 10 s `sample` of the main thread. Keep the Mac otherwise quiet while it runs; the report shows the load average so a noisy run is easy to spot.
+
+**Reading the report:** per scenario you get CPU %, idle wakeups/s, `top` POWER (the Energy Impact number), main-thread busy %, footprint at start/end/peak, RSS, counters per minute, and where the main thread spends its time.
+
+| Counter | Counts |
+| --- | --- |
+| `appleScriptExec.<target>` | NowPlaying AppleScript probes per player/browser |
+| `cleanupTickWork` | cleanup ticks that ran their sweep |
+| `discoveryScan` | session discovery scans |
+| `publishESP32` / `publishCompanion` | device flush attempts, connected or not |
+| `hostingLayoutPass` | layout passes of the panel's hosting view (≈ SwiftUI frames) |
+| `prayerTick` / `nowPlayingTick` | prayer and NowPlaying timer ticks |
+
+The counters are only on when the app is launched with `CODEISLAND_PERF_COUNTERS=<file.json>`; otherwise each call site is one nil check. Add a case to `PerfCounters.Name` when a new periodic job needs watching.
+
+**Pass/fail:**
+- *Regression* (always fails): a metric is above baseline × 1.25 **and** above the noise floor (CPU 0.5 pp, footprint 5 MB, wakeups 20/s, counters 2/min).
+- *Target* (✓/✗): fails only when its `"enforce": true` in `baseline.json`. Turn a target on in the PR that reaches it.
+- If the Mac model, macOS version or the set of running players/browsers differs from the baseline, regressions are skipped with a warning and only targets are checked. The baseline comes from one maintainer machine.
+
+**Updating the baseline:** after an intended change (or on a new reference machine), run `scripts/perf/bench.sh full --update-baseline`. It does 3 runs per scenario and stores the medians; commit `baseline.json` with the change that moved the numbers.
+
+---
+
 ## 📄 License
 CodeIsland is licensed under the [MIT License](LICENSE).
 Original upstream project by [wxtsky](https://github.com/wxtsky/CodeIsland).
