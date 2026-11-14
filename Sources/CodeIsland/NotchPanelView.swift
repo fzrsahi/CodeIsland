@@ -424,19 +424,32 @@ struct NotchPanelView: View {
         }
         if showIdleIndicator {
             let wing = idleHovered ? (compactWingWidth + 6) : compactWingWidth
+            if mailManager.showMiniPeekBanner && !appState.surface.isExpanded {
+                return max(nw + wing * 2, 355)
+            }
             return nw + wing * 2
         }
-        if !isActive { return nw }
+        if !isActive {
+            if mailManager.showMiniPeekBanner && !appState.surface.isExpanded {
+                return min(355, maxPanelWidth)
+            }
+            return nw
+        }
         if sys.showChargingBanner && !appState.surface.isExpanded {
             return min(320, maxPanelWidth)
         }
         // Mini peek banner width: sleek ~330pt when toast is showing while collapsed
-        if (nowPlaying.showToast || prayerManager.showMiniPeekBanner || mailManager.showMiniPeekBanner) && !appState.surface.isExpanded {
+        if (nowPlaying.showToast || prayerManager.showMiniPeekBanner) && !appState.surface.isExpanded {
             return min(330, maxPanelWidth)
         }
         let wing = symmetricWingWidth
         let clearance: CGFloat = 0
-        return nw + wing * 2 + clearance
+        let normalWidth = nw + wing * 2 + clearance
+        if mailManager.showMiniPeekBanner && !appState.surface.isExpanded {
+            // Keep wide top notch intact when agents or music are active; never shrink the top bar!
+            return max(normalWidth, 355)
+        }
+        return normalWidth
     }
 
     /// Room the collapsed right wing lacks to clear the notch; 0 whenever it fits.
