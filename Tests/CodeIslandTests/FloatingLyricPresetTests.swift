@@ -9,10 +9,13 @@ final class FloatingLyricPresetTests: XCTestCase {
             .capsule,
             .frostedGlass,
             .neonHud,
-            .seamlessGlass
+            .seamlessGlass,
+            .retroPixel,
+            .liquidAurora,
+            .minimalBraun
         ]
 
-        XCTAssertEqual(FloatingLyricPreset.allCases.count, 5)
+        XCTAssertEqual(FloatingLyricPreset.allCases.count, 8)
         for preset in expectedCases {
             XCTAssertTrue(FloatingLyricPreset.allCases.contains(preset))
             XCTAssertFalse(preset.title.isEmpty)

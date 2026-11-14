@@ -133,6 +133,9 @@ struct NotchPanelView: View {
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
 
@@ -370,8 +373,13 @@ struct NotchPanelView: View {
     private var symmetricWingWidth: CGFloat {
         guard !shouldShowExpanded else { return expandedWingWidth }
 
-        if isThinking {
-            return 148
+        let isAgentActive = isThinking || appState.status != .idle || appState.currentTool != nil || appState.sessions.values.contains {
+            $0.status == .processing || $0.status == .running || $0.currentTool != nil
+        }
+        let isToolVisible = showToolStatus && showAgentDetails && (isAgentActive || appState.currentTool != nil)
+
+        if isThinking || isToolVisible {
+            return isPixel ? 156 : 148
         }
         if isHoveringRightWing {
             return 154
@@ -382,9 +390,8 @@ struct NotchPanelView: View {
         }
         if signals.isPlaying {
             var width: CGFloat = 68
-            let isToolOrThinkingActive = isThinking || (showToolStatus && showAgentDetails && appState.status != .idle)
-            if isToolOrThinkingActive {
-                width = max(width, 142)
+            if isAgentActive || isToolVisible {
+                width = max(width, isPixel ? 156 : 148)
             }
             if isHoveringRightWing {
                 width = max(width, 124)
@@ -401,9 +408,8 @@ struct NotchPanelView: View {
             return width
         }
         var width: CGFloat = 88
-        let isToolActive = showToolStatus && showAgentDetails && appState.status != .idle
-        if isToolActive {
-            width = max(width, 142)
+        if isAgentActive || isToolVisible {
+            width = max(width, isPixel ? 156 : 148)
         }
         if hasQuotaChip {
             width = max(width, quotaWingWidth)
@@ -452,16 +458,14 @@ struct NotchPanelView: View {
             return nw + wing * 2
         }
         if !isActive { return nw }
+        let requiredActiveBarWidth = nw + symmetricWingWidth * 2
         if signals.showChargingBanner && !appState.surface.isExpanded {
-            return min(320, maxPanelWidth)
+            return min(max(320, requiredActiveBarWidth), maxPanelWidth)
         }
-        // Mini peek banner width: sleek ~330pt when toast is showing while collapsed
-        if (signals.showToast || signals.showMiniPeekBanner) && !appState.surface.isExpanded {
-            return min(330, maxPanelWidth)
+        if signals.showMiniPeekBanner && !appState.surface.isExpanded {
+            return min(max(330, requiredActiveBarWidth), maxPanelWidth)
         }
-        let wing = symmetricWingWidth
-        let clearance: CGFloat = 0
-        return nw + wing * 2 + clearance
+        return min(requiredActiveBarWidth, maxPanelWidth)
     }
 
     /// Room the collapsed right wing lacks to clear the notch; 0 whenever it fits.
@@ -1136,15 +1140,24 @@ private struct CompactLeftWing: View {
     @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
 
     private var displaySession: SessionSnapshot? {
-        let sid = appState.rotatingSessionId ?? appState.activeSessionId ?? appState.sessions.keys.sorted().first
-        guard let sid else { return nil }
-        return appState.sessions[sid]
+        if let sid = appState.rotatingSessionId, let s = appState.sessions[sid] {
+            return s
+        }
+        // Always prioritize the actively working agent (processing, running, or executing tool)
+        if let working = appState.sessions.values.first(where: {
+            $0.status == .processing || $0.status == .running || $0.currentTool != nil
+        }) {
+            return working
+        }
+        if let sid = appState.activeSessionId, let s = appState.sessions[sid] {
+            return s
+        }
+        if let firstSid = appState.sessions.keys.sorted().first {
+            return appState.sessions[firstSid]
+        }
+        return nil
     }
     private var displaySource: String {
-        // Honor user's configured default mascot whenever nothing is actively
-        // happening. Covers no-session and all-idle equally (#149) — without
-        // this, an idle session's source overrides the user preference.
-        if displayStatus == .idle { return settingsDefaultSource }
         // Prefer mascotSource so a Cursor/Codex session with empty hook source
         // still resolves via termBundleId instead of falling through to Clawd.
         if let s = displaySession {
@@ -1152,13 +1165,24 @@ private struct CompactLeftWing: View {
             if !resolved.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return resolved
             }
+            if !s.source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return s.source
+            }
+        }
+        if displayStatus == .idle && !isThinking && shownTool == nil {
+            return settingsDefaultSource
         }
         return appState.primarySource
     }
     private var displayStatus: AgentStatus { displaySession?.status ?? .idle }
-    /// The mascot shows the session's own status. Music used to force a
-    /// `.running` pose here, which spent frames on a pose that said nothing.
-    private var effectiveMascotStatus: MascotAgentStatus { displayStatus }
+    /// The mascot shows the session's active status.
+    /// When thinking or running a tool, show working animation instead of idle sleep.
+    private var effectiveMascotStatus: MascotAgentStatus {
+        if isThinking || shownTool != nil {
+            return (displayStatus == .running) ? .running : .processing
+        }
+        return displayStatus
+    }
 
     private var isThinking: Bool { appState.isThinking }
     private var liveTool: String? { displaySession?.currentTool }
@@ -1176,14 +1200,14 @@ private struct CompactLeftWing: View {
                 .transition(.opacity)
             } else {
                 ZStack {
-                    if signals.isPlaying && displayStatus == .idle {
+                    if signals.isPlaying && displayStatus == .idle && !isThinking && shownTool == nil {
                         // Neon beat aura when music is vibing: a CA layer pulsed
                         // by the render server, gated on the Music class. Held
                         // at mid-beat when the class may not animate.
                         CAMusicGlowView(kind: .aura, mascotSize: mascotSize,
                                       animating: animationGates.allows(.music))
                             .frame(width: mascotSize + 8, height: mascotSize + 8)
-                    } else if displayStatus == .idle {
+                    } else if displayStatus == .idle && !isThinking && shownTool == nil {
                         // Slow idle glow, same treatment under Ambient Idle.
                         CAMusicGlowView(kind: .breath, mascotSize: mascotSize,
                                       animating: animationGates.allows(.ambientIdle))
@@ -1191,11 +1215,14 @@ private struct CompactLeftWing: View {
                     }
 
                     MascotView(source: displaySource, status: effectiveMascotStatus, size: mascotSize)
-                        .id(displaySource)
+                        .frame(width: mascotSize, height: mascotSize)
+                        .fixedSize()
+                        .id("\(displaySource)-\(effectiveMascotStatus)")
                         .transition(.opacity)
                         .animation(.easeInOut(duration: 0.3), value: displaySource)
 
                 }
+                .fixedSize()
 
                 // Tool name or thinking indicator
                 if let tool = shownTool, showToolStatus && showAgentDetails {
@@ -1203,9 +1230,10 @@ private struct CompactLeftWing: View {
                         Image(systemName: "wrench.and.screwdriver.fill")
                             .font(.system(size: 7, weight: .bold))
                             .foregroundStyle(toolStatusColor(tool))
+                            .fixedSize()
                         if isPixel {
                             PixelText(
-                                text: ToolNameDisplay.compact(tool, maxCharacters: 18).uppercased(),
+                                text: ToolNameDisplay.compact(tool, maxCharacters: 16).uppercased(),
                                 color: toolStatusColor(tool),
                                 pixelSize: 1.05
                             )
@@ -1735,13 +1763,9 @@ private struct CompactRightWing: View {
                                 }
                             }
 
-                            if isPixel {
-                                PixelText(text: "▾", color: Color.white.opacity(0.50), pixelSize: 0.9)
-                            } else {
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 6.5, weight: .bold))
-                                    .foregroundStyle(Color.white.opacity(0.50))
-                            }
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 6.5, weight: .bold))
+                                .foregroundStyle(Color.white.opacity(0.50))
                         }
                         .padding(.horizontal, 6.5)
                         .padding(.vertical, 3)
@@ -7048,26 +7072,18 @@ private struct TypingIndicator: View {
                         let offsetFactor = Double(index) * 1.05
                         let dotColor = color ?? (isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 0.25, green: 0.9, blue: 0.8))
 
-                        Group {
-                            if isPixel {
-                                Rectangle()
-                                    .fill(dotColor)
-                                    .frame(width: max(3.5, fontSize * 0.35), height: max(3.5, fontSize * 0.35))
-                            } else {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                dotColor,
-                                                Color(red: 0.4, green: 0.75, blue: 1.0)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: max(3.5, fontSize * 0.32), height: max(3.5, fontSize * 0.32))
-                            }
-                        }
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        dotColor,
+                                        Color(red: 0.4, green: 0.75, blue: 1.0)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: max(3.5, fontSize * 0.32), height: max(3.5, fontSize * 0.32))
                         .offset(y: reduceMotion ? 0 : -1.8 * sin(dotPulse + offsetFactor))
                         .scaleEffect(reduceMotion ? 1.0 : (0.75 + 0.35 * sin(dotPulse + offsetFactor)))
                         .opacity(reduceMotion ? 0.8 : (0.4 + 0.6 * (0.5 + 0.5 * sin(dotPulse + offsetFactor))))
