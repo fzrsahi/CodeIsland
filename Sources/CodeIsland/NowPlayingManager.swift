@@ -623,18 +623,32 @@ final class NowPlayingManager: ObservableObject {
         }
     }
 
+    private var toastDismissWorkItem: DispatchWorkItem?
+
+    public func dismissToast() {
+        toastDismissWorkItem?.cancel()
+        toastDismissWorkItem = nil
+        toastDismissTimer?.invalidate()
+        toastDismissTimer = nil
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            showToast = false
+        }
+    }
+
     func triggerToast() {
         toastDismissTimer?.invalidate()
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
+        toastDismissTimer = nil
+        toastDismissWorkItem?.cancel()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             showToast = true
         }
-        toastDismissTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: false) { [weak self] _ in
-            Task { @MainActor in
-                withAnimation(.spring(response: 0.42, dampingFraction: 0.84)) {
-                    self?.showToast = false
-                }
+        let item = DispatchWorkItem { [weak self] in
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                self?.showToast = false
             }
         }
+        toastDismissWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: item)
     }
 
     public func triggerTestToast() {

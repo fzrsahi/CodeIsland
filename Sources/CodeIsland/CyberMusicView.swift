@@ -388,15 +388,17 @@ struct CyberMusicWingView: View {
     @ObservedObject var nowPlaying: NowPlayingManager
     var isHovered: Bool = false
     var isEnlarged: Bool = false
+    var wingWidth: CGFloat = 0
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
 
-    init(nowPlaying: NowPlayingManager, isHovered: Bool = false, isEnlarged: Bool = false) {
+    init(nowPlaying: NowPlayingManager, isHovered: Bool = false, isEnlarged: Bool = false, wingWidth: CGFloat = 0) {
         self.nowPlaying = nowPlaying
         self.isHovered = isHovered
         self.isEnlarged = isEnlarged
+        self.wingWidth = wingWidth
     }
 
     private var isModernClean: Bool {
@@ -449,10 +451,11 @@ struct CyberMusicWingView: View {
                         )
                 }
 
-                if isHovered {
+                if isHovered && (wingWidth == 0 || wingWidth >= 75) {
+                    let titleMaxW = max(36, min(isEnlarged ? 76 : 64, wingWidth > 0 ? (wingWidth - 44) : 64))
                     ModernMarqueeText(
                         text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
-                        maxWidth: isEnlarged ? 76 : 64
+                        maxWidth: titleMaxW
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
@@ -478,7 +481,6 @@ struct CyberMusicWingView: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(width: artSize, height: artSize)
                         .clipShape(RoundedRectangle(cornerRadius: isEnlarged ? 4.5 : 3.5, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: isEnlarged ? 4.5 : 3.5, style: .continuous).stroke(Color.white.opacity(0.2), lineWidth: 0.5))
                 } else {
                     RoundedRectangle(cornerRadius: isEnlarged ? 4.5 : 3.5, style: .continuous)
                         .fill(Color(red: 0.08, green: 0.09, blue: 0.12))
@@ -491,12 +493,13 @@ struct CyberMusicWingView: View {
                 }
 
                 // Title: Marquee scrolling text in retro monospace font (vertically centered, never truncated)
-                if isHovered {
+                if isHovered && (wingWidth == 0 || wingWidth >= 75) {
+                    let titleMaxW = max(36, min(isEnlarged ? 76 : 64, wingWidth > 0 ? (wingWidth - 44) : 64))
                     ModernMarqueeText(
                         text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
                         font: .system(size: isEnlarged ? 9.5 : 8.5, weight: .bold, design: .monospaced),
                         color: .white,
-                        maxWidth: isEnlarged ? 76 : 64
+                        maxWidth: titleMaxW
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
@@ -563,11 +566,7 @@ struct CyberMusicMiniPeekBanner: View {
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: 26, height: 26)
-                        .clipShape(RoundedRectangle(cornerRadius: isModernClean ? 6 : 2, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: isModernClean ? 6 : 2, style: .continuous)
-                                .stroke(isModernClean ? Color(white: 0.3) : Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), lineWidth: isModernClean ? 0.5 : 1)
-                        )
+                        .clipShape(RoundedRectangle(cornerRadius: isModernClean ? 6 : 3.5, style: .continuous))
                         .shadow(color: Color.black.opacity(0.4), radius: 3)
                 } else {
                     ZStack {
@@ -576,10 +575,10 @@ struct CyberMusicMiniPeekBanner: View {
                                 .fill(Color(white: 0.12))
                                 .frame(width: 26, height: 26)
                         } else {
-                            Rectangle()
-                                .fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.16))
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(Pixel16Palette.slot)
                                 .frame(width: 26, height: 26)
-                                .overlay(Rectangle().stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), lineWidth: 1))
+                                .pixel16Bevel(raised: false, fillColor: Pixel16Palette.slot)
                         }
 
                         Image(systemName: "music.note")
@@ -612,16 +611,15 @@ struct CyberMusicMiniPeekBanner: View {
 
                 // Close button
                 Button(action: {
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-                        nowPlaying.showToast = false
-                    }
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    nowPlaying.dismissToast()
                 }) {
                     ZStack {
                         if !isModernClean {
-                            Rectangle()
-                                .fill(Color.white.opacity(0.08))
+                            RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                                .fill(Pixel16Palette.surface)
                                 .frame(width: 16, height: 16)
-                                .overlay(Rectangle().stroke(Color.white.opacity(0.25), lineWidth: 0.6))
+                                .pixel16Bevel(raised: true, fillColor: Pixel16Palette.surface)
                         }
                         Image(systemName: "xmark")
                             .font(.system(size: 7.5, weight: .bold))
@@ -637,12 +635,11 @@ struct CyberMusicMiniPeekBanner: View {
                 Group {
                     if isModernClean {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.white.opacity(0.06))
-                            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 0.8))
+                            .fill(Color(white: 0.10).opacity(0.95))
                     } else {
-                        Rectangle()
-                            .fill(Color(red: 0.05, green: 0.07, blue: 0.10))
-                            .overlay(Rectangle().stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.55), lineWidth: 1))
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Pixel16Palette.chassis)
+                            .pixel16Bevel(raised: false, fillColor: Pixel16Palette.chassis)
                     }
                 }
             )

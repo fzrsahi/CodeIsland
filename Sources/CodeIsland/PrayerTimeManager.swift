@@ -468,23 +468,28 @@ public final class PrayerTimeManager: ObservableObject {
     }
 
     // MARK: - Mini Peek Toast Banner & Agent Suppression
+    private var bannerDismissWorkItem: DispatchWorkItem?
 
     public func dismissMiniPeekBanner() {
-        showMiniPeekBanner = false
+        bannerDismissWorkItem?.cancel()
+        bannerDismissWorkItem = nil
         bannerDismissTask?.cancel()
         bannerDismissTask = nil
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            self.showMiniPeekBanner = false
+        }
     }
 
     private func scheduleBannerAutoDismiss() {
+        bannerDismissWorkItem?.cancel()
         bannerDismissTask?.cancel()
-        bannerDismissTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 6_000_000_000)
-            if !Task.isCancelled {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    self.showMiniPeekBanner = false
-                }
+        let item = DispatchWorkItem { [weak self] in
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                self?.showMiniPeekBanner = false
             }
         }
+        bannerDismissWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: item)
     }
 
     /// Evaluates if banner should pop up, deferring if an agent approval or question dialog is currently visible.

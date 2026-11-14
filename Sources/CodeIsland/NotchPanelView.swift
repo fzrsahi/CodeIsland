@@ -289,30 +289,7 @@ struct NotchPanelView: View {
         (signals.showToast || signals.showMiniPeekBanner || signals.showChargingBanner) && !appState.surface.isExpanded
     }
 
-    private func triggerMusicAutoPeek() {
-        guard !appState.surface.isPrompting else { return }
-        musicAutoCollapseTimer?.invalidate()
-        musicDeferCollapseOnMouseLeave = false
 
-        withAnimation(NotchAnimation.open) {
-            appState.transitionToTab(.music)
-            appState.surface = .sessionList
-        }
-
-        musicAutoCollapseTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
-            Task { @MainActor in
-                if isHovered || appState.followUps.pointerOverIsland {
-                    musicDeferCollapseOnMouseLeave = true
-                } else {
-                    withAnimation(NotchAnimation.close) {
-                        if appState.surface == .sessionList && expandedTab == .music {
-                            appState.surface = .collapsed
-                        }
-                    }
-                }
-            }
-        }
-    }
     private var isBarVisible: Bool {
         showBar || shouldShowExpanded || showIdleIndicator || isToastOnly
     }
@@ -390,6 +367,7 @@ struct NotchPanelView: View {
 
     /// Symmetrical wing width calculated dynamically — guarantees zero clipping against notch corner curves
     /// and scales adaptively across all phases based on the Island Width setting (0% - 200%).
+    /// Never exceeds safe menu-bar bounds, ensuring the island NEVER overlaps macOS menu items.
     private var symmetricWingWidth: CGFloat {
         guard !shouldShowExpanded else { return expandedWingWidth }
 
@@ -404,84 +382,58 @@ struct NotchPanelView: View {
         // 1. Natural width required for Left Wing in each phase (Agent Mascot + Tool / Thinking / Quota)
         var naturalLeft: CGFloat = compactWingWidth
         if isThinking {
-            naturalLeft = max(naturalLeft, isPixel ? 168 : 156)
+            naturalLeft = max(naturalLeft, isPixel ? 104 : 96)
         } else if isToolVisible {
-            naturalLeft = max(naturalLeft, isPixel ? 176 : 162)
+            naturalLeft = max(naturalLeft, isPixel ? 116 : 108)
         } else if hasQuotaChip {
             naturalLeft = max(naturalLeft, quotaWingWidth)
         }
-        let contentLeft = leftWingWidth > 0 ? (leftWingWidth + 28) : naturalLeft
-        let effectiveNaturalLeft = max(naturalLeft, contentLeft)
+        let contentLeft = leftWingWidth > 0 ? (leftWingWidth + 14) : naturalLeft
+        let effectiveNaturalLeft = max(naturalLeft, min(contentLeft, 126))
 
         // 2. Natural width required for Right Wing in each phase (Music / Prayer / Actions)
         var naturalRight: CGFloat = compactWingWidth
         if prayerManager.isPrayerPrioritized {
-            naturalRight = max(naturalRight, isHoveringRightWing ? 140 : 110)
+            naturalRight = max(naturalRight, isHoveringRightWing ? 115 : 85)
         } else if signals.isPlaying {
-            if isHoveringRightWing || isThinking {
-                naturalRight = max(naturalRight, isPixel ? 154 : 142)
+            if isHoveringRightWing {
+                naturalRight = max(naturalRight, isPixel ? 116 : 108)
             } else {
-                naturalRight = max(naturalRight, isConnectedChinLyricActive ? 56 : 48)
+                naturalRight = max(naturalRight, isConnectedChinLyricActive ? 52 : 44)
             }
         }
         if isHoveringRightWing {
-            naturalRight = max(naturalRight, 154)
+            naturalRight = max(naturalRight, 115)
         }
         if appState.glanceCompletionActive {
-            naturalRight += 26
+            naturalRight += 18
         }
         if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion {
-            naturalRight += 26
+            naturalRight += 18
         }
-        let contentRight = rightWingWidth > 0 ? (rightWingWidth + 28) : naturalRight
-        let effectiveNaturalRight = max(naturalRight, contentRight)
+        let contentRight = rightWingWidth > 0 ? (rightWingWidth + 14) : naturalRight
+        let effectiveNaturalRight = max(naturalRight, min(contentRight, 126))
 
         // 3. Balanced Dynamic Island natural width for current phase
         let naturalPhaseWidth = max(effectiveNaturalLeft, effectiveNaturalRight)
 
-        // 4. HARD ZERO-CLIPPING GUARANTEE:
-        // Sizing never shrinks below the state-based floor or laid-out geometry of either wing,
-        // ensuring RUN_COMMAND, THINKING, track titles, and mascot are NEVER clipped at ANY slider setting (0%-200%).
-        let safeClearance: CGFloat = isPixel ? 28 : 24
-
-        var stateFloorLeft: CGFloat = compactWingWidth
-        if isThinking {
-            stateFloorLeft = max(stateFloorLeft, isPixel ? 168 : 156)
-        } else if isToolVisible {
-            stateFloorLeft = max(stateFloorLeft, isPixel ? 176 : 162)
-        } else if hasQuotaChip {
-            stateFloorLeft = max(stateFloorLeft, quotaWingWidth)
-        }
-        let minLeftToAvoidClipping = max(stateFloorLeft, leftWingWidth > 0 ? (leftWingWidth + safeClearance) : 0)
-
-        var stateFloorRight: CGFloat = isConnectedChinLyricActive ? 42 : 36
-        if prayerManager.isPrayerPrioritized {
-            stateFloorRight = max(stateFloorRight, isHoveringRightWing ? 140 : 110)
-        } else if signals.isPlaying {
-            if isHoveringRightWing || isThinking {
-                stateFloorRight = max(stateFloorRight, isPixel ? 154 : 142)
-            } else {
-                stateFloorRight = max(stateFloorRight, isConnectedChinLyricActive ? 52 : 44)
-            }
-        }
-        let minRightToAvoidClipping = max(stateFloorRight, rightWingWidth > 0 ? (rightWingWidth + safeClearance) : 0)
-
-        let hardNonClippingFloor = max(minLeftToAvoidClipping, minRightToAvoidClipping)
+        // 4. Absolute compact floor at 0% slider (fits mascot / essential indicators cleanly)
+        let absoluteMinimumWing: CGFloat = 36
 
         // 5. Scale adaptively across all phases based on user's Island Width setting (0% - 200%)
         let scaledWingWidth: CGFloat = {
             if widthScaleFactor >= 1.0 {
-                return naturalPhaseWidth + (naturalPhaseWidth * (widthScaleFactor - 1.0) * 0.75)
+                return naturalPhaseWidth + (naturalPhaseWidth * (widthScaleFactor - 1.0) * 0.6)
             } else {
-                let lowerBound = min(hardNonClippingFloor, naturalPhaseWidth)
-                return lowerBound + (naturalPhaseWidth - lowerBound) * widthScaleFactor
+                return absoluteMinimumWing + (naturalPhaseWidth - absoluteMinimumWing) * widthScaleFactor
             }
         }()
 
-        let effectiveWingWidth = max(scaledWingWidth, hardNonClippingFloor)
-
-        let maxSingleWingWidth = max(0, (maxPanelWidth - effectiveNotchW) / 2)
-        return min(effectiveWingWidth, maxSingleWingWidth)
+        // 6. Absolute safe ceiling to guarantee it NEVER collides with the macOS menu bar:
+        // Collapsed bar width must never crowd the left/right screen menus.
+        let maxSafeCollapsedBarWidth = min(screenWidth * 0.38, 440)
+        let maxSingleWingWidth = max(absoluteMinimumWing, (maxSafeCollapsedBarWidth - effectiveNotchW) / 2)
+        return min(scaledWingWidth, maxSingleWingWidth)
     }
 
     /// Notch cutout reserved in the center of the expanded header.
@@ -529,7 +481,11 @@ struct NotchPanelView: View {
         if signals.showMiniPeekBanner && !appState.surface.isExpanded {
             return min(max(330, requiredActiveBarWidth), maxPanelWidth)
         }
-        return min(requiredActiveBarWidth, maxPanelWidth)
+        if signals.showToast && !appState.surface.isExpanded {
+            return min(max(320, requiredActiveBarWidth), maxPanelWidth)
+        }
+        let maxSafeCollapsed = min(screenWidth * 0.38, 440)
+        return min(requiredActiveBarWidth, maxSafeCollapsed)
     }
 
     /// Room the collapsed right wing lacks to clear the notch; 0 whenever it fits.
@@ -662,7 +618,7 @@ struct NotchPanelView: View {
 
     @ViewBuilder
     private var activeCompactBar: some View {
-        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : 14
+        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : (symmetricWingWidth < 46 ? 6 : (symmetricWingWidth < 60 ? 9 : 14))
 
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -674,7 +630,8 @@ struct NotchPanelView: View {
                     hasNotch: hasNotch,
                     showToolStatus: showToolStatus,
                     expandedTab: expandedTabBinding,
-                    workspaceManager: workspaceManager
+                    workspaceManager: workspaceManager,
+                    wingWidth: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth
                 )
                     .padding(.leading, wingOuterPadding)
                     .frame(
@@ -703,7 +660,8 @@ struct NotchPanelView: View {
                     expandedTab: expandedTabBinding,
                     workspaceManager: workspaceManager,
                     expandedWingWidth: expandedWingWidth,
-                    isEnlarged: isConnectedChinLyricActive
+                    isEnlarged: isConnectedChinLyricActive,
+                    wingWidth: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth
                 )
                     .padding(.trailing, wingOuterPadding)
                     .frame(
@@ -794,126 +752,7 @@ struct NotchPanelView: View {
 
                 // Below-notch expanded content
                 if shouldShowExpanded || isToastOnly || signals.showChargingBanner {
-                    if signals.showChargingBanner && !appState.surface.isExpanded {
-                        // MagSafe Dynamic Island Charging Notification
-                        MagSafeChargingBanner(batteryLevel: signals.batteryLevel)
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .top).combined(with: .opacity),
-                                removal: .move(edge: .top).combined(with: .opacity)
-                            ))
-                    } else if signals.showMiniPeekBanner && !appState.surface.isExpanded {
-                        // PRAYER MINI PEEK BANNER: Buka tipis saat T-10m & saat masuk waktu salat
-                        PrayerMiniPeekBannerView(manager: prayerManager) {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                appState.transitionToTab(.prayer)
-                                appState.surface = .sessionList
-                            }
-                        }
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .top).combined(with: .opacity),
-                            removal: .move(edge: .top).combined(with: .opacity)
-                        ))
-                    } else {
-                        // High-priority cards always take precedence over secondary tabs
-                        switch appState.surface {
-                        case .approvalCard(let sid):
-                            // Card is addressed by session — render that session's
-                            // request, not whatever is at the head of the queue. (#308)
-                            if let pending = appState.pendingPermission(forSession: sid) {
-                                let session = appState.sessions[sid]
-                                ApprovalBar(
-                                    tool: pending.event.toolName ?? "Unknown",
-                                    toolInput: pending.event.toolInput,
-                                    queuePosition: appState.permissionQueuePosition(forSession: sid),
-                                    queueTotal: appState.permissionQueue.count,
-                                    session: session,
-                                    sessionId: sid,
-                                    appState: appState,
-                                    alwaysScope: ApprovalAlwaysScope(for: pending.event),
-                                    onAllow: { appState.approvePermission(always: false, expectedSessionId: sid) },
-                                    onAlwaysAllow: { appState.approvePermission(always: true, expectedSessionId: sid) },
-                                    onDeny: { appState.denyPermission(expectedSessionId: sid) },
-                                    onDismiss: { appState.dismissPermissionPrompt(expectedSessionId: sid) }
-                                )
-                                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
-                            }
-                        case .questionCard(let sid):
-                            let session = appState.sessions[sid]
-                            if let q = appState.pendingQuestion(forSession: sid) {
-                                QuestionBar(
-                                    question: q.question.question,
-                                    options: q.question.options,
-                                    descriptions: q.question.descriptions,
-                                    allQuestions: q.askUserQuestionState?.items ?? [],
-                                    requestId: q.id,
-                                    sessionSource: session?.source,
-                                    sessionContext: session?.cwd,
-                                    session: session,
-                                    sessionId: sid,
-                                    appState: appState,
-                                    queuePosition: appState.questionQueuePosition(forSession: sid),
-                                    queueTotal: appState.questionQueue.count,
-                                    onAnswer: { appState.answerQuestion($0, expectedSessionId: sid) },
-                                    onAnswerMulti: { appState.answerQuestionMulti($0, expectedSessionId: sid) },
-                                    onSkip: { appState.skipQuestion(expectedSessionId: sid) },
-                                    onDismiss: { appState.dismissQuestion(expectedSessionId: sid) }
-                                )
-                                // One view per request. Answering a card promotes the
-                                // next session's request into this same slot, and
-                                // without a new identity SwiftUI hands it the previous
-                                // card's @State — answers, selection and typed text
-                                // included. (#333)
-                                .id(q.id)
-                                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
-                            } else if let preview = appState.previewQuestionPayload {
-                                QuestionBar(
-                                    question: preview.question,
-                                    options: preview.options,
-                                    descriptions: preview.descriptions,
-                                    allQuestions: [],
-                                    requestId: nil,
-                                    sessionSource: session?.source,
-                                    sessionContext: session?.cwd,
-                                    session: session,
-                                    sessionId: sid,
-                                    appState: appState,
-                                    queuePosition: 1,
-                                    queueTotal: 1,
-                                    onAnswer: { _ in },
-                                    onAnswerMulti: { _ in },
-                                    onSkip: { },
-                                    onDismiss: { }
-                                )
-                                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
-                            }
-                        case .completionCard:
-                            SessionListView(appState: appState, onlySessionId: appState.justCompletedSessionId)
-                                .transition(.blurFade.combined(with: .move(edge: .top)))
-                        case .quickPrompt:
-                            CyberQuickPromptView(appState: appState)
-                                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
-                        case .sessionList:
-                            // Priority 2: General expanded surface respects expandedTab (Music, Workspace, Prayer, or Agent SessionList)
-                            ZStack(alignment: .top) {
-                                switch expandedTab {
-                                case .music:
-                                    CyberMusicHUDView(nowPlaying: nowPlaying, appState: appState)
-                                        .transition(tabContentTransition)
-                                case .workspace:
-                                    CyberWorkspaceView(manager: workspaceManager, appState: appState)
-                                        .transition(tabContentTransition)
-                                case .prayer:
-                                    PrayerExpandedCardView(manager: prayerManager)
-                                        .transition(tabContentTransition)
-                                case .agents:
-                                    SessionListView(appState: appState, onlySessionId: nil)
-                                        .transition(tabContentTransition)
-                                }
-                            }
-                        case .collapsed:
-                            EmptyView()
-                        }
-                    }
+                    belowNotchContent
                 }
             }
             .recordsCompletionCardChrome(in: cardSpace)
@@ -923,13 +762,8 @@ struct NotchPanelView: View {
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: shouldShowExpanded)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showToast)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showMiniPeekBanner)
-            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: isThinking)
-            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
-            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: signals.isPlaying)
-            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: isConnectedChinLyricActive)
-            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: effectiveNotchHeight)
+            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showChargingBanner)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: expandedTab)
-            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: signals.isDetailExpanded)
             .background(
                 Group {
                     if appState.isFullscreenMode {
@@ -982,16 +816,7 @@ struct NotchPanelView: View {
                 displayedToolStatus = showToolStatus
                 prayerManager.appState = appState
             }
-            .onChange(of: signals.musicTitle) { oldTitle, newTitle in
-                if !newTitle.isEmpty && newTitle != oldTitle && signals.isPlaying {
-                    triggerMusicAutoPeek()
-                }
-            }
-            .onChange(of: signals.showToast) { _, isToast in
-                if isToast && signals.isPlaying && signals.hasTitle {
-                    triggerMusicAutoPeek()
-                }
-            }
+
             .onChange(of: signals.isPlaying) { _, isPlaying in
                 if isPlaying && expandedTab == .music && appState.surface.isExpanded {
                     appState.transitionToTab(.music)
@@ -1227,6 +1052,144 @@ struct NotchPanelView: View {
         .environment(\.mascotAnimationEpoch, animationGate.epoch)
         .animation(NotchAnimation.open, value: appState.surface)
     }
+
+    // MARK: - Below-Notch Dynamic Island Banners & Expanded Cards
+
+    @ViewBuilder
+    private var belowNotchContent: some View {
+        if signals.showChargingBanner && !appState.surface.isExpanded {
+            // MagSafe Dynamic Island Charging Notification
+            MagSafeChargingBanner(batteryLevel: signals.batteryLevel) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    sys.dismissChargingBanner()
+                }
+            }
+            .transition(.asymmetric(
+                insertion: .move(edge: .top).combined(with: .opacity),
+                removal: .move(edge: .top).combined(with: .opacity)
+            ))
+        } else if signals.showMiniPeekBanner && !appState.surface.isExpanded {
+            // PRAYER MINI PEEK BANNER: Buka tipis saat T-10m & saat masuk waktu salat
+            PrayerMiniPeekBannerView(manager: prayerManager) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    appState.transitionToTab(.prayer)
+                    appState.surface = .sessionList
+                }
+            }
+            .transition(.asymmetric(
+                insertion: .move(edge: .top).combined(with: .opacity),
+                removal: .move(edge: .top).combined(with: .opacity)
+            ))
+        } else if signals.showToast && !appState.surface.isExpanded {
+            // Music Track Change Mini Peek Banner
+            CyberMusicMiniPeekBanner(nowPlaying: nowPlaying) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    appState.transitionToTab(.music)
+                    appState.surface = .sessionList
+                }
+            }
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .opacity),
+                    removal: .move(edge: .top).combined(with: .opacity)
+                ))
+        } else {
+            expandedSurfaceContent
+        }
+    }
+
+    @ViewBuilder
+    private var expandedSurfaceContent: some View {
+        switch appState.surface {
+        case .approvalCard(let sid):
+            if let pending = appState.pendingPermission(forSession: sid) {
+                let session = appState.sessions[sid]
+                ApprovalBar(
+                    tool: pending.event.toolName ?? "Unknown",
+                    toolInput: pending.event.toolInput,
+                    queuePosition: appState.permissionQueuePosition(forSession: sid),
+                    queueTotal: appState.permissionQueue.count,
+                    session: session,
+                    sessionId: sid,
+                    appState: appState,
+                    alwaysScope: ApprovalAlwaysScope(for: pending.event),
+                    onAllow: { appState.approvePermission(always: false, expectedSessionId: sid) },
+                    onAlwaysAllow: { appState.approvePermission(always: true, expectedSessionId: sid) },
+                    onDeny: { appState.denyPermission(expectedSessionId: sid) },
+                    onDismiss: { appState.dismissPermissionPrompt(expectedSessionId: sid) }
+                )
+                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
+            }
+        case .questionCard(let sid):
+            let session = appState.sessions[sid]
+            if let q = appState.pendingQuestion(forSession: sid) {
+                QuestionBar(
+                    question: q.question.question,
+                    options: q.question.options,
+                    descriptions: q.question.descriptions,
+                    allQuestions: q.askUserQuestionState?.items ?? [],
+                    requestId: q.id,
+                    sessionSource: session?.source,
+                    sessionContext: session?.cwd,
+                    session: session,
+                    sessionId: sid,
+                    appState: appState,
+                    queuePosition: appState.questionQueuePosition(forSession: sid),
+                    queueTotal: appState.questionQueue.count,
+                    onAnswer: { appState.answerQuestion($0, expectedSessionId: sid) },
+                    onAnswerMulti: { appState.answerQuestionMulti($0, expectedSessionId: sid) },
+                    onSkip: { appState.skipQuestion(expectedSessionId: sid) },
+                    onDismiss: { appState.dismissQuestion(expectedSessionId: sid) }
+                )
+                .id(q.id)
+                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
+            } else if let preview = appState.previewQuestionPayload {
+                QuestionBar(
+                    question: preview.question,
+                    options: preview.options,
+                    descriptions: preview.descriptions,
+                    allQuestions: [],
+                    requestId: nil,
+                    sessionSource: session?.source,
+                    sessionContext: session?.cwd,
+                    session: session,
+                    sessionId: sid,
+                    appState: appState,
+                    queuePosition: 1,
+                    queueTotal: 1,
+                    onAnswer: { _ in },
+                    onAnswerMulti: { _ in },
+                    onSkip: { },
+                    onDismiss: { }
+                )
+                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
+            }
+        case .completionCard:
+            SessionListView(appState: appState, onlySessionId: appState.justCompletedSessionId)
+                .transition(.blurFade.combined(with: .move(edge: .top)))
+        case .quickPrompt:
+            CyberQuickPromptView(appState: appState)
+                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
+        case .sessionList:
+            ZStack(alignment: .top) {
+                switch expandedTab {
+                case .music:
+                    CyberMusicHUDView(nowPlaying: nowPlaying, appState: appState)
+                        .transition(tabContentTransition)
+                case .workspace:
+                    CyberWorkspaceView(manager: workspaceManager, appState: appState)
+                        .transition(tabContentTransition)
+                case .prayer:
+                    PrayerExpandedCardView(manager: prayerManager)
+                        .transition(tabContentTransition)
+                case .agents:
+                    SessionListView(appState: appState, onlySessionId: nil)
+                        .transition(tabContentTransition)
+                }
+            }
+        case .collapsed:
+            EmptyView()
+        }
+    }
 }
 
 
@@ -1242,6 +1205,7 @@ private struct CompactLeftWing: View {
     @Binding var expandedTab: ExpandedContentTab
     @Environment(\.animationGates) private var animationGates
     var workspaceManager: WorkspaceMonitorManager? = nil
+    var wingWidth: CGFloat = 0
     private let nowPlaying = NowPlayingManager.shared
     private let signals = IslandSignals.shared
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
@@ -1378,45 +1342,68 @@ private struct CompactLeftWing: View {
                 .fixedSize()
 
                 // Tool name or thinking indicator
+                let availableForTool: CGFloat = wingWidth > 0 ? max(0, wingWidth - mascotSize - 20) : 110
+
                 if let tool = shownTool, showToolStatus && showAgentDetails {
-                    HStack(spacing: 3) {
-                        Image(systemName: "wrench.and.screwdriver.fill")
-                            .font(.system(size: 7, weight: .bold))
-                            .foregroundStyle(effectiveToolColor(tool))
-                            .fixedSize()
-                        if isPixel {
-                            PixelText(
-                                text: ToolNameDisplay.compact(tool, maxCharacters: 16).uppercased(),
-                                color: effectiveToolColor(tool),
-                                pixelSize: 1.05
-                            )
-                        } else {
-                            Text(ToolNameDisplay.compact(tool))
-                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    if availableForTool >= 14 {
+                        HStack(spacing: 3) {
+                            Image(systemName: "wrench.and.screwdriver.fill")
+                                .font(.system(size: 7, weight: .bold))
                                 .foregroundStyle(effectiveToolColor(tool))
-                                .lineLimit(1)
-                                .truncationMode(.middle)
+                                .fixedSize()
+                            if availableForTool >= 34 {
+                                let maxChars: Int = {
+                                    if availableForTool >= 75 { return 16 }
+                                    if availableForTool >= 50 { return 8 }
+                                    return 4
+                                }()
+                                if isPixel {
+                                    PixelText(
+                                        text: ToolNameDisplay.compact(tool, maxCharacters: maxChars).uppercased(),
+                                        color: effectiveToolColor(tool),
+                                        pixelSize: 1.05
+                                    )
+                                } else {
+                                    Text(ToolNameDisplay.compact(tool, maxCharacters: maxChars))
+                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(effectiveToolColor(tool))
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                }
+                            }
                         }
+                        .frame(maxWidth: max(14, availableForTool), alignment: .leading)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.9)),
+                            removal: .opacity
+                        ))
+                        .help(tool)
                     }
-                    .frame(maxWidth: isPixel ? 110 : 86, alignment: .leading)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.9)),
-                        removal: .opacity
-                    ))
-                    .help(tool)
                 } else if isThinking {
-                    TypingIndicator(
-                        fontSize: 9,
-                        label: L10n.shared["typing_thinking"],
-                        bright: true,
-                        color: effectiveThinkingColor,
-                        showDots: true
-                    )
-                    .fixedSize(horizontal: true, vertical: false)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.9)),
-                        removal: .opacity
-                    ))
+                    if availableForTool >= 40 {
+                        TypingIndicator(
+                            fontSize: 9,
+                            label: L10n.shared["typing_thinking"],
+                            bright: true,
+                            color: effectiveThinkingColor,
+                            showDots: true
+                        )
+                        .fixedSize(horizontal: true, vertical: false)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.9)),
+                            removal: .opacity
+                        ))
+                    } else if availableForTool >= 14 {
+                        TypingIndicator(
+                            fontSize: 9,
+                            label: "",
+                            bright: true,
+                            color: effectiveThinkingColor,
+                            showDots: true
+                        )
+                        .fixedSize(horizontal: true, vertical: false)
+                        .transition(.opacity)
+                    }
                 } else if !nowPlaying.isPlaying && showAgentDetails,
                           let limit = QuotaChip.limit(appState: appState, enabled: showClaudeQuota, modeRaw: claudeQuotaChip),
                           let snapshot = appState.claudeQuota.snapshot {
@@ -1552,6 +1539,7 @@ private struct CompactRightWing: View {
     let workspaceManager: WorkspaceMonitorManager
     var expandedWingWidth: CGFloat = 240
     var isEnlarged: Bool = false
+    var wingWidth: CGFloat = 0
     @Environment(\.animationGates) private var animationGates
     @ObservedObject private var l10n = L10n.shared
     private let nowPlaying = NowPlayingManager.shared
@@ -1631,7 +1619,7 @@ private struct CompactRightWing: View {
     /// ran on each render of the bar.
     private var isThinking: Bool { appState.isThinking }
     private var shouldExpandRightWing: Bool {
-        isHovered || isThinking
+        isHovered
     }
 
     var body: some View {
@@ -1661,7 +1649,7 @@ private struct CompactRightWing: View {
                     }
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else if signals.isPlaying {
-                    CyberMusicWingView(nowPlaying: nowPlaying, isHovered: shouldExpandRightWing, isEnlarged: isEnlarged)
+                    CyberMusicWingView(nowPlaying: nowPlaying, isHovered: shouldExpandRightWing, isEnlarged: isEnlarged, wingWidth: wingWidth)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 } else {
                     // AGENT / STANDBY MODE:

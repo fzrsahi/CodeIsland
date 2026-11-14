@@ -68,77 +68,55 @@ struct NotchVolumeHUDView: View {
         .help("Click to toggle mute")
     }
 
-    // MARK: - 1. Pixel Retro 16-Bit Hi-Fi Meter HUD
+    // MARK: - 1. Pixel Retro 16-Bit Hi-Fi Meter HUD (Lineless)
 
     private var pixelVolumeHUD: some View {
         let totalBlocks = 12
         let filledBlocks = volumeManager.isMuted ? 0 : max(0, min(totalBlocks, Int(round(Double(volumeManager.volume) * Double(totalBlocks)))))
 
-        return HStack(spacing: 7) {
-            // 8-Bit Pixel Speaker Box
+        return HStack(spacing: 8) {
+            // Recessed Speaker Icon Slot
             ZStack {
-                Rectangle()
-                    .fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.16))
-                    .frame(width: 20, height: 20)
-                    .overlay(
-                        Rectangle()
-                            .stroke(volumeManager.isMuted ? Color(red: 1.0, green: 0.25, blue: 0.35) : Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), lineWidth: 0.8)
-                    )
-
                 Image(systemName: speakerIconName)
                     .font(.system(size: 9.5, weight: .black))
                     .foregroundStyle(speakerIconColor)
             }
+            .frame(width: 20, height: 20)
+            .pixel16Bevel(raised: false, cornerRadius: 3.5, fillColor: Pixel16Palette.slot)
 
-            // 12-Segment Discrete Hi-Fi Equalizer Meter
+            // 12-Segment Discrete Solid Hi-Fi LED Meter (Lineless)
             HStack(spacing: 2) {
                 ForEach(0..<totalBlocks, id: \.self) { idx in
                     let isFilled = idx < filledBlocks
                     let blockColor: Color = {
                         if idx >= 10 {
-                            return Color(red: 1.0, green: 0.20, blue: 0.35) // High volume warning (red/pink)
+                            return Pixel16Palette.red // High volume peak
                         } else if idx >= 8 {
-                            return Color(red: 1.0, green: 0.80, blue: 0.15) // Mid-high (amber)
+                            return Pixel16Palette.amber // Mid-high warning
                         } else {
-                            return activeProgressColor // Normal (theme accent)
+                            return activeProgressColor // Safe active range
                         }
                     }()
 
                     Rectangle()
                         .fill(isFilled ? blockColor : Color.white.opacity(0.12))
-                        .frame(width: 5, height: 10)
-                        .overlay(
-                            Rectangle()
-                                .stroke(isFilled ? blockColor.opacity(0.6) : Color.clear, lineWidth: 0.4)
-                        )
-                        .shadow(color: isFilled ? blockColor.opacity(0.6) : Color.clear, radius: 1)
+                        .frame(width: 5, height: 9.5)
                 }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 4.5)
             .padding(.vertical, 3)
-            .background(Color.black.opacity(0.55))
-            .overlay(
-                Rectangle()
-                    .stroke(Color.white.opacity(0.2), lineWidth: 0.6)
-            )
+            .pixel16Bevel(raised: false, cornerRadius: 3, fillColor: Pixel16Palette.slot)
 
             // Monospace Readout
             Text(percentageText)
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundStyle(volumeManager.isMuted ? Color(red: 1.0, green: 0.25, blue: 0.35) : Color.white.opacity(0.95))
+                .foregroundStyle(volumeManager.isMuted ? Pixel16Palette.red : Pixel16Palette.textWhite)
                 .frame(width: 32, alignment: .trailing)
         }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 4.5)
-        .background(
-            Rectangle()
-                .fill(Color(red: 0.05, green: 0.07, blue: 0.10).opacity(0.96))
-                .overlay(
-                    Rectangle()
-                        .stroke(volumeManager.isMuted ? Color(red: 1.0, green: 0.25, blue: 0.35).opacity(0.7) : Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6), lineWidth: 0.8)
-                )
-                .shadow(color: Color.black.opacity(0.65), radius: 5, y: 2)
-        )
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .pixel16Bevel(raised: false, cornerRadius: 6, fillColor: Pixel16Palette.surface)
+        .shadow(color: Color.black.opacity(0.5), radius: 4, y: 2)
     }
 
     // MARK: - 2. Modern Clean Dynamic Island Fluid Volume HUD

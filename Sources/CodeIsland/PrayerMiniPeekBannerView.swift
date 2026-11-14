@@ -32,24 +32,19 @@ public struct PrayerMiniPeekBannerView: View {
         .onHover { isHovering = $0 }
     }
 
-    // MARK: - 1. Pixel Retro (8-Bit) Banner
+    // MARK: - 1. Pixel Retro (8-Bit) Banner (Lineless Impeccable)
 
     private var pixelBanner: some View {
-        HStack(spacing: 8) {
-            // 8-bit Mosque / Crescent Icon Box
+        HStack(spacing: 9) {
+            // Recessed Crescent / Moon Slot
             ZStack {
-                Rectangle()
-                    .fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18))
-                    .frame(width: 26, height: 26)
-                    .overlay(
-                        Rectangle()
-                            .stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6), lineWidth: 1)
-                    )
-
                 Image(systemName: "moon.stars.fill")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 11, weight: .black))
                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), radius: 3)
             }
+            .frame(width: 26, height: 26)
+            .pixel16Bevel(raised: false, cornerRadius: 4.5, fillColor: Pixel16Palette.slot)
 
             // Text Info
             VStack(alignment: .leading, spacing: 2) {
@@ -61,22 +56,25 @@ public struct PrayerMiniPeekBannerView: View {
 
                     if manager.upcomingPrayer != nil {
                         let diffMins = manager.minutesUntilNextPrayer
-                        Text(diffMins <= 0 ? "[NOW]" : "[-\(diffMins)M]")
-                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                        Text(diffMins <= 0 ? "NOW" : "-\(diffMins)M")
+                            .font(.system(size: 7.5, weight: .black, design: .monospaced))
                             .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                            .padding(.horizontal, 4.5)
+                            .padding(.vertical, 1.5)
+                            .pixel16Bevel(raised: false, cornerRadius: 2.5, fillColor: Pixel16Palette.slot)
                     }
                 }
 
                 Text(manager.miniPeekBannerSubtitle.uppercased())
                     .font(.system(size: 8, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.65))
+                    .foregroundStyle(Pixel16Palette.textMuted)
                     .lineLimit(1)
             }
 
             Spacer(minLength: 4)
 
-            // Interactive Actions Strip
-            HStack(spacing: 4) {
+            // Interactive Actions Strip (Lineless Tactile Buttons)
+            HStack(spacing: 4.5) {
                 // Open Tab Button
                 Button(action: {
                     NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
@@ -86,15 +84,11 @@ public struct PrayerMiniPeekBannerView: View {
                         Image(systemName: "arrow.up.right.square")
                             .font(.system(size: 8, weight: .bold))
                         Text("OPEN")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .font(.system(size: 8, weight: .black, design: .monospaced))
                     }
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 3)
-                    .background(
-                        Rectangle()
-                            .fill(hoveredButton == "open" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.35) : Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18))
-                            .overlay(Rectangle().stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), lineWidth: 0.8))
-                    )
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3.5)
+                    .pixel16Bevel(raised: true, cornerRadius: 3.5, fillColor: hoveredButton == "open" ? Pixel16Palette.surfaceRaised : Pixel16Palette.slot)
                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
                 }
                 .buttonStyle(.plain)
@@ -108,13 +102,9 @@ public struct PrayerMiniPeekBannerView: View {
                 }) {
                     Text("+5M")
                         .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .padding(.horizontal, 4.5)
-                        .padding(.vertical, 3)
-                        .background(
-                            Rectangle()
-                                .fill(hoveredButton == "snooze" ? Color.white.opacity(0.20) : Color.white.opacity(0.08))
-                                .overlay(Rectangle().stroke(Color.white.opacity(0.3), lineWidth: 0.8))
-                        )
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 3.5)
+                        .pixel16Bevel(raised: true, cornerRadius: 3.5, fillColor: hoveredButton == "snooze" ? Pixel16Palette.surfaceRaised : Pixel16Palette.slot)
                         .foregroundStyle(Color.white.opacity(0.85))
                 }
                 .buttonStyle(.plain)
@@ -132,26 +122,16 @@ public struct PrayerMiniPeekBannerView: View {
                         .font(.system(size: 7.5, weight: .bold))
                         .foregroundStyle(Color.white.opacity(hoveredButton == "dismiss" ? 1.0 : 0.45))
                         .frame(width: 16, height: 16)
-                        .background(
-                            Rectangle()
-                                .fill(hoveredButton == "dismiss" ? Color.white.opacity(0.15) : Color.clear)
-                        )
+                        .pixel16Bevel(raised: false, cornerRadius: 3.5, fillColor: hoveredButton == "dismiss" ? Pixel16Palette.surfaceRaised : Color.clear)
                 }
                 .buttonStyle(.plain)
                 .onHover { if $0 { hoveredButton = "dismiss" } else if hoveredButton == "dismiss" { hoveredButton = nil } }
                 .help("Dismiss reminder")
             }
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 11)
         .padding(.vertical, 6)
-        .background(
-            Rectangle()
-                .fill(Color(red: 0.05, green: 0.07, blue: 0.10))
-                .overlay(
-                    Rectangle()
-                        .stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.55), lineWidth: 1)
-                )
-        )
+        .pixel16Bevel(raised: false, cornerRadius: 8, fillColor: Pixel16Palette.chassis)
         .padding(.horizontal, 8)
         .padding(.bottom, 5)
     }
