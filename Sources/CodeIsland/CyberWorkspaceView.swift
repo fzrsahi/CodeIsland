@@ -175,19 +175,20 @@ struct WorkspacePixelIcon: View {
     var body: some View {
         let (w, h, data) = matrix
         Canvas { context, _ in
+            var path = Path()
             for row in 0..<h {
                 for col in 0..<w {
                     if data[row * w + col] == 1 {
-                        let rect = CGRect(
+                        path.addRect(CGRect(
                             x: CGFloat(col) * pixelSize,
                             y: CGFloat(row) * pixelSize,
                             width: pixelSize,
                             height: pixelSize
-                        )
-                        context.fill(Path(rect), with: .color(color))
+                        ))
                     }
                 }
             }
+            context.fill(path, with: .color(color))
         }
         .frame(width: CGFloat(matrix.w) * pixelSize, height: CGFloat(matrix.h) * pixelSize)
     }

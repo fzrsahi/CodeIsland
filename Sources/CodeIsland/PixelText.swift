@@ -684,6 +684,7 @@ public struct PixelText: View {
         let gap: CGFloat = px
 
         Canvas { ctx, _ in
+            var path = Path()
             var xOff: CGFloat = 0
             for ch in chars {
                 guard let glyph = Self.glyphs[ch] else {
@@ -693,18 +694,18 @@ public struct PixelText: View {
                 for row in 0..<Self.H {
                     for col in 0..<Self.W {
                         if glyph[row * Self.W + col] == 1 {
-                            let rect = CGRect(
+                            path.addRect(CGRect(
                                 x: xOff + CGFloat(col) * px,
                                 y: CGFloat(row) * px,
                                 width: px,
                                 height: px
-                            )
-                            ctx.fill(Path(rect), with: .color(color))
+                            ))
                         }
                     }
                 }
                 xOff += CGFloat(Self.W) * px + gap
             }
+            ctx.fill(path, with: .color(color))
         }
         .frame(width: charWidth(chars.count), height: CGFloat(Self.inkRows) * pixelSize)
         .clipped()

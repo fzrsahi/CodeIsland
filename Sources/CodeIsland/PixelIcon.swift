@@ -153,19 +153,20 @@ public struct PixelIcon: View {
         let totalH = CGFloat(h) * px
 
         Canvas { ctx, _ in
+            var path = Path()
             for row in 0..<h {
                 for col in 0..<w {
                     if data[row * w + col] == 1 {
-                        let rect = CGRect(
+                        path.addRect(CGRect(
                             x: CGFloat(col) * px,
                             y: CGFloat(row) * px,
                             width: px,
                             height: px
-                        )
-                        ctx.fill(Path(rect), with: .color(color))
+                        ))
                     }
                 }
             }
+            ctx.fill(path, with: .color(color))
         }
         .frame(width: totalW, height: totalH)
     }

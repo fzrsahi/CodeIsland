@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 
 // MARK: - 16-Bit Retro Cyber Design System
 // Inspired by 16-bit arcade hardware (SNES, Sega Genesis, Neo-Geo, Capcom CPS-2,
@@ -172,23 +171,21 @@ public struct Pixel16Badge: View {
 
 public struct Pixel16ThinkingDots: View {
     public var color: Color = Pixel16Palette.cyan
-    @State private var phase: Int = 0
-    private let timer = Timer.publish(every: 0.35, on: .main, in: .common).autoconnect()
 
     public init(color: Color = Pixel16Palette.cyan) {
         self.color = color
     }
 
     public var body: some View {
-        HStack(spacing: 3) {
-            ForEach(0..<3, id: \.self) { i in
-                Text("■")
-                    .font(.system(size: 7, weight: .bold, design: .monospaced))
-                    .foregroundStyle(color.opacity(phase == i ? 1.0 : 0.25))
+        TimelineView(.periodic(from: .now, by: 0.35)) { timeline in
+            let step = Int(timeline.date.timeIntervalSinceReferenceDate / 0.35) % 3
+            HStack(spacing: 3) {
+                ForEach(0..<3, id: \.self) { i in
+                    Text("■")
+                        .font(.system(size: 7, weight: .bold, design: .monospaced))
+                        .foregroundStyle(color.opacity(step == i ? 1.0 : 0.25))
+                }
             }
-        }
-        .onReceive(timer) { _ in
-            phase = (phase + 1) % 3
         }
     }
 }
