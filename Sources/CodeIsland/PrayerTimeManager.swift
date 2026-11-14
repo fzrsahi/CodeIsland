@@ -75,7 +75,6 @@ public final class PrayerTimeManager: ObservableObject {
     @Published public private(set) var upcomingPrayer: (prayer: PrayerType, date: Date)?
     @Published public private(set) var minutesUntilNextPrayer: Int = 0
     @Published public private(set) var currentTimeString: String = "12:00"
-    @Published public private(set) var currentSecondsString: String = "12:00:00"
     @Published public private(set) var hijriDateString: String = ""
     @Published public private(set) var hijriDay: Int = 1
     @Published public private(set) var gregorianDateString: String = ""
@@ -107,6 +106,11 @@ public final class PrayerTimeManager: ObservableObject {
 
     public var cityName: String {
         locationService.displayName
+    }
+
+    /// The active city's zone — what the expanded card's local clock reads.
+    public var timeZone: TimeZone {
+        locationService.activeCity.timeZone
     }
 
     public var sunriseHour: Double {
@@ -178,7 +182,13 @@ public final class PrayerTimeManager: ObservableObject {
     }
 
     private var cancellables = Set<AnyCancellable>()
-    private var timerCancellable: AnyCancellable?
+    /// The single one-shot wake timer (see `PrayerWakePolicy`).
+    private var wakeTimer: Timer?
+    private var isDisplayAsleep = false
+    /// Prayer settings as they were when the timer was last armed.
+    private var settingsSnapshotAtLastUpdate = PrayerTimeManager.settingsSnapshot()
+    /// True during a wake catch-up that is not allowed to replay a lead-in banner.
+    private var suppressStaleLeadInBanner = false
     private var lastCalculatedDay: YearMonthDay?
     private let locationService = PrayerLocationService.shared
     private var triggeredAlerts = Set<String>()
@@ -221,34 +231,117 @@ public final class PrayerTimeManager: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Observe user settings changes in UserDefaults
+        // Observe user settings changes in UserDefaults. Only a change to one of
+        // the keys prayer actually reads is worth re-arming the timer for.
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
-                self?.updateTimerState()
+                guard let self else { return }
+                let snapshot = Self.settingsSnapshot()
+                guard snapshot != self.settingsSnapshotAtLastUpdate else { return }
+                self.settingsSnapshotAtLastUpdate = snapshot
+                self.updateTimerState()
             }
             .store(in: &cancellables)
+
+        // Awake only: a sleeping display has no clock to advance.
+        let wsCenter = NSWorkspace.shared.notificationCenter
+        wsCenter.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.isDisplayAsleep = true
+                self.wakeTimer?.invalidate()
+                self.wakeTimer = nil
+            }
+        }
+        wsCenter.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.isDisplayAsleep = false
+                self.catchUpAfterWake()
+            }
+        }
+    }
+
+    /// The prayer settings this manager reads, as one comparable value.
+    static func settingsSnapshot(defaults: UserDefaults = .standard) -> [String] {
+        [
+            SettingsKey.prayerEnabled,
+            SettingsKey.prayerAlertBeforeMinutes,
+            SettingsKey.prayerCalculationMethod,
+            SettingsKey.prayerHijriCalendarSource,
+            SettingsKey.prayerHijriDayOffset,
+            SettingsKey.prayerLocationMode,
+            SettingsKey.prayerManualCityId,
+        ].map { key in
+            "\(key)=\(defaults.object(forKey: key).map { "\($0)" } ?? "-")"
+        }
+    }
+
+    /// Back from sleep: bring the clock up to date, then show the entry banner
+    /// only for a prayer that just began. A T-N banner whose moment passed
+    /// while the display slept is stale and is not shown.
+    private func catchUpAfterWake() {
+        guard isEnabled else { return }
+        recalculateSchedule(force: false)
+        let entryRecentlyPassed = todaySchedule.map { schedule in
+            schedule.fivePrayers.contains { item in
+                let elapsed = Date().timeIntervalSince(item.date)
+                return elapsed >= 0 && elapsed <= 5 * 60
+            }
+        } ?? false
+        if entryRecentlyPassed {
+            tick()
+        } else {
+            // Advance the state without letting `evaluateBannerTriggers`
+            // replay the lead-in it missed.
+            suppressStaleLeadInBanner = true
+            tick()
+            suppressStaleLeadInBanner = false
+        }
+        armWakeTimer()
     }
 
     private func updateTimerState() {
         if isEnabled {
-            if timerCancellable == nil {
-                timerCancellable = Timer.publish(every: 1.0, on: .main, in: .common)
-                    .autoconnect()
-                    .sink { [weak self] _ in
-                        self?.tick()
-                    }
-            }
             recalculateSchedule(force: false)
             tick()
+            armWakeTimer()
         } else {
-            timerCancellable?.cancel()
-            timerCancellable = nil
+            wakeTimer?.invalidate()
+            wakeTimer = nil
             todaySchedule = nil
             tomorrowSubuh = nil
             upcomingPrayer = nil
             dismissMiniPeekBanner()
         }
+    }
+
+    /// Arm the single timer for the next moment anything can change. One shot:
+    /// it re-arms itself from the result each time it fires.
+    private func armWakeTimer() {
+        wakeTimer?.invalidate()
+        wakeTimer = nil
+        guard isEnabled, !isDisplayAsleep else { return }
+        let now = simulatedDate ?? Date()
+        guard let wake = PrayerWakePolicy.nextWake(
+            now: now,
+            schedule: todaySchedule,
+            tomorrowSubuh: tomorrowSubuh,
+            alertMinutes: UserDefaults.standard.integer(forKey: SettingsKey.prayerAlertBeforeMinutes),
+            timeZone: locationService.activeCity.timeZone
+        ) else { return }
+        let timer = Timer.scheduledTimer(withTimeInterval: max(0.05, wake.timeIntervalSince(now)), repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.wakeTimer = nil
+                self.tick()
+                self.armWakeTimer()
+            }
+        }
+        // A wake a second late changes nothing: the state is minute resolution.
+        timer.tolerance = 1
+        wakeTimer = timer
     }
 
     // MARK: - Daily Recalculation (Zero-allocation per second)
@@ -308,6 +401,7 @@ public final class PrayerTimeManager: ObservableObject {
 
     internal func tick(now: Date = Date()) {
         guard isEnabled else { return }
+        PerfCounters.shared?.bump(.prayerTick)
 
         let now = simulatedDate ?? now
         let tz = locationService.activeCity.timeZone
@@ -318,22 +412,22 @@ public final class PrayerTimeManager: ObservableObject {
         let comps = cal.dateComponents([.year, .month, .day, .hour, .minute, .second], from: now)
         let h = comps.hour ?? 0
         let m = comps.minute ?? 0
-        let s = comps.second ?? 0
-
-        self.currentTimeString = String(format: "%02d:%02d", h, m)
-        self.currentSecondsString = String(format: "%02d:%02d:%02d", h, m, s)
-
-        // Solar 24h progress [0..1] and fractional hour [0..24)
-        let totalSeconds = Double(h * 3600 + m * 60 + s)
-        self.solarProgress = totalSeconds / 86400.0
-        self.currentFractionalHour = totalSeconds / 3600.0
-
+        let timeString = String(format: "%02d:%02d", h, m)
+        if currentTimeString != timeString { currentTimeString = timeString }
+        // Solar 24h progress [0..1] and fractional hour [0..24), at minute
+        // resolution: the diorama and the wing's sun marker do not move faster.
+        let totalSeconds = Double(h * 3600 + m * 60)
+        let progress = totalSeconds / 86400.0
+        if solarProgress != progress { solarProgress = progress }
+        let fractionalHour = totalSeconds / 3600.0
+        if currentFractionalHour != fractionalHour { currentFractionalHour = fractionalHour }
         // Cached DateFormatter: formatted string only recalculated when calendar day changes
         let day = comps.day ?? 0
         if cachedGregorianDay != day {
             cachedGregorianDay = day
             gregorianDateFormatter.timeZone = tz
-            self.gregorianDateString = gregorianDateFormatter.string(from: now)
+            let formatted = gregorianDateFormatter.string(from: now)
+            if gregorianDateString != formatted { gregorianDateString = formatted }
         }
 
         // Auto-recalculate if midnight rolled over
@@ -345,23 +439,28 @@ public final class PrayerTimeManager: ObservableObject {
         guard let schedule = todaySchedule else { return }
 
         // Determine current phase
+        let phase: DayPhase
         if now < schedule.subuh {
-            self.currentPhase = .malam
+            phase = .malam
         } else if h < 11 {
-            self.currentPhase = .pagi
+            phase = .pagi
         } else if now < schedule.ashar {
-            self.currentPhase = .siang
+            phase = .siang
         } else if now < schedule.maghrib {
-            self.currentPhase = .sore
+            phase = .sore
         } else {
-            self.currentPhase = .malam
+            phase = .malam
         }
+        if currentPhase != phase { currentPhase = phase }
 
         // Upcoming fardh prayer & countdown
         if let next = schedule.nextFardhPrayer(at: now, tomorrowSubuh: tomorrowSubuh) {
-            self.upcomingPrayer = next
+            if upcomingPrayer?.prayer != next.prayer || upcomingPrayer?.date != next.date {
+                upcomingPrayer = next
+            }
             let diff = next.date.timeIntervalSince(now)
-            self.minutesUntilNextPrayer = Int(ceil(diff / 60.0))
+            let minutes = Int(ceil(diff / 60.0))
+            if minutesUntilNextPrayer != minutes { minutesUntilNextPrayer = minutes }
         }
 
         // Evaluate mini peek banners directly in tick loop
@@ -395,8 +494,9 @@ public final class PrayerTimeManager: ObservableObject {
         let alertBeforeMinutes = UserDefaults.standard.integer(forKey: SettingsKey.prayerAlertBeforeMinutes)
         let diffMins = minutesUntilNextPrayer
 
-        // Trigger 1: Approaching prayer (e.g. T-10m)
-        if alertBeforeMinutes > 0 && diffMins == alertBeforeMinutes {
+        // Trigger 1: Approaching prayer (e.g. T-10m). A lead-in whose moment
+        // passed while the Mac slept is not replayed on wake.
+        if !suppressStaleLeadInBanner && alertBeforeMinutes > 0 && diffMins == alertBeforeMinutes {
             let key = "\(next.prayer.rawValue)-\(alertBeforeMinutes)"
             if !triggeredAlerts.contains(key) {
                 triggeredAlerts.insert(key)

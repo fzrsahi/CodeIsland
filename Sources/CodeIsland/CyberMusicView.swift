@@ -76,6 +76,7 @@ struct CyberAudioSpectrumView: View {
     var segmentSpacing: CGFloat = 1.0
     var palette: RetroSpectrumPalette? = nil
     var accentColor: Color? = nil
+    @Environment(\.animationGates) private var animationGates
 
     private var activePalette: RetroSpectrumPalette {
         if let palette { return palette }
@@ -104,27 +105,54 @@ struct CyberAudioSpectrumView: View {
         }
     }
 
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 0.04)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .bottom, spacing: 1.5) {
-                ForEach(0..<barCount, id: \.self) { barIndex in
-                    let normalized: Double = {
-                        guard isPlaying else { return 0.2 }
-                        let factor = Double(barIndex)
-                        let b1 = sin(time * 8.0 + factor * 1.5) * 0.4
-                        let b2 = cos(time * 13.0 + factor * 2.2) * 0.3
-                        let b3 = sin(time * 4.5) * 0.15
-                        return max(0.15, min(1.0, 0.45 + b1 + b2 + b3))
-                    }()
-                    let activeCount = isPlaying ? Int((normalized * 4.0).rounded()) : 1
+    /// Fixed size the CA replacement reports to layout — identical to the
+    /// SwiftUI HStack it replaces, so the measured wing width never changes.
+    private var caSize: CGSize {
+        CARetroSpectrumView.fixedSize(barCount: barCount, barWidth: barWidth,
+                                      segmentHeight: segmentHeight, segmentSpacing: segmentSpacing)
+    }
 
-                    VStack(spacing: segmentSpacing) {
-                        ForEach((0..<4).reversed(), id: \.self) { step in
-                            Rectangle()
-                                .fill(segmentColor(level: step, isActive: step < activeCount))
-                                .frame(width: barWidth, height: segmentHeight)
-                        }
+    var body: some View {
+        // Gated on the Music class (one decision from ticket 03): while a
+        // track plays, the render server drives the segments — no SwiftUI
+        // redraw per frame. The still frame (gate off, Reduce Motion, paused)
+        // stays SwiftUI and holds the bottom segment lit, exactly as before.
+        if animationGates.allows(.music) && isPlaying {
+            CARetroSpectrumView(
+                barCount: barCount,
+                barWidth: barWidth,
+                segmentHeight: segmentHeight,
+                segmentSpacing: segmentSpacing,
+                palette: activePalette,
+                animating: true
+            )
+            .frame(width: caSize.width, height: caSize.height)
+        } else {
+            bars(time: nil)
+        }
+    }
+
+    /// `time == nil` renders the still frame: one segment lit, no motion.
+    @ViewBuilder
+    private func bars(time: TimeInterval?) -> some View {
+        HStack(alignment: .bottom, spacing: 1.5) {
+            ForEach(0..<barCount, id: \.self) { barIndex in
+                let normalized: Double = {
+                    guard isPlaying else { return 0.2 }
+                    guard let time else { return 0.15 }
+                    let factor = Double(barIndex)
+                    let b1 = sin(time * 8.0 + factor * 1.5) * 0.4
+                    let b2 = cos(time * 13.0 + factor * 2.2) * 0.3
+                    let b3 = sin(time * 4.5) * 0.15
+                    return max(0.15, min(1.0, 0.45 + b1 + b2 + b3))
+                }()
+                let activeCount = isPlaying ? Int((normalized * 4.0).rounded()) : 1
+
+                VStack(spacing: segmentSpacing) {
+                    ForEach((0..<4).reversed(), id: \.self) { step in
+                        Rectangle()
+                            .fill(segmentColor(level: step, isActive: step < activeCount))
+                            .frame(width: barWidth, height: segmentHeight)
                     }
                 }
             }
@@ -140,6 +168,7 @@ struct CyberDiscoVisualizer: View {
     var maxHeight: CGFloat = 18
     var palette: RetroSpectrumPalette? = nil
     var accentColor: Color? = nil
+    @Environment(\.animationGates) private var animationGates
 
     private var activePalette: RetroSpectrumPalette {
         if let palette { return palette }
@@ -154,16 +183,26 @@ struct CyberDiscoVisualizer: View {
     }
 
     var body: some View {
+        if animationGates.allows(.music) {
+            TimelineView(.animation(minimumInterval: 0.04)) { timeline in
+                bars(time: timeline.date.timeIntervalSinceReferenceDate)
+            }
+        } else {
+            bars(time: nil)
+        }
+    }
+
+    /// `time == nil` renders the still frame: every bar at rest.
+    @ViewBuilder
+    private func bars(time: TimeInterval?) -> some View {
         let pal = activePalette
-        TimelineView(.animation(minimumInterval: 0.04)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .bottom, spacing: 2.0) {
-                ForEach(0..<barCount, id: \.self) { i in
-                    let factor = Double(i) * 0.9
-                    let wave = isPlaying
-                        ? max(0.12, min(1.0, 0.5 + sin(time * 7.0 + factor) * 0.35 + cos(time * 12.0 + factor * 1.7) * 0.25))
-                        : 0.15
-                    let barH = max(3, maxHeight * CGFloat(wave))
+        HStack(alignment: .bottom, spacing: 2.0) {
+            ForEach(0..<barCount, id: \.self) { i in
+                let factor = Double(i) * 0.9
+                let wave = isPlaying && time != nil
+                    ? max(0.12, min(1.0, 0.5 + sin(time! * 7.0 + factor) * 0.35 + cos(time! * 12.0 + factor * 1.7) * 0.25))
+                    : 0.15
+                let barH = max(3, maxHeight * CGFloat(wave))
 
                     VStack(spacing: 1.2) {
                         Rectangle()
@@ -187,8 +226,7 @@ struct CyberDiscoVisualizer: View {
                     }
                 }
             }
-            .frame(height: maxHeight + 4, alignment: .bottom)
-        }
+        .frame(height: maxHeight + 4, alignment: .bottom)
     }
 }
 
@@ -200,28 +238,53 @@ struct ModernAudioSpectrumView: View {
     var barWidth: CGFloat = 1.8
     var maxHeight: CGFloat = 9.0
     var color: Color = Color(red: 1.0, green: 0.65, blue: 0.45)
+    @Environment(\.animationGates) private var animationGates
+
+    /// Fixed size the CA replacement reports to layout — identical to the
+    /// SwiftUI HStack it replaces, so the measured wing width never changes.
+    private var caSize: CGSize {
+        CAModernSpectrumView.fixedSize(barCount: barCount, barWidth: barWidth, maxHeight: maxHeight)
+    }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 0.04)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .center, spacing: 1.6) {
-                ForEach(0..<barCount, id: \.self) { barIndex in
-                    let normalized: CGFloat = {
-                        guard isPlaying else { return 0.25 }
-                        let factor = Double(barIndex)
-                        let b1 = sin(time * 8.0 + factor * 2.2) * 0.42
-                        let b2 = cos(time * 12.5 + factor * 1.7) * 0.28
-                        let b3 = sin(time * 4.2 + factor * 0.9) * 0.15
-                        return max(0.25, min(1.0, CGFloat(0.55 + b1 + b2 + b3)))
-                    }()
-
-                    Capsule()
-                        .fill(color)
-                        .frame(width: barWidth, height: max(2.5, maxHeight * normalized))
-                }
-            }
-            .frame(height: maxHeight, alignment: .center)
+        // Gated on the Music class (one decision from ticket 03): while a
+        // track plays, the render server drives the capsule heights — no
+        // SwiftUI redraw per frame. The still frame stays SwiftUI.
+        if animationGates.allows(.music) && isPlaying {
+            CAModernSpectrumView(
+                barCount: barCount,
+                barWidth: barWidth,
+                maxHeight: maxHeight,
+                color: color,
+                animating: true
+            )
+            .frame(width: caSize.width, height: caSize.height)
+        } else {
+            // Still frame: every capsule at its rest height.
+            bars(time: nil)
         }
+    }
+
+    @ViewBuilder
+    private func bars(time: TimeInterval?) -> some View {
+        HStack(alignment: .center, spacing: 1.6) {
+            ForEach(0..<barCount, id: \.self) { barIndex in
+                let normalized: CGFloat = {
+                    guard isPlaying else { return 0.25 }
+                    guard let time else { return 0.25 }
+                    let factor = Double(barIndex)
+                    let b1 = sin(time * 8.0 + factor * 2.2) * 0.42
+                    let b2 = cos(time * 12.5 + factor * 1.7) * 0.28
+                    let b3 = sin(time * 4.2 + factor * 0.9) * 0.15
+                    return max(0.25, min(1.0, CGFloat(0.55 + b1 + b2 + b3)))
+                }()
+
+                Capsule()
+                    .fill(color)
+                    .frame(width: barWidth, height: max(2.5, maxHeight * normalized))
+            }
+        }
+        .frame(height: maxHeight, alignment: .center)
     }
 }
 
@@ -238,61 +301,31 @@ struct ModernMarqueeText: View {
     let text: String
     var font: Font = .system(size: 9.5, weight: .bold, design: .rounded)
     var color: Color = .white
-    var maxWidth: CGFloat = 64
+    var maxWidth: CGFloat? = nil
+    var centerShortText: Bool = false
+    @Environment(\.animationGates) private var animationGates
     @State private var textWidth: CGFloat = 0
     @State private var startDate = Date()
 
-    private var contentWidth: CGFloat {
-        if textWidth > 0 {
-            return min(maxWidth, textWidth)
-        }
-        return min(maxWidth, CGFloat(text.count) * 7.0)
-    }
-
     var body: some View {
-        let excess = max(0, textWidth - maxWidth)
-        TimelineView(.animation(minimumInterval: 0.03)) { timeline in
-            let offset: CGFloat = {
-                guard excess > 0 else { return 0 }
-                let scrollDuration = max(2.5, Double(excess) / 22.0)
-                let pauseStart = 1.2
-                let pauseEnd = 1.2
-                let resetDuration = 1.0
-                let totalCycle = pauseStart + scrollDuration + pauseEnd + resetDuration
-
-                let time = max(0, timeline.date.timeIntervalSince(startDate))
-                let t = time.truncatingRemainder(dividingBy: totalCycle)
-
-                if t < pauseStart {
-                    return 0
-                } else if t < pauseStart + scrollDuration {
-                    let progress = (t - pauseStart) / scrollDuration
-                    let smooth = (1.0 - cos(progress * .pi)) / 2.0
-                    return CGFloat(smooth) * excess
-                } else if t < pauseStart + scrollDuration + pauseEnd {
-                    return excess
-                } else {
-                    let progress = (t - (pauseStart + scrollDuration + pauseEnd)) / resetDuration
-                    let smooth = (1.0 - cos(progress * .pi)) / 2.0
-                    return (1.0 - CGFloat(smooth)) * excess
-                }
-            }()
-
-            Text(text)
-                .font(font)
-                .foregroundStyle(color)
-                .lineLimit(1)
-                .fixedSize()
-                .background(
-                    GeometryReader { textGeo in
-                        Color.clear.preference(key: ModernMarqueeTextWidthKey.self, value: textGeo.size.width)
-                    }
-                )
-                .offset(x: -offset)
-                .frame(width: contentWidth, alignment: .leading)
-                .clipped()
+        GeometryReader { geo in
+            let containerWidth = maxWidth ?? geo.size.width
+            let excess = max(0, textWidth - containerWidth)
+            // The Marquee class still needs text wider than its box; a title
+            // that fits never scrolls, so no timeline is created for it.
+            if animationGates.allows(.marquee) && excess > 0 {
+                scrolling(containerWidth: containerWidth, excess: excess, height: geo.size.height)
+            } else {
+                Text(text)
+                    .font(font)
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(width: containerWidth, height: geo.size.height, alignment: (centerShortText && excess == 0) ? .center : .leading)
+                    .clipped()
+            }
         }
-        .frame(width: contentWidth, height: 17)
+        .frame(width: maxWidth)
         .onPreferenceChange(ModernMarqueeTextWidthKey.self) { width in
             if abs(self.textWidth - width) > 1 {
                 self.textWidth = width
@@ -301,6 +334,50 @@ struct ModernMarqueeText: View {
         .onChange(of: text) { _, _ in
             startDate = Date()
             textWidth = 0
+        }
+    }
+
+    private func scrolling(containerWidth: CGFloat, excess: CGFloat, height: CGFloat) -> some View {
+        TimelineView(.animation(minimumInterval: 0.03)) { timeline in
+                let offset: CGFloat = {
+                    guard excess > 0 else { return 0 }
+                    let scrollDuration = max(2.5, Double(excess) / 22.0)
+                    let pauseStart = 1.2
+                    let pauseEnd = 1.2
+                    let resetDuration = 1.0
+                    let totalCycle = pauseStart + scrollDuration + pauseEnd + resetDuration
+
+                    let time = max(0, timeline.date.timeIntervalSince(startDate))
+                    let t = time.truncatingRemainder(dividingBy: totalCycle)
+
+                    if t < pauseStart {
+                        return 0
+                    } else if t < pauseStart + scrollDuration {
+                        let progress = (t - pauseStart) / scrollDuration
+                        let smooth = (1.0 - cos(progress * .pi)) / 2.0
+                        return CGFloat(smooth) * excess
+                    } else if t < pauseStart + scrollDuration + pauseEnd {
+                        return excess
+                    } else {
+                        let progress = (t - (pauseStart + scrollDuration + pauseEnd)) / resetDuration
+                        let smooth = (1.0 - cos(progress * .pi)) / 2.0
+                        return (1.0 - CGFloat(smooth)) * excess
+                    }
+                }()
+
+                Text(text)
+                    .font(font)
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .background(
+                        GeometryReader { textGeo in
+                            Color.clear.preference(key: ModernMarqueeTextWidthKey.self, value: textGeo.size.width)
+                        }
+                    )
+                    .offset(x: -offset)
+                    .frame(width: containerWidth, height: height, alignment: .leading)
+                    .clipped()
         }
     }
 }
@@ -1376,10 +1453,14 @@ struct ModernCleanMusicHUDContentView: View {
                     Spacer(minLength: 2)
 
                     // Di tengah: Scrubber Bar & Durasi (diberi padding kanan agar tidak mepet border)
+                    // The position comes from the anchor; a local timeline at
+                    // two ticks a second keeps the bar smooth without the
+                    // manager publishing four times a second.
+                    TimelineView(.periodic(from: .now, by: 0.5)) { timeline in
                     VStack(spacing: 2) {
                         GeometryReader { geo in
                             let totalWidth = geo.size.width
-                            let effectivePosition = dragPosition ?? nowPlaying.playerPosition
+                            let effectivePosition = dragPosition ?? nowPlaying.position(at: timeline.date)
                             let progressFraction: CGFloat = nowPlaying.trackDuration > 0
                                 ? min(1.0, max(0.0, CGFloat(effectivePosition / nowPlaying.trackDuration)))
                                 : 0.0
@@ -1416,7 +1497,7 @@ struct ModernCleanMusicHUDContentView: View {
                         .frame(height: 3)
 
                         HStack {
-                            let effectivePosition = dragPosition ?? nowPlaying.playerPosition
+                            let effectivePosition = dragPosition ?? nowPlaying.position(at: timeline.date)
                             Text(formatTime(effectivePosition))
                                 .font(.system(size: 7.5, weight: .medium, design: .monospaced))
                                 .foregroundStyle(Color.white.opacity(0.48))
@@ -1427,6 +1508,7 @@ struct ModernCleanMusicHUDContentView: View {
                         }
                     }
                     .padding(.trailing, 10)
+                    }
 
                     Spacer(minLength: 2)
 
@@ -1711,8 +1793,9 @@ struct RetroCyberMusicHUDContentView: View {
                 .help(nowPlaying.isBrowserJSHintVisible ? nowPlaying.browserJSHintText : "Click to focus active music player")
 
                 // Segmented 8-Bit Pixel Scrubber
+                TimelineView(.periodic(from: .now, by: 0.5)) { timeline in
                 let totalSegments = 18
-                let effectivePosition = dragPosition ?? nowPlaying.playerPosition
+                let effectivePosition = dragPosition ?? nowPlaying.position(at: timeline.date)
                 let progressFraction = nowPlaying.trackDuration > 0
                     ? min(1.0, max(0.0, effectivePosition / nowPlaying.trackDuration))
                     : 0.0
@@ -1763,6 +1846,7 @@ struct RetroCyberMusicHUDContentView: View {
                             .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.white.opacity(0.50))
                     }
+                }
                 }
 
                 // Transport Controls + STEREO EQUALIZER INTEGRATED SIDE-BY-SIDE

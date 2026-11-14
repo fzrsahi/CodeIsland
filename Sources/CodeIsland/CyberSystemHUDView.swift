@@ -121,6 +121,16 @@ public struct CyberSystemGaugeBar: View {
 
     public init() {}
 
+    /// Sampling runs only while this gauge is on screen: appearing starts it,
+    /// disappearing (the Workspace tab closing) stops it.
+    private struct SamplingLifecycle: ViewModifier {
+        func body(content: Content) -> some View {
+            content
+                .onAppear { SystemMonitorManager.shared.beginSampling() }
+                .onDisappear { SystemMonitorManager.shared.endSampling() }
+        }
+    }
+
     public var body: some View {
         let m = sys.metrics
         HStack(spacing: 8) {
@@ -171,5 +181,6 @@ public struct CyberSystemGaugeBar: View {
                 .fill(Color(white: 0.08))
                 .overlay(RoundedRectangle(cornerRadius: 3.5).stroke(Color(white: 0.16), lineWidth: 0.6))
         )
+        .modifier(SamplingLifecycle())
     }
 }

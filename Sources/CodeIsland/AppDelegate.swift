@@ -30,6 +30,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         let isolated = RuntimeEnvironment.isIsolated
+        // Starts the benchmark's counter file when CODEISLAND_PERF_COUNTERS is set.
+        _ = PerfCounters.shared
+        // Feeds the values the panel bar shows into `IslandSignals`, so the bar
+        // re-renders when something it displays changes — not on every manager
+        // publish.
+        IslandSignalsSync.shared.start()
         // One island per hook socket. A second one — `open -n`, a second copy
         // of the app — would take the socket from the first, which would go
         // on unheard, and remove its hosts' sockets. An island on a
@@ -117,7 +123,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         if !isolated {
             CustomAgentCommandManager.shared.syncAll()
+        }
+        // `CODEISLAND_PERF_DISCOVERY=1` lets an isolated run discover sessions
+        // so `bench.sh` can measure discovery's cost acting on a fake HOME.
+        // Process monitoring and the orphan reaper stay off (they check
+        // `isIsolated` themselves), so no real agent is touched.
+        if !isolated || RuntimeEnvironment.perfDiscoveryEnabled {
             appState.startSessionDiscovery()
+        }
+        if !isolated {
             appState.startCodexAppServerWatcher()
             appState.startAiWorkWatcher()
             appState.startCoworkWatcher()
@@ -171,11 +185,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Hooks auto-recovery: periodic + app activation trigger
         if !isolated {
-            hookRecoveryTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+            let timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
                 Task { @MainActor in
                     self?.checkAndRepairHooks()
                 }
             }
+            // Hook repair is a safety net; a minute late is fine.
+            timer.tolerance = 30
+            hookRecoveryTimer = timer
             NSWorkspace.shared.notificationCenter.addObserver(
                 forName: NSWorkspace.didActivateApplicationNotification,
                 object: nil, queue: .main
@@ -186,10 +203,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // Preview mode: inject mock data if --preview flag is present
-        if let scenario = DebugHarness.requestedScenario() {
+        // Preview mode: inject mock data if --preview flag is present. Release
+        // builds take it only when isolated, for scripts/perf/bench.sh.
+        #if DEBUG
+        let previewAllowed = true
+        #else
+        let previewAllowed = isolated
+        #endif
+        if previewAllowed, let scenario = DebugHarness.requestedScenario() {
             Self.log.debug("Loading scenario: \(scenario.rawValue)")
             DebugHarness.apply(scenario, to: appState)
+            // Isolated instances start no discovery, which is what starts the
+            // cleanup tick; the benchmark measures it, so start it here.
+            if isolated { appState.startCleanupTimer() }
             // --collapsed keeps the bar collapsed, for checking the compact layout.
             if DebugHarness.keepsCollapsed { return }
             Task { @MainActor in
@@ -239,6 +265,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        PerfCounters.shared?.write()
         // Nothing was started; what is on disk is the other island's.
         guard !standingAside else { return }
         hookRecoveryTimer?.invalidate()

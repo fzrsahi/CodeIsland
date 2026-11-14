@@ -156,6 +156,9 @@ final class AppState {
     /// NSWorkspace launch/terminate observers tracking Codex Desktop.
     @ObservationIgnored
     var codexAppServerObservers: [NSObjectProtocol]?
+    /// The Codex Desktop discovery poll, alive only while Codex Desktop is.
+    @ObservationIgnored
+    nonisolated(unsafe) var codexDesktopPollTimer: Timer?
     /// Backoff loop used when the auxiliary app-server exits while the Desktop
     /// host remains open.
     @ObservationIgnored
@@ -164,6 +167,10 @@ final class AppState {
     /// app-server delivered `thread/closed`.
     @ObservationIgnored
     var closedCodexAppThreads: [String: Date] = [:]
+    /// How long a `thread/closed` tombstone is kept before the cleanup tick
+    /// drops it. Long enough to outlive a trailing state-DB scan, short enough
+    /// that the dictionary cannot grow for the life of the app.
+    nonisolated static let closedCodexThreadTTL: TimeInterval = 24 * 3600
     /// Grok sessions retired because their pager process started another
     /// session (#318), mapped to that process. While it lives, discovery and
     /// trailing passive hooks must not resurrect the card; a new prompt or
@@ -367,12 +374,14 @@ final class AppState {
     private static var usageScanInFlight = false
     /// Incremental parse state — round-trips through each detached scan so
     /// growing transcripts are only read past their last consumed offset.
+    @ObservationIgnored
     private var usageFileCache = ClaudeUsageScanner.FileCache()
 
     /// Glance completion mode: an agent finished while the pill was collapsed —
     /// light the dot instead of expanding. Cleared when the user expands the
     /// panel, with a long failsafe so a missed dot never lingers forever.
     var glanceCompletionActive = false
+    @ObservationIgnored
     private var glanceDismissTask: Task<Void, Never>?
 
     var justCompletedSessionId: String? {
@@ -385,6 +394,10 @@ final class AppState {
     /// XCTest ARC). Only mutated on the main actor while `self` is alive.
     @ObservationIgnored
     nonisolated(unsafe) private var cleanupTimer: Timer?
+    /// The interval the current one-shot sweep was armed with, so a session
+    /// change that does not move it leaves the timer alone.
+    @ObservationIgnored
+    private var cleanupScheduledInterval: TimeInterval?
     private var autoCollapseTask: Task<Void, Never>?
     /// How long a completion card stays up on its own. Tests shorten it.
     @ObservationIgnored
@@ -407,8 +420,10 @@ final class AppState {
     /// Auto-collapse timer fired but mouse is inside panel — defer collapse until mouse leaves
     var deferCollapseOnMouseLeave = false
     /// Exit watches on the sessions' local CLI processes.
+    @ObservationIgnored
     private let processMonitor = SessionProcessMonitor()
     /// Sessions in the grace period after their process exited, with that process.
+    @ObservationIgnored
     private var exitingSessions: [String: ProcessIdentity] = [:]
     @ObservationIgnored
     nonisolated(unsafe) private var saveTimer: Timer?
@@ -453,6 +468,7 @@ final class AppState {
         default: return false
         }
     }
+    @ObservationIgnored
     private var modelReadRetryAt: [String: Date] = [:]
     /// Cards whose model (`maybeBackfillModel`), YOLO setting or native-app
     /// turn end is being read off the main actor.
@@ -552,13 +568,52 @@ final class AppState {
         return sessions[rid]
     }
 
-    private func startCleanupTimer() {
-        guard cleanupTimer == nil else { return }
-        cleanupTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+    /// How often the idle sweep has to run, or nil when it can stop.
+    ///
+    /// A sweep is cheap but never free: it walks every session and asks the
+    /// process table. With nothing on the island there is nothing to sweep, so
+    /// the timer stops; with every card idle a slow sweep is enough; while a
+    /// turn is running the card has to settle promptly.
+    nonisolated static func cleanupInterval(sessionCount: Int, hasActiveSession: Bool) -> TimeInterval? {
+        guard sessionCount > 0 else { return nil }
+        return hasActiveSession ? 3 : 15
+    }
+
+    /// Whether any card is doing something the sweep can act on.
+    private var hasActiveSession: Bool {
+        sessions.values.contains { $0.status != .idle }
+    }
+
+    func startCleanupTimer() {
+        rescheduleCleanupIfNeeded(force: true)
+    }
+
+    /// Re-arm the one-shot sweep when the island's composition changed the
+    /// interval it needs. Called from `refreshDerivedState`, i.e. on every
+    /// session change, so the cadence follows the sessions without polling.
+    private func rescheduleCleanupIfNeeded(force: Bool = false) {
+        let interval = Self.cleanupInterval(sessionCount: sessions.count, hasActiveSession: hasActiveSession)
+        guard force || interval != cleanupScheduledInterval else { return }
+        cleanupScheduledInterval = interval
+        scheduleCleanupTick(after: interval)
+    }
+
+    private func scheduleCleanupTick(after interval: TimeInterval?) {
+        cleanupTimer?.invalidate()
+        cleanupTimer = nil
+        guard let interval else { return }
+        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
             Task { @MainActor in
-                self?.cleanupIdleSessions()
+                guard let self else { return }
+                self.cleanupTimer = nil
+                self.cleanupScheduledInterval = nil
+                self.cleanupIdleSessions()
+                self.rescheduleCleanupIfNeeded(force: true)
             }
         }
+        // The sweep has no deadline of its own; let the system coalesce the wake.
+        timer.tolerance = interval * 0.1
+        cleanupTimer = timer
     }
 
     /// Agents whose tracked process is a long-lived daemon rather than a
@@ -601,6 +656,16 @@ final class AppState {
     }
 
     private func cleanupIdleSessions() {
+        PerfCounters.shared?.bump(.cleanupTickWork)
+        // What the sweep can change. A tick that changes nothing must not
+        // republish derived state or push a device payload.
+        let fingerprintBefore = cleanupFingerprint()
+        // Tombstones for closed Codex Desktop threads only guard discovery for a
+        // while; keeping them forever leaks one entry per thread ever closed.
+        if !closedCodexAppThreads.isEmpty {
+            let expiry = Date().addingTimeInterval(-Self.closedCodexThreadTTL)
+            closedCodexAppThreads = closedCodexAppThreads.filter { $0.value > expiry }
+        }
         // 1. Verify monitored PIDs are still alive (DispatchSource can silently miss exits)
         //    Also kill orphaned processes (ppid <= 1, terminal closed but process survived).
         let sweep = processMonitor.sweep()
@@ -739,7 +804,8 @@ final class AppState {
                 removeSession(key)
             }
         }
-        discovery.pollCodexDesktopIfDue(now: Date(), runningBundleIdentifiers: runningBundleIds)
+        // The Codex Desktop poll has a timer of its own (see
+        // `startCodexDesktopPollTimer`); the sweep must not carry it.
 
         // 4. Remove idle sessions past timeout (user setting, or 10 min default for no-monitor sessions)
         let userTimeout = SettingsManager.shared.sessionTimeout
@@ -779,7 +845,23 @@ final class AppState {
         // 5. Reclaim memory for abandoned tool_use_id cache entries.
         prunePendingToolUses()
 
-        refreshDerivedState()
+        if cleanupFingerprint() != fingerprintBefore {
+            refreshDerivedState()
+        }
+    }
+
+    /// A cheap digest of the fields the sweep mutates. Two ticks that leave
+    /// every card as it was produce the same value.
+    private func cleanupFingerprint() -> Int {
+        var hasher = Hasher()
+        hasher.combine(sessions.count)
+        for (id, session) in sessions {
+            hasher.combine(id)
+            hasher.combine(session.status)
+            hasher.combine(session.currentTool)
+            hasher.combine(session.toolDescription)
+        }
+        return hasher.finalize()
     }
 
     /// Settle a native app's thinking card idle once its transcript shows
@@ -1012,9 +1094,14 @@ final class AppState {
         subagentModelObservations.removeValue(forKey: sessionId)
         subagentModelReads.removeValue(forKey: sessionId)
         hermesStoreReads.removeValue(forKey: sessionId)
+        // A removed session's unfinished tool calls can never be answered.
+        pendingToolUses = pendingToolUses.filter { $0.key.sessionId != sessionId }
         hostHarnessProbes.removeValue(forKey: sessionId)
         hostHarnessProbeRetryAt.removeValue(forKey: sessionId)
         claudeTerminalProbes.removeValue(forKey: sessionId)
+        gitBranchCheckedAt.removeValue(forKey: sessionId)
+        providerTitleReads.removeValue(forKey: sessionId)
+        providerTitleGenerations.removeValue(forKey: sessionId)
         if activeSessionId == sessionId {
             activeSessionId = mostActiveSessionId()
         }
@@ -1187,6 +1274,7 @@ final class AppState {
 
     /// Last unresolved-branch probe per session — keeps `gitBranch == nil`
     /// (non-repo cwds, SessionStart snapshot rebuilds) from probing on every event.
+    @ObservationIgnored
     private var gitBranchCheckedAt: [String: Date] = [:]
 
     /// Branch resolution runs detached: .git probing on a dead network mount
@@ -1204,8 +1292,13 @@ final class AppState {
             let info = GitBranchReader.read(cwd: cwd)
             await MainActor.run { [weak self] in
                 guard let self, var s = self.sessions[sessionId], s.cwd == cwd else { return }
-                s.gitBranch = info?.branch
-                s.gitIsWorktree = info?.isWorktree ?? false
+                let branch = info?.branch
+                let isWorktree = info?.isWorktree ?? false
+                // Re-assigning the same values republishes `sessions` and
+                // re-renders every observer for nothing.
+                guard s.gitBranch != branch || s.gitIsWorktree != isWorktree else { return }
+                s.gitBranch = branch
+                s.gitIsWorktree = isWorktree
                 self.sessions[sessionId] = s
             }
         }
@@ -1214,7 +1307,9 @@ final class AppState {
     /// Last conclusive host-harness probe per session, keyed to the CLI pid it
     /// walked. A SessionStart rebuilds the snapshot; the cache lets the result
     /// be re-applied without walking the ancestry again. (#321)
+    @ObservationIgnored
     private var hostHarnessProbes: [String: (pid: pid_t, harness: HostHarness?)] = [:]
+    @ObservationIgnored
     private var hostHarnessProbesInFlight: Set<String> = []
     /// Throttle for probes that could not read the process (it had already
     /// exited, or the pid is a short-lived hook shell) — retried, not cached.
@@ -1482,8 +1577,19 @@ final class AppState {
 
     /// Recompute cached status/source/counts from sessions in a single O(n) pass.
     /// Call after any mutation to `sessions` or session status.
+    /// Whether any card is thinking, kept as derived state so the collapsed
+    /// bar does not have to walk every session on each render.
+    private(set) var isThinking = false
+    /// The card the collapsed bar is showing, likewise derived.
+    private(set) var displaySessionId: String?
+
     func refreshDerivedState() {
         let summary = deriveSessionSummary(from: sessions)
+        let thinking = summary.status == .processing || summary.status == .running
+            || sessions.values.contains { $0.status == .processing || $0.status == .running || $0.currentTool != nil }
+        if isThinking != thinking { isThinking = thinking }
+        let display = rotatingSessionId ?? activeSessionId ?? sessions.keys.sorted().first
+        if displaySessionId != display { displaySessionId = display }
         // Whenever no session is actively working, honor the user-configured
         // default mascot. Covers both "no sessions at all" (#102) and "all
         // sessions idle" (#149) — without this, a user who sets the default
@@ -1503,6 +1609,7 @@ final class AppState {
         if totalSessionCount != summary.totalSessionCount { totalSessionCount = summary.totalSessionCount }
         ESP32StatePublisher.shared.notifyDirty()
         AppleCompanionPublisher.shared.notifyDirty()
+        rescheduleCleanupIfNeeded()
     }
 
     private func refreshProviderTitle(for trackedSessionId: String, providerSessionId: String? = nil) {

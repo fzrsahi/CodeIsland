@@ -43,6 +43,11 @@ private class NotchHostingView<Content: View>: NSHostingView<Content> {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    override func layout() {
+        PerfCounters.shared?.bump(.hostingLayoutPass)
+        super.layout()
+    }
+
     /// Latest requested value awaiting its deferred apply, or nil when nothing
     /// is queued. Coalescing matters: SwiftUI sets these several times per
     /// animation frame, and the mascot drives frames continuously, so one
@@ -231,6 +236,9 @@ class PanelWindowController: NSObject, NSWindowDelegate {
             Task { @MainActor in
                 guard let self else { return }
                 self.isSessionObservationArmed = false
+                // A session event is the user's cue to look again: it revives a
+                // waiting island that had gone quiet.
+                MascotAnimationGate.shared.noteInteraction()
                 self.updateVisibility()
                 self.armSessionObservation()
             }
@@ -519,7 +527,11 @@ class PanelWindowController: NSObject, NSWindowDelegate {
     private func updatePosition() {
         guard let panel = panel else { return }
         let screen = chosenScreen()
-        panel.setFrame(panelFrame(for: screen), display: true)
+        let target = panelFrame(for: screen)
+        // `updatePosition` runs on every hover/visibility change; a no-op
+        // `setFrame` still walks AppKit's layout and re-renders the hosting view.
+        guard panel.frame != target else { return }
+        panel.setFrame(target, display: true)
     }
 
     private func panelFrame(for screen: NSScreen) -> NSRect {
@@ -640,7 +652,7 @@ class PanelWindowController: NSObject, NSWindowDelegate {
     /// Poll every 1.5s while in fullscreen; stop when fullscreen ends
     private func startFullscreenExitPoller() {
         fullscreenPoller?.invalidate()
-        fullscreenPoller = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
             Task { @MainActor in
                 guard let self = self else { timer.invalidate(); return }
                 if !self.isActiveSpaceFullscreen() {
@@ -653,6 +665,9 @@ class PanelWindowController: NSObject, NSWindowDelegate {
                 }
             }
         }
+        // A fullscreen exit is noticed a moment later; nothing depends on 1.5 s exactly.
+        timer.tolerance = 0.15
+        fullscreenPoller = timer
     }
 
     /// Update panel visibility based on settings
@@ -676,15 +691,27 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         }
         MascotAnimationGate.shared.setPanelVisible(true)
         MascotAnimationGate.shared.setIdleSettled(isIslandSettled())
+        MascotAnimationGate.shared.setMusicPlaying(NowPlayingManager.shared.isPlaying)
+        // An expanded island is being looked at, so Now Playing may probe more often.
+        NowPlayingManager.shared.isIslandExpanded = appState.surface.isExpanded
+        MascotAnimationGate.shared.setWaitingForUser(isWaitingForUser())
     }
 
     /// Collapsed island with nothing running — the state a Mac spends most of
     /// its day in, and the one where a live mascot timeline costs real CPU for
-    /// motion nobody is looking at (#299). Any expanded surface, or any session
-    /// that is not idle, keeps the mascot animating.
+    /// motion nobody is looking at (#299). Any expanded surface, any session
+    /// that is not idle, or a playing track keeps the island animating.
     private func isIslandSettled() -> Bool {
         guard !appState.surface.isExpanded else { return false }
+        guard !NowPlayingManager.shared.isPlaying else { return false }
         return appState.sessions.values.allSatisfy { $0.status == .idle }
+    }
+
+    /// A session parked on an approval or a question is waiting for the user.
+    private func isWaitingForUser() -> Bool {
+        appState.sessions.values.contains {
+            $0.status == .waitingApproval || $0.status == .waitingQuestion
+        }
     }
 
     private func isActiveSpaceFullscreen() -> Bool {

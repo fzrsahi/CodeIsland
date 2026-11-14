@@ -47,6 +47,14 @@ public struct PrayerExpandedCardView: View {
         self.manager = manager
     }
 
+    /// `HH:mm:ss` in the city's zone at a given instant.
+    static func clockText(at date: Date, timeZone: TimeZone) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let c = calendar.dateComponents([.hour, .minute, .second], from: date)
+        return String(format: "%02d:%02d:%02d", c.hour ?? 0, c.minute ?? 0, c.second ?? 0)
+    }
+
     public var body: some View {
         Group {
             if isPixel {
@@ -170,10 +178,12 @@ public struct PrayerExpandedCardView: View {
                             }
                         }
 
-                        Text(manager.currentSecondsString)
-                            .font(.system(size: 26, weight: .black, design: .monospaced))
-                            .foregroundStyle(Color.white)
-                            .shadow(color: Color.black.opacity(0.8), radius: 3)
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            Text(Self.clockText(at: context.date, timeZone: manager.timeZone))
+                                .font(.system(size: 26, weight: .black, design: .monospaced))
+                                .foregroundStyle(Color.white)
+                                .shadow(color: Color.black.opacity(0.8), radius: 3)
+                        }
                     }
 
                     Spacer()
@@ -510,10 +520,12 @@ public struct PrayerExpandedCardView: View {
                             }
                         }
 
-                        Text(manager.currentSecondsString)
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.white)
-                            .shadow(color: Color.black.opacity(0.7), radius: 3)
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            Text(Self.clockText(at: context.date, timeZone: manager.timeZone))
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.white)
+                                .shadow(color: Color.black.opacity(0.7), radius: 3)
+                        }
                     }
 
                     Spacer()

@@ -189,7 +189,39 @@ final class NowPlayingManager: ObservableObject {
         }
     }
     @Published var albumPalette: AlbumArtPalette = .fallback
-    @Published var playerPosition: Double = 0
+    /// Bumped per artwork request so a slow load cannot land on a newer track.
+    private var artworkToken = 0
+    /// Where the track was, when, and how fast it is moving from there.
+    /// The position is derived from this, so a playing track does not need a
+    /// 4 Hz publish: the bar reads the anchor and interpolates locally.
+    struct PlaybackAnchor: Equatable, Sendable {
+        var position: Double
+        var at: Date
+        var rate: Double
+
+        func position(at now: Date) -> Double {
+            position + rate * max(0, now.timeIntervalSince(at))
+        }
+    }
+
+    @Published private(set) var playbackAnchor = PlaybackAnchor(position: 0, at: Date(), rate: 0)
+
+    /// The current position, interpolated from the anchor. Published only
+    /// through `playbackAnchor`, which changes on play, pause, seek and track
+    /// change — not four times a second.
+    var playerPosition: Double { playbackAnchor.position(at: Date()) }
+
+    /// The position as of a specific instant (the progress bar's timeline).
+    func position(at date: Date) -> Double {
+        min(trackDuration > 0 ? trackDuration : .greatestFiniteMagnitude,
+            playbackAnchor.position(at: date))
+    }
+
+    /// Move the anchor and, with it, the published position.
+    private func setAnchor(position: Double, playing: Bool, at now: Date = Date()) {
+        let anchor = PlaybackAnchor(position: position, at: now, rate: playing ? 1 : 0)
+        if playbackAnchor != anchor { playbackAnchor = anchor }
+    }
     @Published var trackDuration: Double = 0
     @Published var showToast: Bool = false
     @Published var lyrics: [LyricLine] = []
@@ -201,8 +233,26 @@ final class NowPlayingManager: ObservableObject {
 
     private var toastDismissTimer: Timer?
     private var progressTimer: Timer?
-    private var idleDiscoveryTimer: Timer?
+    /// The policy's next probe. One-shot: it is re-armed from the answer.
+    private var probeTimer: Timer?
+    /// Players and browsers that are running, kept by NSWorkspace's launch and
+    /// terminate notifications plus one snapshot at start. A probe never asks
+    /// Launch Services, and never scripts an app that is not there.
+    private var runningTargets: Set<NowPlayingProbeTarget> = []
+    /// When the last play/pause/seek/track change landed, for the pause reset.
+    private var lastPlaybackChangeAt = Date()
+    /// Last notification-driven probe per target, so a chatty player cannot
+    /// turn into a probe storm.
+    private var lastNotifiedProbeAt: [NowPlayingProbeTarget: Date] = [:]
     private(set) var isDisplayAsleep = false
+    private(set) var isScreenLocked = false
+    private(set) var isSessionActive = true
+    /// Set by the panel: an expanded island may be looked at, so it probes more.
+    var isIslandExpanded = false {
+        didSet { if isIslandExpanded != oldValue { armProbeTimer() } }
+    }
+    /// Set by `startSimulatedPlayback`: no player is asked anything any more.
+    private(set) var isSimulated = false
     private var lastFetchedLyricsKey: String = ""
     private var lastBrowserSnapshots: [PlaybackSourceKind: PlaybackSnapshot] = [:]
     private let probeQueue = DispatchQueue(label: "com.codeisland.nowplaying.probe", qos: .userInitiated)
@@ -214,8 +264,9 @@ final class NowPlayingManager: ObservableObject {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             self?.requestAutomationPermissionIfNeeded()
         }
+        refreshRunningTargets()
         fetchPlaybackDetails()
-        startIdleDiscoveryTimer()
+        armProbeTimer()
     }
 
     nonisolated func requestAutomationPermissionIfNeeded() {
@@ -276,24 +327,155 @@ final class NowPlayingManager: ObservableObject {
                 self?.handleDisplayWake()
             }
         }
+
+        // Locked screen / inactive session: nobody is looking, so no probe.
+        DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("com.apple.screenIsLocked"), object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.isScreenLocked = true
+                self?.armProbeTimer()
+            }
+        }
+        DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("com.apple.screenIsUnlocked"), object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.isScreenLocked = false
+                self?.probeNowAfterResume()
+            }
+        }
+        for name in [NSNotification.Name("com.apple.sessionDidResignActive")] {
+            DistributedNotificationCenter.default().addObserver(
+                forName: name, object: nil, queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.isSessionActive = false
+                    self?.armProbeTimer()
+                }
+            }
+        }
+        for name in [NSNotification.Name("com.apple.sessionDidBecomeActive")] {
+            DistributedNotificationCenter.default().addObserver(
+                forName: name, object: nil, queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.isSessionActive = true
+                    self?.probeNowAfterResume()
+                }
+            }
+        }
+
+        // Which players exist, kept by the workspace rather than by polling.
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
+            wsCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                      let bundleId = app.bundleIdentifier,
+                      NowPlayingProbeTarget.target(for: bundleId) != nil else { return }
+                Task { @MainActor in
+                    self?.refreshRunningTargets()
+                    // A player that just appeared may already be playing.
+                    if note.name == NSWorkspace.didLaunchApplicationNotification {
+                        self?.probeNowAfterResume()
+                    } else {
+                        self?.armProbeTimer()
+                    }
+                }
+            }
+        }
     }
 
-    // Suspend high-frequency timers when display is asleep
+    /// Read which of the players and browsers are running right now.
+    private func refreshRunningTargets() {
+        var running: Set<NowPlayingProbeTarget> = []
+        for target in NowPlayingProbeTarget.allCases {
+            let apps = NSRunningApplication.runningApplications(withBundleIdentifier: target.bundleIdentifier)
+            if apps.contains(where: { !$0.isTerminated }) { running.insert(target) }
+        }
+        // Browser probes only exist while the web-music detection setting is on.
+        if !Self.isWebMusicDetectionEnabled() {
+            running = running.filter { !$0.isBrowser }
+        }
+        runningTargets = running
+    }
+
+    /// The current state, as the pure policy sees it.
+    private var pollState: NowPlayingPollState {
+        NowPlayingPollState(
+            runningTargets: runningTargets,
+            isPlaying: isPlaying,
+            isPaused: !isPlaying && !title.isEmpty && !lyricsLoading,
+            activeTarget: activeSource.flatMap(Self.target(for:)),
+            lastTarget: activeSource.flatMap(Self.target(for:)),
+            isExpanded: isIslandExpanded,
+            isDisplayAsleep: isDisplayAsleep,
+            isScreenLocked: isScreenLocked,
+            isSessionActive: isSessionActive,
+            secondsSinceLastChange: Date().timeIntervalSince(lastPlaybackChangeAt)
+        )
+    }
+
+    private static func target(for source: PlaybackSourceKind) -> NowPlayingProbeTarget? {
+        switch source {
+        case .spotifyDesktop: return .spotifyDesktop
+        case .appleMusic: return .appleMusic
+        case .webMusic(_, let browser): return .target(for: browser.bundleIdentifier)
+        }
+    }
+
+    /// (Re)arm the single pending probe from the policy. Nothing to probe, or
+    /// nobody to see the answer, means no timer at all.
+    private func armProbeTimer() {
+        probeTimer?.invalidate()
+        probeTimer = nil
+        guard let plan = NowPlayingPollPolicy.nextProbe(pollState) else { return }
+        let timer = Timer.scheduledTimer(withTimeInterval: plan.interval, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.probeTimer = nil
+                PerfCounters.shared?.bump(.nowPlayingTick)
+                self.fetchPlaybackDetails(targets: plan.targets)
+                // Re-armed after the probe lands, so the next interval is
+                // measured from the answer rather than from the request.
+                self.armProbeTimer()
+            }
+        }
+        timer.tolerance = plan.interval * 0.1
+        probeTimer = timer
+    }
+
+    /// Back from sleep or lock: one probe right away, then the normal cadence.
+    private func probeNowAfterResume() {
+        refreshRunningTargets()
+        let targets = runningTargets
+        if !targets.isEmpty {
+            PerfCounters.shared?.bump(.nowPlayingTick)
+            fetchPlaybackDetails(targets: targets)
+        }
+        armProbeTimer()
+    }
+
+    /// A player's own notification is evidence, but not a licence to probe
+    /// everything: at most one probe per second, to that player only.
+    private func probeAfterNotification(_ target: NowPlayingProbeTarget) {
+        let now = Date()
+        if let last = lastNotifiedProbeAt[target], now.timeIntervalSince(last) < 1 { return }
+        lastNotifiedProbeAt[target] = now
+        PerfCounters.shared?.bump(.nowPlayingTick)
+        fetchPlaybackDetails(targets: [target])
+    }
+
+    // Suspend the probe schedule when the display is asleep.
     private func handleDisplaySleep() {
         isDisplayAsleep = true
-        stopProgressTimer()
-        idleDiscoveryTimer?.invalidate()
-        idleDiscoveryTimer = nil
+        armProbeTimer()
     }
 
-    // Resume timers and synchronize playback state when display wakes
+    // Resume it, with one probe to catch up, when the display wakes.
     private func handleDisplayWake() {
         isDisplayAsleep = false
-        startIdleDiscoveryTimer()
-        if isPlaying {
-            fetchPlaybackDetails()
-            startProgressTimer()
-        }
+        probeNowAfterResume()
+        if isPlaying { startProgressTimer() }
     }
 
     private func extractDouble(from dict: [AnyHashable: Any], keys: [String]) -> Double? {
@@ -318,8 +500,7 @@ final class NowPlayingManager: ObservableObject {
     }
 
     private func handleAppleMusicNotification(_ notification: Notification) {
-        guard isMusicFeatureEnabled else { return }
-        guard let info = notification.userInfo else { return }
+        guard !isSimulated, isMusicFeatureEnabled, let info = notification.userInfo else { return }
         let state = info["Player State"] as? String ?? ""
         let playing = (state == "Playing")
 
@@ -348,12 +529,11 @@ final class NowPlayingManager: ObservableObject {
                 duration: rawDuration > 0 ? rawDuration : nil
             )
         }
-        fetchPlaybackDetails()
+        probeAfterNotification(.appleMusic)
     }
 
     private func handleSpotifyNotification(_ notification: Notification) {
-        guard isMusicFeatureEnabled else { return }
-        guard let info = notification.userInfo else { return }
+        guard !isSimulated, isMusicFeatureEnabled, let info = notification.userInfo else { return }
         let state = info["Player State"] as? String ?? ""
         let playing = (state == "Playing")
 
@@ -393,7 +573,7 @@ final class NowPlayingManager: ObservableObject {
                 duration: rawDuration > 0 ? rawDuration : nil
             )
         }
-        fetchPlaybackDetails()
+        probeAfterNotification(.spotifyDesktop)
     }
 
     private func updateBasicInfo(
@@ -417,18 +597,18 @@ final class NowPlayingManager: ObservableObject {
         }
 
         if trackChanged {
-            self.playerPosition = position ?? 0.0
+            self.setAnchor(position: position ?? 0.0, playing: playing)
             self.currentLyricIndex = 0
             self.lyrics = []
             triggerToast()
             fetchLyrics(title: title, artist: artist)
         } else if let position = position {
-            self.playerPosition = position
+            self.setAnchor(position: position, playing: isPlaying)
             self.updateCurrentLyricIndex()
         }
 
         if self.trackDuration > 0 && self.playerPosition > self.trackDuration {
-            self.playerPosition = 0.0
+            self.setAnchor(position: 0, playing: isPlaying)
             self.updateCurrentLyricIndex()
         }
 
@@ -459,46 +639,40 @@ final class NowPlayingManager: ObservableObject {
 
     // MARK: - Playback Progress & Adaptive Polling
 
-    private func startIdleDiscoveryTimer() {
-        guard !isDisplayAsleep else { return }
-        idleDiscoveryTimer?.invalidate()
-        idleDiscoveryTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self = self, !self.isPlaying else { return }
-                self.fetchPlaybackDetails()
-            }
-        }
-    }
 
+    /// No interpolation timer any more: the position comes from the anchor,
+    /// and the one thing that still has to happen on time is the lyric line
+    /// changing. One timer, armed for the next line's timestamp.
     private func startProgressTimer() {
-        guard !isDisplayAsleep else { return }
-        progressTimer?.invalidate()
-        var tickCount = 0
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self = self, self.isPlaying else { return }
-                tickCount += 1
-
-                if self.trackDuration > 0 {
-                    if self.playerPosition < self.trackDuration {
-                        self.playerPosition = min(self.trackDuration, self.playerPosition + 0.25)
-                    }
-                } else {
-                    self.playerPosition += 0.25
-                }
-                self.updateCurrentLyricIndex()
-
-                // Every 6 ticks (1.5 seconds), poll AppleScript to detect seeks and sync position
-                if tickCount % 6 == 0 {
-                    self.fetchPlaybackDetails()
-                }
-            }
-        }
+        updateCurrentLyricIndex()
+        scheduleNextLyricWake()
     }
 
     private func stopProgressTimer() {
         progressTimer?.invalidate()
         progressTimer = nil
+    }
+
+    /// Arm one timer for the moment the next lyric line starts. Re-armed
+    /// whenever the anchor moves (seek, pause, new track) and after each line.
+    private func scheduleNextLyricWake() {
+        progressTimer?.invalidate()
+        progressTimer = nil
+        guard isPlaying, !isDisplayAsleep, !lyrics.isEmpty else { return }
+        let offset = UserDefaults.standard.double(forKey: SettingsKey.lyricSyncOffset)
+        let position = playerPosition + offset
+        guard let delay = Self.nextLyricDelay(lyrics: lyrics, position: position) else { return }
+        let timer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.progressTimer = nil
+                self.updateCurrentLyricIndex()
+                self.scheduleNextLyricWake()
+            }
+        }
+        // A line a few hundredths of a second late is invisible.
+        timer.tolerance = min(0.2, delay * 0.1)
+        progressTimer = timer
     }
 
     var currentLyricText: String {
@@ -923,24 +1097,27 @@ final class NowPlayingManager: ObservableObject {
 
     // MARK: - Fetching Playback Details
 
-    func fetchPlaybackDetails() {
+    /// Probe the players. `targets` limits the probe to the ones the policy
+    /// asked for; nil means everything that is running.
+    func fetchPlaybackDetails(targets: Set<NowPlayingProbeTarget>? = nil) {
         guard !RuntimeEnvironment.isRunningTests else { return }
-        guard fetchGate.begin() else { return }
-        let detectWeb = Self.isWebMusicDetectionEnabled()
+        guard !isSimulated else { return }
+        guard fetchGate.begin() else {
+            // A probe is already in flight; it re-arms when its answer lands.
+            return
+        }
         let lastSource = self.activeSource
         let previousWebSnapshots = self.lastBrowserSnapshots
+        let running = self.runningTargets
+        let wanted = targets.map { $0.intersection(running) } ?? running
 
         // Serial: a slow probe (a browser blocked on a modal dialog) cannot overlap the next one.
         probeQueue.async { [weak self] in
             guard let self else { return }
             defer { self.fetchGate.finish() }
-            let isSpotifyRunning = NSRunningApplication.runningApplications(withBundleIdentifier: "com.spotify.client").contains { !$0.isTerminated }
-            let isMusicRunning = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Music").contains { !$0.isTerminated }
-            let runningBrowsers: [SpotifyWebBrowser] = detectWeb
-                ? SpotifyWebBrowser.allCases.filter { browser in
-                    NSRunningApplication.runningApplications(withBundleIdentifier: browser.bundleIdentifier).contains { !$0.isTerminated }
-                }
-                : []
+            let isSpotifyRunning = wanted.contains(.spotifyDesktop)
+            let isMusicRunning = wanted.contains(.appleMusic)
+            let runningBrowsers: [SpotifyWebBrowser] = wanted.compactMap(\.browser)
 
             guard isSpotifyRunning || isMusicRunning || !runningBrowsers.isEmpty else {
                 Task { @MainActor [weak self] in self?.resetToIdle() }
@@ -952,6 +1129,7 @@ final class NowPlayingManager: ObservableObject {
 
             // 1. Desktop Spotify
             if isSpotifyRunning {
+                PerfCounters.shared?.bumpAppleScript(target: "spotify")
                 let spotifyScript = """
                 tell application "Spotify"
                     set trackName to name of current track
@@ -976,6 +1154,7 @@ final class NowPlayingManager: ObservableObject {
 
             // 2. Apple Music Desktop
             if isMusicRunning {
+                PerfCounters.shared?.bumpAppleScript(target: "music")
                 let musicScript = """
                 tell application "Music"
                     set trackName to name of current track
@@ -1002,12 +1181,13 @@ final class NowPlayingManager: ObservableObject {
                 """
                 if let rawOutput = Self.runAppleScript(musicScript),
                    let snapshot = Self.parseDesktopOutput(rawOutput, source: .appleMusic) {
-                    candidates.append(snapshot)
+                    candidates.append(Self.artworkPerTrack(snapshot))
                 }
             }
 
             // 3. Running Web Browsers (open.spotify.com, music.youtube.com, music.apple.com)
             for browser in runningBrowsers {
+                PerfCounters.shared?.bumpAppleScript(target: "\(browser)")
                 let probeScript = Self.buildBrowserProbeScript(for: browser)
                 if let rawOutput = Self.runAppleScript(probeScript) {
                     let lines = rawOutput.components(separatedBy: .newlines)
@@ -1081,32 +1261,39 @@ final class NowPlayingManager: ObservableObject {
     }
 
     func applySnapshot(_ chosen: PlaybackSnapshot) {
+        guard !isSimulated else { return }
         log.debug(
             "apply \(chosen.source.displayBadge, privacy: .public) playing=\(chosen.isPlaying) pos=\(chosen.position) dur=\(chosen.duration) js=\(chosen.isJSBridgeAvailable)"
         )
         let trackChanged = (self.title != chosen.title || self.artist != chosen.artist) && !chosen.title.isEmpty
 
+        let badge = chosen.source.displayBadge
         self.activeSource = chosen.source
-        self.player = chosen.source.displayBadge
+        self.player = badge
 
         if case .webMusic(_, let browser) = chosen.source, !chosen.isJSBridgeAvailable {
-            self.isBrowserJSHintVisible = true
-            self.browserJSHintText = browser.jsPermissionHint
+            if !self.isBrowserJSHintVisible { self.isBrowserJSHintVisible = true }
+            if self.browserJSHintText != browser.jsPermissionHint { self.browserJSHintText = browser.jsPermissionHint }
         } else {
-            self.isBrowserJSHintVisible = false
-            self.browserJSHintText = ""
+            if self.isBrowserJSHintVisible { self.isBrowserJSHintVisible = false }
+            if !self.browserJSHintText.isEmpty { self.browserJSHintText = "" }
         }
 
-        self.title = chosen.title
-        self.artist = chosen.artist
-        self.album = chosen.album
+        if self.title != chosen.title { self.title = chosen.title }
+        if self.artist != chosen.artist { self.artist = chosen.artist }
+        if self.album != chosen.album { self.album = chosen.album }
 
-        if chosen.duration > 0 {
+        if chosen.duration > 0, self.trackDuration != chosen.duration {
             self.trackDuration = chosen.duration
         }
 
         if trackChanged {
-            self.playerPosition = chosen.isJSBridgeAvailable ? max(0.0, chosen.position) : 0.0
+            // A title-only snapshot knows the track but not the transport, so
+            // its position must not start interpolating.
+            self.setAnchor(
+                position: chosen.isJSBridgeAvailable ? max(0.0, chosen.position) : 0,
+                playing: chosen.isPlaying && chosen.isJSBridgeAvailable
+            )
             self.currentLyricIndex = 0
             self.lyrics = []
             if chosen.isPlaying {
@@ -1115,17 +1302,20 @@ final class NowPlayingManager: ObservableObject {
             self.fetchLyrics(title: chosen.title, artist: chosen.artist)
         } else if chosen.isJSBridgeAvailable && chosen.position >= 0 {
             if abs(self.playerPosition - chosen.position) > 0.75 || self.playerPosition == 0 {
-                self.playerPosition = chosen.position
+                self.setAnchor(position: chosen.position, playing: chosen.isPlaying && chosen.isJSBridgeAvailable)
                 self.updateCurrentLyricIndex()
             }
         }
 
         if self.trackDuration > 0 && self.playerPosition > self.trackDuration {
-            self.playerPosition = 0.0
+            self.setAnchor(position: 0, playing: isPlaying)
             self.updateCurrentLyricIndex()
         }
 
-        self.isPlaying = chosen.isPlaying
+        if self.isPlaying != chosen.isPlaying || trackChanged {
+            self.lastPlaybackChangeAt = Date()
+        }
+        if self.isPlaying != chosen.isPlaying { self.isPlaying = chosen.isPlaying }
         // Only a probe that could observe transport state may drive the interpolation timer.
         // A title-only (Tier 2) snapshot knows the track but not the position, so advancing
         // from 0 would report progress that was never observed.
@@ -1136,6 +1326,8 @@ final class NowPlayingManager: ObservableObject {
         }
 
         self.updateCurrentLyricIndex()
+        self.scheduleNextLyricWake()
+        self.armProbeTimer()
 
         // Load artwork if changed
         if self.artworkURL != chosen.artworkURLOrPath {
@@ -1149,9 +1341,38 @@ final class NowPlayingManager: ObservableObject {
         }
     }
 
+    /// Preview / benchmark only (`--preview music`): plays a fixed track with
+    /// synced lyrics and stops asking any player, so no AppleScript runs and no
+    /// lyrics are fetched. The progress timer and lyric index run as for a real
+    /// track.
+    func startSimulatedPlayback(title: String, artist: String, album: String, duration: Double, lrc: String, artwork: NSImage?) {
+        isSimulated = true
+        probeTimer?.invalidate()
+        probeTimer = nil
+        activeSource = .spotifyDesktop
+        player = PlaybackSourceKind.spotifyDesktop.displayBadge
+        isBrowserJSHintVisible = false
+        browserJSHintText = ""
+        self.title = title
+        self.artist = artist
+        self.album = album
+        trackDuration = duration
+        setAnchor(position: 0, playing: false)
+        lyrics = Self.parseLRC(lrc)
+        currentLyricIndex = lyrics.first?.id ?? 0
+        lyricsLoading = false
+        artworkURL = ""
+        artworkImage = artwork
+        isPlaying = true
+        triggerToast()
+        startProgressTimer()
+    }
+
     /// Clears everything the HUD reads. Called when no source is playing any more so the island
     /// does not keep showing a frozen track (and a position clamped at duration) forever.
     func resetToIdle() {
+        // A probe started before simulated playback must not clear it.
+        guard !isSimulated else { return }
         guard activeSource != nil || isPlaying || !title.isEmpty else { return }
 
         stopProgressTimer()
@@ -1167,12 +1388,13 @@ final class NowPlayingManager: ObservableObject {
         player = ""
         artworkURL = ""
         artworkImage = nil
+        setAnchor(position: 0, playing: false)
         albumPalette = .fallback
-        playerPosition = 0
         trackDuration = 0
         lyrics = []
         currentLyricIndex = 0
         lyricsLoading = false
+        armProbeTimer()
         lastFetchedLyricsKey = ""
         activeSource = nil
         isBrowserJSHintVisible = false
@@ -1180,7 +1402,45 @@ final class NowPlayingManager: ObservableObject {
         lastBrowserSnapshots = [:]
     }
 
+    /// Music writes its cover to one fixed path, so a changed cover and an
+    /// unchanged one look identical to the loader and the HUD kept the first
+    /// track's art. Copy it to a path that names the track instead.
+    nonisolated static func artworkPerTrack(_ snapshot: PlaybackSnapshot) -> PlaybackSnapshot {
+        let source = snapshot.artworkURLOrPath
+        guard !source.isEmpty, !source.hasPrefix("http"),
+              FileManager.default.fileExists(atPath: source) else { return snapshot }
+        let key = "\(snapshot.title)|\(snapshot.artist)"
+        var hasher = Hasher()
+        hasher.combine(key)
+        let destination = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codeisland-artwork-\(UInt(bitPattern: hasher.finalize())).png")
+        if !FileManager.default.fileExists(atPath: destination.path) {
+            try? FileManager.default.copyItem(atPath: source, toPath: destination.path)
+        }
+        return PlaybackSnapshot(
+            title: snapshot.title, artist: snapshot.artist, album: snapshot.album,
+            position: snapshot.position, duration: snapshot.duration,
+            artworkURLOrPath: destination.path, isPlaying: snapshot.isPlaying,
+            source: snapshot.source, isJSBridgeAvailable: snapshot.isJSBridgeAvailable
+        )
+    }
+
+    /// How long until the next line starts, from the current position. nil
+    /// when the last line is already showing.
+    nonisolated static func nextLyricDelay(lyrics: [LyricLine], position: Double) -> TimeInterval? {
+        guard let next = lyrics.first(where: { $0.timestamp > position }) else { return nil }
+        return max(0.05, next.timestamp - position)
+    }
+
+    /// Artwork is downsampled before it is held: a 3000 px cover in a 17 pt
+    /// square is tens of megabytes of the footprint for nothing.
+    nonisolated static let artworkMaxPixelSize: CGFloat = 256
+
+    /// Load the cover for `pathOrUrl`. A load that is superseded by a new
+    /// track is dropped instead of landing on the next track's cover.
     private func loadArtwork(from pathOrUrl: String) {
+        artworkToken &+= 1
+        let token = artworkToken
         guard !pathOrUrl.isEmpty else {
             self.artworkImage = nil
             return
@@ -1189,17 +1449,35 @@ final class NowPlayingManager: ObservableObject {
         if pathOrUrl.hasPrefix("http") {
             guard let url = URL(string: pathOrUrl) else { return }
             URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-                if let data = data, let img = NSImage(data: data) {
-                    Task { @MainActor in
-                        self?.artworkImage = img
-                    }
+                guard let data, let img = Self.downsampledArtwork(data) else { return }
+                Task { @MainActor in
+                    guard let self, self.artworkToken == token else { return }
+                    self.artworkImage = img
                 }
             }.resume()
-        } else if FileManager.default.fileExists(atPath: pathOrUrl) {
-            if let img = NSImage(contentsOfFile: pathOrUrl) {
-                self.artworkImage = img
-            }
+        } else if let img = Self.downsampledArtwork(atPath: pathOrUrl) {
+            self.artworkImage = img
         }
+    }
+
+    private func loadArtworkFile(url: URL) -> NSImage? { Self.downsampledArtwork(atPath: url.path) }
+
+    nonisolated static func downsampledArtwork(atPath path: String) -> NSImage? {
+        guard let data = FileManager.default.contents(atPath: path) else { return nil }
+        return downsampledArtwork(data)
+    }
+
+    nonisolated static func downsampledArtwork(_ data: Data) -> NSImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: artworkMaxPixelSize,
+        ]
+        guard let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return NSImage(data: data)
+        }
+        return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
     }
 
     private func updateAlbumPalette(from image: NSImage?) {
@@ -1472,7 +1750,7 @@ final class NowPlayingManager: ObservableObject {
             DispatchQueue.global(qos: .userInitiated).async {
                 _ = Self.runAppleScript(script)
             }
-            self.playerPosition = position
+            self.setAnchor(position: position, playing: isPlaying)
             updateCurrentLyricIndex()
         } else {
             let app = (activeSource == .appleMusic || player == "Music") ? "Music" : "Spotify"
@@ -1480,26 +1758,46 @@ final class NowPlayingManager: ObservableObject {
             DispatchQueue.global(qos: .userInitiated).async {
                 _ = Self.runAppleScript(script)
             }
-            self.playerPosition = position
+            self.setAnchor(position: position, playing: isPlaying)
             updateCurrentLyricIndex()
         }
     }
 
     nonisolated private static func runAppleScript(_ script: String) -> String? {
         guard !RuntimeEnvironment.isRunningTests else { return nil }
+        guard let appleScript = compiledAppleScript(script) else { return nil }
         var error: NSDictionary?
-        if let appleScript = NSAppleScript(source: script) {
-            let result = appleScript.executeAndReturnError(&error)
-            if error == nil {
-                return result.stringValue
-            }
-            // Debug level on purpose: a denied Automation grant fails on every poll, so an
-            // error-level line here would flood the log. Read it with
-            // `log show --debug --predicate 'subsystem == "com.codeisland"'`.
-            let number = error?[NSAppleScript.errorNumber] as? Int ?? 0
-            let message = error?[NSAppleScript.errorMessage] as? String ?? "unknown"
-            log.debug("AppleScript failed (\(number, privacy: .public)): \(message, privacy: .public)")
+        // One instance is shared between probes, so executions are serialized:
+        // NSAppleScript is not reentrant.
+        appleScriptExecutionLock.lock()
+        let result = appleScript.executeAndReturnError(&error)
+        appleScriptExecutionLock.unlock()
+        if error == nil {
+            return result.stringValue
         }
+        // Debug level on purpose: a denied Automation grant fails on every poll, so an
+        // error-level line here would flood the log. Read it with
+        // `log show --debug --predicate 'subsystem == "com.codeisland"'`.
+        let number = error?[NSAppleScript.errorNumber] as? Int ?? 0
+        let message = error?[NSAppleScript.errorMessage] as? String ?? "unknown"
+        log.debug("AppleScript failed (\(number, privacy: .public)): \(message, privacy: .public)")
         return nil
     }
+
+    /// Compiling is the expensive half of a probe and the source is the same
+    /// string on every poll, so each source is compiled once and reused.
+    /// Seek scripts embed a position, so the cache is capped rather than unbounded.
+    nonisolated private static func compiledAppleScript(_ script: String) -> NSAppleScript? {
+        appleScriptCacheLock.lock()
+        defer { appleScriptCacheLock.unlock() }
+        if let cached = appleScriptCache[script] { return cached }
+        guard let compiled = NSAppleScript(source: script) else { return nil }
+        if appleScriptCache.count >= 64 { appleScriptCache.removeAll() }
+        appleScriptCache[script] = compiled
+        return compiled
+    }
+
+    nonisolated(unsafe) private static var appleScriptCache: [String: NSAppleScript] = [:]
+    nonisolated private static let appleScriptCacheLock = NSLock()
+    nonisolated private static let appleScriptExecutionLock = NSLock()
 }

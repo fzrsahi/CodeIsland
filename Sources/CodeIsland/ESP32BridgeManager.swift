@@ -689,11 +689,14 @@ final class ESP32BridgeManager: NSObject {
 
     private func startDiscoveryPruneTimer() {
         discoveryPruneTimer?.invalidate()
-        discoveryPruneTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.pruneStaleDiscoveries()
             }
         }
+        // Pruning is housekeeping; a late sweep changes nothing the user sees.
+        timer.tolerance = 0.1
+        discoveryPruneTimer = timer
     }
 
     private func pruneStaleDiscoveries() {
