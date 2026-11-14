@@ -1909,6 +1909,7 @@ private struct MusicSettingsPage: View {
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
     @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
+    @AppStorage(SettingsKey.floatingLyricIconStyle) private var floatingLyricIconStyle = SettingsDefaults.floatingLyricIconStyle
     @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
     @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
     @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
@@ -1979,6 +1980,19 @@ private struct MusicSettingsPage: View {
                         }
 
                         VStack(alignment: .leading, spacing: 3) {
+                            Picker("Lyric Lead Icon", selection: $floatingLyricIconStyle) {
+                                ForEach(FloatingLyricIconStyle.allCases) { iconStyle in
+                                    Text(iconStyle.title).tag(iconStyle.rawValue)
+                                }
+                            }
+                            .pickerStyle(.menu)
+
+                            Text(FloatingLyricIconStyle(rawValue: floatingLyricIconStyle)?.description ?? "")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                        }
+
+                        VStack(alignment: .leading, spacing: 3) {
                             Picker("Font Typography", selection: $floatingLyricFontDesign) {
                                 ForEach(FloatingLyricFontDesign.allCases) { style in
                                     Text(style.title).tag(style.rawValue)
@@ -1986,7 +2000,7 @@ private struct MusicSettingsPage: View {
                             }
                             .pickerStyle(.menu)
 
-                            Text("Choose font family: Modern Rounded, Monospaced code, Clean System, or Elegant Serif.")
+                            Text("Choose font typography: Modern Rounded, Monospaced Cyber, System Clean, Elegant Serif, or 8-Bit Arcade Pixel.")
                                 .font(.system(size: 11))
                                 .foregroundStyle(.tertiary)
                         }

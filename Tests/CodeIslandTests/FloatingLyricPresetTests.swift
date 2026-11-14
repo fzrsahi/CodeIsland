@@ -41,4 +41,44 @@ final class FloatingLyricPresetTests: XCTestCase {
             XCTAssertEqual(roundTrip, preset)
         }
     }
+
+    func testAllFloatingLyricIconStylesDefined() {
+        let expectedStyles: [FloatingLyricIconStyle] = [
+            .spinningVinyl,
+            .albumTurntable,
+            .dancingWave,
+            .pulsingNote,
+            .retroCassette,
+            .studioMic,
+            .hapticBubble,
+            .none
+        ]
+
+        XCTAssertEqual(FloatingLyricIconStyle.allCases.count, 8)
+        for style in expectedStyles {
+            XCTAssertTrue(FloatingLyricIconStyle.allCases.contains(style))
+            XCTAssertFalse(style.title.isEmpty)
+            XCTAssertFalse(style.description.isEmpty)
+            let roundTrip = FloatingLyricIconStyle(rawValue: style.rawValue)
+            XCTAssertEqual(roundTrip, style)
+        }
+    }
+
+    func testAllFloatingLyricFontDesignsDefined() {
+        let expectedDesigns: [FloatingLyricFontDesign] = [
+            .rounded,
+            .monospaced,
+            .system,
+            .serif,
+            .pixel
+        ]
+
+        XCTAssertEqual(FloatingLyricFontDesign.allCases.count, 5)
+        for design in expectedDesigns {
+            XCTAssertTrue(FloatingLyricFontDesign.allCases.contains(design))
+            XCTAssertFalse(design.title.isEmpty)
+            let roundTrip = FloatingLyricFontDesign(rawValue: design.rawValue)
+            XCTAssertEqual(roundTrip, design)
+        }
+    }
 }

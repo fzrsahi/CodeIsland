@@ -410,7 +410,7 @@ struct NotchPanelView: View {
         } else if hasQuotaChip {
             naturalLeft = max(naturalLeft, quotaWingWidth)
         }
-        let contentLeft = leftWingWidth > 0 ? (leftWingWidth + 24) : naturalLeft
+        let contentLeft = leftWingWidth > 0 ? (leftWingWidth + 28) : naturalLeft
         let effectiveNaturalLeft = max(naturalLeft, contentLeft)
 
         // 2. Natural width required for Right Wing in each phase (Music / Prayer / Actions)
@@ -418,7 +418,7 @@ struct NotchPanelView: View {
         if prayerManager.isPrayerPrioritized {
             naturalRight = max(naturalRight, isHoveringRightWing ? 140 : 110)
         } else if signals.isPlaying {
-            if isHoveringRightWing {
+            if isHoveringRightWing || isThinking {
                 naturalRight = max(naturalRight, isPixel ? 154 : 142)
             } else {
                 naturalRight = max(naturalRight, isConnectedChinLyricActive ? 56 : 48)
@@ -433,24 +433,55 @@ struct NotchPanelView: View {
         if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion {
             naturalRight += 26
         }
-        let contentRight = rightWingWidth > 0 ? (rightWingWidth + 24) : naturalRight
+        let contentRight = rightWingWidth > 0 ? (rightWingWidth + 28) : naturalRight
         let effectiveNaturalRight = max(naturalRight, contentRight)
 
         // 3. Balanced Dynamic Island natural width for current phase
         let naturalPhaseWidth = max(effectiveNaturalLeft, effectiveNaturalRight)
 
-        // 4. Scale adaptively across all phases based on user's Island Width setting (0% - 200%)
-        let absoluteMinWing: CGFloat = isConnectedChinLyricActive ? 42 : 36
+        // 4. HARD ZERO-CLIPPING GUARANTEE:
+        // Sizing never shrinks below the state-based floor or laid-out geometry of either wing,
+        // ensuring RUN_COMMAND, THINKING, track titles, and mascot are NEVER clipped at ANY slider setting (0%-200%).
+        let safeClearance: CGFloat = isPixel ? 28 : 24
+
+        var stateFloorLeft: CGFloat = compactWingWidth
+        if isThinking {
+            stateFloorLeft = max(stateFloorLeft, isPixel ? 168 : 156)
+        } else if isToolVisible {
+            stateFloorLeft = max(stateFloorLeft, isPixel ? 176 : 162)
+        } else if hasQuotaChip {
+            stateFloorLeft = max(stateFloorLeft, quotaWingWidth)
+        }
+        let minLeftToAvoidClipping = max(stateFloorLeft, leftWingWidth > 0 ? (leftWingWidth + safeClearance) : 0)
+
+        var stateFloorRight: CGFloat = isConnectedChinLyricActive ? 42 : 36
+        if prayerManager.isPrayerPrioritized {
+            stateFloorRight = max(stateFloorRight, isHoveringRightWing ? 140 : 110)
+        } else if signals.isPlaying {
+            if isHoveringRightWing || isThinking {
+                stateFloorRight = max(stateFloorRight, isPixel ? 154 : 142)
+            } else {
+                stateFloorRight = max(stateFloorRight, isConnectedChinLyricActive ? 52 : 44)
+            }
+        }
+        let minRightToAvoidClipping = max(stateFloorRight, rightWingWidth > 0 ? (rightWingWidth + safeClearance) : 0)
+
+        let hardNonClippingFloor = max(minLeftToAvoidClipping, minRightToAvoidClipping)
+
+        // 5. Scale adaptively across all phases based on user's Island Width setting (0% - 200%)
         let scaledWingWidth: CGFloat = {
             if widthScaleFactor >= 1.0 {
                 return naturalPhaseWidth + (naturalPhaseWidth * (widthScaleFactor - 1.0) * 0.75)
             } else {
-                return absoluteMinWing + (naturalPhaseWidth - absoluteMinWing) * widthScaleFactor
+                let lowerBound = min(hardNonClippingFloor, naturalPhaseWidth)
+                return lowerBound + (naturalPhaseWidth - lowerBound) * widthScaleFactor
             }
         }()
 
+        let effectiveWingWidth = max(scaledWingWidth, hardNonClippingFloor)
+
         let maxSingleWingWidth = max(0, (maxPanelWidth - effectiveNotchW) / 2)
-        return min(scaledWingWidth, maxSingleWingWidth)
+        return min(effectiveWingWidth, maxSingleWingWidth)
     }
 
     /// Notch cutout reserved in the center of the expanded header.
@@ -631,8 +662,7 @@ struct NotchPanelView: View {
 
     @ViewBuilder
     private var activeCompactBar: some View {
-        let widthScaleMultiplier = CGFloat(Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))) / 100.0
-        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : max(6, 14 * min(1.0, widthScaleMultiplier))
+        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : 14
 
         VStack(spacing: 0) {
             HStack(spacing: 0) {

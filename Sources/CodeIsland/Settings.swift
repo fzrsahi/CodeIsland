@@ -205,6 +205,7 @@ public enum FloatingLyricFontDesign: String, CaseIterable, Identifiable, Sendabl
     case monospaced = "monospaced"
     case system = "system"
     case serif = "serif"
+    case pixel = "pixel"
 
     public var id: String { rawValue }
 
@@ -214,6 +215,46 @@ public enum FloatingLyricFontDesign: String, CaseIterable, Identifiable, Sendabl
         case .monospaced: return "Monospaced Cyber"
         case .system: return "System Clean"
         case .serif: return "Elegant Serif"
+        case .pixel: return "8-Bit Arcade Pixel"
+        }
+    }
+}
+
+public enum FloatingLyricIconStyle: String, CaseIterable, Identifiable, Sendable {
+    case spinningVinyl = "spinningVinyl"
+    case albumTurntable = "albumTurntable"
+    case dancingWave = "dancingWave"
+    case pulsingNote = "pulsingNote"
+    case retroCassette = "retroCassette"
+    case studioMic = "studioMic"
+    case hapticBubble = "hapticBubble"
+    case none = "none"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .spinningVinyl: return "Spinning Micro Vinyl"
+        case .albumTurntable: return "Rotating Album Disc"
+        case .dancingWave: return "Harmonic Waveform"
+        case .pulsingNote: return "Pulsing Neon Note"
+        case .retroCassette: return "Retro Cassette Spool"
+        case .studioMic: return "Live Studio Microphone"
+        case .hapticBubble: return "Tactile Lyric Bubble"
+        case .none: return "Hidden (Text Only)"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .spinningVinyl: return "Realistic micro vinyl record with concentric grooves that smoothly spins while music plays (Tap to play/pause)."
+        case .albumTurntable: return "Live spinning miniature album art disc with glowing grooved rim (Tap to play/pause)."
+        case .dancingWave: return "Dynamic harmonic soundwave node with rhythmically dancing peak bars."
+        case .pulsingNote: return "Vibrant neon musical eighth note with ambient breathing glow."
+        case .retroCassette: return "Miniature cassette tape spool with counter-rotating mechanical gears."
+        case .studioMic: return "Broadcast studio condenser mic with live luminescence ring."
+        case .hapticBubble: return "Frosted glass capsule with pulsating audio syllable dots."
+        case .none: return "No leading icon — pure minimalist floating typography."
         }
     }
 }
@@ -311,6 +352,7 @@ enum SettingsKey {
     static let floatingLyricPreset = "floatingLyricPreset"
     static let floatingLyricFontSize = "floatingLyricFontSize"
     static let floatingLyricFontDesign = "floatingLyricFontDesign"
+    static let floatingLyricIconStyle = "floatingLyricIconStyle"
     static let floatingLyricTextColor = "floatingLyricTextColor"
     static let floatingLyricVerticalGap = "floatingLyricVerticalGap"
     static let lyricSyncOffset = "lyricSyncOffset"
@@ -495,6 +537,7 @@ struct SettingsDefaults {
     static let floatingLyricPreset = FloatingLyricPreset.pureText.rawValue
     static let floatingLyricFontSize: Double = 10.0
     static let floatingLyricFontDesign = FloatingLyricFontDesign.rounded.rawValue
+    static let floatingLyricIconStyle = FloatingLyricIconStyle.spinningVinyl.rawValue
     static let floatingLyricTextColor = FloatingLyricTextColor.white.rawValue
     static let floatingLyricVerticalGap: Double = 2.5
     static let lyricSyncOffset = 0.0
@@ -638,6 +681,7 @@ class SettingsManager {
             SettingsKey.floatingLyricPreset: SettingsDefaults.floatingLyricPreset,
             SettingsKey.floatingLyricFontSize: SettingsDefaults.floatingLyricFontSize,
             SettingsKey.floatingLyricFontDesign: SettingsDefaults.floatingLyricFontDesign,
+            SettingsKey.floatingLyricIconStyle: SettingsDefaults.floatingLyricIconStyle,
             SettingsKey.floatingLyricTextColor: SettingsDefaults.floatingLyricTextColor,
             SettingsKey.floatingLyricVerticalGap: SettingsDefaults.floatingLyricVerticalGap,
             SettingsKey.lyricSyncOffset: SettingsDefaults.lyricSyncOffset,
