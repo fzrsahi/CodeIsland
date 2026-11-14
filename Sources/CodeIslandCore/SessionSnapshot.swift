@@ -1499,7 +1499,9 @@ private func applyHookEvent(
         }
         // Detect ESC/Ctrl+C interruption
         let stopReason = (event.rawJSON["stop_reason"] as? String ?? "").lowercased()
-        let wasInterrupted = (stopReason == "user" || stopReason == "interrupted" || stopReason == "cancel" || stopReason == "cancelled" || stopReason == "abort" || stopReason == "aborted" || stopReason.contains("interrupt") || stopReason.contains("cancel"))
+        let isCursor = sessions[sessionId]?.source == "cursor" || sessions[sessionId]?.source == "cursor-cli"
+        let wasInterrupted = (!isCursor && stopReason == "user")
+            || (stopReason == "interrupted" || stopReason == "cancel" || stopReason == "cancelled" || stopReason == "abort" || stopReason == "aborted" || stopReason.contains("interrupt") || stopReason.contains("cancel"))
             || (event.rawJSON["interrupted"] as? Bool == true)
             || (event.rawJSON["cancelled"] as? Bool == true)
             || HermesHookPayload.endsInterruptedTurn(event)

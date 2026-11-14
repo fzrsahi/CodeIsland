@@ -1479,319 +1479,28 @@ private struct CompactRightWing: View {
         isHovered || isThinking
     }
 
+    private var prayerManager: PrayerTimeManager {
+        PrayerTimeManager.shared
+    }
+
+    private var extraBadgeCount: Int {
+        var count = 0
+        if inQuietHours { count += 1 }
+        if appState.glanceCompletionActive { count += 1 }
+        if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion { count += 1 }
+        return count
+    }
+
+    private var maxBranchWidth: CGFloat {
+        extraBadgeCount > 0 ? 54 : 76
+    }
+
     var body: some View {
         HStack(spacing: 5) {
             if expanded {
-                HStack(spacing: 6) {
-                    if expandedTab == .agents {
-                        SessionGroupingTabs(
-                            mode: $groupingMode,
-                            expandedTab: $expandedTab
-                        )
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                    }
-
-                    Spacer(minLength: 4)
-
-                    // System controls (Mute, Settings, Quit)
-                    ExpandedHeaderControls(soundEnabled: $soundEnabled)
-                }
-                .padding(.horizontal, 4)
+                expandedWingContent
             } else {
-                let prayerManager = PrayerTimeManager.shared
-                if prayerManager.isPrayerPrioritized {
-                    // SMART PRIORITY: Prayer countdown takes active priority at T <= 15m
-                    PrayerCompactWingView(isHovered: shouldExpandRightWing) {
-                        expandedTab = .prayer
-                        appState.surface = .sessionList
-                    }
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                } else if nowPlaying.isPlaying {
-                    CyberMusicWingView(nowPlaying: nowPlaying, isHovered: shouldExpandRightWing)
-                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                } else {
-                    // AGENT / STANDBY MODE:
-                    let extraBadgeCount: Int = {
-                        var count = 0
-                        if inQuietHours { count += 1 }
-                        if appState.glanceCompletionActive { count += 1 }
-                        if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion { count += 1 }
-                        return count
-                    }()
-                    let maxBranchWidth: CGFloat = extraBadgeCount > 0 ? 54 : 76
-
-                    if shouldExpandRightWing {
-                        if isHovered {
-                            // "INTERACTIVE QUICK-ACTION DOCK" - Tactile Micro Controls
-                            HStack(spacing: 3) {
-                                // 1. Workspace Button
-                                Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                                    withAnimation(NotchAnimation.open) {
-                                        expandedTab = .workspace
-                                        appState.surface = .sessionList
-                                    }
-                                }) {
-                                    HStack(spacing: 2.5) {
-                                        Image(systemName: (gitBranch != nil && !gitBranch!.isEmpty) ? "arrow.triangle.branch" : "folder.fill")
-                                            .font(.system(size: 7, weight: .bold))
-                                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                        Text(gitBranch ?? projectName ?? "work")
-                                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.95))
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                            .frame(maxWidth: 44)
-                                    }
-                                    .padding(.horizontal, 4.5)
-                                    .padding(.vertical, 2.5)
-                                    .background(
-                                        Capsule()
-                                            .fill(hoveredAction == "workspace" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.25) : Color.white.opacity(0.06))
-                                            .overlay(Capsule().strokeBorder(hoveredAction == "workspace" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6) : Color.white.opacity(0.10), lineWidth: 0.5))
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                                .onHover { if $0 { hoveredAction = "workspace" } else if hoveredAction == "workspace" { hoveredAction = nil } }
-                                .help("Open Workspace (Git & Files)")
-
-                                // 2. Agents Button
-                                Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                                    withAnimation(NotchAnimation.open) {
-                                        expandedTab = .agents
-                                        appState.surface = .sessionList
-                                    }
-                                }) {
-                                    let active = appState.activeSessionCount
-                                    let total = appState.totalSessionCount
-                                    HStack(spacing: 2.5) {
-                                        if active > 0 {
-                                            Circle()
-                                                .fill(Color(red: 0.20, green: 0.88, blue: 0.65))
-                                                .frame(width: 3.5, height: 3.5)
-                                                .shadow(color: Color(red: 0.20, green: 0.88, blue: 0.65).opacity(0.8), radius: 2)
-                                        } else {
-                                            Image(systemName: "terminal.fill")
-                                                .font(.system(size: 6, weight: .bold))
-                                                .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                        }
-                                        Text("\(active)/\(total)")
-                                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.95))
-                                    }
-                                    .padding(.horizontal, 4.5)
-                                    .padding(.vertical, 2.5)
-                                    .background(
-                                        Capsule()
-                                            .fill(hoveredAction == "agents" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.25) : Color.white.opacity(0.06))
-                                            .overlay(Capsule().strokeBorder(hoveredAction == "agents" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6) : Color.white.opacity(0.10), lineWidth: 0.5))
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                                .onHover { if $0 { hoveredAction = "agents" } else if hoveredAction == "agents" { hoveredAction = nil } }
-                                .help("Open Agents & Sessions")
-
-                                // 3. Expand Chevron Button
-                                Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                                    withAnimation(NotchAnimation.open) {
-                                        appState.surface = .sessionList
-                                    }
-                                }) {
-                                    Image(systemName: "chevron.down")
-                                        .font(.system(size: 6.5, weight: .bold))
-                                        .foregroundStyle(Color.white.opacity(hoveredAction == "expand" ? 1.0 : 0.6))
-                                        .frame(width: 15, height: 15)
-                                        .background(
-                                            Circle()
-                                                .fill(hoveredAction == "expand" ? Color.white.opacity(0.2) : Color.white.opacity(0.06))
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                                .onHover { if $0 { hoveredAction = "expand" } else if hoveredAction == "expand" { hoveredAction = nil } }
-                                .help("Expand Dynamic Island")
-                            }
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2.5)
-                            .background(
-                                Capsule()
-                                    .fill(Color.white.opacity(0.09))
-                                    .overlay(Capsule().strokeBorder(Color.white.opacity(0.16), lineWidth: 0.6))
-                            )
-                            .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
-                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                        } else {
-                            // "THINKING ACTIVE" - Sleek Dynamic Island Capsule
-                            HStack(spacing: 4.5) {
-                                if let branch = gitBranch, !branch.isEmpty {
-                                    HStack(spacing: 3) {
-                                        Image(systemName: "arrow.triangle.branch")
-                                            .font(.system(size: 7.5, weight: .bold))
-                                            .foregroundStyle(Color(red: 0.20, green: 0.88, blue: 0.65))
-
-                                        Text(branch)
-                                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.92))
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
-                                    }
-                                } else if let proj = projectName, !proj.isEmpty {
-                                    HStack(spacing: 3) {
-                                        Image(systemName: "folder.fill")
-                                            .font(.system(size: 7, weight: .bold))
-                                            .foregroundStyle(Color.white.opacity(0.60))
-
-                                        Text(proj)
-                                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.90))
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
-                                    }
-                                } else {
-                                    HStack(spacing: 3) {
-                                        Image(systemName: "cpu")
-                                            .font(.system(size: 7, weight: .bold))
-                                            .foregroundStyle(Color.white.opacity(0.60))
-
-                                        Text(agentDisplayLabel.lowercased())
-                                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.90))
-                                            .lineLimit(1)
-                                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
-                                    }
-                                }
-
-                                Rectangle()
-                                    .fill(Color.white.opacity(0.18))
-                                    .frame(width: 1, height: 9)
-
-                                let active = appState.activeSessionCount
-                                let total = appState.totalSessionCount
-                                HStack(spacing: 3) {
-                                    if active > 0 {
-                                        Circle()
-                                            .fill(Color(red: 0.20, green: 0.88, blue: 0.65))
-                                            .frame(width: 4, height: 4)
-                                            .shadow(color: Color(red: 0.20, green: 0.88, blue: 0.65).opacity(0.7), radius: 2)
-                                    } else {
-                                        Image(systemName: "terminal")
-                                            .font(.system(size: 6.5, weight: .semibold))
-                                            .foregroundStyle(Color.white.opacity(0.40))
-                                    }
-
-                                    Text("\(active)/\(total)")
-                                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(active > 0 ? Color.white : Color.white.opacity(0.65))
-                                }
-                            }
-                            .padding(.horizontal, 6.5)
-                            .padding(.vertical, 3)
-                            .background(
-                                Capsule()
-                                    .fill(Color.white.opacity(0.08))
-                                    .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
-                            )
-                            .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
-                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                        }
-                    } else {
-                        // "STANDBY DYNAMIC ISLAND PILL" - Interactive & Alive
-                        HStack(spacing: 3.5) {
-                            if let branch = gitBranch, !branch.isEmpty {
-                                Image(systemName: "arrow.triangle.branch")
-                                    .font(.system(size: 7.5, weight: .bold))
-                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                Text(branch)
-                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color.white.opacity(0.92))
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                                    .frame(maxWidth: 48)
-                            } else if let proj = projectName, !proj.isEmpty {
-                                Image(systemName: "folder.fill")
-                                    .font(.system(size: 7, weight: .bold))
-                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                Text(proj)
-                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color.white.opacity(0.92))
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                                    .frame(maxWidth: 48)
-                            } else {
-                                Circle()
-                                    .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                    .frame(width: 4, height: 4)
-                                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), radius: 2)
-                                TimelineView(.periodic(from: .now, by: 10.0)) { _ in
-                                    Text(currentTimeString)
-                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color.white.opacity(0.92))
-                                }
-                            }
-
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 6.5, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.50))
-                        }
-                        .padding(.horizontal, 6.5)
-                        .padding(.vertical, 3)
-                        .background(
-                            Capsule()
-                                .fill(Color.white.opacity(0.08))
-                                .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
-                        )
-                        .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                            withAnimation(NotchAnimation.open) {
-                                expandedTab = .agents
-                                appState.surface = .sessionList
-                            }
-                        }
-                        .help("Click to expand island")
-                    }
-                }
-
-                // Quiet hours active — explains why event sounds are silent.
-                if inQuietHours {
-                    Image(systemName: "moon.fill")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.5))
-                        .help(l10n["quiet_hours"])
-                }
-
-                // Glance completion badge
-                if appState.glanceCompletionActive {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                        .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), radius: 2)
-                }
-
-                // Question / Approval badges
-                if appState.hiddenPendingQuestionSessionId != nil {
-                    Image(systemName: "questionmark.bubble.fill")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
-                        .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
-                        .symbolEffect(.bounce, value: appState.followUps.hintPulse)
-                        .help(l10n["question_waiting_hint"])
-                } else if appState.followUps.hintActive {
-                    Image(systemName: "bell.badge.fill")
-                        .font(.system(size: 8.5, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
-                        .symbolEffect(.bounce, value: appState.followUps.hintPulse)
-                        .help(l10n["follow_up_hint"])
-                } else if appState.status == .waitingApproval || appState.status == .waitingQuestion {
-                    Image(systemName: "bell.fill")
-                        .font(.system(size: 8.5, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
-                        .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
-                }
+                collapsedWingContent
             }
         }
         .padding(.leading, 8)
@@ -1802,6 +1511,351 @@ private struct CompactRightWing: View {
         .background(GeometryReader { geo in
             Color.clear.preference(key: CompactRightWingWidthKey.self, value: expanded ? 0 : geo.size.width)
         })
+    }
+
+    @ViewBuilder
+    private var expandedWingContent: some View {
+        HStack(spacing: 6) {
+            if expandedTab == .agents {
+                SessionGroupingTabs(
+                    mode: $groupingMode,
+                    expandedTab: $expandedTab
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+
+            Spacer(minLength: 4)
+
+            // System controls (Mute, Settings, Quit)
+            ExpandedHeaderControls(soundEnabled: $soundEnabled)
+        }
+        .padding(.horizontal, 4)
+    }
+
+    @ViewBuilder
+    private var collapsedWingContent: some View {
+        if prayerManager.isPrayerPrioritized {
+            // SMART PRIORITY: Prayer countdown takes active priority at T <= 15m
+            PrayerCompactWingView(isHovered: shouldExpandRightWing) {
+                expandedTab = .prayer
+                appState.surface = .sessionList
+            }
+            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        } else if nowPlaying.isPlaying {
+            CyberMusicWingView(nowPlaying: nowPlaying, isHovered: shouldExpandRightWing)
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        } else {
+            // AGENT / STANDBY MODE:
+            if shouldExpandRightWing {
+                if isHovered {
+                    interactiveQuickActionDock
+                } else {
+                    thinkingCapsule
+                }
+            } else {
+                standbyPill
+            }
+        }
+
+        statusBadges
+    }
+
+    private func dockButtonFill(isHovered: Bool) -> Color {
+        isHovered ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.25) : Color.white.opacity(0.06)
+    }
+
+    private func dockButtonStroke(isHovered: Bool) -> Color {
+        isHovered ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6) : Color.white.opacity(0.10)
+    }
+
+    @ViewBuilder
+    private var dockWorkspaceButton: some View {
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            withAnimation(NotchAnimation.open) {
+                expandedTab = .workspace
+                appState.surface = .sessionList
+            }
+        }) {
+            HStack(spacing: 2.5) {
+                Image(systemName: (gitBranch != nil && !gitBranch!.isEmpty) ? "arrow.triangle.branch" : "folder.fill")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                Text(gitBranch ?? projectName ?? "work")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.95))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: 44)
+            }
+            .padding(.horizontal, 4.5)
+            .padding(.vertical, 2.5)
+            .background(
+                Capsule()
+                    .fill(dockButtonFill(isHovered: hoveredAction == "workspace"))
+                    .overlay(Capsule().strokeBorder(dockButtonStroke(isHovered: hoveredAction == "workspace"), lineWidth: 0.5))
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { if $0 { hoveredAction = "workspace" } else if hoveredAction == "workspace" { hoveredAction = nil } }
+        .help("Open Workspace (Git & Files)")
+    }
+
+    @ViewBuilder
+    private var dockAgentsButton: some View {
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            withAnimation(NotchAnimation.open) {
+                expandedTab = .agents
+                appState.surface = .sessionList
+            }
+        }) {
+            let active = appState.activeSessionCount
+            let total = appState.totalSessionCount
+            HStack(spacing: 2.5) {
+                if active > 0 {
+                    Circle()
+                        .fill(Color(red: 0.20, green: 0.88, blue: 0.65))
+                        .frame(width: 3.5, height: 3.5)
+                        .shadow(color: Color(red: 0.20, green: 0.88, blue: 0.65).opacity(0.8), radius: 2)
+                } else {
+                    Image(systemName: "terminal.fill")
+                        .font(.system(size: 6, weight: .bold))
+                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                }
+                Text("\(active)/\(total)")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.95))
+            }
+            .padding(.horizontal, 4.5)
+            .padding(.vertical, 2.5)
+            .background(
+                Capsule()
+                    .fill(dockButtonFill(isHovered: hoveredAction == "agents"))
+                    .overlay(Capsule().strokeBorder(dockButtonStroke(isHovered: hoveredAction == "agents"), lineWidth: 0.5))
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { if $0 { hoveredAction = "agents" } else if hoveredAction == "agents" { hoveredAction = nil } }
+        .help("Open Agents & Sessions")
+    }
+
+    @ViewBuilder
+    private var dockExpandButton: some View {
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            withAnimation(NotchAnimation.open) {
+                appState.surface = .sessionList
+            }
+        }) {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 6.5, weight: .bold))
+                .foregroundStyle(Color.white.opacity(hoveredAction == "expand" ? 1.0 : 0.6))
+                .frame(width: 15, height: 15)
+                .background(
+                    Circle()
+                        .fill(hoveredAction == "expand" ? Color.white.opacity(0.2) : Color.white.opacity(0.06))
+                )
+        }
+        .buttonStyle(.plain)
+        .onHover { if $0 { hoveredAction = "expand" } else if hoveredAction == "expand" { hoveredAction = nil } }
+        .help("Expand Dynamic Island")
+    }
+
+    @ViewBuilder
+    private var interactiveQuickActionDock: some View {
+        // "INTERACTIVE QUICK-ACTION DOCK" - Tactile Micro Controls
+        HStack(spacing: 3) {
+            dockWorkspaceButton
+            dockAgentsButton
+            dockExpandButton
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2.5)
+        .background(
+            Capsule()
+                .fill(Color.white.opacity(0.09))
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.16), lineWidth: 0.6))
+        )
+        .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
+        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+    }
+
+    @ViewBuilder
+    private var thinkingCapsule: some View {
+        // "THINKING ACTIVE" - Sleek Dynamic Island Capsule
+        HStack(spacing: 4.5) {
+            if let branch = gitBranch, !branch.isEmpty {
+                HStack(spacing: 3) {
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.system(size: 7.5, weight: .bold))
+                        .foregroundStyle(Color(red: 0.20, green: 0.88, blue: 0.65))
+
+                    Text(branch)
+                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.92))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                }
+            } else if let proj = projectName, !proj.isEmpty {
+                HStack(spacing: 3) {
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.60))
+
+                    Text(proj)
+                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.90))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                }
+            } else {
+                HStack(spacing: 3) {
+                    Image(systemName: "cpu")
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.60))
+
+                    Text(agentDisplayLabel.lowercased())
+                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.90))
+                        .lineLimit(1)
+                        .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                }
+            }
+
+            Rectangle()
+                .fill(Color.white.opacity(0.18))
+                .frame(width: 1, height: 9)
+
+            let active = appState.activeSessionCount
+            let total = appState.totalSessionCount
+            HStack(spacing: 3) {
+                if active > 0 {
+                    Circle()
+                        .fill(Color(red: 0.20, green: 0.88, blue: 0.65))
+                        .frame(width: 4, height: 4)
+                        .shadow(color: Color(red: 0.20, green: 0.88, blue: 0.65).opacity(0.7), radius: 2)
+                } else {
+                    Image(systemName: "terminal")
+                        .font(.system(size: 6.5, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.40))
+                }
+
+                Text("\(active)/\(total)")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(active > 0 ? Color.white : Color.white.opacity(0.65))
+            }
+        }
+        .padding(.horizontal, 6.5)
+        .padding(.vertical, 3)
+        .background(
+            Capsule()
+                .fill(Color.white.opacity(0.08))
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+        )
+        .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
+        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+    }
+
+    @ViewBuilder
+    private var standbyPill: some View {
+        // "STANDBY DYNAMIC ISLAND PILL" - Interactive & Alive
+        HStack(spacing: 3.5) {
+            if let branch = gitBranch, !branch.isEmpty {
+                Image(systemName: "arrow.triangle.branch")
+                    .font(.system(size: 7.5, weight: .bold))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                Text(branch)
+                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.92))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: 48)
+            } else if let proj = projectName, !proj.isEmpty {
+                Image(systemName: "folder.fill")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                Text(proj)
+                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.92))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: 48)
+            } else {
+                Circle()
+                    .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .frame(width: 4, height: 4)
+                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), radius: 2)
+                TimelineView(.periodic(from: .now, by: 10.0)) { _ in
+                    Text(currentTimeString)
+                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.92))
+                }
+            }
+
+            Image(systemName: "chevron.down")
+                .font(.system(size: 6.5, weight: .bold))
+                .foregroundStyle(Color.white.opacity(0.50))
+        }
+        .padding(.horizontal, 6.5)
+        .padding(.vertical, 3)
+        .background(
+            Capsule()
+                .fill(Color.white.opacity(0.08))
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+        )
+        .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            withAnimation(NotchAnimation.open) {
+                expandedTab = .agents
+                appState.surface = .sessionList
+            }
+        }
+        .help("Click to expand island")
+    }
+
+    @ViewBuilder
+    private var statusBadges: some View {
+        // Quiet hours active — explains why event sounds are silent.
+        if inQuietHours {
+            Image(systemName: "moon.fill")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(.white.opacity(0.5))
+                .help(l10n["quiet_hours"])
+        }
+
+        // Glance completion badge
+        if appState.glanceCompletionActive {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), radius: 2)
+        }
+
+        // Question / Approval badges
+        if appState.hiddenPendingQuestionSessionId != nil {
+            Image(systemName: "questionmark.bubble.fill")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
+                .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+                .symbolEffect(.bounce, value: appState.followUps.hintPulse)
+                .help(l10n["question_waiting_hint"])
+        } else if appState.followUps.hintActive {
+            Image(systemName: "bell.badge.fill")
+                .font(.system(size: 8.5, weight: .bold))
+                .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
+                .symbolEffect(.bounce, value: appState.followUps.hintPulse)
+                .help(l10n["follow_up_hint"])
+        } else if appState.status == .waitingApproval || appState.status == .waitingQuestion {
+            Image(systemName: "bell.fill")
+                .font(.system(size: 8.5, weight: .bold))
+                .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
+                .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+        }
     }
 }
 
