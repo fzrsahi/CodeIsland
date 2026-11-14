@@ -20,9 +20,9 @@ steps:
     image: bash
     secrets: [ codeisland_webhook_secret, sparkle_private_key ]
     commands:
-      - echo "==> Release tag detected: $CI_COMMIT_TAG"
+      - 'echo "==> Release tag detected: $CI_COMMIT_TAG"'
       - VERSION="${CI_COMMIT_TAG#[vV]}"
-      - echo "==> Building CodeIsland DMG version: $VERSION"
+      - 'echo "==> Building CodeIsland DMG version: $VERSION"'
       - SKIP_SIGN=1 SKIP_NOTARIZE=1 BUILD_ARCH=arm64 ./scripts/build-dmg.sh "$VERSION"
       - |
         echo "==> Updating appcast.xml and signing with Sparkle Ed25519 key..."
