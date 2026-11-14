@@ -146,12 +146,17 @@ struct NotchPanelView: View {
         case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
         }
     }
+    private var mailAccentColor: Color {
+        AppColorTheme.accent(for: musicHUDProgressColor, isModern: islandUITheme != IslandUITheme.pixel.rawValue)
+    }
+
     @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @ObservedObject private var workspaceManager = WorkspaceMonitorManager.shared
     @ObservedObject private var sys = SystemMonitorManager.shared
     @ObservedObject private var prayerManager = PrayerTimeManager.shared
     @ObservedObject private var volumeManager = SystemVolumeManager.shared
+    @ObservedObject private var mailManager = MailManager.shared
 
     /// Delayed hover: prevents accidental expansion when mouse passes through
     @State private var hoverTimer: Timer?
@@ -173,6 +178,8 @@ struct NotchPanelView: View {
     @State private var isHoveringRightWing = false
     @State private var musicAutoCollapseTimer: Timer?
     @State private var musicDeferCollapseOnMouseLeave = false
+    @State private var mailAutoCollapseTimer: Timer?
+    @State private var mailDeferCollapseOnMouseLeave = false
 
     private var expandedTabBinding: Binding<ExpandedContentTab> {
         Binding(
@@ -222,7 +229,7 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if nowPlaying.isPlaying || nowPlaying.showToast || prayerManager.showMiniPeekBanner { return true }
+        if nowPlaying.isPlaying || nowPlaying.showToast || prayerManager.showMiniPeekBanner || mailManager.showMiniPeekBanner { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
@@ -250,7 +257,7 @@ struct NotchPanelView: View {
     }
 
     private var isToastOnly: Bool {
-        prayerManager.showMiniPeekBanner && !appState.surface.isExpanded
+        (prayerManager.showMiniPeekBanner || mailManager.showMiniPeekBanner) && !appState.surface.isExpanded
     }
 
     private func triggerMusicAutoPeek() {
@@ -270,6 +277,31 @@ struct NotchPanelView: View {
                 } else {
                     withAnimation(NotchAnimation.close) {
                         if appState.surface == .sessionList && expandedTab == .music {
+                            appState.surface = .collapsed
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func triggerMailAutoPeek() {
+        guard !appState.surface.isPrompting else { return }
+        mailAutoCollapseTimer?.invalidate()
+        mailDeferCollapseOnMouseLeave = false
+
+        withAnimation(NotchAnimation.open) {
+            appState.transitionToTab(.mail)
+            appState.surface = .sessionList
+        }
+
+        mailAutoCollapseTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
+            Task { @MainActor in
+                if isHovered || appState.followUps.pointerOverIsland {
+                    mailDeferCollapseOnMouseLeave = true
+                } else {
+                    withAnimation(NotchAnimation.close) {
+                        if appState.surface == .sessionList && expandedTab == .mail {
                             appState.surface = .collapsed
                         }
                     }
@@ -399,7 +431,7 @@ struct NotchPanelView: View {
             return min(320, maxPanelWidth)
         }
         // Mini peek banner width: sleek ~330pt when toast is showing while collapsed
-        if (nowPlaying.showToast || prayerManager.showMiniPeekBanner) && !appState.surface.isExpanded {
+        if (nowPlaying.showToast || prayerManager.showMiniPeekBanner || mailManager.showMiniPeekBanner) && !appState.surface.isExpanded {
             return min(330, maxPanelWidth)
         }
         let wing = symmetricWingWidth
@@ -611,6 +643,29 @@ struct NotchPanelView: View {
                             insertion: .move(edge: .top).combined(with: .opacity),
                             removal: .move(edge: .top).combined(with: .opacity)
                         ))
+                    } else if mailManager.showMiniPeekBanner && !appState.surface.isExpanded, let mail = mailManager.latestMailForPeek {
+                        // MAIL MINI PEEK BANNER: Buka tipis saat email baru masuk
+                        MailMiniPeekBannerView(
+                            mail: mail,
+                            isRetro: islandUITheme == IslandUITheme.pixel.rawValue,
+                            accentColor: mailAccentColor,
+                            onOpenFull: {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    mailManager.dismissMiniPeekBanner()
+                                    appState.transitionToTab(.mail)
+                                    appState.surface = .sessionList
+                                }
+                            },
+                            onDismiss: {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    mailManager.dismissMiniPeekBanner()
+                                }
+                            }
+                        )
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal: .move(edge: .top).combined(with: .opacity)
+                        ))
                     } else {
                         // High-priority cards always take precedence over secondary tabs
                         switch appState.surface {
@@ -703,6 +758,9 @@ struct NotchPanelView: View {
                                 case .prayer:
                                     PrayerExpandedCardView(manager: prayerManager)
                                         .transition(tabContentTransition)
+                                case .mail:
+                                    CyberMailHUDView(appState: appState)
+                                        .transition(tabContentTransition)
                                 case .agents:
                                     SessionListView(appState: appState, onlySessionId: nil)
                                         .transition(tabContentTransition)
@@ -721,6 +779,7 @@ struct NotchPanelView: View {
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: shouldShowExpanded)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: nowPlaying.showToast)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: prayerManager.showMiniPeekBanner)
+            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: mailManager.showMiniPeekBanner)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: isThinking)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: nowPlaying.isPlaying)
@@ -890,11 +949,27 @@ struct NotchPanelView: View {
                     }
                     return
                 }
+                if !hovering && mailDeferCollapseOnMouseLeave {
+                    mailDeferCollapseOnMouseLeave = false
+                    mailAutoCollapseTimer?.invalidate()
+                    mailAutoCollapseTimer = nil
+                    withAnimation(NotchAnimation.close) {
+                        if appState.surface == .sessionList && expandedTab == .mail {
+                            appState.surface = .collapsed
+                        }
+                    }
+                    return
+                }
                 if hovering {
                     if musicAutoCollapseTimer != nil {
                         musicAutoCollapseTimer?.invalidate()
                         musicAutoCollapseTimer = nil
                         musicDeferCollapseOnMouseLeave = true
+                    }
+                    if mailAutoCollapseTimer != nil {
+                        mailAutoCollapseTimer?.invalidate()
+                        mailAutoCollapseTimer = nil
+                        mailDeferCollapseOnMouseLeave = true
                     }
                     // Immediate lightweight acknowledgement; a quick pass-through
                     // only ever plays this first stage and reverses.
@@ -975,8 +1050,10 @@ struct NotchPanelView: View {
             }
             .onChange(of: appState.status) { oldStatus, newStatus in
                 // Switch to .agents if task completes while viewing secondary tabs
-                if (oldStatus == .processing || oldStatus == .running) && newStatus == .idle {
-                    if expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer {
+                let wasBusy = oldStatus == .processing || oldStatus == .running
+                if wasBusy && newStatus == .idle {
+                    let isSecondary = expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer || expandedTab == .mail
+                    if isSecondary {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                             expandedTab = .agents
                         }
@@ -984,7 +1061,8 @@ struct NotchPanelView: View {
                 }
             }
             .onChange(of: appState.justCompletedSessionId) { _, completedId in
-                if completedId != nil && (expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer) {
+                let isSecondary = expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer || expandedTab == .mail
+                if completedId != nil && isSecondary {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                         expandedTab = .agents
                     }
@@ -995,6 +1073,14 @@ struct NotchPanelView: View {
                     musicAutoCollapseTimer?.invalidate()
                     musicAutoCollapseTimer = nil
                     musicDeferCollapseOnMouseLeave = false
+                }
+                if newTab != .mail {
+                    mailAutoCollapseTimer?.invalidate()
+                    mailAutoCollapseTimer = nil
+                    mailDeferCollapseOnMouseLeave = false
+                }
+                if newTab == .mail {
+                    mailManager.refresh()
                 }
                 if newTab == .workspace {
                     workspaceManager.resolveAndRefreshWorkspace(appState: appState)
@@ -1906,6 +1992,7 @@ private struct HeaderNavigationMenuTabs: View {
     @ObservedObject var workspaceManager: WorkspaceMonitorManager
     var availableWidth: CGFloat = 240
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
+    @ObservedObject private var mailManager = MailManager.shared
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -2064,6 +2151,48 @@ private struct HeaderNavigationMenuTabs: View {
                     .buttonStyle(.plain)
                     .help("Prayer Schedule & Living Sky Diorama")
                 }
+
+                // MAIL TAB (MODERN)
+                if MailManager.shared.isEnabled {
+                    let isMailActive = expandedTab == .mail
+                    let showMailLabel = isMailActive && (activeLabelTab == .mail || !appState.isTabTransitioning)
+                    let mailColor = activeAccentColor
+                    Button {
+                        switchToTab(.mail)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "envelope.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                            if showMailLabel {
+                                Text("Mail")
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .lineLimit(1)
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .leading).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            }
+                            if MailManager.shared.unreadCount > 0 {
+                                Text("\(min(999, MailManager.shared.unreadCount))")
+                                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                                    .foregroundStyle(mailColor == .white ? Color.black : Color.white)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(Capsule().fill(mailColor))
+                            }
+                        }
+                        .foregroundStyle(isMailActive ? mailColor : Self.inactiveColor)
+                        .padding(.horizontal, isMailActive ? 8 : 6)
+                        .frame(height: 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(isMailActive ? (mailColor == .white ? Color.white.opacity(0.18) : mailColor.opacity(0.22)) : .clear)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Apple Mail (\(MailManager.shared.unreadCount) unread)")
+                }
             }
             .padding(.vertical, 2)
         } else {
@@ -2209,6 +2338,53 @@ private struct HeaderNavigationMenuTabs: View {
                     }
                     .buttonStyle(.plain)
                     .help("Prayer Schedule & Living Sky Diorama")
+                }
+
+                // MAIL PIXEL TAB
+                if MailManager.shared.isEnabled {
+                    let isMailActive = expandedTab == .mail
+                    let showMailLabel = isMailActive && (activeLabelTab == .mail || !appState.isTabTransitioning)
+                    let cyberMailColor = activeAccentColor
+                    Button {
+                        switchToTab(.mail)
+                    } label: {
+                        HStack(spacing: 4) {
+                            PixelIcon(
+                                glyph: .email,
+                                color: isMailActive ? cyberMailColor : Self.inactiveColor,
+                                pixelSize: 1.35
+                            )
+                            if showMailLabel {
+                                PixelText(
+                                    text: "MAIL",
+                                    color: cyberMailColor,
+                                    pixelSize: 1.15
+                                )
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .leading).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                ))
+                            }
+                            if MailManager.shared.unreadCount > 0 {
+                                Text("\(min(999, MailManager.shared.unreadCount))")
+                                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color.black)
+                                    .padding(.horizontal, 3)
+                                    .padding(.vertical, 1)
+                                    .background(cyberMailColor)
+                                    .cornerRadius(2)
+                            }
+                        }
+                        .padding(.horizontal, isMailActive ? 7 : 5)
+                        .frame(height: 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(isMailActive ? cyberMailColor.opacity(0.20) : .clear)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Apple Mail (\(MailManager.shared.unreadCount) unread)")
                 }
             }
             .padding(.vertical, 2)
