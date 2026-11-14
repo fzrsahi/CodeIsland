@@ -382,15 +382,15 @@ struct NotchPanelView: View {
             return max(80, needed)
         }
         if nowPlaying.isPlaying && !shouldShowExpanded {
-            var width: CGFloat = 58
+            var width: CGFloat = 68
             if appState.glanceCompletionActive {
-                width += 22
+                width += 26
             }
             if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion {
-                width += 22
+                width += 26
             }
             if rightWingWidth > 0 {
-                width = max(width, rightWingWidth + 18)
+                width = max(width, rightWingWidth + 24)
             }
             return width
         }
@@ -1794,7 +1794,8 @@ private struct CompactRightWing: View {
                 }
             }
         }
-        .padding(.horizontal, expanded ? 10 : 3)
+        .padding(.leading, 8)
+        .padding(.trailing, expanded ? 10 : 3)
         // Its natural width, reported so the collapsed bar can make room for
         // it clear of the notch (CompactRightWingLayout).
         .fixedSize(horizontal: true, vertical: false)
@@ -2347,9 +2348,10 @@ private struct HeaderNavigationMenuTabs: View {
                         }
                         .padding(.horizontal, isAgentsActive ? 7 : 5)
                         .frame(height: 18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(isAgentsActive ? activeAccentColor.opacity(0.20) : .clear)
+                        .pixel16Bevel(
+                            raised: isAgentsActive,
+                            cornerRadius: 3,
+                            fillColor: isAgentsActive ? activeAccentColor.opacity(0.18) : Pixel16Palette.slot
                         )
                         .contentShape(Rectangle())
                     }
@@ -2384,9 +2386,10 @@ private struct HeaderNavigationMenuTabs: View {
                         }
                         .padding(.horizontal, isWorkActive ? 7 : 5)
                         .frame(height: 18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(isWorkActive ? activeAccentColor.opacity(0.20) : .clear)
+                        .pixel16Bevel(
+                            raised: isWorkActive,
+                            cornerRadius: 3,
+                            fillColor: isWorkActive ? activeAccentColor.opacity(0.18) : Pixel16Palette.slot
                         )
                         .contentShape(Rectangle())
                     }
@@ -2421,9 +2424,10 @@ private struct HeaderNavigationMenuTabs: View {
                         }
                         .padding(.horizontal, isMusicActive ? 7 : 5)
                         .frame(height: 18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(isMusicActive ? activeAccentColor.opacity(0.20) : .clear)
+                        .pixel16Bevel(
+                            raised: isMusicActive,
+                            cornerRadius: 3,
+                            fillColor: isMusicActive ? activeAccentColor.opacity(0.18) : Pixel16Palette.slot
                         )
                         .contentShape(Rectangle())
                     }
@@ -2458,9 +2462,10 @@ private struct HeaderNavigationMenuTabs: View {
                         }
                         .padding(.horizontal, isPrayerActive ? 7 : 5)
                         .frame(height: 18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(isPrayerActive ? activeAccentColor.opacity(0.20) : .clear)
+                        .pixel16Bevel(
+                            raised: isPrayerActive,
+                            cornerRadius: 3,
+                            fillColor: isPrayerActive ? activeAccentColor.opacity(0.18) : Pixel16Palette.slot
                         )
                         .contentShape(Rectangle())
                     }
@@ -2565,9 +2570,10 @@ private struct SessionGroupingTabs: View {
                         )
                         .padding(.horizontal, 5)
                         .frame(height: 16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                .fill(selected ? activeAccentColor.opacity(0.18) : .clear)
+                        .pixel16Bevel(
+                            raised: selected,
+                            cornerRadius: 2.5,
+                            fillColor: selected ? activeAccentColor.opacity(0.18) : Color.clear
                         )
                         .contentShape(Rectangle())
                     }
@@ -2578,13 +2584,10 @@ private struct SessionGroupingTabs: View {
                 }
             }
             .padding(2)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(Color.white.opacity(0.05))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .stroke(expandedTab == .agents ? activeAccentColor.opacity(0.4) : .white.opacity(0.12), lineWidth: 1)
-                    )
+            .pixel16Bevel(
+                raised: false,
+                cornerRadius: 4,
+                fillColor: Pixel16Palette.slot
             )
         }
     }
@@ -6179,9 +6182,11 @@ private struct SessionCard: View {
             if let tint {
                 shape.fill(tint)
             }
-            Rectangle()
-                .fill(cardStatus.railColor)
-                .frame(width: 3)
+            if !isCompactRow {
+                Rectangle()
+                    .fill(cardStatus.railColor)
+                    .frame(width: 3)
+            }
         }
         .clipShape(shape)
         .accessibilityHidden(true)

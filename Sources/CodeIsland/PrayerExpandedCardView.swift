@@ -120,10 +120,7 @@ public struct PrayerExpandedCardView: View {
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.black.opacity(0.65))
-                        )
+                        .pixel16Bevel(raised: false, cornerRadius: 3.5, fillColor: Pixel16Palette.slot.opacity(0.70))
 
                         Text("\(manager.gregorianDateString.uppercased()) // \(manager.hijriDateString.uppercased())")
                             .font(.system(size: 8, weight: .bold, design: .monospaced))
@@ -143,10 +140,7 @@ public struct PrayerExpandedCardView: View {
                     }
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.black.opacity(0.65))
-                    )
+                    .pixel16Bevel(raised: false, cornerRadius: 3.5, fillColor: Pixel16Palette.slot.opacity(0.70))
                 }
                 .padding(.horizontal, 14)
                 .padding(.top, 12)
@@ -169,10 +163,10 @@ public struct PrayerExpandedCardView: View {
 
                                 Text(diffMins <= 0 ? "[NOW]" : "[-\(manager.formattedCountdown)]")
                                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(accentColor)
-                                    .padding(.horizontal, 6)
+                                    .foregroundStyle(Pixel16Palette.textMuted)
+                                    .padding(.horizontal, 5)
                                     .padding(.vertical, 2)
-                                    .background(RoundedRectangle(cornerRadius: 3).fill(accentColor.opacity(0.20)))
+                                    .pixel16Bevel(raised: false, cornerRadius: 3, fillColor: Pixel16Palette.slot.opacity(0.70))
                             }
                         }
 
@@ -253,9 +247,10 @@ public struct PrayerExpandedCardView: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.black.opacity(0.55))
+                    .pixel16Bevel(
+                        raised: false,
+                        cornerRadius: 4,
+                        fillColor: Pixel16Palette.slot.opacity(0.70)
                     )
                 }
                 .padding(.horizontal, 16)
@@ -325,9 +320,10 @@ public struct PrayerExpandedCardView: View {
                     .foregroundStyle(Color.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2.5)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.black.opacity(0.65))
+                    .pixel16Bevel(
+                        raised: false,
+                        cornerRadius: 3.5,
+                        fillColor: Pixel16Palette.slot.opacity(0.70)
                     )
 
                     Text("\(manager.gregorianDateString.uppercased()) // \(manager.cityName.uppercased())")
@@ -337,13 +333,13 @@ public struct PrayerExpandedCardView: View {
 
                     Spacer(minLength: 4)
 
-                    // Next Prayer Spotlight Badge
+                    // Next Prayer Spotlight Badge (Seamless 16-Bit Telemetry - Zero Ugly Nested Stroke Boxes)
                     if let next = upcoming {
                         let diffMins = manager.minutesUntilNextPrayer
                         HStack(spacing: 5) {
                             Text(next.prayer.displayName.uppercased())
                                 .font(.system(size: 8.5, weight: .black, design: .monospaced))
-                                .foregroundStyle(Color.white)
+                                .foregroundStyle(Pixel16Palette.textWhite)
 
                             Text(manager.formattedPrayerTime(next.date))
                                 .font(.system(size: 8.5, weight: .bold, design: .monospaced))
@@ -351,24 +347,22 @@ public struct PrayerExpandedCardView: View {
 
                             Text(diffMins <= 0 ? "[NOW]" : "[-\(manager.formattedCountdown)]")
                                 .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                                .foregroundStyle(accentColor)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(RoundedRectangle(cornerRadius: 3).fill(accentColor.opacity(0.20)))
+                                .foregroundStyle(Pixel16Palette.textMuted)
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2.5)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.black.opacity(0.50))
+                        .pixel16Bevel(
+                            raised: false,
+                            cornerRadius: 3.5,
+                            fillColor: Pixel16Palette.slot.opacity(0.70)
                         )
                     }
 
-                    // Compact Pixel Qibla Dial
+                    // Compact Pixel Qibla Dial (Seamless 16-Bit Recessed Inset)
                     HStack(spacing: 4) {
                         ZStack {
                             Circle()
-                                .fill(Color.black.opacity(0.50))
+                                .fill(Pixel16Palette.slot.opacity(0.80))
                                 .frame(width: 17, height: 17)
 
                             VStack(spacing: 0) {
@@ -394,9 +388,10 @@ public struct PrayerExpandedCardView: View {
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2.5)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.black.opacity(0.50))
+                    .pixel16Bevel(
+                        raised: false,
+                        cornerRadius: 3.5,
+                        fillColor: Pixel16Palette.slot.opacity(0.70)
                     )
                     .help("Qibla Direction: \(Int(deg))° \(dirFull) towards Kaaba")
                 }

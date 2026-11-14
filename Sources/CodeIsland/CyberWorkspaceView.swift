@@ -783,7 +783,7 @@ struct PixelRetroWorkspaceView: View {
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4.5)
-                        .background(Rectangle().fill(accentColor))
+                        .pixel16Bevel(raised: true, cornerRadius: 3, fillColor: accentColor)
                     }
                     .buttonStyle(.plain)
                 }
@@ -892,7 +892,7 @@ struct PixelRetroWorkspaceView: View {
                             }
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
-                            .background(Rectangle().fill(MinimalPixelPalette.surface))
+                            .pixel16Bevel(raised: false, cornerRadius: 2.5, fillColor: Pixel16Palette.slot)
                         }
 
                         // Refresh Button
@@ -1001,8 +1001,7 @@ struct PixelRetroWorkspaceView: View {
                                 .foregroundStyle(openHovered ? Color.black : accentColor)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
-                                .background(Rectangle().fill(openHovered ? accentColor : MinimalPixelPalette.surface))
-                                .overlay(Rectangle().stroke(openHovered ? accentColor : accentColor.opacity(0.4), lineWidth: 1))
+                                .pixel16Bevel(raised: true, cornerRadius: 3, fillColor: openHovered ? accentColor : Pixel16Palette.surfaceRaised)
                             }
                             .buttonStyle(.plain)
                             .onHover { openHovered = $0 }
@@ -1028,8 +1027,7 @@ struct PixelRetroWorkspaceView: View {
                                 .foregroundStyle(aiHovered ? Color.black : accentColor)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3.5)
-                                .background(Rectangle().fill(aiHovered ? accentColor : MinimalPixelPalette.surface))
-                                .overlay(Rectangle().stroke(accentColor.opacity(0.5), lineWidth: 1))
+                                .pixel16Bevel(raised: true, cornerRadius: 3, fillColor: aiHovered ? accentColor : Pixel16Palette.surfaceRaised)
                             }
                             .buttonStyle(.plain)
                             .onHover { aiHovered = $0 }
@@ -1051,8 +1049,7 @@ struct PixelRetroWorkspaceView: View {
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 3.5)
                             }
-                            .background(Rectangle().fill(MinimalPixelPalette.surface))
-                            .overlay(Rectangle().stroke(MinimalPixelPalette.border, lineWidth: 1))
+                            .pixel16Bevel(raised: false, cornerRadius: 3, fillColor: Pixel16Palette.slot)
 
                             // Commit Button
                             Button(action: {
@@ -1075,12 +1072,12 @@ struct PixelRetroWorkspaceView: View {
                                 )
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3.5)
-                                .background(
-                                    Rectangle().fill(
-                                        manager.proposedCommitMessage.isEmpty
-                                            ? MinimalPixelPalette.surface
-                                            : (commitHovered ? accentColor.opacity(0.85) : accentColor)
-                                    )
+                                .pixel16Bevel(
+                                    raised: true,
+                                    cornerRadius: 3,
+                                    fillColor: manager.proposedCommitMessage.isEmpty
+                                        ? Pixel16Palette.surface
+                                        : (commitHovered ? accentColor.opacity(0.85) : accentColor)
                                 )
                             }
                             .buttonStyle(.plain)
@@ -1104,8 +1101,7 @@ struct PixelRetroWorkspaceView: View {
                                 .foregroundStyle(pushHovered ? Color.black : MinimalPixelPalette.textWhite)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3.5)
-                                .background(Rectangle().fill(pushHovered ? accentColor : MinimalPixelPalette.surface))
-                                .overlay(Rectangle().stroke(pushHovered ? accentColor : MinimalPixelPalette.border, lineWidth: 1))
+                                .pixel16Bevel(raised: true, cornerRadius: 3, fillColor: pushHovered ? accentColor : Pixel16Palette.surfaceRaised)
                             }
                             .buttonStyle(.plain)
                             .disabled(manager.isCommitting || manager.proposedCommitMessage.isEmpty)

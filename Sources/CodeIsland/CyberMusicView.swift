@@ -11,6 +11,10 @@ struct RetroSpectrumPalette: Equatable, Sendable {
 
     @MainActor
     static func forThemeKey(_ key: String) -> RetroSpectrumPalette {
+        let syncAlbum = UserDefaults.standard.bool(forKey: SettingsKey.syncThemeWithAlbumArt)
+        if (syncAlbum || key == MusicProgressColor.album.rawValue) && NowPlayingManager.shared.isPlaying && NowPlayingManager.shared.artworkImage != nil {
+            return NowPlayingManager.shared.albumPalette.spectrum
+        }
         let pc = MusicProgressColor(rawValue: key) ?? .theme
         return forProgressColor(pc)
     }
@@ -1660,13 +1664,13 @@ struct RetroCyberMusicHUDContentView: View {
                     }
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1.5)
-                    .background(Color.white.opacity(0.06))
+                    .pixel16Bevel(raised: false, cornerRadius: 2.5, fillColor: Pixel16Palette.slot)
                 }
 
                 // Track & Album Info (Clean, open layout)
                 Button(action: { nowPlaying.activateCurrentPlayer() }) {
                     HStack(spacing: 8) {
-                        // Pixel Stepped Album Art (44x44)
+                        // 16-Bit Recessed Cartridge Album Bay (44x44)
                         ZStack {
                             if let art = nowPlaying.artworkImage {
                                 Image(nsImage: art)
@@ -1674,15 +1678,14 @@ struct RetroCyberMusicHUDContentView: View {
                                     .aspectRatio(contentMode: .fill)
                                     .frame(width: 44, height: 44)
                                     .clipped()
-                                    .overlay(Rectangle().stroke(activeProgressColor.opacity(0.6), lineWidth: 1))
                             } else {
                                 Rectangle()
-                                    .fill(Color(red: 0.06, green: 0.07, blue: 0.09))
+                                    .fill(Pixel16Palette.slot)
                                     .frame(width: 44, height: 44)
                                     .overlay(Image(systemName: "music.note").font(.system(size: 14)).foregroundColor(activeProgressColor))
-                                    .overlay(Rectangle().stroke(activeProgressColor.opacity(0.4), lineWidth: 1))
                             }
                         }
+                        .pixel16Bevel(raised: false, cornerRadius: 3.5, fillColor: Pixel16Palette.slot)
                         .id(nowPlaying.title + nowPlaying.artist)
 
                         // Title & Artist
@@ -1762,17 +1765,16 @@ struct RetroCyberMusicHUDContentView: View {
                     }
                 }
 
-                // Transport Controls + STEREO DISCO EQUALIZER INTEGRATED SIDE-BY-SIDE
+                // Transport Controls + STEREO EQUALIZER INTEGRATED SIDE-BY-SIDE
                 HStack(spacing: 8) {
-                    // Tactile Retro Arcade Transport Buttons
+                    // Tactile 16-Bit Cyberdeck Transport Buttons
                     HStack(spacing: 4) {
                         Button(action: { nowPlaying.previousTrack() }) {
                             Text("◀◀")
                                 .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.white.opacity(0.85))
+                                .foregroundStyle(Color.white.opacity(0.90))
                                 .frame(width: 25, height: 18)
-                                .background(Color.white.opacity(0.08))
-                                .overlay(Rectangle().stroke(Color.white.opacity(0.18), lineWidth: 0.8))
+                                .pixel16Bevel(raised: true, cornerRadius: 2.5, fillColor: Pixel16Palette.surfaceRaised)
                         }
                         .buttonStyle(.plain)
 
@@ -1781,25 +1783,23 @@ struct RetroCyberMusicHUDContentView: View {
                                 .font(.system(size: 8, weight: .bold, design: .monospaced))
                                 .foregroundStyle(activeProgressColor)
                                 .frame(width: 29, height: 18)
-                                .background(activeProgressColor.opacity(0.18))
-                                .overlay(Rectangle().stroke(activeProgressColor.opacity(0.65), lineWidth: 1))
+                                .pixel16Bevel(raised: true, cornerRadius: 2.5, fillColor: activeProgressColor.opacity(0.22))
                         }
                         .buttonStyle(.plain)
 
                         Button(action: { nowPlaying.nextTrack() }) {
                             Text("▶▶")
                                 .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.white.opacity(0.85))
+                                .foregroundStyle(Color.white.opacity(0.90))
                                 .frame(width: 25, height: 18)
-                                .background(Color.white.opacity(0.08))
-                                .overlay(Rectangle().stroke(Color.white.opacity(0.18), lineWidth: 0.8))
+                                .pixel16Bevel(raised: true, cornerRadius: 2.5, fillColor: Pixel16Palette.surfaceRaised)
                         }
                         .buttonStyle(.plain)
                     }
 
                     Spacer()
 
-                    // THE VIBRANT DISCO EQUALIZER - Integrated pulse right beside playback controls!
+                    // THE 16-BIT EQUALIZER - Integrated in recessed bay beside controls
                     HStack(spacing: 2) {
                         CyberDiscoVisualizer(
                             isPlaying: nowPlaying.isPlaying,
@@ -1810,8 +1810,7 @@ struct RetroCyberMusicHUDContentView: View {
                     }
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
-                    .background(Color.white.opacity(0.04))
-                    .overlay(Rectangle().stroke(Color.white.opacity(0.10), lineWidth: 0.8))
+                    .pixel16Bevel(raised: false, cornerRadius: 2.5, fillColor: Pixel16Palette.slot)
                 }
             }
             .frame(width: 255, alignment: .leading)
