@@ -2,9 +2,15 @@ import SwiftUI
 
 /// Unified Color Theme accessor for CodeIsland
 public enum AppColorTheme {
+    @MainActor
     public static func accent(for colorKey: String, isModern: Bool = false) -> Color {
         let pc = MusicProgressColor(rawValue: colorKey) ?? .theme
         switch pc {
+        case .album:
+            if NowPlayingManager.shared.isPlaying && NowPlayingManager.shared.artworkImage != nil {
+                return NowPlayingManager.shared.albumPalette.primary
+            }
+            return isModern ? .white : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme:
             return isModern ? .white : Color(red: 0.12, green: 0.84, blue: 0.38)
         case .white: return .white

@@ -4,18 +4,25 @@ import AppKit
 
 // MARK: - Retro Spectrum Dynamic Palette (Color Theme as Base, Harmonious Gradient on Top)
 
-struct RetroSpectrumPalette: Equatable {
+struct RetroSpectrumPalette: Equatable, Sendable {
     var base: Color
     var mid: Color
     var peak: Color
 
+    @MainActor
     static func forThemeKey(_ key: String) -> RetroSpectrumPalette {
         let pc = MusicProgressColor(rawValue: key) ?? .theme
         return forProgressColor(pc)
     }
 
+    @MainActor
     static func forProgressColor(_ pc: MusicProgressColor) -> RetroSpectrumPalette {
         switch pc {
+        case .album:
+            if NowPlayingManager.shared.isPlaying && NowPlayingManager.shared.artworkImage != nil {
+                return NowPlayingManager.shared.albumPalette.spectrum
+            }
+            return forProgressColor(.cyan)
         case .pink:
             // Base = Neon Pink/Merah, Mid = Warm Sunset Orange, Peak = Electric Yellow
             return RetroSpectrumPalette(
@@ -302,6 +309,7 @@ struct CyberMusicWingView: View {
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
 
     init(nowPlaying: NowPlayingManager, isHovered: Bool = false) {
         self.nowPlaying = nowPlaying
@@ -315,8 +323,16 @@ struct CyberMusicWingView: View {
     }
 
     private var accentColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == MusicProgressColor.album.rawValue) && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return isModernClean ? Color(red: 1.0, green: 0.65, blue: 0.45) : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme: return isModernClean ? Color(red: 1.0, green: 0.65, blue: 0.45) : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
@@ -424,6 +440,7 @@ struct CyberMusicMiniPeekBanner: View {
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
 
     private var isModernClean: Bool {
         if islandUITheme == IslandUITheme.modern.rawValue { return true }
@@ -432,8 +449,16 @@ struct CyberMusicMiniPeekBanner: View {
     }
 
     private var accentColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return isModernClean ? Color(red: 1.0, green: 0.65, blue: 0.45) : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme: return isModernClean ? Color(red: 1.0, green: 0.65, blue: 0.45) : Color(red: 0.0, green: 0.96, blue: 0.83)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
@@ -513,8 +538,14 @@ struct CyberMusicMiniPeekBanner: View {
 }
 
 extension FloatingLyricTextColor {
+    @MainActor
     var color: Color {
         switch self {
+        case .album:
+            if NowPlayingManager.shared.isPlaying && NowPlayingManager.shared.artworkImage != nil {
+                return NowPlayingManager.shared.albumPalette.primary
+            }
+            return Color.white
         case .white: return Color.white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
@@ -535,6 +566,7 @@ struct SubNotchFloatingLyricCapsuleView: View {
     @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
     @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @State private var isHovered = false
     @State private var capsuleWidth: CGFloat = 180
 
@@ -543,7 +575,10 @@ struct SubNotchFloatingLyricCapsuleView: View {
     }
 
     private var activeTextColor: Color {
-        FloatingLyricTextColor(rawValue: floatingLyricTextColor)?.color ?? .white
+        if (syncThemeWithAlbumArt || floatingLyricTextColor == "album" || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
+        return FloatingLyricTextColor(rawValue: floatingLyricTextColor)?.color ?? .white
     }
 
     private var activeFontDesign: Font.Design {
@@ -1188,8 +1223,14 @@ struct CyberMusicHUDView: View {
 // MARK: - Modern Clean Dynamic Island Music HUD Theme (Apple Music / Spotify Partial Flow)
 
 extension MusicProgressColor {
+    @MainActor
     var color: Color {
         switch self {
+        case .album:
+            if NowPlayingManager.shared.isPlaying && NowPlayingManager.shared.artworkImage != nil {
+                return NowPlayingManager.shared.albumPalette.primary
+            }
+            return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme: return Color(red: 1.0, green: 0.65, blue: 0.45)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
@@ -1199,8 +1240,20 @@ extension MusicProgressColor {
         }
     }
 
+    @MainActor
     var gradient: LinearGradient {
         switch self {
+        case .album:
+            if NowPlayingManager.shared.isPlaying && NowPlayingManager.shared.artworkImage != nil {
+                return LinearGradient(
+                    colors: [NowPlayingManager.shared.albumPalette.primary, NowPlayingManager.shared.albumPalette.secondary],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            }
+            return LinearGradient(
+                colors: [Color(red: 0.0, green: 0.96, blue: 0.83), Color(red: 0.0, green: 0.75, blue: 0.95)],
+                startPoint: .leading, endPoint: .trailing
+            )
         case .theme, .amber:
             return LinearGradient(
                 colors: [Color(red: 1.0, green: 0.68, blue: 0.48), Color(red: 1.0, green: 0.58, blue: 0.38)],
@@ -1522,6 +1575,7 @@ struct RetroCyberMusicHUDContentView: View {
     @ObservedObject var nowPlaying: NowPlayingManager
     var appState: AppState
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @State private var dragPosition: Double?
 
     init(nowPlaying: NowPlayingManager, appState: AppState) {
@@ -1530,8 +1584,16 @@ struct RetroCyberMusicHUDContentView: View {
     }
 
     private var activeProgressColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme: return Color(red: 0.0, green: 0.96, blue: 0.83) // Iconic Cyber Cyan by default
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
@@ -1542,8 +1604,25 @@ struct RetroCyberMusicHUDContentView: View {
     }
 
     private var activeProgressGradient: LinearGradient {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return LinearGradient(
+                colors: [nowPlaying.albumPalette.primary, nowPlaying.albumPalette.secondary],
+                startPoint: .leading, endPoint: .trailing
+            )
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return LinearGradient(
+                    colors: [nowPlaying.albumPalette.primary, nowPlaying.albumPalette.secondary],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            }
+            return LinearGradient(
+                colors: [Color(red: 0.0, green: 0.96, blue: 0.83), Color(red: 0.0, green: 0.75, blue: 0.95)],
+                startPoint: .leading, endPoint: .trailing
+            )
         case .theme:
             return LinearGradient(
                 colors: [Color(red: 0.0, green: 0.96, blue: 0.83), Color(red: 0.0, green: 0.75, blue: 0.95)],

@@ -2,17 +2,22 @@ import SwiftUI
 import CodeIslandCore
 
 /// Unified living diorama prayer card with an integrated seamless timeline and functional Qibla compass.
-/// Eliminates segmented boxy cards in favor of a cohesive, minimalist, and cinematic panoramic dashboard.
-/// Fully supports authentic 8-bit retro pixel and modern clean aesthetics with 100% English wording.
+/// Eliminates harsh outer bounding boxes in favor of a cohesive, minimalist, and cinematic panoramic dashboard.
+/// Fully supports both Compact (120pt) and Panoramic (242pt) display modes, configurable in Settings.
 public struct PrayerExpandedCardView: View {
     @ObservedObject public var manager: PrayerTimeManager
 
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    @AppStorage(SettingsKey.prayerCardDisplayMode) private var prayerCardDisplayMode = SettingsDefaults.prayerCardDisplayMode
     @State private var hoveredPrayer: String? = nil
     @State private var hoveredCompass = false
 
     private var isPixel: Bool {
         islandUITheme == IslandUITheme.pixel.rawValue
+    }
+
+    private var isPanoramic: Bool {
+        prayerCardDisplayMode == PrayerCardDisplayMode.panoramic.rawValue
     }
 
     private static let tabGreen = Color(red: 0.12, green: 0.84, blue: 0.38)
@@ -24,22 +29,238 @@ public struct PrayerExpandedCardView: View {
     public var body: some View {
         Group {
             if isPixel {
-                unifiedPixelDashboard
+                if isPanoramic {
+                    panoramicPixelDashboard
+                } else {
+                    compactPixelDashboard
+                }
             } else {
-                unifiedModernDashboard
+                if isPanoramic {
+                    panoramicModernDashboard
+                } else {
+                    compactModernDashboard
+                }
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 18)
         .padding(.top, 4)
         .padding(.bottom, 16)
         .frame(maxWidth: .infinity)
     }
 
     // MARK: - ==========================================
-    // MARK: 1. UNIFIED PIXEL RETRO (8-BIT) DASHBOARD
+    // MARK: 1. PIXEL RETRO - PANORAMIC (242pt)
     // MARK: - ==========================================
 
-    private var unifiedPixelDashboard: some View {
+    private var panoramicPixelDashboard: some View {
+        let upcoming = manager.upcomingPrayer
+        let schedule = manager.todaySchedule
+        let phase = manager.currentPhase
+        let deg = manager.qiblaDegrees
+        let dirShort = manager.qiblaCompassDirection
+
+        return ZStack(alignment: .topLeading) {
+            // Background: Living 8-bit Stepped Pixel Sky & Mosque Architecture
+            DioramaSkyView(
+                hour: manager.currentFractionalHour,
+                hijriDay: manager.hijriDay,
+                sunriseHour: manager.sunriseHour,
+                sunsetHour: manager.sunsetHour,
+                pixel: true,
+                skyline: true,
+                skylineHeight: 0.18
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            // Contrast Gradient Overlay for flawless legibility
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.15),
+                    Color.black.opacity(0.40),
+                    Color.black.opacity(0.88)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .allowsHitTesting(false)
+
+            // Foreground Unified Content
+            VStack(spacing: 0) {
+                // A. Top Floating Header Strip
+                HStack(alignment: .center) {
+                    HStack(spacing: 6) {
+                        HStack(spacing: 4) {
+                            Image(systemName: phase.systemImage)
+                                .font(.system(size: 8.5, weight: .bold))
+                            Text("PHASE: \(phase.displayName.uppercased())")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.black.opacity(0.65))
+                        )
+
+                        Text("\(manager.gregorianDateString.uppercased()) // \(manager.hijriDateString.uppercased())")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.85))
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(Self.tabGreen)
+                        Text(manager.cityName.uppercased())
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.95))
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.black.opacity(0.65))
+                    )
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+
+                Spacer(minLength: 6)
+
+                // B. Hero Spotlight & Qibla Compass
+                HStack(alignment: .center, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        if let next = upcoming {
+                            let diffMins = manager.minutesUntilNextPrayer
+                            HStack(spacing: 6) {
+                                Text(next.prayer.displayName.uppercased())
+                                    .font(.system(size: 14, weight: .black, design: .monospaced))
+                                    .foregroundStyle(Color.white)
+
+                                Text(manager.formattedPrayerTime(next.date))
+                                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Self.tabGreen)
+
+                                Text(diffMins <= 0 ? "[NOW]" : "[-\(manager.formattedCountdown)]")
+                                    .font(.system(size: 10, weight: .black, design: .monospaced))
+                                    .foregroundStyle(Color.black)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(RoundedRectangle(cornerRadius: 3).fill(Self.tabGreen))
+                                    .shadow(color: Self.tabGreen.opacity(0.6), radius: 4)
+                            }
+                        }
+
+                        Text(manager.currentSecondsString)
+                            .font(.system(size: 26, weight: .black, design: .monospaced))
+                            .foregroundStyle(Color.white)
+                            .shadow(color: Color.black.opacity(0.8), radius: 3)
+                    }
+
+                    Spacer()
+
+                    // Right: Seamless Pixel Qibla Compass Dial
+                    HStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .stroke(Self.tabGreen.opacity(0.40), lineWidth: 1)
+                                .frame(width: 44, height: 44)
+                                .background(Circle().fill(Color.black.opacity(0.65)))
+
+                            VStack {
+                                Text("N")
+                                    .font(.system(size: 6, weight: .black, design: .monospaced))
+                                    .foregroundStyle(Color.white)
+                                Spacer()
+                                Text("S")
+                                    .font(.system(size: 6, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color.white.opacity(0.4))
+                            }
+                            .frame(height: 40)
+
+                            HStack {
+                                Text("W")
+                                    .font(.system(size: 6, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color.white.opacity(0.4))
+                                Spacer()
+                                Text("E")
+                                    .font(.system(size: 6, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color.white.opacity(0.4))
+                            }
+                            .frame(width: 40)
+
+                            ZStack {
+                                VStack(spacing: 0) {
+                                    Image(systemName: "triangle.fill")
+                                        .font(.system(size: 6, weight: .bold))
+                                        .foregroundStyle(Self.tabGreen)
+                                    Rectangle()
+                                        .fill(Self.tabGreen)
+                                        .frame(width: 1.2, height: 13)
+                                    Spacer()
+                                }
+                                .frame(height: 36)
+                                .rotationEffect(.degrees(deg))
+
+                                Circle()
+                                    .fill(Self.tabGreen)
+                                    .frame(width: 4, height: 4)
+                            }
+
+                            Text("🕋")
+                                .font(.system(size: 7))
+                                .offset(x: 15 * sin(deg * .pi / 180.0), y: -15 * cos(deg * .pi / 180.0))
+                        }
+                        .frame(width: 46, height: 46)
+
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("QIBLA")
+                                .font(.system(size: 7, weight: .black, design: .monospaced))
+                                .foregroundStyle(Self.tabGreen)
+
+                            Text("\(Int(deg))° \(dirShort)")
+                                .font(.system(size: 11, weight: .black, design: .monospaced))
+                                .foregroundStyle(Color.white)
+
+                            Text(manager.qiblaCompassDirectionFull.uppercased())
+                                .font(.system(size: 7, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.white.opacity(0.55))
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.black.opacity(0.55))
+                    )
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 4)
+
+                Spacer(minLength: 4)
+
+                // C. Timeline Ribbon
+                if let sched = schedule {
+                    timelineRibbon(sched: sched, isPixelTheme: true)
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 8)
+                }
+            }
+        }
+        .frame(height: 242)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    // MARK: - ==========================================
+    // MARK: 2. PIXEL RETRO - COMPACT RIBBON (120pt)
+    // MARK: - ==========================================
+
+    private var compactPixelDashboard: some View {
         let upcoming = manager.upcomingPrayer
         let schedule = manager.todaySchedule
         let phase = manager.currentPhase
@@ -48,7 +269,7 @@ public struct PrayerExpandedCardView: View {
         let dirFull = manager.qiblaCompassDirectionFull
 
         return ZStack(alignment: .topLeading) {
-            // ── Background: Authentic 8-bit Stepped Pixel Sky & Mosque Skyline ──
+            // Background: Living 8-bit Stepped Pixel Sky & Mosque Skyline
             DioramaSkyView(
                 hour: manager.currentFractionalHour,
                 hijriDay: manager.hijriDay,
@@ -58,13 +279,8 @@ public struct PrayerExpandedCardView: View {
                 skyline: true,
                 skylineHeight: 0.28
             )
-            .clipShape(Rectangle())
-            .overlay(
-                Rectangle()
-                    .stroke(Self.tabGreen.opacity(0.40), lineWidth: 1)
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            // Deepening vertical contrast gradient overlay for flawless legibility
             LinearGradient(
                 colors: [
                     Color.black.opacity(0.18),
@@ -74,13 +290,13 @@ public struct PrayerExpandedCardView: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .allowsHitTesting(false)
 
-            // ── Foreground Unified Content ──
+            // Foreground Content
             VStack(spacing: 6) {
-                // A. Top Floating Header & Info Row (Compact, Single Horizontal Bar)
+                // Top Floating Header & Info Row
                 HStack(alignment: .center, spacing: 7) {
-                    // Phase Tag
                     HStack(spacing: 4) {
                         Image(systemName: phase.systemImage)
                             .font(.system(size: 8, weight: .bold))
@@ -88,15 +304,13 @@ public struct PrayerExpandedCardView: View {
                             .font(.system(size: 8, weight: .bold, design: .monospaced))
                     }
                     .foregroundStyle(Color.white)
-                    .padding(.horizontal, 5)
+                    .padding(.horizontal, 6)
                     .padding(.vertical, 2.5)
                     .background(
-                        Rectangle()
-                            .fill(Color.black.opacity(0.70))
-                            .overlay(Rectangle().stroke(Color.white.opacity(0.20), lineWidth: 0.8))
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.black.opacity(0.65))
                     )
 
-                    // Date & City
                     Text("\(manager.gregorianDateString.uppercased()) // \(manager.cityName.uppercased())")
                         .font(.system(size: 8, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.85))
@@ -121,14 +335,13 @@ public struct PrayerExpandedCardView: View {
                                 .foregroundStyle(Color.black)
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1.5)
-                                .background(Rectangle().fill(Self.tabGreen))
+                                .background(RoundedRectangle(cornerRadius: 2).fill(Self.tabGreen))
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2.5)
                         .background(
-                            Rectangle()
-                                .fill(Color.black.opacity(0.70))
-                                .overlay(Rectangle().stroke(Self.tabGreen.opacity(0.35), lineWidth: 0.8))
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.black.opacity(0.65))
                         )
                     }
 
@@ -140,7 +353,6 @@ public struct PrayerExpandedCardView: View {
                                 .frame(width: 17, height: 17)
                                 .background(Circle().fill(Color.black.opacity(0.65)))
 
-                            // Needle
                             VStack(spacing: 0) {
                                 Image(systemName: "triangle.fill")
                                     .font(.system(size: 4, weight: .bold))
@@ -165,9 +377,8 @@ public struct PrayerExpandedCardView: View {
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2.5)
                     .background(
-                        Rectangle()
-                            .fill(Color.black.opacity(0.70))
-                            .overlay(Rectangle().stroke(Self.tabGreen.opacity(0.35), lineWidth: 0.8))
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.black.opacity(0.65))
                     )
                     .help("Qibla Direction: \(Int(deg))° \(dirFull) towards Kaaba")
                 }
@@ -176,22 +387,192 @@ public struct PrayerExpandedCardView: View {
 
                 Spacer(minLength: 2)
 
-                // B. Seamless Integrated Prayer Timeline Ribbon
+                // Timeline Ribbon
                 if let sched = schedule {
-                    seamlessPrayerTimeline(sched: sched, isPixelTheme: true)
-                        .padding(.horizontal, 14)
+                    timelineRibbon(sched: sched, isPixelTheme: true)
+                        .padding(.horizontal, 10)
                         .padding(.bottom, 6)
                 }
             }
         }
         .frame(height: 120)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     // MARK: - ==========================================
-    // MARK: 2. UNIFIED MODERN CLEAN DASHBOARD
+    // MARK: 3. MODERN CLEAN - PANORAMIC (242pt)
     // MARK: - ==========================================
 
-    private var unifiedModernDashboard: some View {
+    private var panoramicModernDashboard: some View {
+        let upcoming = manager.upcomingPrayer
+        let schedule = manager.todaySchedule
+        let phase = manager.currentPhase
+        let deg = manager.qiblaDegrees
+        let dirShort = manager.qiblaCompassDirection
+
+        return ZStack(alignment: .topLeading) {
+            DioramaSkyView(
+                hour: manager.currentFractionalHour,
+                hijriDay: manager.hijriDay,
+                sunriseHour: manager.sunriseHour,
+                sunsetHour: manager.sunsetHour,
+                pixel: false,
+                skyline: true,
+                skylineHeight: 0.18
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.12),
+                    Color.black.opacity(0.35),
+                    Color.black.opacity(0.85)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .allowsHitTesting(false)
+
+            VStack(spacing: 0) {
+                // Header
+                HStack(alignment: .center) {
+                    HStack(spacing: 6) {
+                        HStack(spacing: 4) {
+                            Image(systemName: phase.systemImage)
+                                .font(.system(size: 9, weight: .semibold))
+                            Text(phase.displayName)
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3.5)
+                        .background(Capsule().fill(Color.black.opacity(0.50)))
+
+                        Text("\(manager.gregorianDateString) · \(manager.hijriDateString)")
+                            .font(.system(size: 8.5, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color.white.opacity(0.85))
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(Self.tabGreen)
+                        Text(manager.cityName)
+                            .font(.system(size: 8.5, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.white.opacity(0.95))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3.5)
+                    .background(Capsule().fill(Color.black.opacity(0.50)))
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+
+                Spacer(minLength: 6)
+
+                // Hero Spotlight
+                HStack(alignment: .center, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        if let next = upcoming {
+                            let diffMins = manager.minutesUntilNextPrayer
+                            HStack(spacing: 6) {
+                                Text(next.prayer.displayName)
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color.white)
+
+                                Text(manager.formattedPrayerTime(next.date))
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Self.tabGreen)
+
+                                Text(diffMins <= 0 ? "Now" : "-\(manager.formattedCountdown)")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2.5)
+                                    .background(Capsule().fill(Self.tabGreen.opacity(0.90)))
+                            }
+                        }
+
+                        Text(manager.currentSecondsString)
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.white)
+                            .shadow(color: Color.black.opacity(0.7), radius: 3)
+                    }
+
+                    Spacer()
+
+                    // Modern Qibla Dial
+                    HStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.black.opacity(0.50))
+                                .frame(width: 44, height: 44)
+
+                            VStack(spacing: 0) {
+                                Image(systemName: "location.north.fill")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(Self.tabGreen)
+                                Rectangle()
+                                    .fill(Self.tabGreen)
+                                    .frame(width: 1.2, height: 14)
+                                Spacer()
+                            }
+                            .frame(height: 38)
+                            .rotationEffect(.degrees(deg))
+
+                            Circle()
+                                .fill(Self.tabGreen)
+                                .frame(width: 4, height: 4)
+
+                            Text("🕋")
+                                .font(.system(size: 7.5))
+                                .offset(x: 16 * sin(deg * .pi / 180.0), y: -16 * cos(deg * .pi / 180.0))
+                        }
+                        .frame(width: 46, height: 46)
+
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Qibla")
+                                .font(.system(size: 8, weight: .bold, design: .rounded))
+                                .foregroundStyle(Self.tabGreen)
+
+                            Text("\(Int(deg))° \(dirShort)")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.white)
+
+                            Text(manager.qiblaCompassDirectionFull)
+                                .font(.system(size: 7.5, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.white.opacity(0.6))
+                        }
+                    }
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.black.opacity(0.50)))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 4)
+
+                Spacer(minLength: 4)
+
+                if let sched = schedule {
+                    timelineRibbon(sched: sched, isPixelTheme: false)
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 8)
+                }
+            }
+        }
+        .frame(height: 242)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    // MARK: - ==========================================
+    // MARK: 4. MODERN CLEAN - COMPACT RIBBON (120pt)
+    // MARK: - ==========================================
+
+    private var compactModernDashboard: some View {
         let upcoming = manager.upcomingPrayer
         let schedule = manager.todaySchedule
         let phase = manager.currentPhase
@@ -200,7 +581,6 @@ public struct PrayerExpandedCardView: View {
         let dirFull = manager.qiblaCompassDirectionFull
 
         return ZStack(alignment: .topLeading) {
-            // ── Background: Smooth Atmospheric Diorama Sky & Silhouette Skyline ──
             DioramaSkyView(
                 hour: manager.currentFractionalHour,
                 hijriDay: manager.hijriDay,
@@ -210,29 +590,23 @@ public struct PrayerExpandedCardView: View {
                 skyline: true,
                 skylineHeight: 0.28
             )
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            // Deepening vertical contrast gradient overlay
             LinearGradient(
                 colors: [
-                    Color.black.opacity(0.12),
-                    Color.black.opacity(0.42),
-                    Color.black.opacity(0.85)
+                    Color.black.opacity(0.18),
+                    Color.black.opacity(0.48),
+                    Color.black.opacity(0.88)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .allowsHitTesting(false)
 
-            // ── Foreground Unified Content ──
             VStack(spacing: 6) {
-                // A. Top Floating Header & Info Row (Compact, Single Horizontal Bar)
+                // Top Row
                 HStack(alignment: .center, spacing: 8) {
-                    // Phase Tag
                     HStack(spacing: 4) {
                         Image(systemName: phase.systemImage)
                             .font(.system(size: 8.5, weight: .bold))
@@ -242,13 +616,8 @@ public struct PrayerExpandedCardView: View {
                     .foregroundStyle(Color.white)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(
-                        Capsule()
-                            .fill(Color.black.opacity(0.50))
-                            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.6))
-                    )
+                    .background(Capsule().fill(Color.black.opacity(0.50)))
 
-                    // Date & City
                     Text("\(manager.gregorianDateString) · \(manager.cityName)")
                         .font(.system(size: 8.5, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.88))
@@ -277,22 +646,16 @@ public struct PrayerExpandedCardView: View {
                         }
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
-                        .background(
-                            Capsule()
-                                .fill(Color.black.opacity(0.50))
-                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.6))
-                        )
+                        .background(Capsule().fill(Color.black.opacity(0.50)))
                     }
 
                     // Compact Modern Qibla Dial
                     HStack(spacing: 4.5) {
                         ZStack {
                             Circle()
-                                .fill(Color.black.opacity(0.45))
+                                .fill(Color.black.opacity(0.50))
                                 .frame(width: 18, height: 18)
-                                .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.6))
 
-                            // Needle towards Kaaba
                             VStack(spacing: 0) {
                                 Image(systemName: "location.north.fill")
                                     .font(.system(size: 4.5, weight: .bold))
@@ -316,37 +679,31 @@ public struct PrayerExpandedCardView: View {
                     }
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(
-                        Capsule()
-                            .fill(Color.black.opacity(0.50))
-                            .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.6))
-                    )
-                    .help("Qibla Direction: \(Int(deg))° \(dirFull) towards Kaaba in Mecca")
+                    .background(Capsule().fill(Color.black.opacity(0.50)))
+                    .help("Qibla Direction: \(Int(deg))° \(dirFull) towards Kaaba")
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 14)
                 .padding(.top, 8)
 
                 Spacer(minLength: 2)
 
-                // B. Seamless Integrated Prayer Timeline Ribbon
                 if let sched = schedule {
-                    seamlessPrayerTimeline(sched: sched, isPixelTheme: false)
-                        .padding(.horizontal, 16)
+                    timelineRibbon(sched: sched, isPixelTheme: false)
+                        .padding(.horizontal, 10)
                         .padding(.bottom, 6)
                 }
             }
         }
         .frame(height: 120)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     // MARK: - ==========================================
-    // MARK: 3. SEAMLESS TIMELINE RIBBON (NO BOXES / KOTAK-KOTAK)
+    // MARK: 5. SEAMLESS TIMELINE RIBBON
     // MARK: - ==========================================
 
-    /// Elegant borderless horizontal timeline stepper with glowing beacon dots.
-    /// Perfectly integrates across the lower portion of the unified panoramic canvas.
     @ViewBuilder
-    private func seamlessPrayerTimeline(sched: DailyPrayerSchedule, isPixelTheme: Bool) -> some View {
+    private func timelineRibbon(sched: DailyPrayerSchedule, isPixelTheme: Bool) -> some View {
         let upcoming = manager.upcomingPrayer
         let prayers = sched.fivePrayers
         let nextIndex = prayers.firstIndex { $0.prayer == upcoming?.prayer } ?? -1

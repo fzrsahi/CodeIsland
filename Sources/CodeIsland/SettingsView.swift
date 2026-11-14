@@ -1555,7 +1555,15 @@ private struct AppearancePage: View {
                                     musicHUDProgressColor = col.rawValue
                                 }) {
                                     ZStack {
-                                        if col == .theme {
+                                        if col == .album {
+                                            Circle()
+                                                .fill(AngularGradient(
+                                                    colors: [Color.pink, Color.purple, Color.blue, Color.cyan, Color.green, Color.yellow, Color.orange, Color.pink],
+                                                    center: .center
+                                                ))
+                                                .frame(width: 14, height: 14)
+                                                .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                                        } else if col == .theme {
                                             Circle()
                                                 .fill(LinearGradient(
                                                     colors: [Color(red: 0.0, green: 0.96, blue: 0.83), Color(red: 0.12, green: 0.84, blue: 0.38)],
@@ -1871,6 +1879,7 @@ private struct MusicSettingsPage: View {
     @AppStorage(SettingsKey.musicEnabled) private var musicEnabled = SettingsDefaults.musicEnabled
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
     @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
     @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
@@ -1901,6 +1910,13 @@ private struct MusicSettingsPage: View {
                         .pickerStyle(.menu)
 
                         Text(MusicHUDTheme(rawValue: musicHUDTheme)?.description ?? "")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle("Adaptive Album Art Palette", isOn: $syncThemeWithAlbumArt)
+                        Text("Automatically extracts vibrant colors from the playing album artwork and synchronizes Music HUD, Workspace HUD, and Floating Lyrics.")
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                     }
@@ -1959,12 +1975,22 @@ private struct MusicSettingsPage: View {
                                             floatingLyricTextColor = col.rawValue
                                         }) {
                                             ZStack {
-                                                Circle()
-                                                    .fill(col.color)
-                                                .frame(width: 14, height: 14)
-                                                .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                                                if col == .album {
+                                                    Circle()
+                                                        .fill(AngularGradient(
+                                                            colors: [Color.pink, Color.purple, Color.blue, Color.cyan, Color.green, Color.yellow, Color.orange, Color.pink],
+                                                            center: .center
+                                                        ))
+                                                        .frame(width: 14, height: 14)
+                                                        .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                                                } else {
+                                                    Circle()
+                                                        .fill(col.color)
+                                                        .frame(width: 14, height: 14)
+                                                        .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                                                }
 
-                                            if isSelected {
+                                                if isSelected {
                                                 Circle()
                                                     .stroke(Color.white, lineWidth: 2)
                                                     .frame(width: 20, height: 20)
@@ -3762,6 +3788,7 @@ private struct PrayerSettingsPage: View {
     @AppStorage(SettingsKey.prayerSoundEnabled) private var soundEnabled = SettingsDefaults.prayerSoundEnabled
     @AppStorage(SettingsKey.prayerSystemNotificationEnabled) private var systemNotificationEnabled = SettingsDefaults.prayerSystemNotificationEnabled
     @AppStorage(SettingsKey.prayerUsePreciseLocation) private var usePreciseLocation = SettingsDefaults.prayerUsePreciseLocation
+    @AppStorage(SettingsKey.prayerCardDisplayMode) private var prayerCardDisplayMode = SettingsDefaults.prayerCardDisplayMode
 
     var body: some View {
         Form {
@@ -3774,6 +3801,19 @@ private struct PrayerSettingsPage: View {
             }
 
             if prayerEnabled {
+                Section(header: Text("Card Display Mode")) {
+                    Picker("Display Layout", selection: $prayerCardDisplayMode) {
+                        ForEach(PrayerCardDisplayMode.allCases) { mode in
+                            Text(mode.title).tag(mode.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Text(PrayerCardDisplayMode(rawValue: prayerCardDisplayMode)?.description ?? "Choose between compact ribbon and full diorama.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section(header: Text("Calculation Method")) {
                     Picker("Method", selection: $calculationMethod) {
                         Text("Ministry of Religious Affairs (Fajr -20°, +2m safety margin)").tag("kemenag")

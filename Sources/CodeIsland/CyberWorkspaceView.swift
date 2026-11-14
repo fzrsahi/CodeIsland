@@ -340,12 +340,27 @@ struct ModernWorkspaceView: View {
     @State private var terminalHovered = false
     @State private var aiHovered = false
     @State private var pushHovered = false
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @ObservedObject private var nowPlaying = NowPlayingManager.shared
+
+    private var accentColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
+        return ModernPalette.sage
+    }
 
     private var railColor: Color {
         if !manager.isGitRepo                 { return Color.white.opacity(0.18) }
         else if manager.isCommitting          { return Color.white.opacity(0.60) }
-        else if !manager.changedFiles.isEmpty { return ModernPalette.amber }
-        else                                  { return ModernPalette.sage }
+        else if !manager.changedFiles.isEmpty {
+            if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.secondary
+            }
+            return ModernPalette.amber
+        }
+        else                                  { return accentColor }
     }
 
     var body: some View {
@@ -674,17 +689,13 @@ struct ModernWorkspaceView: View {
         }
         .background(
             ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 9).fill(ModernPalette.base)
-                // 1px status rail
-                Rectangle().fill(railColor).frame(width: 1)
+                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(ModernPalette.base)
+                // 1.5px status rail
+                Rectangle().fill(railColor).frame(width: 1.5)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 9))
-            .overlay(
-                RoundedRectangle(cornerRadius: 9)
-                    .strokeBorder(ModernPalette.border, lineWidth: 0.8)
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         )
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 18)
         .padding(.top, 4)
         .padding(.bottom, 16)
     }
@@ -706,22 +717,39 @@ struct PixelRetroWorkspaceView: View {
     @State private var pushHovered = false
     @State private var openHovered = false
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @ObservedObject private var nowPlaying = NowPlayingManager.shared
 
     private var activeSession: SessionSnapshot? {
         guard !manager.currentCwd.isEmpty else { return nil }
         return appState.sessions.values.first { $0.cwd == manager.currentCwd }
     }
 
-    /// Dynamic Retro Cyber Accent: follows the exact same color theme as Retro Music HUD
+    /// Dynamic Retro Cyber Accent: follows the album artwork when enabled/album mode, or the active color theme
     private var accentColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         switch pc {
+        case .album:
+            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .theme, .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83) // Iconic Cyber Cyan
         case .white: return .white
         case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
         case .green: return Color(red: 0.12, green: 0.84, blue: 0.38)
         case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
         }
+    }
+
+    private var amberColor: Color {
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.secondary
+        }
+        return MinimalPixelPalette.amber
     }
 
     var body: some View {
@@ -834,10 +862,10 @@ struct PixelRetroWorkspaceView: View {
                             }
                         } else {
                             HStack(spacing: 3.5) {
-                                WorkspacePixelIcon(glyph: .modified, color: MinimalPixelPalette.amber, pixelSize: 1.0)
+                                WorkspacePixelIcon(glyph: .modified, color: amberColor, pixelSize: 1.0)
                                 Text("\(manager.changedFiles.count) modified")
                                     .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-                                    .foregroundStyle(MinimalPixelPalette.amber)
+                                    .foregroundStyle(amberColor)
                             }
                         }
 
@@ -1093,18 +1121,15 @@ struct PixelRetroWorkspaceView: View {
         }
         .background(
             ZStack(alignment: .leading) {
-                Rectangle().fill(MinimalPixelPalette.base)
+                RoundedRectangle(cornerRadius: 8).fill(MinimalPixelPalette.base)
                 // Left 1.5px Cyber Cyan / Sunset Amber Status Rail
                 Rectangle()
-                    .fill(manager.changedFiles.isEmpty ? accentColor : MinimalPixelPalette.amber)
+                    .fill(manager.changedFiles.isEmpty ? accentColor : amberColor)
                     .frame(width: 1.5)
             }
-            .overlay(
-                Rectangle()
-                    .stroke(MinimalPixelPalette.border, lineWidth: 1)
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 8))
         )
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 18)
         .padding(.top, 4)
         .padding(.bottom, 16)
     }
