@@ -125,6 +125,7 @@ public final class MailManager: ObservableObject {
     @Published public var isRefreshing: Bool = false
     @Published public var lastRefreshed: Date? = nil
     @Published public var showNewMailPeek: Bool = false
+    @Published public var showMiniPeekBanner: Bool = false
     @Published public var latestMailForPeek: MailItem? = nil
 
     private var pollingTimer: Timer?
@@ -169,7 +170,7 @@ public final class MailManager: ObservableObject {
     public func startPolling() {
         stopPolling()
         guard isEnabled else { return }
-        pollingTimer = Timer.scheduledTimer(withTimeInterval: 45.0, repeats: true) { [weak self] _ in
+        pollingTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.refresh()
             }
@@ -206,6 +207,9 @@ public final class MailManager: ObservableObject {
             end if
 
             tell application "Mail"
+                try
+                    check for new mail
+                end try
                 set unreadTotal to 0
                 try
                     set unreadTotal to unread count of inbox
@@ -297,20 +301,31 @@ public final class MailManager: ObservableObject {
         self.recentMails = parsedItems
     }
 
-    /// Triggers a brief 5-second auto-peek notification for incoming mail
+    /// Triggers a brief 4.5-second mini-peek banner notification for incoming mail
     public func triggerNewMailPeek(_ item: MailItem) {
         guard UserDefaults.standard.bool(forKey: SettingsKey.mailAutoPeekNewEmail) else { return }
         self.latestMailForPeek = item
         withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+            self.showMiniPeekBanner = true
             self.showNewMailPeek = true
         }
         peekDismissTimer?.invalidate()
-        peekDismissTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
+        peekDismissTimer = Timer.scheduledTimer(withTimeInterval: 4.5, repeats: false) { [weak self] _ in
             Task { @MainActor in
                 withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                    self?.showMiniPeekBanner = false
                     self?.showNewMailPeek = false
                 }
             }
+        }
+    }
+
+    /// Dismisses the incoming mail mini-peek banner immediately
+    public func dismissMiniPeekBanner() {
+        peekDismissTimer?.invalidate()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+            self.showMiniPeekBanner = false
+            self.showNewMailPeek = false
         }
     }
 

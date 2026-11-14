@@ -146,6 +146,10 @@ struct NotchPanelView: View {
         case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
         }
     }
+    private var mailAccentColor: Color {
+        AppColorTheme.accent(for: musicHUDProgressColor, isModern: islandUITheme != IslandUITheme.pixel.rawValue)
+    }
+
     @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @ObservedObject private var workspaceManager = WorkspaceMonitorManager.shared
@@ -225,7 +229,7 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if nowPlaying.isPlaying || nowPlaying.showToast || prayerManager.showMiniPeekBanner { return true }
+        if nowPlaying.isPlaying || nowPlaying.showToast || prayerManager.showMiniPeekBanner || mailManager.showMiniPeekBanner { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
@@ -253,7 +257,7 @@ struct NotchPanelView: View {
     }
 
     private var isToastOnly: Bool {
-        prayerManager.showMiniPeekBanner && !appState.surface.isExpanded
+        (prayerManager.showMiniPeekBanner || mailManager.showMiniPeekBanner) && !appState.surface.isExpanded
     }
 
     private func triggerMusicAutoPeek() {
@@ -427,7 +431,7 @@ struct NotchPanelView: View {
             return min(320, maxPanelWidth)
         }
         // Mini peek banner width: sleek ~330pt when toast is showing while collapsed
-        if (nowPlaying.showToast || prayerManager.showMiniPeekBanner) && !appState.surface.isExpanded {
+        if (nowPlaying.showToast || prayerManager.showMiniPeekBanner || mailManager.showMiniPeekBanner) && !appState.surface.isExpanded {
             return min(330, maxPanelWidth)
         }
         let wing = symmetricWingWidth
@@ -639,6 +643,29 @@ struct NotchPanelView: View {
                             insertion: .move(edge: .top).combined(with: .opacity),
                             removal: .move(edge: .top).combined(with: .opacity)
                         ))
+                    } else if mailManager.showMiniPeekBanner && !appState.surface.isExpanded, let mail = mailManager.latestMailForPeek {
+                        // MAIL MINI PEEK BANNER: Buka tipis saat email baru masuk
+                        MailMiniPeekBannerView(
+                            mail: mail,
+                            isRetro: islandUITheme == IslandUITheme.pixel.rawValue,
+                            accentColor: mailAccentColor,
+                            onOpenFull: {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    mailManager.dismissMiniPeekBanner()
+                                    appState.transitionToTab(.mail)
+                                    appState.surface = .sessionList
+                                }
+                            },
+                            onDismiss: {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    mailManager.dismissMiniPeekBanner()
+                                }
+                            }
+                        )
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal: .move(edge: .top).combined(with: .opacity)
+                        ))
                     } else {
                         // High-priority cards always take precedence over secondary tabs
                         switch appState.surface {
@@ -752,6 +779,7 @@ struct NotchPanelView: View {
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: shouldShowExpanded)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: nowPlaying.showToast)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: prayerManager.showMiniPeekBanner)
+            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: mailManager.showMiniPeekBanner)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: isThinking)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: nowPlaying.isPlaying)
@@ -822,12 +850,6 @@ struct NotchPanelView: View {
             .onChange(of: nowPlaying.isPlaying) { _, isPlaying in
                 if isPlaying && expandedTab == .music && appState.surface.isExpanded {
                     appState.transitionToTab(.music)
-                }
-            }
-            .onChange(of: mailManager.showNewMailPeek) { _, showPeek in
-                if showPeek {
-                    mailManager.showNewMailPeek = false
-                    triggerMailAutoPeek()
                 }
             }
             .onChange(of: appState.activeSessionId) { _, sid in
@@ -1028,8 +1050,10 @@ struct NotchPanelView: View {
             }
             .onChange(of: appState.status) { oldStatus, newStatus in
                 // Switch to .agents if task completes while viewing secondary tabs
-                if (oldStatus == .processing || oldStatus == .running) && newStatus == .idle {
-                    if expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer || expandedTab == .mail {
+                let wasBusy = oldStatus == .processing || oldStatus == .running
+                if wasBusy && newStatus == .idle {
+                    let isSecondary = expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer || expandedTab == .mail
+                    if isSecondary {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                             expandedTab = .agents
                         }
@@ -1037,7 +1061,8 @@ struct NotchPanelView: View {
                 }
             }
             .onChange(of: appState.justCompletedSessionId) { _, completedId in
-                if completedId != nil && (expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer || expandedTab == .mail) {
+                let isSecondary = expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer || expandedTab == .mail
+                if completedId != nil && isSecondary {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                         expandedTab = .agents
                     }

@@ -157,3 +157,63 @@ public struct PixelIcon: View {
         .frame(width: totalW, height: totalH)
     }
 }
+
+// MARK: - Pixel Circle Shape (Stepped 8-Bit Discrete Contour)
+
+/// An authentic 8-bit stepped pixel circle shape.
+/// Replaces continuous Bezier curves with discrete orthogonal staircase pixel steps.
+public struct PixelCircleShape: Shape {
+    public var step: CGFloat = 2.0
+
+    public init(step: CGFloat = 2.0) {
+        self.step = step
+    }
+
+    public func path(in rect: CGRect) -> Path {
+        let w = rect.width
+        let h = rect.height
+        let s = min(step, min(w, h) / 6.0)
+        let s2 = s * 2.0
+
+        var path = Path()
+        // Top edge
+        path.move(to: CGPoint(x: s2, y: 0))
+        path.addLine(to: CGPoint(x: w - s2, y: 0))
+
+        // Top-right corner steps
+        path.addLine(to: CGPoint(x: w - s2, y: s))
+        path.addLine(to: CGPoint(x: w - s, y: s))
+        path.addLine(to: CGPoint(x: w - s, y: s2))
+        path.addLine(to: CGPoint(x: w, y: s2))
+
+        // Right edge
+        path.addLine(to: CGPoint(x: w, y: h - s2))
+
+        // Bottom-right corner steps
+        path.addLine(to: CGPoint(x: w - s, y: h - s2))
+        path.addLine(to: CGPoint(x: w - s, y: h - s))
+        path.addLine(to: CGPoint(x: w - s2, y: h - s))
+        path.addLine(to: CGPoint(x: w - s2, y: h))
+
+        // Bottom edge
+        path.addLine(to: CGPoint(x: s2, y: h))
+
+        // Bottom-left corner steps
+        path.addLine(to: CGPoint(x: s2, y: h - s))
+        path.addLine(to: CGPoint(x: s, y: h - s))
+        path.addLine(to: CGPoint(x: s, y: h - s2))
+        path.addLine(to: CGPoint(x: 0, y: h - s2))
+
+        // Left edge
+        path.addLine(to: CGPoint(x: 0, y: s2))
+
+        // Top-left corner steps
+        path.addLine(to: CGPoint(x: s, y: s2))
+        path.addLine(to: CGPoint(x: s, y: s))
+        path.addLine(to: CGPoint(x: s2, y: s))
+        path.addLine(to: CGPoint(x: s2, y: 0))
+
+        path.closeSubpath()
+        return path
+    }
+}
