@@ -77,6 +77,7 @@ with open("/tmp/xctest_clone/Sources/XCTest/Public/XCTestSuite.swift", "w") as f
 
 with open("/tmp/xctest_clone/Sources/XCTest/Public/XCTestCase.swift", "r") as f:
     c = f.read()
+c = c.replace("open class func setUp() {}", "open class var defaultTestSuite: XCTestSuite { return XCTestSuite(name: String(describing: self)) }\n    open class func setUp() {}")
 c = c.replace("try setUpWithError()", "try MainActor.assumeIsolated { try setUpWithError() }")
 c = c.replace("        setUp()", "        MainActor.assumeIsolated { setUp() }")
 c = c.replace("        tearDown()", "        MainActor.assumeIsolated { tearDown() }")
