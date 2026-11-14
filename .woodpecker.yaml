@@ -25,7 +25,7 @@ steps:
     commands:
       - echo "==> Running Swift tests on macOS Sonoma runner..."
       - swift --version
-      - swift test
+      - python3 ./scripts/run-xctest-runner.py --target core
     when:
       - event: [pull_request, tag]
       - event: push
@@ -77,6 +77,8 @@ steps:
         from_secret: codeisland_webhook_secret
       SPARKLE_PRIVATE_KEY:
         from_secret: sparkle_private_key
+      GITHUB_TOKEN:
+        from_secret: github_token
     commands:
       - 'echo "==> Production release tag detected: $CI_COMMIT_TAG"'
       - VERSION="${CI_COMMIT_TAG#[vV]}"
@@ -89,6 +91,12 @@ steps:
         echo "==> Generating SHA256SUMS.txt..."
         shasum -a 256 .build/CodeIsland.dmg > .build/SHA256SUMS.txt
         cat .build/SHA256SUMS.txt
+      - |
+        echo "==> Uploading release artifacts to GitHub Release..."
+        python3 ./scripts/upload-github-release.py \
+          --repo "$CI_REPO" \
+          --tag "$CI_COMMIT_TAG" \
+          --files .build/CodeIsland.dmg .build/SHA256SUMS.txt appcast.xml || true
       - |
         echo "==> Triggering production deployment webhook..."
         SHA=$(awk '{print $1}' .build/SHA256SUMS.txt)
