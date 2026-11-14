@@ -1,0 +1,44 @@
+# ==============================================================================
+# Woodpecker CI Pipeline for CodeIsland
+# Runs natively on macOS Sonoma KVM runner via 'local' backend
+# ==============================================================================
+
+when:
+  - event: [pull_request, push, tag]
+
+steps:
+  - name: test
+    image: bash
+    commands:
+      - echo "==> Running Swift tests on macOS Sonoma runner..."
+      - swift --version
+      - swift test
+    when:
+      - event: [pull_request, push]
+
+  - name: build-release-dmg
+    image: bash
+    secrets: [ codeisland_webhook_secret, sparkle_private_key ]
+    commands:
+      - echo "==> Release tag detected: $CI_COMMIT_TAG"
+      - VERSION="${CI_COMMIT_TAG#[vV]}"
+      - echo "==> Building CodeIsland DMG version: $VERSION"
+      - SKIP_SIGN=1 SKIP_NOTARIZE=1 BUILD_ARCH=arm64 ./scripts/build-dmg.sh "$VERSION"
+      - |
+        echo "==> Updating appcast.xml and signing with Sparkle Ed25519 key..."
+        ./scripts/update-appcast.sh "$VERSION" .build/CodeIsland.dmg
+      - |
+        echo "==> Generating SHA256SUMS.txt..."
+        shasum -a 256 .build/CodeIsland.dmg > .build/SHA256SUMS.txt
+        cat .build/SHA256SUMS.txt
+      - |
+        echo "==> Triggering distribution node deploy webhook..."
+        SHA=$(awk '{print $1}' .build/SHA256SUMS.txt)
+        curl -f -X POST \
+          -H "Content-Type: application/json" \
+          -H "X-Webhook-Secret: $CODEISLAND_WEBHOOK_SECRET" \
+          -d "{\"version\":\"$VERSION\",\"tag\":\"$CI_COMMIT_TAG\",\"repository\":\"$CI_REPO\",\"sha256\":\"$SHA\"}" \
+          https://codeisland.azhr.cloud/api/deploy-webhook || true
+        echo "==> Pipeline finished successfully!"
+    when:
+      - event: tag

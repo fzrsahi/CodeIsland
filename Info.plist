@@ -44,9 +44,9 @@
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
-	<string>https://raw.githubusercontent.com/wxtsky/CodeIsland/main/appcast.xml</string>
+	<string>https://codeisland.azhr.cloud/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>oqLtx5s2hc8Xgsp4rEuTwnQ8UGRT4ma4tjlf+1i3YHA=</string>
+	<string>YLH56WnMKfONvj4uwfVzFas3Zc4293uGc6TsGZfvR5s=</string>
 	<key>SUScheduledCheckInterval</key>
 	<integer>14400</integer>
 </dict>
