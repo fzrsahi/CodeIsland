@@ -369,7 +369,7 @@ struct NotchPanelView: View {
             return 154
         }
         if prayerManager.isPrayerPrioritized && !shouldShowExpanded {
-            return 134
+            return 80
         }
         if nowPlaying.isPlaying && !shouldShowExpanded {
             return 58
@@ -409,9 +409,6 @@ struct NotchPanelView: View {
             let baseWidth = nw + 500
             let minWidth: CGFloat = 680
             if expandedTab == .workspace && workspaceManager.isExpandedDetail {
-                return min(max(baseWidth, 720), maxPanelWidth)
-            }
-            if expandedTab == .prayer {
                 return min(max(baseWidth, 720), maxPanelWidth)
             }
             return min(max(baseWidth, minWidth), maxPanelWidth)
@@ -2549,7 +2546,7 @@ private struct IdleIndicatorBar: View {
     var onExpand: (() -> Void)? = nil
     @AppStorage(SettingsKey.defaultSource) private var defaultSource = SettingsDefaults.defaultSource
 
-    static let idlePrayerWingMinWidth: CGFloat = 126
+    static let idlePrayerWingMinWidth: CGFloat = 80
 
     private var effectiveWingWidth: CGFloat {
         let base = hovered ? (compactWingWidth + 6) : compactWingWidth
