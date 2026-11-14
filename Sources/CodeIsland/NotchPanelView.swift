@@ -2037,23 +2037,73 @@ struct NotchIconButton: View {
     }
 }
 
+struct PixelHeaderIconButton: View {
+    let glyph: PixelIconGlyph
+    var tint: Color = .white
+    var tooltip: String? = nil
+    let action: () -> Void
+    @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    static let boxSize: CGFloat = 20
+    static let hitSize: CGFloat = 24
+
+    var body: some View {
+        Button(action: action) {
+            PixelIcon(glyph: glyph, color: tint.opacity(hovering ? 1.0 : 0.85), pixelSize: 1.35)
+                .frame(width: Self.boxSize, height: Self.boxSize)
+                .background(
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(tint.opacity(hovering ? 0.22 : 0.08))
+                )
+                .scaleEffect(hovering && !reduceMotion ? 1.08 : 1.0)
+                .frame(width: Self.hitSize, height: Self.hitSize)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { h in withAnimation(NotchAnimation.micro) { hovering = h } }
+        .help(tooltip ?? "")
+        .accessibilityLabel(tooltip ?? glyph.rawValue)
+    }
+}
+
 /// The expanded header's buttons: sound, Settings, and Quit, which asks once.
 private struct ExpandedHeaderControls: View {
     @Binding var soundEnabled: Bool
     @StateObject private var quit = QuitConfirmation()
     @ObservedObject private var l10n = L10n.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
 
     var body: some View {
-        // 4pt between 24pt hit targets keeps the 6pt gap between the circles.
         HStack(spacing: 4) {
-            NotchIconButton(icon: soundEnabled ? "speaker.wave.2" : "speaker.slash", tooltip: soundEnabled ? l10n["mute"] : l10n["enable_sound_tooltip"]) {
-                soundEnabled.toggle()
+            if isPixel {
+                PixelHeaderIconButton(
+                    glyph: soundEnabled ? .volume : .volumeMute,
+                    tooltip: soundEnabled ? l10n["mute"] : l10n["enable_sound_tooltip"]
+                ) {
+                    soundEnabled.toggle()
+                }
+                PixelHeaderIconButton(
+                    glyph: .settings,
+                    tooltip: l10n["settings"]
+                ) {
+                    SettingsWindowController.shared.show()
+                }
+                QuitConfirmButton(confirmation: quit)
+            } else {
+                NotchIconButton(icon: soundEnabled ? "speaker.wave.2" : "speaker.slash", tooltip: soundEnabled ? l10n["mute"] : l10n["enable_sound_tooltip"]) {
+                    soundEnabled.toggle()
+                }
+                NotchIconButton(icon: "gearshape", tooltip: l10n["settings"]) {
+                    SettingsWindowController.shared.show()
+                }
+                QuitConfirmButton(confirmation: quit)
             }
-            NotchIconButton(icon: "gearshape", tooltip: l10n["settings"]) {
-                SettingsWindowController.shared.show()
-            }
-            QuitConfirmButton(confirmation: quit)
         }
         // The pill is wider than the icon: the other buttons slide over to
         // make room, or with Reduce Motion simply move.
@@ -2070,7 +2120,12 @@ struct QuitConfirmButton: View {
     @ObservedObject var confirmation: QuitConfirmation
     @ObservedObject private var l10n = L10n.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @State private var hovering = false
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
 
     static let tint = Color(red: 1.0, green: 0.4, blue: 0.4)
     /// The pill's text: lighter than `tint`, for contrast on its red fill.
@@ -2096,23 +2151,47 @@ struct QuitConfirmButton: View {
         } label: {
             ZStack(alignment: .trailing) {
                 if armed {
-                    Text(l10n["quit_confirm"])
-                        .font(.system(size: Self.pillFontSize, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Self.pillText)
-                        .lineLimit(1)
-                        .fixedSize()
-                        .padding(.horizontal, Self.pillPadding)
-                        .frame(height: NotchIconButton.circleSize)
-                        .background(Capsule().fill(Self.tint.opacity(hovering ? 0.26 : 0.18)))
-                        .transition(.opacity)
+                    if isPixel {
+                        PixelText(text: "QUIT?", color: Self.pillText, pixelSize: 1.15)
+                            .lineLimit(1)
+                            .fixedSize()
+                            .padding(.horizontal, 6)
+                            .frame(height: NotchIconButton.circleSize)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(Self.tint.opacity(hovering ? 0.32 : 0.22))
+                            )
+                            .transition(.opacity)
+                    } else {
+                        Text(l10n["quit_confirm"])
+                            .font(.system(size: Self.pillFontSize, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Self.pillText)
+                            .lineLimit(1)
+                            .fixedSize()
+                            .padding(.horizontal, Self.pillPadding)
+                            .frame(height: NotchIconButton.circleSize)
+                            .background(Capsule().fill(Self.tint.opacity(hovering ? 0.26 : 0.18)))
+                            .transition(.opacity)
+                    }
                 } else {
-                    Image(systemName: "power")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Self.tint.opacity(hovering ? 1.0 : 0.85))
-                        .frame(width: NotchIconButton.circleSize, height: NotchIconButton.circleSize)
-                        .background(Circle().fill(Self.tint.opacity(hovering ? 0.2 : 0.08)))
-                        .scaleEffect(hovering && !reduceMotion ? 1.1 : 1.0)
-                        .transition(.opacity)
+                    if isPixel {
+                        PixelIcon(glyph: .power, color: Self.tint.opacity(hovering ? 1.0 : 0.85), pixelSize: 1.35)
+                            .frame(width: PixelHeaderIconButton.boxSize, height: PixelHeaderIconButton.boxSize)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(Self.tint.opacity(hovering ? 0.22 : 0.08))
+                            )
+                            .scaleEffect(hovering && !reduceMotion ? 1.08 : 1.0)
+                            .transition(.opacity)
+                    } else {
+                        Image(systemName: "power")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Self.tint.opacity(hovering ? 1.0 : 0.85))
+                            .frame(width: NotchIconButton.circleSize, height: NotchIconButton.circleSize)
+                            .background(Circle().fill(Self.tint.opacity(hovering ? 0.2 : 0.08)))
+                            .scaleEffect(hovering && !reduceMotion ? 1.1 : 1.0)
+                            .transition(.opacity)
+                    }
                 }
             }
             .frame(minWidth: NotchIconButton.hitSize, minHeight: NotchIconButton.hitSize, alignment: .trailing)
@@ -2348,10 +2427,9 @@ private struct HeaderNavigationMenuTabs: View {
                         }
                         .padding(.horizontal, isAgentsActive ? 7 : 5)
                         .frame(height: 18)
-                        .pixel16Bevel(
-                            raised: isAgentsActive,
-                            cornerRadius: 3,
-                            fillColor: isAgentsActive ? activeAccentColor.opacity(0.18) : Pixel16Palette.slot
+                        .background(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(isAgentsActive ? activeAccentColor.opacity(0.18) : Color.clear)
                         )
                         .contentShape(Rectangle())
                     }
@@ -2386,10 +2464,9 @@ private struct HeaderNavigationMenuTabs: View {
                         }
                         .padding(.horizontal, isWorkActive ? 7 : 5)
                         .frame(height: 18)
-                        .pixel16Bevel(
-                            raised: isWorkActive,
-                            cornerRadius: 3,
-                            fillColor: isWorkActive ? activeAccentColor.opacity(0.18) : Pixel16Palette.slot
+                        .background(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(isWorkActive ? activeAccentColor.opacity(0.18) : Color.clear)
                         )
                         .contentShape(Rectangle())
                     }
@@ -2424,10 +2501,9 @@ private struct HeaderNavigationMenuTabs: View {
                         }
                         .padding(.horizontal, isMusicActive ? 7 : 5)
                         .frame(height: 18)
-                        .pixel16Bevel(
-                            raised: isMusicActive,
-                            cornerRadius: 3,
-                            fillColor: isMusicActive ? activeAccentColor.opacity(0.18) : Pixel16Palette.slot
+                        .background(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(isMusicActive ? activeAccentColor.opacity(0.18) : Color.clear)
                         )
                         .contentShape(Rectangle())
                     }
@@ -2462,10 +2538,9 @@ private struct HeaderNavigationMenuTabs: View {
                         }
                         .padding(.horizontal, isPrayerActive ? 7 : 5)
                         .frame(height: 18)
-                        .pixel16Bevel(
-                            raised: isPrayerActive,
-                            cornerRadius: 3,
-                            fillColor: isPrayerActive ? activeAccentColor.opacity(0.18) : Pixel16Palette.slot
+                        .background(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(isPrayerActive ? activeAccentColor.opacity(0.18) : Color.clear)
                         )
                         .contentShape(Rectangle())
                     }
@@ -2570,10 +2645,9 @@ private struct SessionGroupingTabs: View {
                         )
                         .padding(.horizontal, 5)
                         .frame(height: 16)
-                        .pixel16Bevel(
-                            raised: selected,
-                            cornerRadius: 2.5,
-                            fillColor: selected ? activeAccentColor.opacity(0.18) : Color.clear
+                        .background(
+                            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                                .fill(selected ? activeAccentColor.opacity(0.18) : Color.clear)
                         )
                         .contentShape(Rectangle())
                     }
@@ -2584,10 +2658,9 @@ private struct SessionGroupingTabs: View {
                 }
             }
             .padding(2)
-            .pixel16Bevel(
-                raised: false,
-                cornerRadius: 4,
-                fillColor: Pixel16Palette.slot
+            .background(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(Color.white.opacity(0.04))
             )
         }
     }
@@ -4403,10 +4476,8 @@ private struct SessionListView: View {
                     if !group.header.isEmpty {
                         HStack(spacing: 6) {
                             if isPixelRetro {
-                                PixelIcon(glyph: .agents, color: accentColor, pixelSize: 1.0)
-                                Text("// \(group.header.uppercased())")
-                                    .font(.system(size: 8.5, weight: .black, design: .monospaced))
-                                    .foregroundStyle(accentColor)
+                                PixelIcon(glyph: .agents, color: accentColor, pixelSize: 1.1)
+                                PixelText(text: "// \(group.header.uppercased())", color: accentColor, pixelSize: 1.1)
                             } else {
                                 if let src = group.source, let icon = cliIcon(source: src) {
                                     Image(nsImage: icon)
@@ -6773,104 +6844,6 @@ private struct TerminalBadge: View {
 }
 
 /// Collapsed single-line row for idle sessions >15 min
-// MARK: - Pixel Text (5×7 dot matrix style)
-
-struct PixelText: View {
-    let text: String
-    let color: Color
-    var pixelSize: CGFloat = 2
-
-    private static let W = 5  // glyph width
-    private static let H = 7  // glyph height
-    /// Rows any glyph draws in: the bottom two are always blank, and framing
-    /// them too set the letters high in a centred strip.
-    private static let inkRows = 5
-
-    // 5×7 bitmaps — each row is 5 bits, 7 rows per glyph
-    static let glyphs: [Character: [UInt8]] = [
-        "0": [0,1,1,1,0, 1,0,0,1,1, 1,0,1,0,1, 1,1,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "1": [0,0,1,0,0, 0,1,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "2": [0,1,1,1,0, 1,0,0,0,1, 0,0,1,1,0, 0,1,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0],
-        "3": [0,1,1,1,0, 1,0,0,0,1, 0,0,1,1,0, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "4": [0,0,0,1,0, 0,0,1,1,0, 0,1,0,1,0, 1,1,1,1,1, 0,0,0,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "5": [1,1,1,1,1, 1,0,0,0,0, 1,1,1,1,0, 0,0,0,0,1, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "6": [0,1,1,1,0, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "7": [1,1,1,1,1, 0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "8": [0,1,1,1,0, 1,0,0,0,1, 0,1,1,1,0, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "9": [0,1,1,1,0, 1,0,0,0,1, 0,1,1,1,1, 0,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "A": [0,0,1,0,0, 0,1,0,1,0, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "B": [1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "C": [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,0, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "D": [1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "E": [1,1,1,1,1, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0],
-        "F": [1,1,1,1,1, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "G": [0,1,1,1,0, 1,0,0,0,0, 1,0,0,1,1, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "H": [1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "I": [0,1,1,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "J": [0,0,0,0,1, 0,0,0,0,1, 0,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "K": [1,0,0,1,0, 1,0,1,0,0, 1,1,0,0,0, 1,0,1,0,0, 1,0,0,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "L": [1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0],
-        "M": [1,0,0,0,1, 1,1,0,1,1, 1,0,1,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "N": [1,0,0,0,1, 1,1,0,0,1, 1,0,1,0,1, 1,0,0,1,1, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "O": [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "P": [1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "Q": [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,1,0, 0,1,1,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "R": [1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0, 1,0,0,1,0, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "S": [0,1,1,1,1, 1,0,0,0,0, 0,1,1,1,0, 0,0,0,0,1, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "T": [1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "U": [1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "V": [1,0,0,0,1, 1,0,0,0,1, 0,1,0,1,0, 0,1,0,1,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "W": [1,0,0,0,1, 1,0,0,0,1, 1,0,1,0,1, 1,0,1,0,1, 0,1,0,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "X": [1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0, 0,1,0,1,0, 1,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "Y": [1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "Z": [1,1,1,1,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0],
-        "•": [0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "/": [0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "-": [0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        ":": [0,0,0,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        ".": [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        ">": [1,0,0,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,1,0,0,0, 1,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "<": [0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,0,0,1,0, 0,0,0,0,1, 0,0,0,0,0, 0,0,0,0,0],
-        "[": [0,1,1,1,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,0,0,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "]": [0,1,1,1,0, 0,0,0,1,0, 0,0,0,1,0, 0,0,0,1,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0],
-        "+": [0,0,0,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        "%": [1,1,0,0,1, 1,1,0,1,0, 0,0,1,0,0, 0,1,0,1,1, 1,0,0,1,1, 0,0,0,0,0, 0,0,0,0,0],
-        "!": [0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0],
-        " ": [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
-    ]
-
-    var body: some View {
-        let chars = Array(text.uppercased())
-        let px = pixelSize
-        let gap: CGFloat = px
-
-        Canvas { ctx, size in
-            var xOff: CGFloat = 0
-            for ch in chars {
-                guard let glyph = Self.glyphs[ch] else {
-                    xOff += 3 * px
-                    continue
-                }
-                for row in 0..<Self.H {
-                    for col in 0..<Self.W {
-                        if glyph[row * Self.W + col] == 1 {
-                            let rect = CGRect(x: xOff + CGFloat(col) * px, y: CGFloat(row) * px, width: px, height: px)
-                            ctx.fill(Path(rect), with: .color(color))
-                        }
-                    }
-                }
-                xOff += CGFloat(Self.W) * px + gap
-            }
-        }
-        .frame(width: charWidth(chars.count), height: CGFloat(Self.inkRows) * pixelSize)
-    }
-
-    private func charWidth(_ count: Int) -> CGFloat {
-        guard count > 0 else { return 0 }
-        let px = pixelSize
-        return CGFloat(count) * (CGFloat(Self.W) * px + px) - px
-    }
-}
 
 private struct Line: Shape {
     func path(in rect: CGRect) -> Path {

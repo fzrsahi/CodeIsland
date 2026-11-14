@@ -187,14 +187,21 @@ struct PixelRetroSessionCardView: View {
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .pixel16Bevel(raised: false, cornerRadius: 2.5, fillColor: Pixel16Palette.slot)
+                    .background(
+                        RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                            .fill(Color.white.opacity(0.04))
+                    )
                 }
             }
         }
         .padding(.leading, 10)
         .padding(.trailing, 10)
         .padding(.vertical, 8)
-        .pixel16Bevel(raised: true, cornerRadius: 5, fillColor: isHovered ? Pixel16Palette.surfaceRaised : Pixel16Palette.surface)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.white.opacity(isHovered ? 0.06 : 0.03))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         .padding(.horizontal, 4)
     }
 
@@ -203,21 +210,10 @@ struct PixelRetroSessionCardView: View {
     private var mascotCartridgeSlot: some View {
         VStack(spacing: 3) {
             ZStack {
-                // Recessed dark slot
-                RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-                    .fill(Pixel16Palette.slot)
+                // Recessed dark slot - 100% lineless
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(Color.white.opacity(0.04))
                     .frame(width: 34, height: 34)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Pixel16Palette.bevelShadow, Color.clear, Pixel16Palette.bevelHighlight],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1.0
-                            )
-                    )
 
                 MascotView(source: session.mascotSource, status: session.status, size: 28)
             }
@@ -257,20 +253,21 @@ struct PixelRetroSessionCardView: View {
             let headline = session.headline(showProjectName: showProjectName)
             HStack(spacing: 3) {
                 WorkspacePixelIcon(glyph: .folder, color: Pixel16Palette.textMuted, pixelSize: 0.85)
-                Text(headline.text.uppercased())
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Pixel16Palette.textWhite)
-                    .lineLimit(1)
+                PixelText(
+                    text: headline.text.uppercased(),
+                    color: Pixel16Palette.textWhite,
+                    pixelSize: 1.05
+                )
 
                 if let branch = session.gitBranch, !branch.isEmpty {
-                    Text("//")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Pixel16Palette.textDim)
+                    PixelText(text: "//", color: Pixel16Palette.textDim, pixelSize: 0.95)
                     WorkspacePixelIcon(glyph: .branch, color: statusColor, pixelSize: 0.85)
-                    Text(branch)
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(statusColor)
-                        .lineLimit(1)
+                    PixelText(
+                        text: branch.uppercased(),
+                        color: statusColor,
+                        pixelSize: 0.95,
+                        maxChars: 28
+                    )
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -286,18 +283,24 @@ struct PixelRetroSessionCardView: View {
                 }
 
                 if showModelLabel, let modelLabel = session.modelLabel {
-                    Text(modelLabel.uppercased())
-                        .font(.system(size: 7, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Pixel16Palette.textDim)
-                        .padding(.horizontal, 3.5)
-                        .padding(.vertical, 1.5)
-                        .background(Pixel16Palette.slot)
-                        .clipShape(RoundedRectangle(cornerRadius: 2))
+                    PixelText(
+                        text: modelLabel.uppercased(),
+                        color: Pixel16Palette.textDim,
+                        pixelSize: 0.85
+                    )
+                    .padding(.horizontal, 3.5)
+                    .padding(.vertical, 1.5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(Color.white.opacity(0.04))
+                    )
                 }
 
-                Text(timeAgo(session.startTime))
-                    .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Pixel16Palette.textDim)
+                PixelText(
+                    text: timeAgo(session.startTime),
+                    color: Pixel16Palette.textDim,
+                    pixelSize: 0.9
+                )
 
                 // 16-Bit Dismiss Button
                 Button(action: {
@@ -306,14 +309,16 @@ struct PixelRetroSessionCardView: View {
                         appState.removeSession(sessionId)
                     }
                 }) {
-                    Text("✕")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(deleteHovered ? Pixel16Palette.red : Pixel16Palette.textDim)
-                        .frame(width: 15, height: 15)
-                        .background(
-                            RoundedRectangle(cornerRadius: 2.5)
-                                .fill(deleteHovered ? Pixel16Palette.red.opacity(0.2) : Pixel16Palette.slot)
-                        )
+                    PixelText(
+                        text: "✕",
+                        color: deleteHovered ? Pixel16Palette.red : Pixel16Palette.textDim,
+                        pixelSize: 0.9
+                    )
+                    .frame(width: 15, height: 15)
+                    .background(
+                        RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                            .fill(deleteHovered ? Pixel16Palette.red.opacity(0.2) : Color.white.opacity(0.05))
+                    )
                 }
                 .buttonStyle(.plain)
                 .onHover { deleteHovered = $0 }
@@ -330,9 +335,11 @@ struct PixelRetroSessionCardView: View {
         let totalCount = items.count
 
         return HStack(spacing: 6) {
-            Text("[\(doneCount)/\(totalCount) TASKS]")
-                .font(.system(size: 7.5, weight: .black, design: .monospaced))
-                .foregroundStyle(doneCount == totalCount ? accentColor : Pixel16Palette.textWhite)
+            PixelText(
+                text: "[\(doneCount)/\(totalCount) TASKS]",
+                color: doneCount == totalCount ? accentColor : Pixel16Palette.textWhite,
+                pixelSize: 0.95
+            )
 
             // 16-Bit Stepped LED Gauge
             Pixel16Gauge(
@@ -354,7 +361,10 @@ struct PixelRetroSessionCardView: View {
         }
         .padding(.horizontal, 5)
         .padding(.vertical, 2.5)
-        .pixel16Bevel(raised: false, cornerRadius: 2.5, fillColor: Pixel16Palette.slot)
+        .background(
+            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                .fill(Color.white.opacity(0.04))
+        )
     }
 
     // MARK: - 16-Bit Live Activity Row
@@ -432,21 +442,23 @@ struct PixelRetroSessionCardView: View {
             }
         }
         .padding(6)
-        .pixel16Bevel(raised: false, cornerRadius: 3, fillColor: Pixel16Palette.amber.opacity(0.08))
+        .background(
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(Pixel16Palette.amber.opacity(0.08))
+        )
     }
 
     private var cursorQuestion16BitBlock: some View {
         HStack(spacing: 4) {
-            Text("[?]")
-                .font(.system(size: 8, weight: .black, design: .monospaced))
-                .foregroundStyle(Pixel16Palette.amber)
-            Text("WAITING FOR ANSWER IN CURSOR")
-                .font(.system(size: 8, weight: .bold, design: .monospaced))
-                .foregroundStyle(Pixel16Palette.textWhite)
+            PixelText(text: "[?]", color: Pixel16Palette.amber, pixelSize: 0.9)
+            PixelText(text: "WAITING FOR ANSWER IN CURSOR", color: Pixel16Palette.textWhite, pixelSize: 0.95)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
-        .pixel16Bevel(raised: false, cornerRadius: 2.5, fillColor: Pixel16Palette.amber.opacity(0.08))
+        .background(
+            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                .fill(Pixel16Palette.amber.opacity(0.08))
+        )
     }
 
     private var questionWaiting16BitRow: some View {
@@ -457,54 +469,51 @@ struct PixelRetroSessionCardView: View {
             }
         }) {
             HStack(spacing: 4) {
-                Text("[?]")
-                    .font(.system(size: 8, weight: .black, design: .monospaced))
-                    .foregroundStyle(Pixel16Palette.amber)
-                Text("QUESTION PENDING — CLICK TO ANSWER")
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Pixel16Palette.amber)
+                PixelText(text: "[?]", color: Pixel16Palette.amber, pixelSize: 0.9)
+                PixelText(text: "QUESTION PENDING — CLICK TO ANSWER", color: Pixel16Palette.amber, pixelSize: 0.95)
                 Spacer()
-                Text("▸")
-                    .font(.system(size: 8, weight: .black, design: .monospaced))
-                    .foregroundStyle(Pixel16Palette.amber)
+                PixelText(text: "▸", color: Pixel16Palette.amber, pixelSize: 0.9)
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
-            .pixel16Bevel(raised: true, cornerRadius: 2.5, fillColor: Pixel16Palette.amber.opacity(0.12))
+            .background(
+                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                    .fill(Pixel16Palette.amber.opacity(0.12))
+            )
         }
         .buttonStyle(.plain)
     }
 
     // MARK: - 2. 16-Bit Compact Single-Row Cartridge Strip
-    // Completely solves the "2 warna berdekatan di samping icon agents":
-    // NO double rails, NO colored tags flanking the mascot icon!
-    // Clean layout: [ Recessed Slot + Mascot ] -> [ Project & Branch ] -> [ Live Activity ] -> [ Right Status Pill ]
 
     private var compact16BitView: some View {
         HStack(alignment: .center, spacing: 6) {
-            // A. Clean Recessed Mascot Bay (No colored stripes hugging it)
+            // A. Clean Recessed Mascot Bay
             ZStack {
                 RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                    .fill(Pixel16Palette.slot)
+                    .fill(Color.white.opacity(0.04))
                     .frame(width: 18, height: 18)
 
                 MascotView(source: session.mascotSource, status: session.status, size: 15)
             }
             .frame(width: 18, height: 18)
 
-            // B. Project Name & Branch (High-Contrast White Typography)
+            // B. Project Name & Branch (Authentic Pixel Typography)
             let headline = session.headline(showProjectName: showProjectName)
             HStack(spacing: 3) {
-                Text(headline.text.uppercased())
-                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Pixel16Palette.textWhite)
-                    .lineLimit(1)
+                PixelText(
+                    text: headline.text.uppercased(),
+                    color: Pixel16Palette.textWhite,
+                    pixelSize: 0.95
+                )
 
                 if let branch = session.gitBranch, !branch.isEmpty {
-                    Text("// \(branch)")
-                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(statusColor)
-                        .lineLimit(1)
+                    PixelText(
+                        text: "// \(branch.uppercased())",
+                        color: statusColor,
+                        pixelSize: 0.9,
+                        maxChars: 22
+                    )
                 }
             }
             .frame(maxWidth: compactProjectWidth, alignment: .leading)
@@ -512,9 +521,11 @@ struct PixelRetroSessionCardView: View {
             // C. Live Tool Execution / Activity in Center
             HStack(spacing: 4) {
                 if let tool = session.currentTool {
-                    Text("▸ [\(tool.uppercased())]")
-                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(statusColor)
+                    PixelText(
+                        text: "▸ [\(tool.uppercased())]",
+                        color: statusColor,
+                        pixelSize: 0.9
+                    )
                 } else if cardStatus == .thinking {
                     Pixel16ThinkingDots(color: accentColor)
                 } else if let prompt = session.lastUserPrompt {
@@ -526,13 +537,15 @@ struct PixelRetroSessionCardView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // D. Single 16-Bit Status Pill at Far Right (Far from the mascot icon!)
+            // D. Single 16-Bit Status Pill at Far Right
             Pixel16Badge(cardStatus.label, color: statusColor, isFilled: cardStatus == .needsYou)
 
             // E. Time Ago
-            Text(timeAgo(session.startTime))
-                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                .foregroundStyle(Pixel16Palette.textDim)
+            PixelText(
+                text: timeAgo(session.startTime),
+                color: Pixel16Palette.textDim,
+                pixelSize: 0.85
+            )
 
             // F. 16-Bit Dismiss Button
             Button(action: {
@@ -541,14 +554,16 @@ struct PixelRetroSessionCardView: View {
                     appState.removeSession(sessionId)
                 }
             }) {
-                Text("✕")
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    .foregroundStyle(deleteHovered ? Pixel16Palette.red : Pixel16Palette.textDim)
-                    .frame(width: 14, height: 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(deleteHovered ? Pixel16Palette.red.opacity(0.2) : Pixel16Palette.slot)
-                    )
+                PixelText(
+                    text: "✕",
+                    color: deleteHovered ? Pixel16Palette.red : Pixel16Palette.textDim,
+                    pixelSize: 0.85
+                )
+                .frame(width: 14, height: 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(deleteHovered ? Pixel16Palette.red.opacity(0.2) : Color.white.opacity(0.04))
+                )
             }
             .buttonStyle(.plain)
             .onHover { deleteHovered = $0 }
@@ -556,7 +571,11 @@ struct PixelRetroSessionCardView: View {
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 3.5)
-        .pixel16Bevel(raised: true, cornerRadius: 4, fillColor: isHovered ? Pixel16Palette.surfaceRaised : Pixel16Palette.surface)
+        .background(
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(Color.white.opacity(isHovered ? 0.06 : 0.02))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
         .padding(.horizontal, 4)
     }
 }

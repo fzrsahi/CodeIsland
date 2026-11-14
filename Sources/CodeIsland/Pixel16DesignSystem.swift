@@ -35,7 +35,7 @@ public enum Pixel16Palette {
     public static let textDim = Color(red: 0.38, green: 0.44, blue: 0.52)
 }
 
-// MARK: - 16-Bit Tactile Bevel Modifier
+// MARK: - 16-Bit Lineless Surface Modifier (Seamless, Pure Depth, Zero Stroke Lines)
 
 public struct Pixel16Bevel: ViewModifier {
     public var raised: Bool = true
@@ -45,43 +45,8 @@ public struct Pixel16Bevel: ViewModifier {
     public func body(content: Content) -> some View {
         content
             .background(
-                ZStack {
-                    // Base Fill
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(fillColor)
-
-                    // 16-Bit Tactile Bevel: 1px top highlight, 1px bottom shadow
-                    if raised {
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [
-                                        Pixel16Palette.bevelHighlight,
-                                        Color.clear,
-                                        Pixel16Palette.bevelShadow
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1.0
-                            )
-                    } else {
-                        // Inset / Recessed Bay
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [
-                                        Pixel16Palette.bevelShadow,
-                                        Color.clear,
-                                        Pixel16Palette.bevelHighlight
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1.0
-                            )
-                    }
-                }
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(fillColor)
             )
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
@@ -160,38 +125,19 @@ public struct Pixel16Button<Label: View>: View {
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3.5)
                 .background(
-                    ZStack {
-                        if isAccent {
-                            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                .fill(isHovered ? accentColor.opacity(0.95) : accentColor)
-                        } else {
-                            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                .fill(isHovered ? Pixel16Palette.surfaceRaised : Pixel16Palette.surface)
-                        }
-
-                        // 16-Bit Bevel Border
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .stroke(
-                                LinearGradient(
-                                    colors: isAccent
-                                        ? [Color.white.opacity(0.4), Color.clear, Color.black.opacity(0.4)]
-                                        : [Pixel16Palette.bevelHighlight, Color.clear, Pixel16Palette.bevelShadow],
-                                    startPoint: isPressed ? .bottomTrailing : .topLeading,
-                                    endPoint: isPressed ? .topLeading : .bottomTrailing
-                                ),
-                                lineWidth: 1.0
-                            )
-                    }
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(isAccent
+                            ? (isHovered ? accentColor.opacity(0.95) : accentColor)
+                            : (isHovered ? Color.white.opacity(0.12) : Color.white.opacity(0.06)))
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-                .shadow(color: isAccent ? accentColor.opacity(isHovered ? 0.35 : 0.15) : Color.black.opacity(0.3), radius: isHovered ? 3 : 1)
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
     }
 }
 
-// MARK: - 16-Bit Badge
+// MARK: - 16-Bit Lineless Badge
 
 public struct Pixel16Badge: View {
     public let text: String
@@ -206,25 +152,17 @@ public struct Pixel16Badge: View {
 
     public var body: some View {
         HStack(spacing: 3) {
-            Text(text.uppercased())
-                .font(.system(size: 7.5, weight: .black, design: .monospaced))
-                .foregroundStyle(isFilled ? Color.black : color)
-                .lineLimit(1)
+            PixelText(
+                text: text.uppercased(),
+                color: isFilled ? Color.black : color,
+                pixelSize: 1.05
+            )
         }
-        .padding(.horizontal, 4.5)
-        .padding(.vertical, 1.5)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 2.5)
         .background(
-            ZStack {
-                if isFilled {
-                    RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                        .fill(color)
-                } else {
-                    RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                        .fill(color.opacity(0.12))
-                    RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                        .stroke(color.opacity(0.45), lineWidth: 0.8)
-                }
-            }
+            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                .fill(isFilled ? color : color.opacity(0.12))
         )
         .clipShape(RoundedRectangle(cornerRadius: 2.5, style: .continuous))
     }
