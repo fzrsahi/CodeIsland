@@ -3,12 +3,13 @@ import CodeIslandCore
 import AppKit
 
 /// The expanded Apple Mail HUD card showing latest unread emails and quick actions.
-/// Dispatches dynamically to Modern Clean or Retro Cyber Pixel theme.
+/// Adapts dynamically between Modern Clean and Retro Cyber Pixel themes, following user's color theme.
 struct CyberMailHUDView: View {
     @ObservedObject var mailManager: MailManager = MailManager.shared
     var appState: AppState
 
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
 
     init(appState: AppState) {
         self.appState = appState
@@ -18,104 +19,74 @@ struct CyberMailHUDView: View {
         islandUITheme == IslandUITheme.pixel.rawValue
     }
 
+    private var themeColor: Color {
+        AppColorTheme.accent(for: musicHUDProgressColor, isModern: !isRetroTheme)
+    }
+
     var body: some View {
         Group {
             if isRetroTheme {
-                RetroCyberMailHUDContentView(mailManager: mailManager, appState: appState)
+                RetroCyberMailHUDContentView(mailManager: mailManager, themeColor: themeColor)
             } else {
-                ModernCleanMailHUDContentView(mailManager: mailManager, appState: appState)
+                ModernCleanMailHUDContentView(mailManager: mailManager, themeColor: themeColor)
             }
         }
         .animation(.easeInOut(duration: 0.22), value: isRetroTheme)
+        .animation(.easeInOut(duration: 0.22), value: musicHUDProgressColor)
     }
 }
 
-// MARK: - Modern Clean Mail HUD Theme (Apple Mail Royal Blue)
+// MARK: - Modern Clean Mail HUD Theme
 
 private struct ModernCleanMailHUDContentView: View {
     @ObservedObject var mailManager: MailManager
-    var appState: AppState
+    let themeColor: Color
     @State private var hoveredMailId: Int? = nil
 
-    private let royalMailBlue = Color(red: 0.12, green: 0.53, blue: 1.0)
-
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             // Header Bar
             HStack(alignment: .center, spacing: 8) {
                 HStack(spacing: 7) {
                     Image(systemName: "envelope.fill")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(royalMailBlue)
+                        .foregroundStyle(themeColor)
 
                     Text("INBOX")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(size: 11.5, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.white)
                         .tracking(0.6)
 
-                    // Formatted Unread Count Pill
-                    HStack(spacing: 4) {
-                        Text("\(mailManager.unreadCount.formatted())")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                        Text("unread")
-                            .font(.system(size: 9, weight: .medium, design: .rounded))
-                    }
-                    .foregroundStyle(royalMailBlue)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(
-                        Capsule()
-                            .fill(royalMailBlue.opacity(0.16))
-                            .overlay(Capsule().stroke(royalMailBlue.opacity(0.24), lineWidth: 0.8))
-                    )
+                    Text("•")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.25))
+
+                    Text("\(mailManager.unreadCount.formatted()) unread")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.48))
                 }
 
                 Spacer()
 
-                // Header Action Buttons
-                HStack(spacing: 6) {
-                    Button {
-                        mailManager.refresh()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 10, weight: .semibold))
-                                .rotationEffect(.degrees(mailManager.isRefreshing ? 360 : 0))
-                                .animation(
-                                    mailManager.isRefreshing
-                                        ? Animation.linear(duration: 0.85).repeatForever(autoreverses: false)
-                                        : .default,
-                                    value: mailManager.isRefreshing
-                                )
-                        }
-                        .foregroundStyle(Color.white.opacity(0.75))
-                        .frame(width: 24, height: 24)
-                        .background(Circle().fill(Color.white.opacity(0.08)))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Refresh unread emails")
-
-                    Button {
-                        mailManager.openMailInbox()
-                    } label: {
-                        HStack(spacing: 5) {
-                            Text("Mail.app")
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                            Image(systemName: "arrow.up.forward.app")
-                                .font(.system(size: 9, weight: .bold))
-                        }
-                        .foregroundStyle(Color.white.opacity(0.90))
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 4.5)
-                        .background(
-                            Capsule()
-                                .fill(Color.white.opacity(0.10))
-                                .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 0.8))
+                // Minimal Refresh Icon Button (No clunky boxes)
+                Button {
+                    mailManager.refresh()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(mailManager.isRefreshing ? 0.95 : 0.50))
+                        .rotationEffect(.degrees(mailManager.isRefreshing ? 360 : 0))
+                        .animation(
+                            mailManager.isRefreshing
+                                ? Animation.linear(duration: 0.85).repeatForever(autoreverses: false)
+                                : .default,
+                            value: mailManager.isRefreshing
                         )
-                    }
-                    .buttonStyle(.plain)
-                    .help("Buka aplikasi Apple Mail")
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .help("Refresh unread emails")
             }
             .padding(.horizontal, 16)
             .padding(.top, 4)
@@ -171,7 +142,7 @@ private struct ModernCleanMailHUDContentView: View {
                         .lineLimit(1)
 
                     Circle()
-                        .fill(royalMailBlue)
+                        .fill(themeColor)
                         .frame(width: 4, height: 4)
 
                     Text(mail.dateReceived)
@@ -207,7 +178,7 @@ private struct ModernCleanMailHUDContentView: View {
                     } label: {
                         Image(systemName: "arrow.up.right.circle.fill")
                             .font(.system(size: 14))
-                            .foregroundStyle(royalMailBlue)
+                            .foregroundStyle(themeColor)
                             .padding(4)
                             .background(Circle().fill(Color.white.opacity(0.10)))
                     }
@@ -225,7 +196,7 @@ private struct ModernCleanMailHUDContentView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .stroke(isHovered ? royalMailBlue.opacity(0.35) : Color.white.opacity(0.05), lineWidth: 0.8)
+                .stroke(isHovered ? themeColor.opacity(0.35) : Color.white.opacity(0.05), lineWidth: 0.8)
         )
         .contentShape(Rectangle())
         .onHover { hovering in
@@ -274,7 +245,7 @@ private struct ModernCleanMailHUDContentView: View {
                 .font(.system(size: 26, weight: .medium))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [royalMailBlue, Color(red: 0.12, green: 0.84, blue: 0.38)],
+                        colors: [themeColor, Color(red: 0.12, green: 0.84, blue: 0.38)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -314,84 +285,57 @@ private struct ModernCleanMailHUDContentView: View {
     }
 }
 
-// MARK: - Retro Cyber Pixel Mail HUD Theme (Cyber Electric Blue)
+// MARK: - Retro Cyber Pixel Mail HUD Theme
 
 private struct RetroCyberMailHUDContentView: View {
     @ObservedObject var mailManager: MailManager
-    var appState: AppState
+    let themeColor: Color
     @State private var hoveredMailId: Int? = nil
-
-    private let cyberBlue = Color(red: 0.0, green: 0.88, blue: 1.0)
-    private let neonCyan = Color(red: 0.0, green: 0.96, blue: 0.83)
 
     var body: some View {
         VStack(spacing: 8) {
-            // Retro Terminal Header
+            // Header Bar: Clean Pixel Typography (No Brackets, No Border)
             HStack(alignment: .center, spacing: 8) {
-                HStack(spacing: 6) {
-                    PixelIcon(glyph: .email, color: cyberBlue, pixelSize: 1.35)
+                HStack(spacing: 7) {
+                    PixelIcon(glyph: .email, color: themeColor, pixelSize: 1.35)
 
-                    PixelText(text: "MAIL.SYS", color: cyberBlue, pixelSize: 1.15)
+                    PixelText(text: "INBOX", color: themeColor, pixelSize: 1.15)
 
-                    // Pixel Terminal Badge [ 14,356 UNREAD ]
-                    HStack(spacing: 3) {
-                        Text("[\(mailManager.unreadCount.formatted()) UNREAD]")
-                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.black)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(cyberBlue)
-                            .cornerRadius(2)
-                    }
+                    Text("•")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.25))
+
+                    Text("\(mailManager.unreadCount.formatted()) unread")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.50))
                 }
 
                 Spacer()
 
-                // Retro Terminal Bracket Buttons
-                HStack(spacing: 6) {
-                    Button {
-                        mailManager.refresh()
-                    } label: {
-                        HStack(spacing: 3) {
-                            Text(mailManager.isRefreshing ? "[SYNC...]" : "[↻ REFRESH]")
-                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                .foregroundStyle(cyberBlue)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2.5)
-                                .background(Color.black)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .stroke(cyberBlue.opacity(0.6), lineWidth: 0.8)
-                                )
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .help("Refresh unread emails")
-
-                    Button {
-                        mailManager.openMailInbox()
-                    } label: {
-                        HStack(spacing: 3) {
-                            Text("[MAIL.APP ↗]")
-                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                .foregroundStyle(neonCyan)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2.5)
-                                .background(Color.black)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .stroke(neonCyan.opacity(0.6), lineWidth: 0.8)
-                                )
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .help("Buka Apple Mail")
+                // Minimal Refresh Icon Button (No clunky bracket boxes)
+                Button {
+                    mailManager.refresh()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(mailManager.isRefreshing ? 0.95 : 0.50))
+                        .rotationEffect(.degrees(mailManager.isRefreshing ? 360 : 0))
+                        .animation(
+                            mailManager.isRefreshing
+                                ? Animation.linear(duration: 0.85).repeatForever(autoreverses: false)
+                                : .default,
+                            value: mailManager.isRefreshing
+                        )
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .help("Refresh unread emails")
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
             .padding(.top, 4)
 
-            // Retro Stream List, Loading, or Clean State
+            // Content List, Loading, or Empty State
             if mailManager.recentMails.isEmpty && mailManager.isRefreshing {
                 retroLoadingView
             } else if mailManager.recentMails.isEmpty {
@@ -406,93 +350,84 @@ private struct RetroCyberMailHUDContentView: View {
 
     private var retroListView: some View {
         VStack(spacing: 5) {
-            ForEach(Array(mailManager.recentMails.prefix(4).enumerated()), id: \.element.id) { index, mail in
-                retroMailRow(mail, index: index + 1)
+            ForEach(mailManager.recentMails.prefix(4)) { mail in
+                retroMailRow(mail)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 14)
     }
 
-    private func retroMailRow(_ mail: MailItem, index: Int) -> some View {
+    private func retroMailRow(_ mail: MailItem) -> some View {
         let isHovered = hoveredMailId == mail.id
 
-        return HStack(alignment: .center, spacing: 8) {
-            // Index Pill [01]
-            Text(String(format: "[%02d]", index))
-                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                .foregroundStyle(isHovered ? Color.black : cyberBlue)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 2)
-                .background(isHovered ? cyberBlue : Color.white.opacity(0.06))
-                .cornerRadius(2)
+        return HStack(alignment: .center, spacing: 9) {
+            // Small subtle dot accent indicator
+            Circle()
+                .fill(isHovered ? themeColor : themeColor.opacity(0.5))
+                .frame(width: 5, height: 5)
 
-            // Sender & Subject Monospace
+            // Sender & Subject in Clean Monospace (No shouting ALL-CAPS, No brackets)
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 5) {
-                    Text(mail.senderName.uppercased())
-                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(cyberBlue)
+                HStack(spacing: 6) {
+                    Text(mail.senderName)
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(themeColor)
                         .lineLimit(1)
 
-                    Text("• \(mail.dateReceived.uppercased())")
-                        .font(.system(size: 8, weight: .medium, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.40))
+                    Text("• \(mail.dateReceived)")
+                        .font(.system(size: 9, weight: .regular, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.35))
                 }
 
                 Text(mail.subject)
-                    .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.85))
+                    .font(.system(size: 10.5, weight: .regular, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.80))
                     .lineLimit(1)
             }
 
             Spacer(minLength: 6)
 
-            // Terminal Action Buttons
-            HStack(spacing: 4) {
-                Button {
-                    mailManager.markAsRead(id: mail.id)
-                } label: {
-                    Text("[READ]")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(isHovered ? Color.black : Color(red: 0.12, green: 0.84, blue: 0.38))
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(isHovered ? Color(red: 0.12, green: 0.84, blue: 0.38) : Color.black)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 2)
-                                .stroke(Color(red: 0.12, green: 0.84, blue: 0.38).opacity(0.6), lineWidth: 0.7)
-                        )
-                }
-                .buttonStyle(.plain)
-                .help("Tandai sudah dibaca")
+            // Minimal Actions on Hover (No clunky bracket boxes)
+            if isHovered {
+                HStack(spacing: 6) {
+                    Button {
+                        mailManager.markAsRead(id: mail.id)
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                            .frame(width: 20, height: 20)
+                            .background(Color.white.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Tandai sudah dibaca")
 
-                Button {
-                    mailManager.openInMailApp(id: mail.id)
-                } label: {
-                    Text("[OPEN]")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(isHovered ? Color.black : cyberBlue)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(isHovered ? cyberBlue : Color.black)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 2)
-                                .stroke(cyberBlue.opacity(0.6), lineWidth: 0.7)
-                        )
+                    Button {
+                        mailManager.openInMailApp(id: mail.id)
+                    } label: {
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(themeColor)
+                            .frame(width: 20, height: 20)
+                            .background(Color.white.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Buka di Apple Mail")
                 }
-                .buttonStyle(.plain)
-                .help("Buka di Apple Mail")
+                .transition(.opacity)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 3)
-                .fill(isHovered ? cyberBlue.opacity(0.12) : Color(red: 0.05, green: 0.08, blue: 0.12))
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(isHovered ? themeColor.opacity(0.08) : Color.white.opacity(0.03))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 3)
-                .stroke(isHovered ? cyberBlue : cyberBlue.opacity(0.20), lineWidth: 0.8)
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .stroke(isHovered ? themeColor.opacity(0.25) : Color.white.opacity(0.04), lineWidth: 0.8)
         )
         .contentShape(Rectangle())
         .onHover { hovering in
@@ -507,9 +442,9 @@ private struct RetroCyberMailHUDContentView: View {
 
     private var retroLoadingView: some View {
         HStack(spacing: 6) {
-            Text(">>> SCANNING INBOX PACKET STREAM...")
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundStyle(cyberBlue.opacity(0.75))
+            Text("Checking inbox stream...")
+                .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                .foregroundStyle(themeColor.opacity(0.70))
         }
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity)
@@ -517,16 +452,16 @@ private struct RetroCyberMailHUDContentView: View {
 
     private var retroEmptyView: some View {
         VStack(spacing: 6) {
-            PixelIcon(glyph: .email, color: cyberBlue, pixelSize: 1.8)
+            PixelIcon(glyph: .email, color: themeColor, pixelSize: 1.6)
                 .padding(.top, 4)
 
-            Text(">>> INBOX ZERO // ALL PACKETS CLEARED <<<")
-                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                .foregroundStyle(cyberBlue)
+            Text("All Caught Up!")
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(themeColor)
 
-            Text("0 UNREAD IN STREAM")
-                .font(.system(size: 8.5, weight: .medium, design: .monospaced))
-                .foregroundStyle(Color.white.opacity(0.50))
+            Text("0 unread in inbox")
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundStyle(Color.white.opacity(0.45))
         }
         .padding(.vertical, 14)
         .frame(maxWidth: .infinity)

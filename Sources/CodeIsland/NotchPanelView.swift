@@ -2131,7 +2131,7 @@ private struct HeaderNavigationMenuTabs: View {
                 if MailManager.shared.isEnabled {
                     let isMailActive = expandedTab == .mail
                     let showMailLabel = isMailActive && (activeLabelTab == .mail || !appState.isTabTransitioning)
-                    let mailColor = Color(red: 0.12, green: 0.53, blue: 1.0)
+                    let mailColor = activeAccentColor
                     Button {
                         switchToTab(.mail)
                     } label: {
@@ -2150,7 +2150,7 @@ private struct HeaderNavigationMenuTabs: View {
                             if MailManager.shared.unreadCount > 0 {
                                 Text("\(min(999, MailManager.shared.unreadCount))")
                                     .font(.system(size: 8, weight: .bold, design: .rounded))
-                                    .foregroundStyle(Color.white)
+                                    .foregroundStyle(mailColor == .white ? Color.black : Color.white)
                                     .padding(.horizontal, 4)
                                     .padding(.vertical, 1)
                                     .background(Capsule().fill(mailColor))
@@ -2161,7 +2161,7 @@ private struct HeaderNavigationMenuTabs: View {
                         .frame(height: 20)
                         .background(
                             RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(isMailActive ? mailColor.opacity(0.20) : .clear)
+                                .fill(isMailActive ? (mailColor == .white ? Color.white.opacity(0.18) : mailColor.opacity(0.22)) : .clear)
                         )
                         .contentShape(Rectangle())
                     }
@@ -2319,7 +2319,7 @@ private struct HeaderNavigationMenuTabs: View {
                 if MailManager.shared.isEnabled {
                     let isMailActive = expandedTab == .mail
                     let showMailLabel = isMailActive && (activeLabelTab == .mail || !appState.isTabTransitioning)
-                    let cyberMailColor = Color(red: 0.0, green: 0.88, blue: 1.0)
+                    let cyberMailColor = activeAccentColor
                     Button {
                         switchToTab(.mail)
                     } label: {
@@ -2354,7 +2354,7 @@ private struct HeaderNavigationMenuTabs: View {
                         .frame(height: 18)
                         .background(
                             RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(isMailActive ? cyberMailColor.opacity(0.22) : .clear)
+                                .fill(isMailActive ? cyberMailColor.opacity(0.20) : .clear)
                         )
                         .contentShape(Rectangle())
                     }
