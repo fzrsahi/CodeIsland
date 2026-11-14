@@ -3,6 +3,12 @@
 # Runs natively on macOS Sonoma KVM runner via 'local' backend
 # ==============================================================================
 
+clone:
+  git:
+    image: bash
+    settings:
+      lfs: false
+
 when:
   - event: [pull_request, push, tag]
 
