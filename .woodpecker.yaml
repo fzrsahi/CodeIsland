@@ -10,7 +10,10 @@ clone:
       lfs: false
 
 when:
-  - event: [pull_request, push, tag]
+  - event: pull_request
+  - event: push
+    branch: main
+  - event: tag
 
 steps:
   - name: test
@@ -20,7 +23,9 @@ steps:
       - swift --version
       - swift test
     when:
-      - event: [pull_request, push]
+      - event: [pull_request, tag]
+      - event: push
+        branch: main
 
   - name: build-release-dmg
     image: bash
