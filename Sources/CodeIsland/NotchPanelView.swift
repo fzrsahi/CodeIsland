@@ -750,6 +750,9 @@ struct NotchPanelView: View {
                                 case .prayer:
                                     PrayerExpandedCardView(manager: prayerManager)
                                         .transition(tabContentTransition)
+                                case .game:
+                                    NotchHoopsView(appState: appState)
+                                        .transition(tabContentTransition)
                                 case .agents:
                                     SessionListView(appState: appState, onlySessionId: nil)
                                         .transition(tabContentTransition)
@@ -992,7 +995,7 @@ struct NotchPanelView: View {
                     hoverTimer?.invalidate()
                     hoverTimer = Timer.scheduledTimer(withTimeInterval: NotchHoverInteraction.collapseDelay, repeats: false) { _ in
                         Task { @MainActor in
-                            guard !isHovered else { return }
+                            guard !isHovered && !appState.isGameInteractionLocked else { return }
                             hoverPhase = NotchHoverInteraction.nextPhase(from: hoverPhase, event: .collapseDelayElapsed)
                             withAnimation(NotchAnimation.close) {
                                 appState.surface = .collapsed
@@ -2225,6 +2228,7 @@ private struct HeaderNavigationMenuTabs: View {
     @AppStorage(SettingsKey.agentsEnabled) private var agentsEnabled = SettingsDefaults.agentsEnabled
     @AppStorage(SettingsKey.workspaceEnabled) private var workspaceEnabled = SettingsDefaults.workspaceEnabled
     @AppStorage(SettingsKey.musicEnabled) private var musicEnabled = SettingsDefaults.musicEnabled
+    @AppStorage(SettingsKey.gameEnabled) private var gameEnabled = SettingsDefaults.gameEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var activeLabelTab: ExpandedContentTab? {
@@ -2395,6 +2399,39 @@ private struct HeaderNavigationMenuTabs: View {
                     .buttonStyle(.plain)
                     .help("Prayer Schedule & Living Sky Diorama")
                 }
+
+                // GAME TAB
+                if gameEnabled {
+                    let isGameActive = expandedTab == .game
+                    let showGameLabel = isGameActive && (activeLabelTab == .game || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.game)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "gamecontroller.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                            if showGameLabel {
+                                Text("Game")
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .lineLimit(1)
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .leading).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            }
+                        }
+                        .foregroundStyle(isGameActive ? activeAccentColor : Self.inactiveColor)
+                        .padding(.horizontal, isGameActive ? 8 : 6)
+                        .frame(height: 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(isGameActive ? (activeAccentColor == .white ? Color.white.opacity(0.18) : activeAccentColor.opacity(0.22)) : .clear)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Notch Hoops // Arcade")
+                }
             }
             .padding(.vertical, 2)
         } else {
@@ -2546,6 +2583,43 @@ private struct HeaderNavigationMenuTabs: View {
                     }
                     .buttonStyle(.plain)
                     .help("Prayer Schedule & Living Sky Diorama")
+                }
+
+                // GAME PIXEL TAB
+                if gameEnabled {
+                    let isGameActive = expandedTab == .game
+                    let showGameLabel = isGameActive && (activeLabelTab == .game || !appState.isTabTransitioning)
+                    Button {
+                        switchToTab(.game)
+                    } label: {
+                        HStack(spacing: 4) {
+                            PixelIcon(
+                                glyph: .game,
+                                color: isGameActive ? activeAccentColor : Self.inactiveColor,
+                                pixelSize: 1.35
+                            )
+                            if showGameLabel {
+                                PixelText(
+                                    text: "GAME",
+                                    color: activeAccentColor,
+                                    pixelSize: 1.15
+                                )
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .leading).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                ))
+                            }
+                        }
+                        .padding(.horizontal, isGameActive ? 7 : 5)
+                        .frame(height: 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(isGameActive ? activeAccentColor.opacity(0.18) : Color.clear)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Notch Hoops // Arcade")
                 }
             }
             .padding(.vertical, 2)

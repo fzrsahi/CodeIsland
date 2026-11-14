@@ -97,12 +97,14 @@ final class NotchNavigationManager {
         }
 
         let currentTab = appState.expandedTab
-        let currentIndex = currentTab.rawValue
-        let targetIndex = currentIndex + (forward ? 1 : -1)
-
-        let allTabs = PrayerTimeManager.shared.isEnabled
-            ? ExpandedContentTab.allCases
-            : ExpandedContentTab.allCases.filter { $0 != .prayer }
+        let gameEnabled = UserDefaults.standard.object(forKey: SettingsKey.gameEnabled) as? Bool ?? SettingsDefaults.gameEnabled
+        let allTabs = ExpandedContentTab.allCases.filter { tab in
+            if tab == .prayer && !PrayerTimeManager.shared.isEnabled { return false }
+            if tab == .game && !gameEnabled { return false }
+            return true
+        }
+        guard let currentPos = allTabs.firstIndex(of: currentTab) else { return }
+        let targetIndex = currentPos + (forward ? 1 : -1)
         guard targetIndex >= 0 && targetIndex < allTabs.count else {
             // Reached boundary edge: do nothing and do not trigger haptic
             return

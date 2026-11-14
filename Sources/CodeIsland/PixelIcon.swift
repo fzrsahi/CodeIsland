@@ -6,6 +6,7 @@ public enum PixelIconGlyph: String, CaseIterable, Sendable {
     case workspace
     case music
     case prayer
+    case game
     case calendar
     case email
     case volume
@@ -58,6 +59,18 @@ public struct PixelIcon: View {
                 1,1,1,1,0,1,1,1,1,
                 1,1,1,0,0,1,1,1,0,
                 0,1,0,0,0,0,1,0,0
+            ])
+        case .game:
+            return (9, 9, [
+                0,0,0,0,0,0,0,0,0,
+                0,1,1,1,1,1,1,1,0,
+                1,1,0,1,1,1,0,1,1,
+                1,0,0,0,1,0,1,0,1,
+                1,1,0,1,1,1,0,1,1,
+                1,1,1,1,1,1,1,1,1,
+                1,1,0,0,0,0,0,1,1,
+                0,1,0,0,0,0,0,1,0,
+                0,0,0,0,0,0,0,0,0
             ])
         case .prayer:
             return (9, 9, [

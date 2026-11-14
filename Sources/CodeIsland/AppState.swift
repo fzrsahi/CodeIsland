@@ -21,6 +21,7 @@ enum ExpandedContentTab: Int, CaseIterable, Sendable {
     case workspace = 1
     case music = 2
     case prayer = 3
+    case game = 4
 
     var tabIndex: Int { rawValue }
 }
@@ -258,6 +259,8 @@ final class AppState {
     }
     var activeTabLabel: ExpandedContentTab? = .agents
     var isTabTransitioning: Bool = false
+    /// Prevents hover-collapse while the user is actively dragging/shooting in the mini-game.
+    @ObservationIgnored var isGameInteractionLocked: Bool = false
 
     func transitionToTab(_ target: ExpandedContentTab) {
         guard target != expandedTab || surface != .sessionList else {
