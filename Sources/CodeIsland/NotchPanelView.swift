@@ -1506,7 +1506,7 @@ private struct CompactRightWing: View {
                     MailArrivalWingView(
                         isRetro: islandUITheme == IslandUITheme.pixel.rawValue,
                         accentColor: mailAccentColor,
-                        isCompact: false,
+                        isCompact: !(isThinking || !appState.sessions.isEmpty),
                         onTap: {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                 mailManager.dismissMailArrival()
@@ -2551,8 +2551,7 @@ private struct IdleIndicatorBar: View {
 
             // Right Wing: sleek, ultra-compact expand indicator & living clock
             let prayerManager = PrayerTimeManager.shared
-            HStack(spacing: 4) {
-                Spacer(minLength: 0)
+            HStack(spacing: 0) {
                 if mailManager.showMailArrivalAnimation {
                     MailArrivalWingView(
                         isRetro: islandUITheme == IslandUITheme.pixel.rawValue,
@@ -2568,6 +2567,7 @@ private struct IdleIndicatorBar: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .transition(.opacity.combined(with: .scale(scale: 0.92)))
                 } else {
+                    Spacer(minLength: 0)
                     if prayerManager.isEnabled {
                         PrayerCompactWingView(isHovered: hovered, onExpand: onExpand)
                     }

@@ -6,69 +6,58 @@ import CodeIslandCore
 public struct RollerCoasterGeometry {
     // Generates cubic Bézier spline segments:
     // Starts at x = 4 (center notch, right beside camera)
-    // Travels to the right into the mailbox:
-    // 1. isCompact == true (Notch Tidur / Idle, width ~62): Direct, snappy curved swoop into mailbox (entryX = 37)
-    // 2. isCompact == false (Agent Aktif / Jalan, width = 118): 360° loop-de-loop (apex y = 9.5, never cut off by top bezel, entryX = 93)
+    // Travels strictly forward to the right into the mailbox:
+    // 1. isCompact == true (Notch Tidur / Idle, width ~54-62): Direct, snappy curved swoop into mailbox (entryX = w - 24)
+    // 2. isCompact == false (Agent Aktif / Jalan, width = 110-118): 360° clockwise loop-de-loop (apex y = 8.0, safe below bezel, entryX = w - 24)
 
     public static func controlPoints(for width: CGFloat, isCompact: Bool) -> [(p0: CGPoint, p1: CGPoint, p2: CGPoint, p3: CGPoint)] {
-        let entryX = max(width - 25, isCompact ? 35 : 78)
+        let effectiveWidth = max(width, 48)
+        let entryX = max(effectiveWidth - 24, 28)
         let entryY: CGFloat = 14.0
 
-        if isCompact {
-            // Direct curved swoop from center (x = 4) into mailbox (x = entryX)
+        if isCompact || effectiveWidth < 85 {
+            // Direct curved swoop from center notch (x = 4) into mailbox (x = entryX)
             let seg = (
-                p0: CGPoint(x: 4, y: 14.0),
-                p1: CGPoint(x: 16, y: 17.5),
-                p2: CGPoint(x: entryX - 10, y: 12.0),
+                p0: CGPoint(x: 4.0, y: 14.0),
+                p1: CGPoint(x: 12.0, y: 16.5),
+                p2: CGPoint(x: entryX - 8.0, y: 12.5),
                 p3: CGPoint(x: entryX, y: entryY)
             )
             return [seg]
         }
 
-        // Active Agent Mode (width = 118):
+        // Active Agent Mode (w >= 85):
         // Envelope starts at x = 4 (center notch, right beside camera)
-        // Curves up to loop apex at loopX ~ 47, y = 9.5
-        // Loops clockwise down to y = 20.0
-        // Exits loop at x = 62, y = 14.0
-        // Glides straight into mailbox door at (entryX, 14.0)
-        let loopX = min(max(entryX * 0.50, 44), 52)
+        // Climbs smoothly to loop apex at loopX, y = 8.0
+        // Loops 360° clockwise down and back through loopX + 4
+        // Glides level into mailbox opening at (entryX, 14.0)
+        let loopX = min(max(entryX * 0.48, 42.0), 50.0)
 
         let seg0 = (
-            p0: CGPoint(x: 4, y: 14.0),
-            p1: CGPoint(x: loopX - 24, y: 14.0),
-            p2: CGPoint(x: loopX - 12, y: 9.5),
-            p3: CGPoint(x: loopX, y: 9.5)
+            p0: CGPoint(x: 4.0, y: 14.0),
+            p1: CGPoint(x: 22.0, y: 14.0),
+            p2: CGPoint(x: loopX - 8.0, y: 8.0),
+            p3: CGPoint(x: loopX, y: 8.0)
         )
         let seg1 = (
-            p0: CGPoint(x: loopX, y: 9.5),
-            p1: CGPoint(x: loopX + 14, y: 9.5),
-            p2: CGPoint(x: loopX + 16, y: 17.0),
-            p3: CGPoint(x: loopX + 8, y: 20.0)
+            p0: CGPoint(x: loopX, y: 8.0),
+            p1: CGPoint(x: loopX + 7.0, y: 8.0),
+            p2: CGPoint(x: loopX + 9.0, y: 17.0),
+            p3: CGPoint(x: loopX + 2.0, y: 19.5)
         )
         let seg2 = (
-            p0: CGPoint(x: loopX + 8, y: 20.0),
-            p1: CGPoint(x: loopX + 1, y: 21.0),
-            p2: CGPoint(x: loopX + 2, y: 14.0),
-            p3: CGPoint(x: loopX + 15, y: 14.0)
+            p0: CGPoint(x: loopX + 2.0, y: 19.5),
+            p1: CGPoint(x: loopX - 5.0, y: 21.0),
+            p2: CGPoint(x: loopX - 5.0, y: 14.0),
+            p3: CGPoint(x: loopX + 4.0, y: 14.0)
         )
         let seg3 = (
-            p0: CGPoint(x: loopX + 15, y: 14.0),
-            p1: CGPoint(x: loopX + 28, y: 14.0),
-            p2: CGPoint(x: entryX - 8, y: entryY),
+            p0: CGPoint(x: loopX + 4.0, y: 14.0),
+            p1: CGPoint(x: loopX + 14.0, y: 14.0),
+            p2: CGPoint(x: entryX - 8.0, y: entryY),
             p3: CGPoint(x: entryX, y: entryY)
         )
         return [seg0, seg1, seg2, seg3]
-    }
-
-    public static func buildPath(for width: CGFloat, isCompact: Bool) -> Path {
-        let segments = controlPoints(for: width, isCompact: isCompact)
-        var path = Path()
-        guard let first = segments.first else { return path }
-        path.move(to: first.p0)
-        for seg in segments {
-            path.addCurve(to: seg.p3, control1: seg.p1, control2: seg.p2)
-        }
-        return path
     }
 
     public static func sample(at progress: CGFloat, for width: CGFloat, isCompact: Bool) -> (point: CGPoint, angle: Double) {
@@ -106,21 +95,30 @@ public struct RollerCoasterGeometry {
     }
 }
 
-// MARK: - Synchronized Realtime Trail Shape
+// MARK: - Synchronized Realtime Trail Shape (Samples exact evaluated trajectory)
 
-private struct RollerCoasterTrailPath: Shape {
+private struct RollerCoasterTrailShape: Shape {
     var progress: CGFloat
     var width: CGFloat
     var isCompact: Bool
 
-    var animatableData: CGFloat {
-        get { progress }
-        set { progress = newValue }
-    }
-
     func path(in rect: CGRect) -> Path {
-        let fullPath = RollerCoasterGeometry.buildPath(for: width > 0 ? width : rect.width, isCompact: isCompact)
-        return fullPath.trimmedPath(from: 0, to: min(max(progress, 0.0), 1.0))
+        var path = Path()
+        guard progress > 0.01 else { return path }
+        let clamped = min(max(progress, 0.0), 1.0)
+        let totalSteps = max(4, Int(clamped * 50))
+        let effectiveW = width > 0 ? width : rect.width
+
+        for i in 0...totalSteps {
+            let t = clamped * CGFloat(i) / CGFloat(totalSteps)
+            let pt = RollerCoasterGeometry.sample(at: t, for: effectiveW, isCompact: isCompact).point
+            if i == 0 {
+                path.move(to: pt)
+            } else {
+                path.addLine(to: pt)
+            }
+        }
+        return path
     }
 }
 
@@ -133,6 +131,7 @@ public struct MailArrivalWingView: View {
     var onTap: (() -> Void)? = nil
 
     @ObservedObject private var mailManager = MailManager.shared
+    @State private var animStartTime: Date? = nil
 
     public init(
         isRetro: Bool = false,
@@ -155,19 +154,21 @@ public struct MailArrivalWingView: View {
         GeometryReader { proxy in
             let w = proxy.size.width
             let h = proxy.size.height
+            let effectiveCompact = isCompact || w < 85
 
             TimelineView(.animation) { timeline in
-                let elapsed = max(0.0, timeline.date.timeIntervalSince(mailManager.arrivalAnimStartTime))
-                let duration: Double = isCompact ? 0.95 : 1.50
+                let start = animStartTime ?? mailManager.arrivalAnimStartTime
+                let elapsed = max(0.0, timeline.date.timeIntervalSince(start))
+                let duration: Double = effectiveCompact ? 0.90 : 1.45
                 let rawProgress = min(max(CGFloat(elapsed / duration), 0.0), 1.0)
                 let progress = smoothProgress(rawProgress)
 
-                let flagUp = progress >= 0.88
-                let mailboxRecoil = progress >= 0.88 && progress < 0.98
-                let showBadge = progress >= 0.92
+                let flagUp = progress >= 0.92
+                let mailboxRecoil = progress >= 0.90 && progress < 0.98
+                let showBadge = progress >= 0.96
 
                 ZStack(alignment: .topLeading) {
-                    // 1. Dynamic Real-time Trailing Wake (Layer 1 - Background)
+                    // 1. Dynamic Real-time Trailing Wake (Behind envelope, grows exactly as envelope passes)
                     let trailOpacity: Double = {
                         if progress < 0.02 { return 0.0 }
                         if progress > 0.88 {
@@ -178,7 +179,7 @@ public struct MailArrivalWingView: View {
 
                     if isRetro {
                         // Dotted Pixel Trail
-                        RollerCoasterTrailPath(progress: progress, width: w, isCompact: isCompact)
+                        RollerCoasterTrailShape(progress: progress, width: w, isCompact: effectiveCompact)
                             .stroke(
                                 accentColor,
                                 style: StrokeStyle(lineWidth: 1.2, dash: [2.0, 2.0])
@@ -187,7 +188,7 @@ public struct MailArrivalWingView: View {
                             .zIndex(1)
                     } else {
                         // Luminous Gradient Vapor Trail
-                        RollerCoasterTrailPath(progress: progress, width: w, isCompact: isCompact)
+                        RollerCoasterTrailShape(progress: progress, width: w, isCompact: effectiveCompact)
                             .stroke(
                                 LinearGradient(
                                     colors: [
@@ -205,7 +206,7 @@ public struct MailArrivalWingView: View {
                             .zIndex(1)
                     }
 
-                    // 2. Mailbox Anchor at far right (Layer 2 - Middle, Pinned with 6pt safe corner clearance)
+                    // 2. Mailbox Anchor at far right (Pinned with 6pt safe corner clearance)
                     HStack(spacing: 0) {
                         Spacer(minLength: 0)
 
@@ -224,7 +225,7 @@ public struct MailArrivalWingView: View {
                                 )
                             }
 
-                            // Clean +1 badge popping cleanly above mailbox dome
+                            // Clean +1 badge popping cleanly above mailbox dome once mail has entered
                             if showBadge {
                                 Text("+1")
                                     .font(.system(size: 6.8, weight: .heavy, design: isRetro ? .monospaced : .rounded))
@@ -246,17 +247,18 @@ public struct MailArrivalWingView: View {
                     .frame(width: w, height: h, alignment: .trailing)
                     .zIndex(2)
 
-                    // 3. Flying Envelope (Layer 3 - FOREGROUND / IN FRONT, strictly starts from notch center x=4 and flies to mailbox x=entryX)
-                    let sample = RollerCoasterGeometry.sample(at: progress, for: w, isCompact: isCompact)
+                    // 3. Flying Envelope (Strictly starts at notch x=4, flies right, and enters mailbox slot at x=entryX)
+                    let sample = RollerCoasterGeometry.sample(at: progress, for: w, isCompact: effectiveCompact)
                     let letterScale: CGFloat = {
                         if progress >= 0.88 {
-                            return max(0.2, 1.0 - (progress - 0.88) / 0.12 * 0.8)
+                            // Tucks cleanly into mailbox slot
+                            return max(0.0, 1.0 - (progress - 0.88) / 0.10)
                         }
                         return 1.0
                     }()
                     let letterOpacity: Double = {
-                        if progress >= 0.96 {
-                            return max(0.0, 1.0 - Double((progress - 0.96) / 0.04))
+                        if progress >= 0.92 {
+                            return max(0.0, 1.0 - Double((progress - 0.92) / 0.06))
                         }
                         return 1.0
                     }()
@@ -280,6 +282,12 @@ public struct MailArrivalWingView: View {
         }
         .frame(height: 32)
         .contentShape(Rectangle())
+        .onAppear {
+            animStartTime = Date()
+        }
+        .onChange(of: mailManager.arrivalAnimId) { _ in
+            animStartTime = Date()
+        }
         .onTapGesture {
             onTap?()
         }
@@ -392,7 +400,7 @@ private struct ModernCleanCurbMailboxView: View {
                     .stroke(Color.white.opacity(0.85), lineWidth: 0.8)
                 )
 
-                // Entrance cavity on left
+                // Entrance cavity on left (facing incoming letters from center notch)
                 Path { path in
                     path.move(to: CGPoint(x: 1, y: 3.5))
                     path.addQuadCurve(to: CGPoint(x: 5, y: 3.5), control: CGPoint(x: 3, y: 1.3))
