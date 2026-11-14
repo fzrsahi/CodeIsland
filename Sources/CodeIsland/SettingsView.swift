@@ -1496,6 +1496,7 @@ private struct AppearancePage: View {
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.workspaceHUDTheme) private var workspaceHUDTheme = SettingsDefaults.workspaceHUDTheme
+    @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.collapsedWidthScale) private var collapsedWidthScale = SettingsDefaults.collapsedWidthScale
     @AppStorage(SettingsKey.notchHeightMode) private var notchHeightModeRaw = SettingsDefaults.notchHeightMode
@@ -1532,9 +1533,11 @@ private struct AppearancePage: View {
                         if islandUITheme == IslandUITheme.pixel.rawValue {
                             musicHUDTheme = MusicHUDTheme.retroCyber.rawValue
                             workspaceHUDTheme = WorkspaceHUDTheme.pixelRetro.rawValue
+                            agentsHUDTheme = AgentsHUDTheme.pixelRetro.rawValue
                         } else {
                             musicHUDTheme = MusicHUDTheme.modernClean.rawValue
                             workspaceHUDTheme = WorkspaceHUDTheme.modern.rawValue
+                            agentsHUDTheme = AgentsHUDTheme.modern.rawValue
                         }
                     }
 
@@ -1695,6 +1698,7 @@ private struct AgentsSettingsPage: View {
     @AppStorage(SettingsKey.showUsageStats) private var showUsageStats = SettingsDefaults.showUsageStats
     @AppStorage(SettingsKey.showClaudeQuota) private var showClaudeQuota = SettingsDefaults.showClaudeQuota
     @AppStorage(SettingsKey.claudeQuotaChip) private var claudeQuotaChip = SettingsDefaults.claudeQuotaChip
+    @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
 
     private var sessionListDensityBinding: Binding<SessionListDensity> {
         Binding(
@@ -1721,6 +1725,21 @@ private struct AgentsSettingsPage: View {
                         showDetails: showAgentDetails,
                         density: sessionListDensityBinding.wrappedValue
                     )
+                }
+
+                Section("Agents Tab Theme") {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Picker("Card Theme", selection: $agentsHUDTheme) {
+                            ForEach(AgentsHUDTheme.allCases) { theme in
+                                Text(theme.title).tag(theme.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        Text(AgentsHUDTheme(rawValue: agentsHUDTheme)?.description ?? "")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
                 }
 
                 Section("Display & Typography") {

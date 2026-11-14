@@ -86,6 +86,29 @@ public enum WorkspaceHUDTheme: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+public enum AgentsHUDTheme: String, CaseIterable, Identifiable, Sendable {
+    case modern = "modern"
+    case pixelRetro = "pixelRetro"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .modern: return "Modern Clean (Island)"
+        case .pixelRetro: return "Pixel Retro 8-Bit (Arcade)"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .modern:
+            return "Sleek Apple SF Symbols, smooth continuous squircles, and dynamic island glass."
+        case .pixelRetro:
+            return "Authentic 8-bit arcade terminal with dot-matrix pixel headers, phosphor accents, and sharp stepped frames."
+        }
+    }
+}
+
 public enum PrayerCardDisplayMode: String, CaseIterable, Identifiable, Sendable {
     case compact = "compact"
     case panoramic = "panoramic"
@@ -264,6 +287,7 @@ enum SettingsKey {
     static let showCompactLyrics = "showCompactLyrics"
     static let musicHUDTheme = "musicHUDTheme"
     static let workspaceHUDTheme = "workspaceHUDTheme"
+    static let agentsHUDTheme = "agentsHUDTheme"
     static let musicHUDProgressColor = "musicHUDProgressColor"
     static let syncThemeWithAlbumArt = "syncThemeWithAlbumArt"
     static let floatingLyricPreset = "floatingLyricPreset"
@@ -447,6 +471,7 @@ struct SettingsDefaults {
     static let showCompactLyrics = true
     static let musicHUDTheme = MusicHUDTheme.modernClean.rawValue
     static let workspaceHUDTheme = WorkspaceHUDTheme.modern.rawValue
+    static let agentsHUDTheme = AgentsHUDTheme.pixelRetro.rawValue
     static let musicHUDProgressColor = MusicProgressColor.theme.rawValue
     static let syncThemeWithAlbumArt = false
     static let floatingLyricPreset = FloatingLyricPreset.pureText.rawValue
@@ -589,6 +614,7 @@ class SettingsManager {
             SettingsKey.showCompactLyrics: SettingsDefaults.showCompactLyrics,
             SettingsKey.musicHUDTheme: SettingsDefaults.musicHUDTheme,
             SettingsKey.workspaceHUDTheme: SettingsDefaults.workspaceHUDTheme,
+            SettingsKey.agentsHUDTheme: SettingsDefaults.agentsHUDTheme,
             SettingsKey.musicHUDProgressColor: SettingsDefaults.musicHUDProgressColor,
             SettingsKey.syncThemeWithAlbumArt: SettingsDefaults.syncThemeWithAlbumArt,
             SettingsKey.floatingLyricPreset: SettingsDefaults.floatingLyricPreset,

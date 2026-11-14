@@ -2482,7 +2482,14 @@ private struct SessionGroupingTabs: View {
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
+
+    private var isModern: Bool {
+        if islandUITheme == IslandUITheme.pixel.rawValue { return false }
+        if islandUITheme == IslandUITheme.modern.rawValue { return true }
+        return agentsHUDTheme == AgentsHUDTheme.modern.rawValue
+    }
 
     private var activeAccentColor: Color {
         if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
@@ -2494,9 +2501,9 @@ private struct SessionGroupingTabs: View {
             if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
                 return nowPlaying.albumPalette.primary
             }
-            return islandUITheme == IslandUITheme.modern.rawValue ? .white : Color(red: 0.12, green: 0.84, blue: 0.38)
+            return isModern ? .white : Color(red: 0.12, green: 0.84, blue: 0.38)
         case .theme:
-            return islandUITheme == IslandUITheme.modern.rawValue ? .white : Color(red: 0.12, green: 0.84, blue: 0.38)
+            return isModern ? .white : Color(red: 0.12, green: 0.84, blue: 0.38)
         case .white: return .white
         case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
         case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
@@ -2508,8 +2515,6 @@ private struct SessionGroupingTabs: View {
     static let inactiveColor = Color.white.opacity(0.62)
 
     var body: some View {
-        let isModern = islandUITheme == IslandUITheme.modern.rawValue
-
         if isModern {
             // Modern segmented capsule styling
             HStack(spacing: 2) {
@@ -4209,12 +4214,19 @@ private struct SessionListView: View {
     @AppStorage(SettingsKey.contentFontSize) private var contentFontSize = SettingsDefaults.contentFontSize
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Natural height of the session cards, scrolling or not.
     @State private var contentHeight: CGFloat = 0
     /// The order on screen is held while the pointer is over the list.
     @State private var orderFreeze = SessionOrderFreeze()
     @State private var thawTask: Task<Void, Never>?
+
+    private var isPixelRetro: Bool {
+        if islandUITheme == IslandUITheme.pixel.rawValue { return true }
+        if islandUITheme == IslandUITheme.modern.rawValue { return false }
+        return agentsHUDTheme == AgentsHUDTheme.pixelRetro.rawValue
+    }
 
     private var density: SessionListDensity {
         // The completion card is one full card whatever the setting.
@@ -4339,17 +4351,25 @@ private struct SessionListView: View {
         let content = VStack(spacing: density == .compact ? CompactSessionRowMetrics.spacing : 6) {
             if totalSessionCount == 0 {
                 VStack(spacing: 5) {
-                    Image(systemName: "cpu")
-                        .font(.system(size: 16))
-                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7))
-                    Text("NO ACTIVE AGENT SESSIONS")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.85))
-                    Text("Run Claude Code, Gemini CLI, Cursor, or Codex in Terminal to monitor live status.")
-                        .font(.system(size: 7.5, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.45))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
+                    if isPixelRetro {
+                        PixelIcon(glyph: .agents, color: Color(red: 0.12, green: 0.84, blue: 0.38), pixelSize: 1.6)
+                        PixelText(text: "NO ACTIVE AGENTS", color: Color(red: 0.12, green: 0.84, blue: 0.38), pixelSize: 1.1)
+                        Text("// RUN CLAUDE, CODEX, GEMINI, OR CURSOR IN TERMINAL")
+                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.45))
+                    } else {
+                        Image(systemName: "cpu")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7))
+                        Text("NO ACTIVE AGENT SESSIONS")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.85))
+                        Text("Run Claude Code, Gemini CLI, Cursor, or Codex in Terminal to monitor live status.")
+                            .font(.system(size: 7.5, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.45))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                    }
                 }
                 .frame(maxWidth: .infinity, minHeight: 65)
                 .padding(.vertical, 8)
@@ -4357,14 +4377,21 @@ private struct SessionListView: View {
                 ForEach(groups, id: \.header) { group in
                     if !group.header.isEmpty {
                         HStack(spacing: 6) {
-                            if let src = group.source, let icon = cliIcon(source: src) {
-                                Image(nsImage: icon)
-                                    .resizable()
-                                    .frame(width: 14, height: 14)
+                            if isPixelRetro {
+                                PixelIcon(glyph: .agents, color: Color(red: 0.12, green: 0.84, blue: 0.38), pixelSize: 1.0)
+                                Text("// \(group.header.uppercased())")
+                                    .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                                    .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                            } else {
+                                if let src = group.source, let icon = cliIcon(source: src) {
+                                    Image(nsImage: icon)
+                                        .resizable()
+                                        .frame(width: 14, height: 14)
+                                }
+                                Text(group.header)
+                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(.white.opacity(0.5))
                             }
-                            Text(group.header)
-                                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                                .foregroundStyle(.white.opacity(0.5))
                             Spacer()
                         }
                         .padding(.horizontal, 12)
@@ -5488,12 +5515,20 @@ private struct SessionCard: View {
     @AppStorage(SettingsKey.showSessionRecap) private var showSessionRecap = SettingsDefaults.showSessionRecap
     @AppStorage(SettingsKey.showModelLabel) private var showModelLabel = SettingsDefaults.showModelLabel
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
     private var fontSize: CGFloat { CGFloat(contentFontSize) }
     private var aiLineLimit: Int? { aiMessageLines > 0 ? aiMessageLines : nil }
     private var approvalQueueIndex: Int? {
         appState.permissionQueue.firstIndex { ($0.event.sessionId ?? "default") == sessionId }
     }
     private var isActiveApproval: Bool { approvalQueueIndex == 0 }
+
+    private var isPixelRetro: Bool {
+        if islandUITheme == IslandUITheme.pixel.rawValue { return true }
+        if islandUITheme == IslandUITheme.modern.rawValue { return false }
+        return agentsHUDTheme == AgentsHUDTheme.pixelRetro.rawValue
+    }
     /// Cursor is blocked on a question answered inside its own UI (#265) —
     /// a display-only wait with no in-panel answer flow.
     private var showsExternalCursorQuestion: Bool {
@@ -5556,7 +5591,19 @@ private struct SessionCard: View {
             }
 
             Group {
-                if isCompactRow {
+                if isPixelRetro {
+                    PixelRetroSessionCardView(
+                        appState: appState,
+                        sessionId: sessionId,
+                        session: session,
+                        isCompletion: isCompletion,
+                        isCompactRow: isCompactRow,
+                        compactProjectWidth: compactProjectWidth,
+                        compactStatusWidth: compactStatusWidth,
+                        isHovered: hovering,
+                        fontSize: fontSize
+                    )
+                } else if isCompactRow {
                     compactBody
                 } else {
                     comfortableBody
