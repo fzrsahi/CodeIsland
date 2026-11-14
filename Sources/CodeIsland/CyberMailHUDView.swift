@@ -260,9 +260,6 @@ private struct ModernCleanMailHUDContentView: View {
                 hoveredMailId = hovering ? mail.id : nil
             }
         }
-        .onTapGesture {
-            mailManager.openInMailApp(id: mail.id)
-        }
     }
 
     private var loadingSkeletonView: some View {
@@ -545,9 +542,6 @@ private struct RetroCyberMailHUDContentView: View {
             withAnimation(.spring(response: 0.20, dampingFraction: 0.8)) {
                 hoveredMailId = hovering ? mail.id : nil
             }
-        }
-        .onTapGesture {
-            mailManager.openInMailApp(id: mail.id)
         }
     }
 

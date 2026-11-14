@@ -100,13 +100,23 @@ public final class MailManager: ObservableObject {
     public func ensureMailRunningInBackground() {
         Task.detached(priority: .utility) {
             let script = """
-            if not (application "Mail" is running) then
+            set wasRunning to (application "Mail" is running)
+            if not wasRunning then
                 try
-                    tell application "Mail" to launch
+                    do shell script "open -g -j -a Mail"
+                    delay 0.5
+                    tell application "Mail"
+                        close every window
+                    end tell
+                    tell application "System Events"
+                        if exists (process "Mail") then
+                            set visible of process "Mail" to false
+                        end if
+                    end tell
                 end try
             end if
             """
-            _ = AppleScriptRunner.current.evaluate(script, 5.0)
+            _ = AppleScriptRunner.current.evaluate(script, 6.0)
         }
     }
 
@@ -133,10 +143,19 @@ public final class MailManager: ObservableObject {
 
         Task.detached(priority: .userInitiated) { [weak self] in
             let script = """
-            if not (application "Mail" is running) then
+            set wasRunning to (application "Mail" is running)
+            if not wasRunning then
                 try
-                    tell application "Mail" to launch
+                    do shell script "open -g -j -a Mail"
                     delay 0.5
+                    tell application "Mail"
+                        close every window
+                    end tell
+                    tell application "System Events"
+                        if exists (process "Mail") then
+                            set visible of process "Mail" to false
+                        end if
+                    end tell
                 end try
             end if
 
