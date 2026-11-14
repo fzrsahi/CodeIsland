@@ -7,16 +7,21 @@ if command -v xhost >/dev/null 2>&1; then
     xhost + >/dev/null 2>&1 || true
 fi
 
+# Ensure persistent directory exists on host
+PERSISTENT_DIR="$HOME/macos-sonoma-data"
+mkdir -p "$PERSISTENT_DIR"
+
+# Ensure persistent disk image exists (128GB sparse QCOW2)
+if [ ! -f "$PERSISTENT_DIR/mac_hdd_ng.img" ]; then
+    echo "==> Initializing persistent macOS disk image at $PERSISTENT_DIR/mac_hdd_ng.img..."
+    docker run --rm -v "$PERSISTENT_DIR:/data" sickcodes/docker-osx:latest qemu-img create -f qcow2 /data/mac_hdd_ng.img 128G
+fi
+
 # Detect display (default to :0 if empty)
 export DISPLAY="${DISPLAY:-:0}"
 
-# Remove any previous failed container
-docker rm -f macos-builder 2>/dev/null || true
-
-# Ensure persistent directory exists on host
-mkdir -p "$HOME/macos-sonoma-data"
-
-echo "==> Starting Docker-OSX macOS Sonoma VM with tuned memory (4GB RAM, 4 Cores)..."
+echo "==> Docker-OSX macOS Sonoma VM Launcher (Persistent Mode)"
+echo "==> Disk: $PERSISTENT_DIR/mac_hdd_ng.img (Protected against container deletion)"
 echo "==> Display: $DISPLAY"
 echo "==> IMPORTANT TIP: DO NOT toggle Fullscreen (Ctrl+Alt+F) to prevent Wayland freezes."
 echo "==> To release mouse focus from VM window, press: Ctrl + Alt + G"
@@ -29,6 +34,21 @@ elif [ -f "$HOME/.Xauthority" ]; then
     XAUTH_ARGS=(-v "$HOME/.Xauthority:/home/arch/.Xauthority:ro" -v "$HOME/.Xauthority:/root/.Xauthority:ro")
 fi
 
+# If container already exists and is running, attach or inform
+if docker ps --format '{{.Names}}' | grep -q "^macos-builder$"; then
+    echo "==> Container macos-builder is ALREADY RUNNING."
+    echo "==> Attaching or viewing display..."
+    exit 0
+fi
+
+# If container exists but is stopped, simply restart it (preserve everything)
+if docker ps -a --format '{{.Names}}' | grep -q "^macos-builder$"; then
+    echo "==> Found existing container 'macos-builder'. Starting it safely..."
+    docker start -ai macos-builder
+    exit 0
+fi
+
+# Otherwise, create container with PERSISTENT DISK MOUNT
 docker run -it \
     --name macos-builder \
     --device /dev/kvm \
@@ -43,5 +63,6 @@ docker run -it \
     -e RAM=4 \
     -e SMP=4 \
     -e CORES=4 \
-    -v "$HOME/macos-sonoma-data:/var/lib/docker-osx" \
+    -v "$PERSISTENT_DIR/mac_hdd_ng.img:/home/arch/OSX-KVM/mac_hdd_ng.img" \
+    -v "$PERSISTENT_DIR:/var/lib/docker-osx" \
     sickcodes/docker-osx:latest
