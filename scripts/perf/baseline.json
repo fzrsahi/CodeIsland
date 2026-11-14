@@ -560,6 +560,16 @@
   },
   "schema": 1,
   "targets": {
+    "approval-card": {
+      "cpu": {
+        "enforce": true,
+        "max": 3.0
+      },
+      "footprintGrowthPct": {
+        "enforce": true,
+        "max": 10.0
+      }
+    },
     "discovery-active": {
       "counters.discoveryScan": {
         "enforce": true,
@@ -607,6 +617,10 @@
       }
     },
     "music": {
+      "counters.appleScriptExec.brave": {
+        "enforce": true,
+        "max": 0.0
+      },
       "counters.hostingLayoutPass": {
         "enforce": true,
         "max": 70.0
