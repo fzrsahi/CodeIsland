@@ -4,8 +4,8 @@ import CodeIslandCore
 /// Shared bounds for the collapsed-width scale setting — keeps the settings
 /// slider and the width math in lockstep. Percent of the (simulated) notch width.
 enum NotchWidthScale {
-    static let min = 50
-    static let max = 150
+    static let min = 0
+    static let max = 200
     static let step = 1
 }
 
@@ -389,61 +389,68 @@ struct NotchPanelView: View {
     }
 
     /// Symmetrical wing width calculated dynamically — guarantees zero clipping against notch corner curves
+    /// and scales adaptively across all phases based on the Island Width setting (0% - 200%).
     private var symmetricWingWidth: CGFloat {
         guard !shouldShowExpanded else { return expandedWingWidth }
 
-        let widthScaleMultiplier = CGFloat(Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))) / 100.0
-        let idleClearance: CGFloat = widthScaleMultiplier < 0.85 ? 16 : 22
+        let clampedScale = Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))
+        let widthScaleFactor = CGFloat(clampedScale) / 100.0
 
         let isAgentActive = isThinking || appState.status != .idle || appState.currentTool != nil || appState.sessions.values.contains {
             $0.status == .processing || $0.status == .running || $0.currentTool != nil
         }
         let isToolVisible = showToolStatus && showAgentDetails && (isAgentActive || appState.currentTool != nil)
 
-        // 1. Calculate required width for Left Wing (Agent Mascot + Tool / Thinking / Quota)
-        var baseLeft: CGFloat = compactWingWidth
+        // 1. Natural width required for Left Wing in each phase (Agent Mascot + Tool / Thinking / Quota)
+        var naturalLeft: CGFloat = compactWingWidth
         if isThinking {
-            baseLeft = max(baseLeft, isPixel ? 168 : 156)
+            naturalLeft = max(naturalLeft, isPixel ? 168 : 156)
         } else if isToolVisible {
-            baseLeft = max(baseLeft, isPixel ? 176 : 162)
+            naturalLeft = max(naturalLeft, isPixel ? 176 : 162)
         } else if hasQuotaChip {
-            baseLeft = max(baseLeft, quotaWingWidth)
-        } else {
-            baseLeft = compactWingWidth * min(1.0, max(0.85, widthScaleMultiplier))
+            naturalLeft = max(naturalLeft, quotaWingWidth)
         }
-        let leftClearance: CGFloat = (isThinking || isToolVisible || hasQuotaChip) ? 24 : idleClearance
-        let neededLeft = max(baseLeft, leftWingWidth > 0 ? (leftWingWidth + leftClearance) : 0)
+        let contentLeft = leftWingWidth > 0 ? (leftWingWidth + 24) : naturalLeft
+        let effectiveNaturalLeft = max(naturalLeft, contentLeft)
 
-        // 2. Calculate required width for Right Wing (Music / Prayer / Actions)
-        var baseRight: CGFloat = compactWingWidth
+        // 2. Natural width required for Right Wing in each phase (Music / Prayer / Actions)
+        var naturalRight: CGFloat = compactWingWidth
         if prayerManager.isPrayerPrioritized {
-            baseRight = max(baseRight, isHoveringRightWing ? 140 : 110)
+            naturalRight = max(naturalRight, isHoveringRightWing ? 140 : 110)
         } else if signals.isPlaying {
             if isHoveringRightWing {
-                baseRight = max(baseRight, isPixel ? 154 : 142)
+                naturalRight = max(naturalRight, isPixel ? 154 : 142)
             } else {
-                let musicBase = isConnectedChinLyricActive ? 56.0 : 48.0
-                baseRight = max(baseRight, musicBase * min(1.0, max(0.85, widthScaleMultiplier)))
+                naturalRight = max(naturalRight, isConnectedChinLyricActive ? 56 : 48)
             }
-        } else {
-            baseRight = compactWingWidth * min(1.0, max(0.85, widthScaleMultiplier))
         }
         if isHoveringRightWing {
-            baseRight = max(baseRight, 154)
+            naturalRight = max(naturalRight, 154)
         }
         if appState.glanceCompletionActive {
-            baseRight += 26
+            naturalRight += 26
         }
         if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion {
-            baseRight += 26
+            naturalRight += 26
         }
-        let rightClearance: CGFloat = (isHoveringRightWing || isThinking || isToolVisible) ? 24 : idleClearance
-        let neededRight = max(baseRight, rightWingWidth > 0 ? (rightWingWidth + rightClearance) : 0)
+        let contentRight = rightWingWidth > 0 ? (rightWingWidth + 24) : naturalRight
+        let effectiveNaturalRight = max(naturalRight, contentRight)
 
-        // 3. Take the maximum to preserve balanced Dynamic Island symmetry while guaranteeing ZERO clipping
-        let targetWingWidth = max(neededLeft, neededRight)
+        // 3. Balanced Dynamic Island natural width for current phase
+        let naturalPhaseWidth = max(effectiveNaturalLeft, effectiveNaturalRight)
+
+        // 4. Scale adaptively across all phases based on user's Island Width setting (0% - 200%)
+        let absoluteMinWing: CGFloat = isConnectedChinLyricActive ? 42 : 36
+        let scaledWingWidth: CGFloat = {
+            if widthScaleFactor >= 1.0 {
+                return naturalPhaseWidth + (naturalPhaseWidth * (widthScaleFactor - 1.0) * 0.75)
+            } else {
+                return absoluteMinWing + (naturalPhaseWidth - absoluteMinWing) * widthScaleFactor
+            }
+        }()
+
         let maxSingleWingWidth = max(0, (maxPanelWidth - effectiveNotchW) / 2)
-        return min(targetWingWidth, maxSingleWingWidth)
+        return min(scaledWingWidth, maxSingleWingWidth)
     }
 
     /// Notch cutout reserved in the center of the expanded header.
@@ -625,7 +632,7 @@ struct NotchPanelView: View {
     @ViewBuilder
     private var activeCompactBar: some View {
         let widthScaleMultiplier = CGFloat(Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))) / 100.0
-        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : (widthScaleMultiplier < 0.85 ? 10 : 14)
+        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : max(6, 14 * min(1.0, widthScaleMultiplier))
 
         VStack(spacing: 0) {
             HStack(spacing: 0) {

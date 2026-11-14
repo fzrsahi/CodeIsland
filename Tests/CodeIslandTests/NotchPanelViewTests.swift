@@ -39,13 +39,13 @@ final class NotchPanelViewTests: XCTestCase {
 
     func testEffectiveNotchWidthClampsOutOfRangeScale() {
         XCTAssertEqual(
-            NotchWidthMetrics.effectiveNotchWidth(notchW: 200, collapsedWidthScale: 10, hasNotch: false),
-            100,
+            NotchWidthMetrics.effectiveNotchWidth(notchW: 200, collapsedWidthScale: -10, hasNotch: false),
+            0,
             accuracy: 0.001
         )
         XCTAssertEqual(
             NotchWidthMetrics.effectiveNotchWidth(notchW: 200, collapsedWidthScale: 250, hasNotch: false),
-            300,
+            400,
             accuracy: 0.001
         )
     }
@@ -257,8 +257,8 @@ final class NotchHoverInteractionTests: XCTestCase {
     }
 
     func testWidthScaleSliderUsesOnePercentSteps() {
-        XCTAssertEqual(NotchWidthScale.min, 50)
-        XCTAssertEqual(NotchWidthScale.max, 150)
+        XCTAssertEqual(NotchWidthScale.min, 0)
+        XCTAssertEqual(NotchWidthScale.max, 200)
         XCTAssertEqual(NotchWidthScale.step, 1)
     }
 
@@ -267,8 +267,8 @@ final class NotchHoverInteractionTests: XCTestCase {
         XCTAssertEqual(NotchWidthMetrics.effectiveNotchWidth(notchW: 200, collapsedWidthScale: 80, hasNotch: true), 200)
         // Simulated notch scales and clamps to NotchWidthScale bounds.
         XCTAssertEqual(NotchWidthMetrics.effectiveNotchWidth(notchW: 200, collapsedWidthScale: 75, hasNotch: false), 150)
-        XCTAssertEqual(NotchWidthMetrics.effectiveNotchWidth(notchW: 200, collapsedWidthScale: 10, hasNotch: false), 100)
-        XCTAssertEqual(NotchWidthMetrics.effectiveNotchWidth(notchW: 200, collapsedWidthScale: 900, hasNotch: false), 300)
+        XCTAssertEqual(NotchWidthMetrics.effectiveNotchWidth(notchW: 200, collapsedWidthScale: -10, hasNotch: false), 0)
+        XCTAssertEqual(NotchWidthMetrics.effectiveNotchWidth(notchW: 200, collapsedWidthScale: 900, hasNotch: false), 400)
     }
 
     // MARK: - Click-to-jump card ownership
