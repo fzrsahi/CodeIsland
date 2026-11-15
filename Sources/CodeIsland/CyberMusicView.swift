@@ -515,35 +515,38 @@ struct CyberMusicWingView: View {
         }
     }
 
+    private var isCompactNarrow: Bool {
+        !isEnlarged && !isBilateralWingsLyricActive && ((maxContentWidth ?? 999) < 42 || (wingWidth > 0 && wingWidth < 52))
+    }
+
     /// Maximum title width permitted inside the right wing without pushing adjacent content into the notch.
     private func resolvedTitleMaxWidth(artSize: CGFloat, spacing: CGFloat) -> CGFloat? {
-        guard isThinking || isHovered else { return nil }
-        let spectrumWidth: CGFloat = isEnlarged ? 12 : 10
-        let fixedOverhead = artSize + spectrumWidth + spacing * 2 + 4
-        let cap: CGFloat = isEnlarged ? 76 : 64
-
-        if let maxContentWidth {
-            let remaining = maxContentWidth - fixedOverhead
-            guard remaining >= 24 else { return nil }
-            return min(cap, remaining)
-        }
-        guard wingWidth == 0 || wingWidth >= 100 else { return nil }
-        let remaining = wingWidth > 0 ? (wingWidth - 76) : cap
-        return max(36, min(cap, remaining))
+        guard isThinking || isHovered, let maxContentWidth else { return nil }
+        let spectrumWidth: CGFloat = isEnlarged ? 12 : (isCompactNarrow ? 9 : 10)
+        let horizPad: CGFloat = isCompactNarrow ? 0 : 4
+        let fixedOverhead = artSize + spectrumWidth + spacing * 2 + horizPad
+        let cap: CGFloat = isEnlarged ? 112 : 184
+        let remaining = maxContentWidth - fixedOverhead
+        guard remaining >= 24 else { return nil }
+        return min(cap, remaining)
     }
 
     var body: some View {
-        let artSize: CGFloat = isEnlarged ? 23 : 17
-        let spectrumMaxH: CGFloat = isEnlarged ? 14.0 : 11.0
-        let itemSpacing: CGFloat = isEnlarged ? 5 : 4
+        let narrow = isCompactNarrow
+        let artSize: CGFloat = isEnlarged ? 23 : (narrow ? 14 : 17)
+        let spectrumMaxH: CGFloat = isEnlarged ? 14.0 : (narrow ? 9.5 : 11.0)
+        let itemSpacing: CGFloat = isEnlarged ? 5 : (narrow ? 3 : 4)
+        let barWidth: CGFloat = isEnlarged ? 2.4 : (narrow ? 1.8 : 2.0)
+        let horizPadding: CGFloat = narrow ? 0 : 2
         let titleMaxWidth = resolvedTitleMaxWidth(artSize: artSize, spacing: itemSpacing)
 
         if isBilateralWingsLyricActive {
             // BILATERAL WING MODE (Right Wing): [Upcoming Lyric] [Album Art] [Equalizer]
             let nextText = nowPlaying.nextLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
             let displayUpcoming = !nextText.isEmpty ? nextText : (nowPlaying.artist.isEmpty ? "" : "— " + nowPlaying.artist)
-            let leadingNotchBuffer: CGFloat = 14
-            let availableForLyric = max(70, wingWidth > 0 ? (wingWidth - artSize - 34 - leadingNotchBuffer) : 170)
+            let leadingNotchBuffer: CGFloat = maxContentWidth != nil ? 4 : 14
+            let contentBudget = maxContentWidth ?? (wingWidth > 0 ? wingWidth : 184)
+            let availableForLyric = max(24, contentBudget - artSize - 34 - leadingNotchBuffer)
             let fontInfo = resolvedUpcomingFont
 
             HStack(alignment: .center, spacing: 5) {
@@ -599,13 +602,13 @@ struct CyberMusicWingView: View {
                 ModernAudioSpectrumView(
                     barCount: 3,
                     isPlaying: nowPlaying.isPlaying,
-                    barWidth: isEnlarged ? 2.4 : 2.0,
+                    barWidth: barWidth,
                     maxHeight: spectrumMaxH,
                     color: accentColor
                 )
             }
             .fixedSize()
-            .padding(.horizontal, 2)
+            .padding(.horizontal, horizPadding)
             .padding(.vertical, 1)
         } else {
             // RETRO CYBER: { [Album Cover] [Title Music (thinking/hover)] [Dancing Spectrum] }
@@ -628,16 +631,16 @@ struct CyberMusicWingView: View {
                 }
 
                 CyberAudioSpectrumView(
-                    barCount: titleMaxWidth != nil ? 3 : 4,
+                    barCount: (titleMaxWidth != nil || narrow) ? 3 : 4,
                     isPlaying: nowPlaying.isPlaying,
-                    barWidth: isEnlarged ? 2.4 : 2.0,
+                    barWidth: barWidth,
                     segmentHeight: isEnlarged ? 2.0 : 1.6,
                     segmentSpacing: 0.8,
                     palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
                 )
             }
             .fixedSize()
-            .padding(.horizontal, 2)
+            .padding(.horizontal, horizPadding)
             .padding(.vertical, 1)
         }
     }

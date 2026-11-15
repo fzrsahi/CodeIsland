@@ -13,8 +13,11 @@ final class NotchMusicThinkingLayoutTests: XCTestCase {
     private let suiteName = "NotchMusicThinkingLayoutTests"
     private var suite: UserDefaults!
     private let notch: CGFloat = 185
-    private let windowWidth: CGFloat = 620
     private let screenWidth: CGFloat = 1512
+    private static func panelWindowWidth(for screenWidth: CGFloat) -> CGFloat {
+        min(760, screenWidth - 40)
+    }
+    private var windowWidth: CGFloat { Self.panelWindowWidth(for: screenWidth) }
     private var savedLanguage: String?
     private var savedRawAppLanguage: Any?
 
@@ -34,22 +37,8 @@ final class NotchMusicThinkingLayoutTests: XCTestCase {
 
     override func tearDown() async throws {
         suite.removePersistentDomain(forName: suiteName)
-        if let savedLanguage {
-            L10n.shared.language = savedLanguage
-        }
-        if let savedRawAppLanguage {
-            UserDefaults.standard.set(savedRawAppLanguage, forKey: SettingsKey.appLanguage)
-        } else {
-            UserDefaults.standard.removeObject(forKey: SettingsKey.appLanguage)
-        }
-        NowPlayingManager.shared.isPlaying = false
-        NowPlayingManager.shared.title = ""
-        NowPlayingManager.shared.artist = ""
-        NowPlayingManager.shared.album = ""
-        NowPlayingManager.shared.artworkImage = nil
-        NowPlayingManager.shared.lyrics = []
-        IslandSignals.shared.setMusic(isPlaying: false, showToast: false, hasTitle: false, hasLyrics: false, title: "", artist: "")
-        IslandSignals.shared.setInQuietHours(false)
+        restoreLanguage()
+        resetMusicAndSignals()
         MascotAnimationGate.shared.setPanelVisible(true)
         try await super.tearDown()
     }
@@ -104,10 +93,7 @@ final class NotchMusicThinkingLayoutTests: XCTestCase {
             (.pixel, "en", 140, false),
         ]
         for c in cases {
-            NowPlayingManager.shared.isPlaying = false
-            NowPlayingManager.shared.title = ""
-            NowPlayingManager.shared.artworkImage = nil
-            IslandSignals.shared.setMusic(isPlaying: false, showToast: false, hasTitle: false, hasLyrics: false, title: "", artist: "")
+            resetMusicAndSignals()
             IslandSignals.shared.setInQuietHours(c.quiet)
             L10n.shared.language = c.lang
             configureDefaults(theme: c.theme, widthScale: c.scale)
@@ -153,10 +139,7 @@ final class NotchMusicThinkingLayoutTests: XCTestCase {
 
     func testEdgeCasesKoreanThreeBadgesQuotaPriorityAndWideScale() throws {
         // 1. Korean ("생각 중") without music in Modern & Pixel themes
-        NowPlayingManager.shared.isPlaying = false
-        NowPlayingManager.shared.title = ""
-        NowPlayingManager.shared.artworkImage = nil
-        IslandSignals.shared.setMusic(isPlaying: false, showToast: false, hasTitle: false, hasLyrics: false, title: "", artist: "")
+        resetMusicAndSignals()
         L10n.shared.language = "ko"
         for theme in [IslandUITheme.modern, IslandUITheme.pixel] {
             configureDefaults(theme: theme, widthScale: 100)
@@ -218,10 +201,7 @@ final class NotchMusicThinkingLayoutTests: XCTestCase {
         IslandSignals.shared.setInQuietHours(false)
 
         // 4. Quota + thinking priority (no music): thinking takes precedence cleanly without notch intrusion
-        NowPlayingManager.shared.isPlaying = false
-        NowPlayingManager.shared.title = ""
-        NowPlayingManager.shared.artworkImage = nil
-        IslandSignals.shared.setMusic(isPlaying: false, showToast: false, hasTitle: false, hasLyrics: false, title: "", artist: "")
+        resetMusicAndSignals()
         configureDefaults(theme: .modern, widthScale: 100)
         suite.set(true, forKey: SettingsKey.showClaudeQuota)
         suite.set(ClaudeQuotaChipMode.auto.rawValue, forKey: SettingsKey.claudeQuotaChip)
@@ -240,6 +220,83 @@ final class NotchMusicThinkingLayoutTests: XCTestCase {
         XCTAssertNil(quotaRender.intrusion, "quota + thinking drew under notch")
         XCTAssertGreaterThanOrEqual(quotaRender.barLeft, 0)
         XCTAssertLessThanOrEqual(quotaRender.barRight, windowWidth)
+    }
+
+    func testNarrowWidthScales0Through50NeverClipMusicArtworkOrOverlapNotch() throws {
+        configureMusic(title: "Midnight City", artworkColor: NSColor(srgbRed: 0.0, green: 0.25, blue: 1.0, alpha: 1.0))
+
+        for hasNotch in [true, false] {
+            for widthScale in [0, 25, 50] {
+                configureDefaults(theme: .modern, widthScale: widthScale)
+                let saveName: String? = (hasNotch && widthScale == 50)
+                    ? "responsive-scale-50"
+                    : ((!hasNotch && widthScale == 0) ? "responsive-nonnotch-scale-0" : nil)
+                let render = try renderCollapsedBar(
+                    state: makeAgentState(status: .processing),
+                    hasNotch: hasNotch,
+                    saveName: saveName
+                )
+                let tag = "hasNotch=\(hasNotch) scale=\(widthScale)"
+                XCTAssertNil(render.intrusion, "\(tag): drew inside hardware notch")
+                XCTAssertGreaterThanOrEqual(render.barLeft, 0, "\(tag): clipped past window left")
+                XCTAssertLessThanOrEqual(render.barRight, windowWidth, "\(tag): clipped past window right")
+
+                let album = try XCTUnwrap(render.rightAlbumRange, "\(tag): album missing")
+                let viz = try XCTUnwrap(render.rightVisualizerRange, "\(tag): visualizer missing")
+                XCTAssertGreaterThanOrEqual(
+                    album.upperBound - album.lowerBound,
+                    12,
+                    "\(tag): album artwork was clipped horizontally (\(album.upperBound - album.lowerBound)pt)"
+                )
+                XCTAssertLessThanOrEqual(album.upperBound, viz.lowerBound, "\(tag): album must remain left of visualizer")
+            }
+        }
+    }
+
+    func testWideWidthScales100Through200GrowWingsAndMusicTitleResponsivelyAcrossScreens() throws {
+        configureMusic(title: "Running Out of Time in This Midnight City", artworkColor: NSColor(srgbRed: 0.0, green: 0.25, blue: 1.0, alpha: 1.0))
+
+        func measureScale(_ scale: Int, screenWidth: CGFloat, saveName: String? = nil) throws -> RenderInspection {
+            configureDefaults(theme: .modern, widthScale: scale)
+            let render = try renderCollapsedBar(
+                state: makeAgentState(status: .processing),
+                hasNotch: true,
+                screenWidthOverride: screenWidth,
+                saveName: saveName
+            )
+            let maxWindow = Self.panelWindowWidth(for: screenWidth)
+            XCTAssertNil(render.intrusion, "screen=\(screenWidth) scale=\(scale): intruded into notch")
+            XCTAssertGreaterThanOrEqual(render.barLeft, 0)
+            XCTAssertLessThanOrEqual(render.barRight, maxWindow)
+            return render
+        }
+
+        // Standard 14" (1512pt): bar width AND title display width must grow smoothly from 100% -> 150% -> 200%
+        let r100 = try measureScale(100, screenWidth: 1512, saveName: "responsive-scale-100")
+        let r150 = try measureScale(150, screenWidth: 1512, saveName: "responsive-scale-150")
+        let r200 = try measureScale(200, screenWidth: 1512, saveName: "responsive-scale-200")
+
+        let t100 = try XCTUnwrap(r100.rightTitleRange)
+        let t150 = try XCTUnwrap(r150.rightTitleRange)
+        let t200 = try XCTUnwrap(r200.rightTitleRange)
+        XCTAssertGreaterThan(t150.upperBound - t150.lowerBound, (t100.upperBound - t100.lowerBound) + 15)
+        XCTAssertGreaterThan(t200.upperBound - t200.lowerBound, (t150.upperBound - t150.lowerBound) + 10)
+        XCTAssertGreaterThan(r150.barRight - r150.barLeft, (r100.barRight - r100.barLeft) + 100)
+        XCTAssertGreaterThan(r200.barRight - r200.barLeft, (r150.barRight - r150.barLeft) + 40)
+
+        // Compact 13" (1280pt): rendered right wing content span & title grow monotonically 100% -> 150% -> 200%
+        let small100 = try measureScale(100, screenWidth: 1280)
+        let small150 = try measureScale(150, screenWidth: 1280)
+        let small200 = try measureScale(200, screenWidth: 1280, saveName: "responsive-1280-scale-200")
+        func rightContentSpan(_ r: RenderInspection) throws -> CGFloat {
+            let album = try XCTUnwrap(r.rightAlbumRange)
+            return r.barRight - album.lowerBound
+        }
+        XCTAssertGreaterThan(try rightContentSpan(small150), try rightContentSpan(small100) + 20)
+        XCTAssertGreaterThan(try rightContentSpan(small200), try rightContentSpan(small150) + 20)
+        let st100 = try XCTUnwrap(small100.rightTitleRange)
+        let st200 = try XCTUnwrap(small200.rightTitleRange)
+        XCTAssertGreaterThan(st200.upperBound - st200.lowerBound, (st100.upperBound - st100.lowerBound) + 30)
     }
 
     func testAdditionalConditionsToolRunningConnectedChinNonNotchAndBadges() throws {
@@ -285,7 +342,223 @@ final class NotchMusicThinkingLayoutTests: XCTestCase {
         XCTAssertNil(zeroScale.intrusion, "scale=0 must still never leak pixels into hardware notch")
     }
 
+    func testAllRemainingWidthExtremesAcross0Through200PreventClippingAndNotchIntrusion() throws {
+        let scales = [0, 50, 100, 150, 200]
+        let artworkColor = NSColor(srgbRed: 0.0, green: 0.25, blue: 1.0, alpha: 1.0)
+
+        // 1. Standby with branch pill + all 3 status badges across 0%–200%
+        resetMusicAndSignals()
+        IslandSignals.shared.setInQuietHours(true)
+        for hasNotch in [true, false] {
+            for scale in scales {
+                configureDefaults(theme: .modern, widthScale: scale)
+                let standbyState = makeAgentState(status: .waitingQuestion)
+                standbyState.glanceCompletionActive = true
+                let r = try renderCollapsedBar(state: standbyState, hasNotch: hasNotch, saveName: nil)
+                let tag = "standby-badges hasNotch=\(hasNotch) scale=\(scale)"
+                XCTAssertNil(r.intrusion, "\(tag): intruded into hardware notch")
+                XCTAssertGreaterThanOrEqual(r.barLeft, 0, "\(tag): clipped past left")
+                XCTAssertLessThanOrEqual(r.barRight, windowWidth, "\(tag): clipped past right")
+            }
+        }
+        IslandSignals.shared.setInQuietHours(false)
+
+        // 2. Idle + music across 0%–200% (Modern & Pixel, notch & non-notch)
+        configureMusic(title: "Midnight City", artworkColor: artworkColor)
+        for theme in [IslandUITheme.modern, .pixel] {
+            for hasNotch in [true, false] {
+                for scale in scales {
+                    configureDefaults(theme: theme, widthScale: scale)
+                    let r = try renderCollapsedBar(state: makeAgentState(status: .idle), hasNotch: hasNotch, saveName: nil)
+                    let tag = "idle-music theme=\(theme.rawValue) hasNotch=\(hasNotch) scale=\(scale)"
+                    XCTAssertNil(r.intrusion, "\(tag): intruded into notch")
+                    XCTAssertGreaterThanOrEqual(r.barLeft, 0, "\(tag): clipped left")
+                    XCTAssertLessThanOrEqual(r.barRight, windowWidth, "\(tag): clipped right")
+                    let album = try XCTUnwrap(r.rightAlbumRange, "\(tag): album missing")
+                    let viz = try XCTUnwrap(r.rightVisualizerRange, "\(tag): viz missing")
+                    XCTAssertGreaterThanOrEqual(album.upperBound - album.lowerBound, 12, "\(tag): album clipped")
+                    XCTAssertLessThanOrEqual(album.upperBound, viz.lowerBound, "\(tag): album overlapped viz")
+                }
+            }
+        }
+
+        // 3. Tool running + music across 0%–200%
+        for scale in scales {
+            configureDefaults(theme: .modern, widthScale: scale)
+            let r = try renderCollapsedBar(state: makeAgentState(status: .running, currentTool: "Read"), hasNotch: true, saveName: nil)
+            let tag = "tool-music scale=\(scale)"
+            XCTAssertNil(r.intrusion, "\(tag): intruded into notch")
+            XCTAssertGreaterThanOrEqual(r.barLeft, 0, "\(tag): clipped left")
+            XCTAssertLessThanOrEqual(r.barRight, windowWidth, "\(tag): clipped right")
+            let album = try XCTUnwrap(r.rightAlbumRange, "\(tag): album missing")
+            XCTAssertGreaterThanOrEqual(album.upperBound - album.lowerBound, 12, "\(tag): album clipped")
+            XCTAssertNotNil(r.rightVisualizerRange, "\(tag): viz missing")
+        }
+
+        // 4. Thinking in German (de) & Korean (ko) + Pixel theme across 0%–200%
+        for lang in ["de", "ko"] {
+            L10n.shared.language = lang
+            UserDefaults.standard.set(lang, forKey: SettingsKey.appLanguage)
+            for hasNotch in [true, false] {
+                for scale in scales {
+                    configureDefaults(theme: .pixel, widthScale: scale)
+                    let r = try renderCollapsedBar(state: makeAgentState(status: .processing), hasNotch: hasNotch, saveName: nil)
+                    let tag = "pixel-\(lang) hasNotch=\(hasNotch) scale=\(scale)"
+                    XCTAssertNil(r.intrusion, "\(tag): intruded into notch")
+                    XCTAssertGreaterThanOrEqual(r.barLeft, 0, "\(tag): clipped left")
+                    XCTAssertLessThanOrEqual(r.barRight, windowWidth, "\(tag): clipped right")
+                    let album = try XCTUnwrap(r.rightAlbumRange, "\(tag): album missing")
+                    XCTAssertGreaterThanOrEqual(album.upperBound - album.lowerBound, 12, "\(tag): album clipped")
+                    XCTAssertNotNil(r.rightVisualizerRange, "\(tag): viz missing")
+                }
+            }
+        }
+        restoreLanguage()
+
+        // 5. Connected chin & bilateral wings lyrics across 0%–200%
+        configureMusic(title: "Midnight City", artworkColor: artworkColor, lrc: "[00:00.00]Waiting in a car outside")
+        for preset in [FloatingLyricPreset.connectedChin, .bilateralWings] {
+            for hasNotch in [true, false] {
+                for scale in scales {
+                    configureDefaults(theme: .modern, widthScale: scale)
+                    suite.set(true, forKey: SettingsKey.showCompactLyrics)
+                    suite.set(preset.rawValue, forKey: SettingsKey.floatingLyricPreset)
+                    let r = try renderCollapsedBar(state: makeAgentState(status: .processing), hasNotch: hasNotch, saveName: nil)
+                    let tag = "lyric-\(preset.rawValue) hasNotch=\(hasNotch) scale=\(scale)"
+                    XCTAssertNil(r.intrusion, "\(tag): intruded into notch")
+                    XCTAssertGreaterThanOrEqual(r.barLeft, 0, "\(tag): clipped left")
+                    XCTAssertLessThanOrEqual(r.barRight, windowWidth, "\(tag): clipped right")
+                }
+            }
+        }
+
+        // 6. Quota chip (music off) across 0%–200%
+        resetMusicAndSignals()
+        for hasNotch in [true, false] {
+            for scale in scales {
+                configureDefaults(theme: .modern, widthScale: scale)
+                suite.set(true, forKey: SettingsKey.showClaudeQuota)
+                suite.set("auto", forKey: SettingsKey.claudeQuotaChip)
+                let quotaState = makeAgentState(status: .processing)
+                quotaState.claudeQuota.applyPreview(ClaudeQuotaSnapshot(
+                    limits: [
+                        ClaudeQuotaLimit(kind: .session, percent: 72, severity: "warning", resetsAt: Date().addingTimeInterval(3 * 3600)),
+                    ],
+                    fetchedAt: Date()
+                ))
+                let r = try renderCollapsedBar(state: quotaState, hasNotch: hasNotch, saveName: nil)
+                let tag = "quota hasNotch=\(hasNotch) scale=\(scale)"
+                XCTAssertNil(r.intrusion, "\(tag): intruded into notch")
+                XCTAssertGreaterThanOrEqual(r.barLeft, 0, "\(tag): clipped left")
+                XCTAssertLessThanOrEqual(r.barRight, windowWidth, "\(tag): clipped right")
+            }
+        }
+
+        // 7. IdleIndicatorBar (no sessions, hideWhenNoSession = false) across 0%–200%
+        for hasNotch in [true, false] {
+            for scale in scales {
+                configureDefaults(theme: .modern, widthScale: scale)
+                suite.set(false, forKey: SettingsKey.hideWhenNoSession)
+                let emptyState = AppState()
+                let r = try renderCollapsedBar(state: emptyState, hasNotch: hasNotch, saveName: nil)
+                let tag = "idle-indicator hasNotch=\(hasNotch) scale=\(scale)"
+                XCTAssertNil(r.intrusion, "\(tag): intruded into notch")
+                XCTAssertGreaterThanOrEqual(r.barLeft, 0, "\(tag): clipped left")
+                XCTAssertLessThanOrEqual(r.barRight, windowWidth, "\(tag): clipped right")
+            }
+        }
+    }
+
+    func testBadgesWithNarrowMusicAndBilateralWingsNeverClipOrIntrudeIntoNotch() throws {
+        let artworkColor = NSColor(srgbRed: 0.0, green: 0.25, blue: 1.0, alpha: 1.0)
+        configureMusic(
+            title: "Midnight City",
+            artworkColor: artworkColor,
+            lrc: "[00:00.00]Waiting in a car outside tonight"
+        )
+        IslandSignals.shared.setInQuietHours(true)
+        defer { IslandSignals.shared.setInQuietHours(false) }
+
+        // 1. Narrow scales (0%, 25%, 50%) with music + ALL 3 status badges must keep artwork >= 12pt and visualizer visible
+        for hasNotch in [true, false] {
+            for scale in [0, 25, 50] {
+                configureDefaults(theme: .modern, widthScale: scale)
+                let state = makeAgentState(status: .waitingQuestion)
+                state.glanceCompletionActive = true
+                let r = try renderCollapsedBar(
+                    state: state,
+                    hasNotch: hasNotch,
+                    saveName: (hasNotch && scale == 0) ? "responsive-badges-scale-0" : nil
+                )
+                let tag = "music-badges hasNotch=\(hasNotch) scale=\(scale)"
+                XCTAssertNil(r.intrusion, "\(tag): intruded into hardware notch")
+                XCTAssertGreaterThanOrEqual(r.barLeft, 0, "\(tag): clipped left")
+                XCTAssertLessThanOrEqual(r.barRight, windowWidth, "\(tag): clipped right")
+                let album = try XCTUnwrap(r.rightAlbumRange, "\(tag): album artwork was clipped by badges")
+                XCTAssertGreaterThanOrEqual(album.upperBound - album.lowerBound, 12, "\(tag): album art clipped < 12pt")
+                let viz = try XCTUnwrap(r.rightVisualizerRange, "\(tag): visualizer clipped by badges")
+                XCTAssertLessThanOrEqual(album.upperBound, viz.lowerBound, "\(tag): album overlapped visualizer")
+            }
+        }
+
+        // 2. Bilateral wings lyrics + ALL 3 status badges across 0%–200% must never leak pixels into hardware notch
+        for scale in [0, 50, 100, 150, 200] {
+            configureDefaults(theme: .modern, widthScale: scale)
+            suite.set(true, forKey: SettingsKey.showCompactLyrics)
+            suite.set(FloatingLyricPreset.bilateralWings.rawValue, forKey: SettingsKey.floatingLyricPreset)
+            let state = makeAgentState(status: .waitingQuestion)
+            state.glanceCompletionActive = true
+            let r = try renderCollapsedBar(
+                state: state,
+                hasNotch: true,
+                saveName: scale == 200 ? "responsive-bilateral-scale-200" : nil
+            )
+            let tag = "bilateral-badges scale=\(scale)"
+            XCTAssertNil(r.intrusion, "\(tag): bilateral wings + badges overflowed into hardware notch")
+            XCTAssertGreaterThanOrEqual(r.barLeft, 0, "\(tag): clipped left")
+            XCTAssertLessThanOrEqual(r.barRight, windowWidth, "\(tag): clipped right")
+        }
+
+        // 3. IdleIndicatorBar responds across 0% -> 100% -> 200%
+        resetMusicAndSignals()
+
+        func idleWidth(_ scale: Int, hasNotch: Bool) throws -> CGFloat {
+            configureDefaults(theme: .modern, widthScale: scale)
+            suite.set(false, forKey: SettingsKey.hideWhenNoSession)
+            let r = try renderCollapsedBar(state: AppState(), hasNotch: hasNotch, saveName: nil)
+            XCTAssertNil(r.intrusion)
+            return r.barRight - r.barLeft
+        }
+        let w0 = try idleWidth(0, hasNotch: true)
+        let w100 = try idleWidth(100, hasNotch: true)
+        let w200 = try idleWidth(200, hasNotch: true)
+        XCTAssertLessThan(w0, w100, "IdleIndicatorBar width must scale below 100% even on notched displays")
+        XCTAssertGreaterThan(w200, w100, "IdleIndicatorBar width must grow above 100%")
+    }
+
     // MARK: - Helpers
+
+    private func resetMusicAndSignals() {
+        NowPlayingManager.shared.isPlaying = false
+        NowPlayingManager.shared.title = ""
+        NowPlayingManager.shared.artist = ""
+        NowPlayingManager.shared.album = ""
+        NowPlayingManager.shared.artworkImage = nil
+        NowPlayingManager.shared.lyrics = []
+        IslandSignals.shared.setMusic(isPlaying: false, showToast: false, hasTitle: false, hasLyrics: false, title: "", artist: "")
+        IslandSignals.shared.setInQuietHours(false)
+    }
+
+    private func restoreLanguage() {
+        if let savedLanguage {
+            L10n.shared.language = savedLanguage
+        }
+        if let savedRawAppLanguage {
+            UserDefaults.standard.set(savedRawAppLanguage, forKey: SettingsKey.appLanguage)
+        } else {
+            UserDefaults.standard.removeObject(forKey: SettingsKey.appLanguage)
+        }
+    }
 
     private func configureDefaults(theme: IslandUITheme, widthScale: Int) {
         suite.removePersistentDomain(forName: suiteName)
@@ -348,9 +621,14 @@ final class NotchMusicThinkingLayoutTests: XCTestCase {
         let rightVisualizerRange: Range<CGFloat>?
     }
 
-    private func renderCollapsedBar(state: AppState, hasNotch: Bool, saveName: String) throws -> RenderInspection {
+    private func renderCollapsedBar(
+        state: AppState,
+        hasNotch: Bool,
+        screenWidthOverride: CGFloat? = nil,
+        saveName: String?
+    ) throws -> RenderInspection {
         var result: RenderInspection!
-        try withOffscreenPanel(state: state, hasNotch: hasNotch) { capture in
+        try withOffscreenPanel(state: state, hasNotch: hasNotch, screenWidthOverride: screenWidthOverride) { capture in
             result = try capture(0.1, saveName)
         }
         return result
@@ -360,15 +638,18 @@ final class NotchMusicThinkingLayoutTests: XCTestCase {
         state: AppState,
         hasNotch: Bool,
         notchHeight: CGFloat = 32,
+        screenWidthOverride: CGFloat? = nil,
         body: (_ capture: (_ waitInterval: TimeInterval, _ saveName: String?) throws -> RenderInspection) throws -> Void
     ) throws {
         let height: CGFloat = 64
+        let effectiveScreenWidth = screenWidthOverride ?? screenWidth
+        let effectiveWindowWidth = Self.panelWindowWidth(for: effectiveScreenWidth)
         let view = NotchPanelView(
             appState: state,
             hasNotch: hasNotch,
             notchHeight: notchHeight,
             notchW: notch,
-            screenWidth: screenWidth
+            screenWidth: effectiveScreenWidth
         )
         .environment(\.mascotStaticTime, 5.2)
         .defaultAppStorage(suite)
@@ -376,7 +657,7 @@ final class NotchMusicThinkingLayoutTests: XCTestCase {
 
         let host = NSHostingView(rootView: view)
         host.sizingOptions = []
-        host.frame = NSRect(x: 0, y: 0, width: windowWidth, height: height)
+        host.frame = NSRect(x: 0, y: 0, width: effectiveWindowWidth, height: height)
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         window.contentView = host
@@ -401,11 +682,21 @@ final class NotchMusicThinkingLayoutTests: XCTestCase {
                 }
             }
 
-            return try inspectBitmap(rep: rep, hasNotch: hasNotch, notchHeight: notchHeight)
+            return try inspectBitmap(
+                rep: rep,
+                windowWidth: effectiveWindowWidth,
+                hasNotch: hasNotch,
+                notchHeight: notchHeight
+            )
         }
     }
 
-    private func inspectBitmap(rep: NSBitmapImageRep, hasNotch: Bool, notchHeight: CGFloat) throws -> RenderInspection {
+    private func inspectBitmap(
+        rep: NSBitmapImageRep,
+        windowWidth: CGFloat,
+        hasNotch: Bool,
+        notchHeight: CGFloat
+    ) throws -> RenderInspection {
         let image = try XCTUnwrap(rep.cgImage)
         let w = image.width, h = image.height
         let scale = CGFloat(w) / windowWidth
