@@ -386,8 +386,9 @@ struct NotchHoopsView: View {
 
             // Rim mounting bracket
             let rimRight = pt(NotchHoopsEngine.rimCenterX + NotchHoopsEngine.rimHalfWidth, NotchHoopsEngine.rimY)
+            let bracketWidth: CGFloat = max(4, bbTop.x - rimRight.x + 1)
             context.fill(
-                Path(CGRect(x: rimRight.x - 1, y: rimRight.y - px * 0.5, width: max(4, bbTop.x - rimRight.x + 1), height: px * 2.2)),
+                Path(CGRect(x: rimRight.x - 1, y: rimRight.y - px * 0.5, width: bracketWidth, height: px * 2.2)),
                 with: .color(Self.orange)
             )
 
