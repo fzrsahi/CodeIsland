@@ -147,7 +147,7 @@ struct NotchPanelView: View {
         shouldShowSubNotchLyrics && activeFloatingPreset == .connectedChin
     }
     private var isBilateralWingsLyricActive: Bool {
-        shouldShowSubNotchLyrics && activeFloatingPreset == .bilateralWings && !nowPlaying.lyrics.isEmpty
+        shouldShowSubNotchLyrics && activeFloatingPreset == .bilateralWings && (signals.isPlaying || nowPlaying.isPlaying)
     }
     private var effectiveNotchHeight: CGFloat {
         isConnectedChinLyricActive ? (notchHeight + 26) : notchHeight
@@ -257,7 +257,7 @@ struct NotchPanelView: View {
         }
     }
 
-    private var isActive: Bool { !appState.sessions.isEmpty || signals.isPlaying }
+    private var isActive: Bool { !appState.sessions.isEmpty || signals.isPlaying || nowPlaying.isPlaying }
     /// First launch / no-session state should still render a visible marker so the app
     /// doesn't disappear completely behind the physical notch.
     private var showIdleIndicator: Bool {
@@ -265,7 +265,7 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if signals.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner { return true }
+        if signals.isPlaying || nowPlaying.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
@@ -280,13 +280,13 @@ struct NotchPanelView: View {
     private var shouldShowSubNotchLyrics: Bool {
         guard !signals.isVolumeHUDVisible,
               showCompactLyrics,
-              signals.isPlaying,
+              signals.isPlaying || nowPlaying.isPlaying,
               !shouldShowExpanded,
               !appState.surface.isExpanded,
-              signals.hasTitle
+              signals.hasTitle || !nowPlaying.title.isEmpty
         else { return false }
-        // No lyrics for this track (and none on the way): hide the capsule.
-        return signals.hasLyrics
+        // Lyrics available for this track (or currently loading):
+        return signals.hasLyrics || !nowPlaying.lyrics.isEmpty || nowPlaying.lyricsLoading
     }
 
     private var isToastOnly: Bool {
@@ -400,60 +400,124 @@ struct NotchPanelView: View {
 
     /// Symmetrical wing width calculated dynamically — guarantees zero clipping against notch corner curves
     /// and scales adaptively across all phases based on the Island Width setting (0% - 200%).
-    /// Never exceeds safe menu-bar bounds, ensuring the island NEVER overlaps macOS menu items.
+    /// Snugly hugs minimal content without excessive black space and NEVER overlaps macOS menu items.
     private var symmetricWingWidth: CGFloat {
         guard !shouldShowExpanded else { return expandedWingWidth }
 
         let clampedScale = Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))
         let widthScaleFactor = CGFloat(clampedScale) / 100.0
 
-        let isAgentActive = isThinking || appState.status != .idle || appState.currentTool != nil || appState.sessions.values.contains {
-            $0.status == .processing || $0.status == .running || $0.currentTool != nil
+        if isBilateralWingsLyricActive {
+            // PANORAMIC NOTCH WINGS MODE (Icon - Lirik - Notch Asli - Lirik - Icon)
+            // Dynamically scale wing width based on lyric text length so text is fully legible without truncation.
+            let curLyric = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let nextLyric = nowPlaying.nextLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let maxLyricLen = max(curLyric.count, nextLyric.count, nowPlaying.title.count)
+
+            let naturalLyricWing: CGFloat = {
+                if maxLyricLen >= 35 { return 270 }
+                if maxLyricLen >= 25 { return 255 }
+                if maxLyricLen >= 15 { return 240 }
+                if maxLyricLen >= 5 { return 225 }
+                return 210
+            }()
+
+            // Floor at 205pt so wings never collapse into a tiny unreadable stub, while allowing slider to expand up to ~310pt
+            let scaledLyricWing: CGFloat = {
+                if widthScaleFactor >= 1.0 {
+                    return naturalLyricWing + (naturalLyricWing * (widthScaleFactor - 1.0) * 0.4)
+                } else {
+                    let floorWing: CGFloat = 205
+                    return floorWing + (naturalLyricWing - floorWing) * widthScaleFactor
+                }
+            }()
+
+            let maxSafeLyricBarWidth = min(screenWidth * 0.56, 740)
+            let maxAllowedWing = max(205, (maxSafeLyricBarWidth - effectiveNotchW) / 2)
+            return min(scaledLyricWing, maxAllowedWing)
         }
-        let isToolVisible = showToolStatus && showAgentDetails && (isAgentActive || appState.currentTool != nil)
 
         // 1. Natural width required for Left Wing in each phase (Agent Mascot + Tool / Thinking / Quota)
-        var naturalLeft: CGFloat = compactWingWidth
-        if isThinking {
-            naturalLeft = max(naturalLeft, isPixel ? 104 : 96)
-        } else if isToolVisible {
-            naturalLeft = max(naturalLeft, isPixel ? 116 : 108)
-        } else if hasQuotaChip {
-            naturalLeft = max(naturalLeft, quotaWingWidth)
-        }
-        if isBilateralWingsLyricActive {
-            naturalLeft = max(naturalLeft, isPixel ? 140 : 130)
-        }
-        let contentLeft = (!isBilateralWingsLyricActive && leftWingWidth > 0) ? (leftWingWidth + 14) : naturalLeft
-        let effectiveNaturalLeft = max(naturalLeft, min(contentLeft, isBilateralWingsLyricActive ? 140 : 126))
-
-        // 2. Natural width required for Right Wing in each phase (Music / Prayer / Actions)
-        var naturalRight: CGFloat = compactWingWidth
-        if prayerManager.isPrayerPrioritized {
-            naturalRight = max(naturalRight, isHoveringRightWing ? 115 : 85)
-        } else if signals.isPlaying {
-            if isBilateralWingsLyricActive {
-                naturalRight = max(naturalRight, isPixel ? 140 : 130)
-            } else if isHoveringRightWing {
-                naturalRight = max(naturalRight, isPixel ? 116 : 108)
-            } else {
-                naturalRight = max(naturalRight, isConnectedChinLyricActive ? 52 : 44)
+        let effectiveNaturalLeft: CGFloat = {
+            if isThinking {
+                return isPixel ? 96 : 88
             }
-        }
-        if isHoveringRightWing {
-            naturalRight = max(naturalRight, 115)
-        }
-        if appState.glanceCompletionActive {
-            naturalRight += 18
-        }
-        if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion {
-            naturalRight += 18
-        }
-        let contentRight = (!isBilateralWingsLyricActive && rightWingWidth > 0) ? (rightWingWidth + 14) : naturalRight
-        let effectiveNaturalRight = max(naturalRight, min(contentRight, isBilateralWingsLyricActive ? 140 : 126))
+            if hasQuotaChip {
+                return quotaWingWidth
+            }
+            let isToolActive = showToolStatus && showAgentDetails && (appState.currentTool != nil || appState.status == .running || appState.status == .processing)
+            if isToolActive {
+                if leftWingWidth > 0 {
+                    return max(compactWingWidth, min(leftWingWidth + 8, isPixel ? 92 : 84))
+                }
+                return isPixel ? 76 : 70
+            }
+            // Idle / Standby: strictly hug measured mascot content + breathing room
+            if leftWingWidth > 0 {
+                return max(compactWingWidth, min(leftWingWidth + 8, 48))
+            }
+            return compactWingWidth
+        }()
+
+        // 2. Natural width required for Right Wing in each phase (Music / Prayer / Actions / Standby)
+        let effectiveNaturalRight: CGFloat = {
+            if isHoveringRightWing {
+                return 115
+            }
+            if prayerManager.isPrayerPrioritized {
+                return 80
+            }
+            if signals.isPlaying || nowPlaying.isPlaying {
+                if isConnectedChinLyricActive {
+                    return 52
+                }
+                if rightWingWidth > 0 {
+                    return max(compactWingWidth, min(rightWingWidth + 8, 76))
+                }
+                return 44
+            }
+            // Standby / Agent mode:
+            let hasBranchOrProject = appState.sessions.values.contains {
+                !($0.gitBranch ?? "").isEmpty || !($0.cwd ?? "").isEmpty
+            }
+            var extraBadges: CGFloat = 0
+            if signals.inQuietHours { extraBadges += 10 }
+            if appState.glanceCompletionActive { extraBadges += 12 }
+            if appState.hiddenPendingQuestionSessionId != nil || appState.status == .waitingApproval || appState.status == .waitingQuestion {
+                extraBadges += 12
+            }
+
+            if hasBranchOrProject {
+                if rightWingWidth > 0 {
+                    return max(compactWingWidth, min(rightWingWidth + 6, isPixel ? 98 : 92))
+                }
+                let targetWidth = 58 + extraBadges
+                return min(targetWidth, isPixel ? 92 : 86)
+            } else {
+                // Clock / Idle mode: strictly compact
+                if rightWingWidth > 0 {
+                    return max(compactWingWidth, min(rightWingWidth + 6, 52))
+                }
+                return compactWingWidth
+            }
+        }()
 
         // 3. Balanced Dynamic Island natural width for current phase
-        let naturalPhaseWidth = max(effectiveNaturalLeft, effectiveNaturalRight)
+        let naturalPhaseWidth: CGFloat = {
+            if isConnectedChinLyricActive {
+                let lyric = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+                let textLen = max(lyric.count, nowPlaying.title.count)
+                let targetWide: CGFloat = {
+                    if textLen >= 30 { return 440 }
+                    if textLen >= 20 { return 400 }
+                    if textLen >= 10 { return 360 }
+                    return 320
+                }()
+                let wingNeeded = max(compactWingWidth, (targetWide - effectiveNotchW) / 2)
+                return max(wingNeeded, max(effectiveNaturalLeft, effectiveNaturalRight))
+            }
+            return max(effectiveNaturalLeft, effectiveNaturalRight)
+        }()
 
         // 4. Absolute compact floor at 0% slider (fits mascot / essential indicators cleanly)
         let absoluteMinimumWing: CGFloat = 36
@@ -461,15 +525,16 @@ struct NotchPanelView: View {
         // 5. Scale adaptively across all phases based on user's Island Width setting (0% - 200%)
         let scaledWingWidth: CGFloat = {
             if widthScaleFactor >= 1.0 {
-                return naturalPhaseWidth + (naturalPhaseWidth * (widthScaleFactor - 1.0) * 0.6)
+                return naturalPhaseWidth + (naturalPhaseWidth * (widthScaleFactor - 1.0) * 0.5)
             } else {
                 return absoluteMinimumWing + (naturalPhaseWidth - absoluteMinimumWing) * widthScaleFactor
             }
         }()
 
         // 6. Absolute safe ceiling to guarantee it NEVER collides with the macOS menu bar:
-        // Collapsed bar width must never crowd the left/right screen menus.
-        let maxSafeCollapsedBarWidth = min(screenWidth * 0.40, isBilateralWingsLyricActive ? 470 : 440)
+        // Normal collapsed island never exceeds 400pt wide (or 38% screen width), leaving plenty of clearance for menu items.
+        // In wide contiguous lyric island mode, allows up to 480pt.
+        let maxSafeCollapsedBarWidth = min(screenWidth * 0.44, isConnectedChinLyricActive ? 480 : 400)
         let maxSingleWingWidth = max(absoluteMinimumWing, (maxSafeCollapsedBarWidth - effectiveNotchW) / 2)
         return min(scaledWingWidth, maxSingleWingWidth)
     }
@@ -519,7 +584,9 @@ struct NotchPanelView: View {
         if signals.showMiniPeekBanner && !appState.surface.isExpanded {
             return min(max(280, requiredActiveBarWidth), maxPanelWidth)
         }
-        let maxSafeCollapsed = min(screenWidth * 0.40, isBilateralWingsLyricActive ? 470 : 440)
+        let maxSafeCollapsed = isBilateralWingsLyricActive
+            ? min(screenWidth * 0.56, 740)
+            : min(screenWidth * 0.44, isConnectedChinLyricActive ? 480 : 400)
         return min(requiredActiveBarWidth, maxSafeCollapsed)
     }
 
@@ -653,7 +720,7 @@ struct NotchPanelView: View {
 
     @ViewBuilder
     private var activeCompactBar: some View {
-        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : (symmetricWingWidth < 46 ? 6 : (symmetricWingWidth < 60 ? 9 : 14))
+        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : (isBilateralWingsLyricActive ? 12 : (symmetricWingWidth < 48 ? 6 : (symmetricWingWidth < 70 ? 8 : 10)))
 
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -719,14 +786,8 @@ struct NotchPanelView: View {
 
             // Integrated contiguous notch chin: seamlessly housing synced lyrics directly under MacBook notch
             if isConnectedChinLyricActive && !shouldShowExpanded {
-                HStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                        .frame(width: symmetricWingWidth)
-                    IntegratedNotchChinLyricView(nowPlaying: nowPlaying, width: effectiveNotchW) {
-                        handleChinLyricTap()
-                    }
-                    Spacer(minLength: 0)
-                        .frame(width: symmetricWingWidth)
+                IntegratedNotchChinLyricView(nowPlaying: nowPlaying, width: panelWidth - 20) {
+                    handleChinLyricTap()
                 }
                 .frame(height: 26)
                 .transition(.asymmetric(
@@ -772,7 +833,7 @@ struct NotchPanelView: View {
                             withAnimation(NotchAnimation.open) {
                                 if signals.isPrayerPrioritized {
                                     appState.transitionToTab(.prayer)
-                                } else if signals.isPlaying {
+                                } else if signals.isPlaying || nowPlaying.isPlaying {
                                     appState.transitionToTab(.music)
                                 } else {
                                     appState.transitionToTab(.agents)
@@ -1051,7 +1112,7 @@ struct NotchPanelView: View {
             // Outside onHover on purpose: the hover region moves with the bar.
             .offset(x: 0)
 
-            // SUB-NOTCH FLOATING LYRIC CAPSULE: Floats freely beneath the notch cutout (when not using unified chin mode or bilateral wings)
+            // SUB-NOTCH FLOATING LYRIC CAPSULE: Floats freely beneath the notch cutout (when not using unified chin or bilateral wings mode)
             if shouldShowSubNotchLyrics && !isConnectedChinLyricActive && !isBilateralWingsLyricActive {
                 SubNotchFloatingLyricCapsuleView(nowPlaying: nowPlaying) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
@@ -1257,6 +1318,27 @@ private struct CompactLeftWing: View {
     @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
+    @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
+
+    private var resolvedLyricFont: (font: Font, tracking: CGFloat) {
+        let designEnum = FloatingLyricFontDesign(rawValue: floatingLyricFontDesign) ?? .rounded
+        let size = CGFloat(floatingLyricFontSize)
+        let isPix = isPixel || designEnum == .pixel
+        let weight: Font.Weight = isPix ? .bold : .bold
+        switch designEnum {
+        case .rounded:
+            return (.system(size: size, weight: weight, design: .rounded), 0.35)
+        case .monospaced:
+            return (.system(size: size, weight: weight, design: .monospaced), 0.50)
+        case .system:
+            return (.system(size: size, weight: weight, design: .default), 0.25)
+        case .serif:
+            return (.system(size: size, weight: weight, design: .serif), 0.25)
+        case .pixel:
+            return (.system(size: max(size, 9.5), weight: .bold, design: .monospaced), 0.8)
+        }
+    }
 
     private var musicPaletteAccent: Color? {
         guard signals.isPlaying else { return nil }
@@ -1351,7 +1433,13 @@ private struct CompactLeftWing: View {
                 )
                 .transition(.opacity)
             } else if isBilateralWingsLyricActive {
-                // PANORAMIC BILATERAL WING: Active synced lyric flowing beside mascot
+                // PANORAMIC NOTCH WING (Left Wing): [Icon (Mascot)] [♫] [Lirik (Current Lyric)]
+                let lyricText = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+                let textToDisplay = !lyricText.isEmpty ? lyricText : (nowPlaying.lyricsLoading ? "Loading lyrics..." : (nowPlaying.title.isEmpty ? "♪ Music" : nowPlaying.title))
+                let trailingNotchBuffer: CGFloat = 14
+                let availableWidth = max(80, wingWidth > 0 ? (wingWidth - mascotSize - 34 - trailingNotchBuffer) : 180)
+                let fontInfo = resolvedLyricFont
+
                 HStack(spacing: 5) {
                     ZStack(alignment: .bottomTrailing) {
                         if signals.isPlaying && displayStatus == .idle && !isThinking && shownTool == nil {
@@ -1364,53 +1452,26 @@ private struct CompactLeftWing: View {
                             .frame(width: mascotSize, height: mascotSize)
                             .fixedSize()
                             .id("\(displaySource)-\(effectiveMascotStatus)")
-
-                        // If a tool is executing or agent is thinking, overlay subtle indicator badge on mascot
-                        if let tool = shownTool, showToolStatus && showAgentDetails {
-                            Image(systemName: "wrench.and.screwdriver.fill")
-                                .font(.system(size: 6, weight: .bold))
-                                .foregroundStyle(effectiveToolColor(tool))
-                                .padding(1.5)
-                                .background(Circle().fill(Color.black))
-                                .offset(x: 2, y: 2)
-                        }
                     }
                     .fixedSize()
 
-                    let lyricText = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let availableWidth = max(24, wingWidth > 0 ? (wingWidth - mascotSize - 16) : 90)
+                    Image(systemName: "music.note")
+                        .font(.system(size: 8.5, weight: .bold))
+                        .foregroundStyle(musicPaletteAccent ?? (isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 1.0, green: 0.65, blue: 0.45)))
+                        .shadow(color: (musicPaletteAccent ?? Color(red: 0.0, green: 0.96, blue: 0.83)).opacity(0.5), radius: 3)
+                        .fixedSize()
 
-                    HStack(spacing: 3.5) {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 7.5, weight: .bold))
-                            .foregroundStyle(musicPaletteAccent ?? (isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 1.0, green: 0.65, blue: 0.45)))
-                            .fixedSize()
-
-                        if !lyricText.isEmpty {
-                            if isPixel {
-                                ModernMarqueeText(
-                                    text: lyricText.uppercased(),
-                                    font: .system(size: 8.5, weight: .bold, design: .monospaced),
-                                    color: .white,
-                                    maxWidth: availableWidth - 12
-                                )
-                            } else {
-                                ModernMarqueeText(
-                                    text: lyricText,
-                                    font: .system(size: 9.0, weight: .semibold, design: .rounded),
-                                    color: .white,
-                                    maxWidth: availableWidth - 12
-                                )
-                            }
-                        } else {
-                            Text("♪ ...")
-                                .font(.system(size: 8.5, weight: .medium, design: isPixel ? .monospaced : .rounded))
-                                .foregroundStyle(Color.white.opacity(0.5))
-                        }
-                    }
-                    .frame(maxWidth: availableWidth, alignment: .leading)
-                    .transition(.opacity)
+                    ModernMarqueeText(
+                        text: (isPixel || floatingLyricFontDesign == FloatingLyricFontDesign.pixel.rawValue) ? textToDisplay.uppercased() : textToDisplay,
+                        font: fontInfo.font,
+                        color: .white,
+                        tracking: fontInfo.tracking,
+                        maxWidth: availableWidth
+                    )
+                    .shadow(color: Color.black.opacity(0.85), radius: 2, y: 1)
                 }
+                .padding(.trailing, trailingNotchBuffer)
+                .frame(maxWidth: max(80, wingWidth > 0 ? (wingWidth - trailingNotchBuffer) : 200), alignment: .leading)
             } else {
                 ZStack {
                     if signals.isPlaying && displayStatus == .idle && !isThinking && shownTool == nil {
@@ -1745,7 +1806,7 @@ private struct CompactRightWing: View {
                         appState.surface = .sessionList
                     }
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                } else if signals.isPlaying {
+                } else if signals.isPlaying || nowPlaying.isPlaying {
                     CyberMusicWingView(
                         nowPlaying: nowPlaying,
                         isHovered: shouldExpandRightWing,
@@ -1967,34 +2028,60 @@ private struct CompactRightWing: View {
                         }
                     } else {
                         // "STANDBY DYNAMIC ISLAND PILL" - Interactive & Alive
-                        HStack(spacing: 3.5) {
-                            if let branch = gitBranch, !branch.isEmpty {
+                        let badgesWidth: CGFloat = {
+                            var w: CGFloat = 0
+                            if inQuietHours { w += 13 }
+                            if appState.glanceCompletionActive { w += 13 }
+                            if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion { w += 15 }
+                            return w
+                        }()
+                        let availableForPill = wingWidth > 0 ? max(16, wingWidth - badgesWidth - 14) : 58
+                        let showChevron = availableForPill >= 50
+                        let branchText: String = {
+                            guard let branch = gitBranch, !branch.isEmpty else { return "" }
+                            if let dashIdx = branch.firstIndex(of: "-") {
+                                let prefix = String(branch[..<dashIdx])
+                                if prefix.contains("#") { return prefix }
+                            }
+                            return branch
+                        }()
+                        let branchSpace = max(16, availableForPill - (showChevron ? 18 : 10) - 12)
+                        let maxCharsForBranch: Int = max(4, Int(branchSpace / (isPixel ? 6.0 : 5.5)))
+
+                        HStack(spacing: 3) {
+                            if !branchText.isEmpty {
                                 Image(systemName: "arrow.triangle.branch")
                                     .font(.system(size: 7.5, weight: .bold))
                                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                if isPixel {
-                                    PixelText(text: branch.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: 6)
-                                } else {
-                                    Text(branch)
-                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color.white.opacity(0.92))
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                        .frame(maxWidth: 48)
+                                    .fixedSize()
+                                if maxCharsForBranch > 0 {
+                                    if isPixel {
+                                        PixelText(text: branchText.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: maxCharsForBranch)
+                                    } else {
+                                        Text(branchText)
+                                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(Color.white.opacity(0.92))
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                            .frame(maxWidth: max(16, availableForPill - (showChevron ? 18 : 10)))
+                                    }
                                 }
                             } else if let proj = projectName, !proj.isEmpty {
                                 Image(systemName: "folder.fill")
                                     .font(.system(size: 7, weight: .bold))
                                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                if isPixel {
-                                    PixelText(text: proj.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: 6)
-                                } else {
-                                    Text(proj)
-                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color.white.opacity(0.92))
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                        .frame(maxWidth: 48)
+                                    .fixedSize()
+                                if maxCharsForBranch > 0 {
+                                    if isPixel {
+                                        PixelText(text: proj.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: maxCharsForBranch)
+                                    } else {
+                                        Text(proj)
+                                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(Color.white.opacity(0.90))
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                            .frame(maxWidth: max(16, availableForPill - (showChevron ? 18 : 10)))
+                                    }
                                 }
                             } else {
                                 Circle()
@@ -2012,11 +2099,13 @@ private struct CompactRightWing: View {
                                 }
                             }
 
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 6.5, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.50))
+                            if showChevron {
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 6.5, weight: .bold))
+                                    .foregroundStyle(Color.white.opacity(0.50))
+                            }
                         }
-                        .padding(.horizontal, 6.5)
+                        .padding(.horizontal, availableForPill < 36 ? 4 : 6)
                         .padding(.vertical, 3)
                         .background(
                             Group {
@@ -2082,8 +2171,8 @@ private struct CompactRightWing: View {
                 }
             }
         }
-        .padding(.leading, 8)
-        .padding(.trailing, expanded ? 10 : 3)
+        .padding(.leading, 6)
+        .padding(.trailing, expanded ? 10 : 8)
         // Its natural width, reported so the collapsed bar can make room for
         // it clear of the notch (CompactRightWingLayout).
         .fixedSize(horizontal: true, vertical: false)

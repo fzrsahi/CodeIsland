@@ -1544,59 +1544,77 @@ final class NowPlayingManager: ObservableObject {
             return
         }
 
-        var primaryUrlString = "https://lrclib.net/api/get?track_name=\(encodedTitle)&artist_name=\(encodedArtist)"
-        let shouldIncludeDuration = trackDuration > 0
-        if shouldIncludeDuration {
-            primaryUrlString += "&duration=\(Int(trackDuration))"
+        var urls: [URL] = []
+        if trackDuration > 0, let url = URL(string: "https://lrclib.net/api/get?track_name=\(encodedTitle)&artist_name=\(encodedArtist)&duration=\(Int(trackDuration))") {
+            urls.append(url)
+        }
+        if let url = URL(string: "https://lrclib.net/api/get?track_name=\(encodedTitle)&artist_name=\(encodedArtist)") {
+            urls.append(url)
+        }
+        if let url = URL(string: "https://lrclib.net/api/search?track_name=\(encodedTitle)&artist_name=\(encodedArtist)") {
+            urls.append(url)
+        }
+        if let query = "\(sanitized.title) \(sanitized.artist)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+           let url = URL(string: "https://lrclib.net/api/search?q=\(query)") {
+            urls.append(url)
         }
 
-        guard let primaryUrl = URL(string: primaryUrlString) else {
+        guard let first = urls.first else {
             lyricsLoading = false
             return
         }
-
-        let fallbackUrl = URL(string: "https://lrclib.net/api/get?track_name=\(encodedTitle)&artist_name=\(encodedArtist)")
-        requestLyricsURL(url: primaryUrl, fallbackUrl: shouldIncludeDuration ? fallbackUrl : nil)
+        requestLyricsPipeline(urls: Array(urls.dropFirst()), currentUrl: first)
     }
 
-    private func requestLyricsURL(url: URL, fallbackUrl: URL?) {
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
-            guard let data = data, error == nil,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                if let fallback = fallbackUrl {
-                    Task { @MainActor [weak self] in
-                        self?.requestLyricsURL(url: fallback, fallbackUrl: nil)
-                    }
-                } else {
-                    Task { @MainActor in self?.lyricsLoading = false }
-                }
-                return
-            }
-
+    private func requestLyricsPipeline(urls: [URL], currentUrl: URL) {
+        URLSession.shared.dataTask(with: currentUrl) { [weak self] data, _, error in
             var parsed: [LyricLine] = []
-            if let synced = json["syncedLyrics"] as? String, !synced.isEmpty {
-                parsed = Self.parseLRC(synced)
-            } else if let plain = json["plainLyrics"] as? String, !plain.isEmpty {
-                let rawLines = plain.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-                parsed = rawLines.enumerated().map { LyricLine(id: $0.offset, timestamp: Double($0.offset) * 4.0, text: $0.element) }
+
+            if let data = data, error == nil {
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    if let synced = json["syncedLyrics"] as? String, !synced.isEmpty {
+                        parsed = Self.parseLRC(synced)
+                    } else if let plain = json["plainLyrics"] as? String, !plain.isEmpty {
+                        let rawLines = plain.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                        parsed = rawLines.enumerated().map { LyricLine(id: $0.offset, timestamp: Double($0.offset) * 4.0, text: $0.element) }
+                    }
+                } else if let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                    for item in array {
+                        if let synced = item["syncedLyrics"] as? String, !synced.isEmpty {
+                            parsed = Self.parseLRC(synced)
+                            if !parsed.isEmpty { break }
+                        } else if parsed.isEmpty, let plain = item["plainLyrics"] as? String, !plain.isEmpty {
+                            let rawLines = plain.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                            parsed = rawLines.enumerated().map { LyricLine(id: $0.offset, timestamp: Double($0.offset) * 4.0, text: $0.element) }
+                        }
+                    }
+                }
             }
 
-            if parsed.isEmpty, let fallback = fallbackUrl {
+            if parsed.isEmpty && !urls.isEmpty {
+                let next = urls[0]
+                let remaining = Array(urls.dropFirst())
                 Task { @MainActor [weak self] in
-                    self?.requestLyricsURL(url: fallback, fallbackUrl: nil)
+                    self?.requestLyricsPipeline(urls: remaining, currentUrl: next)
                 }
                 return
             }
 
             Task { @MainActor in
-                self?.lyricsLoading = false
-                self?.lyrics = parsed
-                if let self = self {
-                    if self.trackDuration <= 0, let lastTs = parsed.last?.timestamp, lastTs > 0 {
-                        self.trackDuration = lastTs + 5.0
+                if !parsed.isEmpty {
+                    self?.lyrics = parsed
+                    self?.lyricsLoading = false
+                    if let self = self {
+                        if self.trackDuration <= 0, let lastTs = parsed.last?.timestamp, lastTs > 0 {
+                            self.trackDuration = lastTs + 5.0
+                        }
+                        self.updateCurrentLyricIndex()
                     }
-                    self.updateCurrentLyricIndex()
+                } else {
+                    self?.lyricsLoading = false
+                    self?.lastFetchedLyricsKey = ""
                 }
+                IslandSignalsSync.shared.publishMusic()
             }
         }.resume()
     }
