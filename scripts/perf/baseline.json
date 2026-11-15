@@ -1,0 +1,640 @@
+{
+  "environment": {
+    "commit": "fa1f293-dirty",
+    "date": "2026-11-13T22:59:04+08:00",
+    "macModel": "Mac17,5",
+    "macOS": "27.2",
+    "players": [
+      "com.apple.Safari",
+      "com.brave.Browser"
+    ]
+  },
+  "scenarios": {
+    "discovery-active": {
+      "busyByImage": [],
+      "counters": {
+        "appleScriptExec.brave": 4.3,
+        "appleScriptExec.safari": 4.3,
+        "discoveryScan": 12.0,
+        "discoveryScanMs": 1572.3,
+        "hostingLayoutPass": 0.0,
+        "nowPlayingTick": 4.3,
+        "procPathRead": 166.3,
+        "publishCompanion": 12.0,
+        "publishESP32": 12.0
+      },
+      "cpu": 2.81,
+      "footprintEndMB": 36.7,
+      "footprintGrowthPct": 0.0,
+      "footprintPeakMB": 70.5,
+      "footprintStartMB": 36.7,
+      "idleWakeupsPerSec": 8.4,
+      "loadAvg1": 3.08,
+      "mainThreadBusyPct": null,
+      "power": 3.2,
+      "rssMB": 75.6,
+      "runs": 3,
+      "topCodeIsland": []
+    },
+    "idle": {
+      "busyByImage": [
+        {
+          "image": "libswiftCore.dylib",
+          "pct": 1.0
+        },
+        {
+          "image": "AttributeGraph",
+          "pct": 0.9
+        },
+        {
+          "image": "libsystem_kernel.dylib",
+          "pct": 0.9
+        },
+        {
+          "image": "SwiftUICore",
+          "pct": 0.8
+        },
+        {
+          "image": "libobjc.A.dylib",
+          "pct": 0.5
+        }
+      ],
+      "counters": {
+        "appleScriptExec.brave": 19.7,
+        "cleanupTickWork": 19.7,
+        "hostingLayoutPass": 3537.7,
+        "nowPlayingTick": 19.7,
+        "publishCompanion": 19.7,
+        "publishESP32": 19.7
+      },
+      "cpu": 7.3,
+      "footprintEndMB": 72.3,
+      "footprintGrowthPct": 3.6,
+      "footprintPeakMB": 73.6,
+      "footprintStartMB": 69.9,
+      "idleWakeupsPerSec": 6.7,
+      "loadAvg1": 4.36,
+      "mainThreadBusyPct": 6.9,
+      "power": 7.8,
+      "rssMB": 40.6,
+      "runs": 3,
+      "topCodeIsland": [
+        {
+          "function": "@objc NotchHostingView.layout()",
+          "pct": 3.5
+        },
+        {
+          "function": "NotchHostingView.layout()",
+          "pct": 3.5
+        },
+        {
+          "function": "thunk for @escaping @callee_guaranteed () -> ()",
+          "pct": 0.2
+        },
+        {
+          "function": "NotchHostingView.applySuperNeedsUpdateConstraints(_:)",
+          "pct": 0.2
+        },
+        {
+          "function": "closure #1 in NotchHostingView.needsUpdateConstraints.setter",
+          "pct": 0.2
+        }
+      ]
+    },
+    "idle-prayer": {
+      "busyByImage": [
+        {
+          "image": "AttributeGraph",
+          "pct": 1.1
+        },
+        {
+          "image": "SwiftUICore",
+          "pct": 0.9
+        },
+        {
+          "image": "libswiftCore.dylib",
+          "pct": 0.8
+        },
+        {
+          "image": "CoreFoundation",
+          "pct": 0.5
+        },
+        {
+          "image": "libsystem_kernel.dylib",
+          "pct": 0.5
+        }
+      ],
+      "counters": {
+        "appleScriptExec.brave": 19.7,
+        "cleanupTickWork": 19.7,
+        "hostingLayoutPass": 3529.6,
+        "nowPlayingTick": 19.7,
+        "prayerTick": 59.9,
+        "publishCompanion": 19.7,
+        "publishESP32": 19.7
+      },
+      "cpu": 6.45,
+      "footprintEndMB": 73.6,
+      "footprintGrowthPct": 3.1,
+      "footprintPeakMB": 74.6,
+      "footprintStartMB": 73.9,
+      "idleWakeupsPerSec": 5.3,
+      "loadAvg1": 3.82,
+      "mainThreadBusyPct": 7.1,
+      "power": 6.6,
+      "rssMB": 30.7,
+      "runs": 3,
+      "topCodeIsland": [
+        {
+          "function": "@objc NotchHostingView.layout()",
+          "pct": 3.2
+        },
+        {
+          "function": "NotchHostingView.layout()",
+          "pct": 3.2
+        },
+        {
+          "function": "thunk for @escaping @callee_guaranteed () -> ()",
+          "pct": 0.3
+        },
+        {
+          "function": "NotchHostingView.applySuperNeedsUpdateConstraints(_:)",
+          "pct": 0.3
+        },
+        {
+          "function": "closure #1 in NotchHostingView.needsUpdateConstraints.setter",
+          "pct": 0.3
+        }
+      ]
+    },
+    "multi": {
+      "busyByImage": [
+        {
+          "image": "SwiftUICore",
+          "pct": 1.1
+        },
+        {
+          "image": "libsystem_kernel.dylib",
+          "pct": 1.0
+        },
+        {
+          "image": "IOKit",
+          "pct": 0.8
+        },
+        {
+          "image": "libsystem_platform.dylib",
+          "pct": 0.8
+        },
+        {
+          "image": "libswiftCore.dylib",
+          "pct": 0.7
+        }
+      ],
+      "counters": {
+        "appleScriptExec.brave": 19.7,
+        "cleanupTickWork": 19.7,
+        "hostingLayoutPass": 3540.3,
+        "nowPlayingTick": 19.7,
+        "publishCompanion": 19.7,
+        "publishESP32": 19.7
+      },
+      "cpu": 9.13,
+      "footprintEndMB": 81.3,
+      "footprintGrowthPct": 0.3,
+      "footprintPeakMB": 85.0,
+      "footprintStartMB": 74.5,
+      "idleWakeupsPerSec": 5.1,
+      "loadAvg1": 5.63,
+      "mainThreadBusyPct": 9.8,
+      "power": 9.7,
+      "rssMB": 36.5,
+      "runs": 3,
+      "topCodeIsland": [
+        {
+          "function": "@objc NotchHostingView.layout()",
+          "pct": 3.5
+        },
+        {
+          "function": "NotchHostingView.layout()",
+          "pct": 3.5
+        },
+        {
+          "function": "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+          "pct": 0.3
+        },
+        {
+          "function": "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+          "pct": 0.3
+        },
+        {
+          "function": "partial apply for closure #1 in closure #1 in AppState.startCleanupTimer()",
+          "pct": 0.2
+        }
+      ]
+    },
+    "music": {
+      "busyByImage": [
+        {
+          "image": "SwiftUICore",
+          "pct": 2.6
+        },
+        {
+          "image": "AttributeGraph",
+          "pct": 2.3
+        },
+        {
+          "image": "libswiftCore.dylib",
+          "pct": 2.1
+        },
+        {
+          "image": "CoreFoundation",
+          "pct": 0.8
+        },
+        {
+          "image": "libsystem_malloc.dylib",
+          "pct": 0.6
+        }
+      ],
+      "counters": {
+        "appleScriptExec.brave": 0.0,
+        "cleanupTickWork": 19.7,
+        "hostingLayoutPass": 3549.3,
+        "nowPlayingTick": 237.4,
+        "publishCompanion": 19.7,
+        "publishESP32": 19.7
+      },
+      "cpu": 13.76,
+      "footprintEndMB": 70.5,
+      "footprintGrowthPct": -0.4,
+      "footprintPeakMB": 74.1,
+      "footprintStartMB": 73.3,
+      "idleWakeupsPerSec": 7.6,
+      "loadAvg1": 4.52,
+      "mainThreadBusyPct": 12.2,
+      "power": 14.1,
+      "rssMB": 36.6,
+      "runs": 3,
+      "topCodeIsland": [
+        {
+          "function": "@objc NotchHostingView.layout()",
+          "pct": 7.4
+        },
+        {
+          "function": "NotchHostingView.layout()",
+          "pct": 7.4
+        },
+        {
+          "function": "NotchPanelView.body.getter",
+          "pct": 0.3
+        },
+        {
+          "function": "closure #1 in NotchPanelView.body.getter",
+          "pct": 0.3
+        },
+        {
+          "function": "thunk for @escaping @callee_guaranteed () -> ()",
+          "pct": 0.2
+        }
+      ]
+    },
+    "stress": {
+      "busyByImage": [
+        {
+          "image": "libsystem_kernel.dylib",
+          "pct": 1.4
+        },
+        {
+          "image": "SwiftUICore",
+          "pct": 1.1
+        },
+        {
+          "image": "libswiftCore.dylib",
+          "pct": 1.0
+        },
+        {
+          "image": "libsystem_platform.dylib",
+          "pct": 0.6
+        },
+        {
+          "image": "CoreFoundation",
+          "pct": 0.6
+        }
+      ],
+      "counters": {
+        "appleScriptExec.brave": 19.7,
+        "cleanupTickWork": 19.7,
+        "hostingLayoutPass": 3531.2,
+        "nowPlayingTick": 19.7,
+        "publishCompanion": 33.4,
+        "publishESP32": 33.4
+      },
+      "cpu": 9.98,
+      "footprintEndMB": 72.3,
+      "footprintGrowthPct": -4.0,
+      "footprintPeakMB": 75.5,
+      "footprintStartMB": 74.1,
+      "idleWakeupsPerSec": 6.2,
+      "loadAvg1": 5.86,
+      "mainThreadBusyPct": 9.7,
+      "power": 10.6,
+      "rssMB": 39.4,
+      "runs": 3,
+      "topCodeIsland": [
+        {
+          "function": "@objc NotchHostingView.layout()",
+          "pct": 3.6
+        },
+        {
+          "function": "NotchHostingView.layout()",
+          "pct": 3.6
+        },
+        {
+          "function": "thunk for @escaping @callee_guaranteed () -> ()",
+          "pct": 0.3
+        },
+        {
+          "function": "NotchHostingView.applySuperNeedsUpdateConstraints(_:)",
+          "pct": 0.3
+        },
+        {
+          "function": "closure #1 in NotchHostingView.needsUpdateConstraints.setter",
+          "pct": 0.3
+        }
+      ]
+    },
+    "waiting-long": {
+      "busyByImage": [
+        {
+          "image": "libsystem_kernel.dylib",
+          "pct": 0.3
+        },
+        {
+          "image": "libswiftCore.dylib",
+          "pct": 0.2
+        },
+        {
+          "image": "SwiftUICore",
+          "pct": 0.1
+        },
+        {
+          "image": "AttributeGraph",
+          "pct": 0.1
+        },
+        {
+          "image": "libobjc.A.dylib",
+          "pct": 0.0
+        }
+      ],
+      "counters": {
+        "appleScriptExec.brave": 19.6,
+        "cleanupTickWork": 20.5,
+        "hostingLayoutPass": 50.3,
+        "nowPlayingTick": 19.6,
+        "publishCompanion": 20.5,
+        "publishESP32": 20.5
+      },
+      "cpu": 1.52,
+      "footprintEndMB": 38.0,
+      "footprintGrowthPct": 0.0,
+      "footprintPeakMB": 72.9,
+      "footprintStartMB": 37.8,
+      "idleWakeupsPerSec": 4.8,
+      "loadAvg1": 3.4,
+      "mainThreadBusyPct": 0.8,
+      "power": 1.6,
+      "rssMB": 29.4,
+      "runs": 3,
+      "topCodeIsland": [
+        {
+          "function": "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+          "pct": 0.3
+        },
+        {
+          "function": "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+          "pct": 0.3
+        },
+        {
+          "function": "partial apply for closure #1 in closure #1 in AppState.startCleanupTimer()",
+          "pct": 0.3
+        },
+        {
+          "function": "closure #1 in closure #1 in AppState.startCleanupTimer()",
+          "pct": 0.3
+        },
+        {
+          "function": "AppState.cleanupIdleSessions()",
+          "pct": 0.3
+        }
+      ]
+    },
+    "working": {
+      "busyByImage": [
+        {
+          "image": "SwiftUICore",
+          "pct": 1.1
+        },
+        {
+          "image": "libsystem_kernel.dylib",
+          "pct": 1.0
+        },
+        {
+          "image": "IOKit",
+          "pct": 0.9
+        },
+        {
+          "image": "libswiftCore.dylib",
+          "pct": 0.8
+        },
+        {
+          "image": "AttributeGraph",
+          "pct": 0.6
+        }
+      ],
+      "counters": {
+        "appleScriptExec.brave": 19.7,
+        "cleanupTickWork": 19.7,
+        "hostingLayoutPass": 3536.4,
+        "nowPlayingTick": 19.7,
+        "publishCompanion": 19.7,
+        "publishESP32": 19.7
+      },
+      "cpu": 8.49,
+      "footprintEndMB": 70.3,
+      "footprintGrowthPct": -5.0,
+      "footprintPeakMB": 75.0,
+      "footprintStartMB": 74.0,
+      "idleWakeupsPerSec": 8.3,
+      "loadAvg1": 3.88,
+      "mainThreadBusyPct": 9.4,
+      "power": 9.0,
+      "rssMB": 35.6,
+      "runs": 3,
+      "topCodeIsland": [
+        {
+          "function": "@objc NotchHostingView.layout()",
+          "pct": 3.5
+        },
+        {
+          "function": "NotchHostingView.layout()",
+          "pct": 3.5
+        },
+        {
+          "function": "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+          "pct": 0.3
+        },
+        {
+          "function": "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+          "pct": 0.3
+        },
+        {
+          "function": "partial apply for closure #1 in closure #1 in AppState.startCleanupTimer()",
+          "pct": 0.3
+        }
+      ]
+    },
+    "working-expanded": {
+      "busyByImage": [
+        {
+          "image": "SwiftUICore",
+          "pct": 1.5
+        },
+        {
+          "image": "IOKit",
+          "pct": 1.1
+        },
+        {
+          "image": "libsystem_kernel.dylib",
+          "pct": 1.0
+        },
+        {
+          "image": "libswiftCore.dylib",
+          "pct": 0.7
+        },
+        {
+          "image": "AttributeGraph",
+          "pct": 0.7
+        }
+      ],
+      "counters": {
+        "appleScriptExec.brave": 19.7,
+        "cleanupTickWork": 19.7,
+        "hostingLayoutPass": 3542.2,
+        "nowPlayingTick": 19.7,
+        "publishCompanion": 19.7,
+        "publishESP32": 19.7
+      },
+      "cpu": 8.06,
+      "footprintEndMB": 75.6,
+      "footprintGrowthPct": -0.8,
+      "footprintPeakMB": 76.7,
+      "footprintStartMB": 76.2,
+      "idleWakeupsPerSec": 21.2,
+      "loadAvg1": 4.42,
+      "mainThreadBusyPct": 9.3,
+      "power": 8.7,
+      "rssMB": 35.6,
+      "runs": 3,
+      "topCodeIsland": [
+        {
+          "function": "@objc NotchHostingView.layout()",
+          "pct": 3.6
+        },
+        {
+          "function": "NotchHostingView.layout()",
+          "pct": 3.6
+        },
+        {
+          "function": "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+          "pct": 0.3
+        },
+        {
+          "function": "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+          "pct": 0.3
+        },
+        {
+          "function": "partial apply for closure #1 in closure #1 in AppState.startCleanupTimer()",
+          "pct": 0.3
+        }
+      ]
+    }
+  },
+  "schema": 1,
+  "targets": {
+    "approval-card": {
+      "cpu": {
+        "enforce": true,
+        "max": 3.0
+      },
+      "footprintGrowthPct": {
+        "enforce": true,
+        "max": 10.0
+      }
+    },
+    "discovery-active": {
+      "counters.discoveryScan": {
+        "enforce": true,
+        "max": 12.0
+      },
+      "counters.procPathRead": {
+        "enforce": true,
+        "max": 2000.0
+      }
+    },
+    "idle": {
+      "counters.cleanupTickWork": {
+        "enforce": true,
+        "max": 0.0
+      },
+      "counters.hostingLayoutPass": {
+        "enforce": true,
+        "max": 10.0
+      },
+      "cpu": {
+        "enforce": true,
+        "max": 2.0
+      },
+      "footprintGrowthPct": {
+        "enforce": true,
+        "max": 10.0
+      }
+    },
+    "idle-prayer": {
+      "counters.hostingLayoutPass": {
+        "enforce": true,
+        "max": 10.0
+      },
+      "counters.prayerTick": {
+        "enforce": true,
+        "max": 2.0
+      },
+      "cpu": {
+        "enforce": true,
+        "max": 2.0
+      },
+      "footprintGrowthPct": {
+        "enforce": true,
+        "max": 10.0
+      }
+    },
+    "music": {
+      "counters.appleScriptExec.brave": {
+        "enforce": true,
+        "max": 0.0
+      },
+      "counters.hostingLayoutPass": {
+        "enforce": true,
+        "max": 70.0
+      },
+      "cpu": {
+        "enforce": true,
+        "max": 3.0
+      }
+    },
+    "waiting-long": {
+      "cpu": {
+        "enforce": true,
+        "max": 2.0
+      }
+    }
+  }
+}

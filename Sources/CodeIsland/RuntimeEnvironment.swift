@@ -30,6 +30,13 @@ enum RuntimeEnvironment {
         environment["CODEISLAND_ISOLATED"] == "1"
     }
 
+    /// True when an isolated run should still run session discovery
+    /// (`CODEISLAND_PERF_DISCOVERY=1`), which is how `bench.sh` measures what
+    /// discovery costs while an agent writes its transcript. Processes are
+    /// still never monitored or signalled: those paths check `isIsolated`
+    /// on their own.
+    static let perfDiscoveryEnabled = ProcessInfo.processInfo.environment["CODEISLAND_PERF_DISCOVERY"] == "1"
+
     /// Why an isolated launch can't go on, or nil. Without a socket of its
     /// own it would answer every hook on this Mac in place of the real app.
     static func isolationProblem(_ environment: [String: String]) -> String? {

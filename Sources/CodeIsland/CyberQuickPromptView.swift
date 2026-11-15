@@ -93,11 +93,8 @@ struct CyberQuickPromptView: View {
             .padding(.vertical, 5)
             .background(
                 RoundedRectangle(cornerRadius: 4.5)
-                    .fill(Color(red: 0.04, green: 0.05, blue: 0.07))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4.5)
-                            .stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.4), lineWidth: 1)
-                    )
+                    .fill(Pixel16Palette.slot)
+                    .pixel16Bevel(raised: false, fillColor: Pixel16Palette.slot)
             )
 
             // Bottom Hints & Status Feedback
@@ -118,8 +115,8 @@ struct CyberQuickPromptView: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 5)
-                .fill(Color(red: 0.05, green: 0.06, blue: 0.08))
-                .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.3), lineWidth: 1))
+                .fill(Pixel16Palette.chassis)
+                .pixel16Bevel(raised: false, fillColor: Pixel16Palette.chassis)
         )
         .padding(.horizontal, 6)
         .padding(.bottom, 6)

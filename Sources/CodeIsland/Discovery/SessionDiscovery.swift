@@ -180,6 +180,24 @@ enum SessionDiscovery {
         return discovered
     }
 
+    /// The transcript paths the tailer is following, published for the
+    /// watcher's queue: a change to one of these is already read line by line,
+    /// so it is not a reason to walk the process table.
+    nonisolated(unsafe) private static var tailedTranscriptPaths: Set<String> = []
+    private static let tailedTranscriptPathsLock = NSLock()
+
+    static func setTailedTranscriptPaths(_ paths: Set<String>) {
+        tailedTranscriptPathsLock.lock()
+        tailedTranscriptPaths = paths
+        tailedTranscriptPathsLock.unlock()
+    }
+
+    nonisolated static func tailedTranscriptPathsSnapshot() -> Set<String> {
+        tailedTranscriptPathsLock.lock()
+        defer { tailedTranscriptPathsLock.unlock() }
+        return tailedTranscriptPaths
+    }
+
     static func discoveryWatchRoots() -> [String] {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let candidates: [(String, String)] = [

@@ -76,6 +76,7 @@ struct CyberAudioSpectrumView: View {
     var segmentSpacing: CGFloat = 1.0
     var palette: RetroSpectrumPalette? = nil
     var accentColor: Color? = nil
+    @Environment(\.animationGates) private var animationGates
 
     private var activePalette: RetroSpectrumPalette {
         if let palette { return palette }
@@ -104,27 +105,54 @@ struct CyberAudioSpectrumView: View {
         }
     }
 
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 0.04)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .bottom, spacing: 1.5) {
-                ForEach(0..<barCount, id: \.self) { barIndex in
-                    let normalized: Double = {
-                        guard isPlaying else { return 0.2 }
-                        let factor = Double(barIndex)
-                        let b1 = sin(time * 8.0 + factor * 1.5) * 0.4
-                        let b2 = cos(time * 13.0 + factor * 2.2) * 0.3
-                        let b3 = sin(time * 4.5) * 0.15
-                        return max(0.15, min(1.0, 0.45 + b1 + b2 + b3))
-                    }()
-                    let activeCount = isPlaying ? Int((normalized * 4.0).rounded()) : 1
+    /// Fixed size the CA replacement reports to layout — identical to the
+    /// SwiftUI HStack it replaces, so the measured wing width never changes.
+    private var caSize: CGSize {
+        CARetroSpectrumView.fixedSize(barCount: barCount, barWidth: barWidth,
+                                      segmentHeight: segmentHeight, segmentSpacing: segmentSpacing)
+    }
 
-                    VStack(spacing: segmentSpacing) {
-                        ForEach((0..<4).reversed(), id: \.self) { step in
-                            Rectangle()
-                                .fill(segmentColor(level: step, isActive: step < activeCount))
-                                .frame(width: barWidth, height: segmentHeight)
-                        }
+    var body: some View {
+        // Gated on the Music class (one decision from ticket 03): while a
+        // track plays, the render server drives the segments — no SwiftUI
+        // redraw per frame. The still frame (gate off, Reduce Motion, paused)
+        // stays SwiftUI and holds the bottom segment lit, exactly as before.
+        if animationGates.allows(.music) && isPlaying {
+            CARetroSpectrumView(
+                barCount: barCount,
+                barWidth: barWidth,
+                segmentHeight: segmentHeight,
+                segmentSpacing: segmentSpacing,
+                palette: activePalette,
+                animating: true
+            )
+            .frame(width: caSize.width, height: caSize.height)
+        } else {
+            bars(time: nil)
+        }
+    }
+
+    /// `time == nil` renders the still frame: one segment lit, no motion.
+    @ViewBuilder
+    private func bars(time: TimeInterval?) -> some View {
+        HStack(alignment: .bottom, spacing: 1.5) {
+            ForEach(0..<barCount, id: \.self) { barIndex in
+                let normalized: Double = {
+                    guard isPlaying else { return 0.2 }
+                    guard let time else { return 0.15 }
+                    let factor = Double(barIndex)
+                    let b1 = sin(time * 8.0 + factor * 1.5) * 0.4
+                    let b2 = cos(time * 13.0 + factor * 2.2) * 0.3
+                    let b3 = sin(time * 4.5) * 0.15
+                    return max(0.15, min(1.0, 0.45 + b1 + b2 + b3))
+                }()
+                let activeCount = isPlaying ? Int((normalized * 4.0).rounded()) : 1
+
+                VStack(spacing: segmentSpacing) {
+                    ForEach((0..<4).reversed(), id: \.self) { step in
+                        Rectangle()
+                            .fill(segmentColor(level: step, isActive: step < activeCount))
+                            .frame(width: barWidth, height: segmentHeight)
                     }
                 }
             }
@@ -140,6 +168,7 @@ struct CyberDiscoVisualizer: View {
     var maxHeight: CGFloat = 18
     var palette: RetroSpectrumPalette? = nil
     var accentColor: Color? = nil
+    @Environment(\.animationGates) private var animationGates
 
     private var activePalette: RetroSpectrumPalette {
         if let palette { return palette }
@@ -154,16 +183,26 @@ struct CyberDiscoVisualizer: View {
     }
 
     var body: some View {
+        if animationGates.allows(.music) {
+            TimelineView(.animation(minimumInterval: 0.04)) { timeline in
+                bars(time: timeline.date.timeIntervalSinceReferenceDate)
+            }
+        } else {
+            bars(time: nil)
+        }
+    }
+
+    /// `time == nil` renders the still frame: every bar at rest.
+    @ViewBuilder
+    private func bars(time: TimeInterval?) -> some View {
         let pal = activePalette
-        TimelineView(.animation(minimumInterval: 0.04)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .bottom, spacing: 2.0) {
-                ForEach(0..<barCount, id: \.self) { i in
-                    let factor = Double(i) * 0.9
-                    let wave = isPlaying
-                        ? max(0.12, min(1.0, 0.5 + sin(time * 7.0 + factor) * 0.35 + cos(time * 12.0 + factor * 1.7) * 0.25))
-                        : 0.15
-                    let barH = max(3, maxHeight * CGFloat(wave))
+        HStack(alignment: .bottom, spacing: 2.0) {
+            ForEach(0..<barCount, id: \.self) { i in
+                let factor = Double(i) * 0.9
+                let wave = isPlaying && time != nil
+                    ? max(0.12, min(1.0, 0.5 + sin(time! * 7.0 + factor) * 0.35 + cos(time! * 12.0 + factor * 1.7) * 0.25))
+                    : 0.15
+                let barH = max(3, maxHeight * CGFloat(wave))
 
                     VStack(spacing: 1.2) {
                         Rectangle()
@@ -187,8 +226,7 @@ struct CyberDiscoVisualizer: View {
                     }
                 }
             }
-            .frame(height: maxHeight + 4, alignment: .bottom)
-        }
+        .frame(height: maxHeight + 4, alignment: .bottom)
     }
 }
 
@@ -200,28 +238,53 @@ struct ModernAudioSpectrumView: View {
     var barWidth: CGFloat = 1.8
     var maxHeight: CGFloat = 9.0
     var color: Color = Color(red: 1.0, green: 0.65, blue: 0.45)
+    @Environment(\.animationGates) private var animationGates
+
+    /// Fixed size the CA replacement reports to layout — identical to the
+    /// SwiftUI HStack it replaces, so the measured wing width never changes.
+    private var caSize: CGSize {
+        CAModernSpectrumView.fixedSize(barCount: barCount, barWidth: barWidth, maxHeight: maxHeight)
+    }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 0.04)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .center, spacing: 1.6) {
-                ForEach(0..<barCount, id: \.self) { barIndex in
-                    let normalized: CGFloat = {
-                        guard isPlaying else { return 0.25 }
-                        let factor = Double(barIndex)
-                        let b1 = sin(time * 8.0 + factor * 2.2) * 0.42
-                        let b2 = cos(time * 12.5 + factor * 1.7) * 0.28
-                        let b3 = sin(time * 4.2 + factor * 0.9) * 0.15
-                        return max(0.25, min(1.0, CGFloat(0.55 + b1 + b2 + b3)))
-                    }()
-
-                    Capsule()
-                        .fill(color)
-                        .frame(width: barWidth, height: max(2.5, maxHeight * normalized))
-                }
-            }
-            .frame(height: maxHeight, alignment: .center)
+        // Gated on the Music class (one decision from ticket 03): while a
+        // track plays, the render server drives the capsule heights — no
+        // SwiftUI redraw per frame. The still frame stays SwiftUI.
+        if animationGates.allows(.music) && isPlaying {
+            CAModernSpectrumView(
+                barCount: barCount,
+                barWidth: barWidth,
+                maxHeight: maxHeight,
+                color: color,
+                animating: true
+            )
+            .frame(width: caSize.width, height: caSize.height)
+        } else {
+            // Still frame: every capsule at its rest height.
+            bars(time: nil)
         }
+    }
+
+    @ViewBuilder
+    private func bars(time: TimeInterval?) -> some View {
+        HStack(alignment: .center, spacing: 1.6) {
+            ForEach(0..<barCount, id: \.self) { barIndex in
+                let normalized: CGFloat = {
+                    guard isPlaying else { return 0.25 }
+                    guard let time else { return 0.25 }
+                    let factor = Double(barIndex)
+                    let b1 = sin(time * 8.0 + factor * 2.2) * 0.42
+                    let b2 = cos(time * 12.5 + factor * 1.7) * 0.28
+                    let b3 = sin(time * 4.2 + factor * 0.9) * 0.15
+                    return max(0.25, min(1.0, CGFloat(0.55 + b1 + b2 + b3)))
+                }()
+
+                Capsule()
+                    .fill(color)
+                    .frame(width: barWidth, height: max(2.5, maxHeight * normalized))
+            }
+        }
+        .frame(height: maxHeight, alignment: .center)
     }
 }
 
@@ -238,69 +301,103 @@ struct ModernMarqueeText: View {
     let text: String
     var font: Font = .system(size: 9.5, weight: .bold, design: .rounded)
     var color: Color = .white
-    var maxWidth: CGFloat = 64
+    var tracking: CGFloat = 0
+    var maxWidth: CGFloat? = nil
+    var centerShortText: Bool = false
+    @Environment(\.animationGates) private var animationGates
     @State private var textWidth: CGFloat = 0
     @State private var startDate = Date()
 
-    private var contentWidth: CGFloat {
-        if textWidth > 0 {
-            return min(maxWidth, textWidth)
-        }
-        return min(maxWidth, CGFloat(text.count) * 7.0)
-    }
-
     var body: some View {
-        let excess = max(0, textWidth - maxWidth)
-        TimelineView(.animation(minimumInterval: 0.03)) { timeline in
-            let offset: CGFloat = {
-                guard excess > 0 else { return 0 }
-                let scrollDuration = max(2.5, Double(excess) / 22.0)
-                let pauseStart = 1.2
-                let pauseEnd = 1.2
-                let resetDuration = 1.0
-                let totalCycle = pauseStart + scrollDuration + pauseEnd + resetDuration
-
-                let time = max(0, timeline.date.timeIntervalSince(startDate))
-                let t = time.truncatingRemainder(dividingBy: totalCycle)
-
-                if t < pauseStart {
-                    return 0
-                } else if t < pauseStart + scrollDuration {
-                    let progress = (t - pauseStart) / scrollDuration
-                    let smooth = (1.0 - cos(progress * .pi)) / 2.0
-                    return CGFloat(smooth) * excess
-                } else if t < pauseStart + scrollDuration + pauseEnd {
-                    return excess
-                } else {
-                    let progress = (t - (pauseStart + scrollDuration + pauseEnd)) / resetDuration
-                    let smooth = (1.0 - cos(progress * .pi)) / 2.0
-                    return (1.0 - CGFloat(smooth)) * excess
-                }
-            }()
-
+        GeometryReader { geo in
+            let containerWidth = maxWidth ?? geo.size.width
+            let excess = max(0, textWidth - containerWidth)
+            // The Marquee class still needs text wider than its box; a title
+            // that fits never scrolls, so no timeline is created for it.
+            if animationGates.allows(.marquee) && excess > 0 {
+                scrolling(containerWidth: containerWidth, excess: excess, height: geo.size.height)
+            } else {
+                Text(text)
+                    .font(font)
+                    .tracking(tracking)
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+                    .frame(width: containerWidth, height: geo.size.height, alignment: (centerShortText && excess == 0) ? .center : .leading)
+                    .clipped()
+            }
+        }
+        .frame(width: maxWidth)
+        .background(
             Text(text)
                 .font(font)
-                .foregroundStyle(color)
+                .tracking(tracking)
                 .lineLimit(1)
                 .fixedSize()
+                .hidden()
                 .background(
                     GeometryReader { textGeo in
                         Color.clear.preference(key: ModernMarqueeTextWidthKey.self, value: textGeo.size.width)
                     }
                 )
-                .offset(x: -offset)
-                .frame(width: contentWidth, alignment: .leading)
-                .clipped()
-        }
-        .frame(width: contentWidth, height: 17)
+        )
         .onPreferenceChange(ModernMarqueeTextWidthKey.self) { width in
             if abs(self.textWidth - width) > 1 {
                 self.textWidth = width
             }
         }
-        .onChange(of: text) { _, _ in
+        .onAppear {
+            if textWidth == 0 {
+                textWidth = max(CGFloat(text.count) * 7.0, 10)
+            }
+        }
+        .onChange(of: text) { _, newText in
             startDate = Date()
-            textWidth = 0
+            textWidth = max(CGFloat(newText.count) * 7.0, 10)
+        }
+    }
+
+    private func scrolling(containerWidth: CGFloat, excess: CGFloat, height: CGFloat) -> some View {
+        TimelineView(.animation(minimumInterval: 0.03)) { timeline in
+                let offset: CGFloat = {
+                    guard excess > 0 else { return 0 }
+                    let scrollDuration = max(2.5, Double(excess) / 22.0)
+                    let pauseStart = 1.2
+                    let pauseEnd = 1.2
+                    let resetDuration = 1.0
+                    let totalCycle = pauseStart + scrollDuration + pauseEnd + resetDuration
+
+                    let time = max(0, timeline.date.timeIntervalSince(startDate))
+                    let t = time.truncatingRemainder(dividingBy: totalCycle)
+
+                    if t < pauseStart {
+                        return 0
+                    } else if t < pauseStart + scrollDuration {
+                        let progress = (t - pauseStart) / scrollDuration
+                        let smooth = (1.0 - cos(progress * .pi)) / 2.0
+                        return CGFloat(smooth) * excess
+                    } else if t < pauseStart + scrollDuration + pauseEnd {
+                        return excess
+                    } else {
+                        let progress = (t - (pauseStart + scrollDuration + pauseEnd)) / resetDuration
+                        let smooth = (1.0 - cos(progress * .pi)) / 2.0
+                        return (1.0 - CGFloat(smooth)) * excess
+                    }
+                }()
+
+                Text(text)
+                    .font(font)
+                    .tracking(tracking)
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .background(
+                        GeometryReader { textGeo in
+                            Color.clear.preference(key: ModernMarqueeTextWidthKey.self, value: textGeo.size.width)
+                        }
+                    )
+                    .offset(x: -offset)
+                    .frame(width: containerWidth, height: height, alignment: .leading)
+                    .clipped()
         }
     }
 }
@@ -310,20 +407,48 @@ struct ModernMarqueeText: View {
 struct CyberMusicWingView: View {
     @ObservedObject var nowPlaying: NowPlayingManager
     var isHovered: Bool = false
+    var isEnlarged: Bool = false
+    var isBilateralWingsLyricActive: Bool = false
+    var wingWidth: CGFloat = 0
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
+    @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
 
-    init(nowPlaying: NowPlayingManager, isHovered: Bool = false) {
+    init(nowPlaying: NowPlayingManager, isHovered: Bool = false, isEnlarged: Bool = false, isBilateralWingsLyricActive: Bool = false, wingWidth: CGFloat = 0) {
         self.nowPlaying = nowPlaying
         self.isHovered = isHovered
+        self.isEnlarged = isEnlarged
+        self.isBilateralWingsLyricActive = isBilateralWingsLyricActive
+        self.wingWidth = wingWidth
     }
 
     private var isModernClean: Bool {
         if islandUITheme == IslandUITheme.modern.rawValue { return true }
         if islandUITheme == IslandUITheme.pixel.rawValue { return false }
         return musicHUDTheme == MusicHUDTheme.modernClean.rawValue
+    }
+
+    private var resolvedUpcomingFont: (font: Font, tracking: CGFloat) {
+        let designEnum = FloatingLyricFontDesign(rawValue: floatingLyricFontDesign) ?? .rounded
+        let baseSize = CGFloat(floatingLyricFontSize)
+        let size = max(8.5, baseSize - 1.0)
+        let isPix = islandUITheme == IslandUITheme.pixel.rawValue || designEnum == .pixel
+        let weight: Font.Weight = isPix ? .medium : .semibold
+        switch designEnum {
+        case .rounded:
+            return (.system(size: size, weight: weight, design: .rounded), 0.30)
+        case .monospaced:
+            return (.system(size: size, weight: weight, design: .monospaced), 0.45)
+        case .system:
+            return (.system(size: size, weight: weight, design: .default), 0.20)
+        case .serif:
+            return (.system(size: size, weight: weight, design: .serif), 0.20)
+        case .pixel:
+            return (.system(size: max(size, 8.5), weight: .medium, design: .monospaced), 0.6)
+        }
     }
 
     private var accentColor: Color {
@@ -347,39 +472,92 @@ struct CyberMusicWingView: View {
     }
 
     var body: some View {
-        if isModernClean {
-            // MODERN CLEAN: Langsung album cover, marquee title (saat di-hover), dan visualizer tanpa border
-            HStack(alignment: .center, spacing: 4) {
+        let artSize: CGFloat = isEnlarged ? 23 : 17
+        let spectrumMaxH: CGFloat = isEnlarged ? 14.0 : 11.0
+
+        if isBilateralWingsLyricActive {
+            // BILATERAL WING MODE (Right Wing): [Upcoming Lyric] [Album Art] [Equalizer]
+            let nextText = nowPlaying.nextLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let displayUpcoming = !nextText.isEmpty ? nextText : (nowPlaying.artist.isEmpty ? "" : "— " + nowPlaying.artist)
+            let leadingNotchBuffer: CGFloat = 14
+            let availableForLyric = max(70, wingWidth > 0 ? (wingWidth - artSize - 34 - leadingNotchBuffer) : 170)
+            let fontInfo = resolvedUpcomingFont
+
+            HStack(alignment: .center, spacing: 5) {
+                if !displayUpcoming.isEmpty {
+                    ModernMarqueeText(
+                        text: (islandUITheme == IslandUITheme.pixel.rawValue || floatingLyricFontDesign == FloatingLyricFontDesign.pixel.rawValue) ? displayUpcoming.uppercased() : displayUpcoming,
+                        font: fontInfo.font,
+                        color: Color.white.opacity(0.72),
+                        tracking: fontInfo.tracking,
+                        maxWidth: availableForLyric
+                    )
+                    .shadow(color: Color.black.opacity(0.85), radius: 2, y: 1)
+                }
+
                 if let art = nowPlaying.artworkImage {
                     Image(nsImage: art)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 17, height: 17)
-                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                } else {
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        .fill(Color.white.opacity(0.12))
-                        .frame(width: 17, height: 17)
+                        .frame(width: artSize, height: artSize)
+                        .clipShape(RoundedRectangle(cornerRadius: isModernClean ? 4 : 3.5, style: .continuous))
                         .overlay(
-                            Image(systemName: "music.note")
-                                .font(.system(size: 8, weight: .semibold))
-                                .foregroundStyle(Color.white.opacity(0.85))
+                            RoundedRectangle(cornerRadius: isModernClean ? 4 : 3.5, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
                         )
-                }
-
-                if isHovered {
-                    ModernMarqueeText(
-                        text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
-                        maxWidth: 64
-                    )
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                } else {
+                    RoundedRectangle(cornerRadius: isModernClean ? 4 : 3.5, style: .continuous)
+                        .fill(Color.white.opacity(0.12))
+                        .frame(width: artSize, height: artSize)
+                        .overlay(Image(systemName: "music.note").font(.system(size: 8)).foregroundStyle(.white))
                 }
 
                 ModernAudioSpectrumView(
                     barCount: 3,
                     isPlaying: nowPlaying.isPlaying,
                     barWidth: 2.0,
-                    maxHeight: 11.0,
+                    maxHeight: spectrumMaxH,
+                    color: accentColor
+                )
+            }
+            .fixedSize()
+            .padding(.leading, leadingNotchBuffer)
+            .padding(.trailing, 2)
+            .padding(.vertical, 1)
+        } else if isModernClean {
+            // MODERN CLEAN: Langsung album cover, marquee title (saat di-hover), dan visualizer tanpa border
+            HStack(alignment: .center, spacing: isEnlarged ? 5 : 4) {
+                if isHovered && (wingWidth == 0 || wingWidth >= 75) {
+                    let titleMaxW = max(36, min(isEnlarged ? 76 : 64, wingWidth > 0 ? (wingWidth - 44) : 64))
+                    ModernMarqueeText(
+                        text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
+                        maxWidth: titleMaxW
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                }
+
+                if let art = nowPlaying.artworkImage {
+                    Image(nsImage: art)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: artSize, height: artSize)
+                        .clipShape(RoundedRectangle(cornerRadius: isEnlarged ? 5 : 4, style: .continuous))
+                } else {
+                    RoundedRectangle(cornerRadius: isEnlarged ? 5 : 4, style: .continuous)
+                        .fill(Color.white.opacity(0.12))
+                        .frame(width: artSize, height: artSize)
+                        .overlay(
+                            Image(systemName: "music.note")
+                                .font(.system(size: isEnlarged ? 10 : 8, weight: .semibold))
+                                .foregroundStyle(Color.white.opacity(0.85))
+                        )
+                }
+
+                ModernAudioSpectrumView(
+                    barCount: 3,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: isEnlarged ? 2.4 : 2.0,
+                    maxHeight: spectrumMaxH,
                     color: accentColor
                 )
             }
@@ -387,34 +565,34 @@ struct CyberMusicWingView: View {
             .padding(.horizontal, 2)
             .padding(.vertical, 1)
         } else {
-            // RETRO CYBER: Seamless Frameless, Sharp 17x17 Album Art, Marquee Monospaced Title saat hover, Dancing Spectrum
-            HStack(alignment: .center, spacing: 4) {
-                // Album Art (17x17, crisp rounded corner, no outer bounding pill)
+            // RETRO CYBER: Seamless Frameless, Sharp Album Art, Marquee Monospaced Title saat hover, Dancing Spectrum
+            HStack(alignment: .center, spacing: isEnlarged ? 5 : 4) {
+                // Album Art (crisp rounded corner, no outer bounding pill)
                 if let art = nowPlaying.artworkImage {
                     Image(nsImage: art)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 17, height: 17)
-                        .clipShape(RoundedRectangle(cornerRadius: 3.5, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 3.5, style: .continuous).stroke(Color.white.opacity(0.2), lineWidth: 0.5))
+                        .frame(width: artSize, height: artSize)
+                        .clipShape(RoundedRectangle(cornerRadius: isEnlarged ? 4.5 : 3.5, style: .continuous))
                 } else {
-                    RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                    RoundedRectangle(cornerRadius: isEnlarged ? 4.5 : 3.5, style: .continuous)
                         .fill(Color(red: 0.08, green: 0.09, blue: 0.12))
-                        .frame(width: 17, height: 17)
+                        .frame(width: artSize, height: artSize)
                         .overlay(
                             Image(systemName: "music.note")
-                                .font(.system(size: 8))
+                                .font(.system(size: isEnlarged ? 10 : 8))
                                 .foregroundStyle(accentColor.opacity(0.85))
                         )
                 }
 
                 // Title: Marquee scrolling text in retro monospace font (vertically centered, never truncated)
-                if isHovered {
+                if isHovered && (wingWidth == 0 || wingWidth >= 75) {
+                    let titleMaxW = max(36, min(isEnlarged ? 76 : 64, wingWidth > 0 ? (wingWidth - 44) : 64))
                     ModernMarqueeText(
                         text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
-                        font: .system(size: 8.5, weight: .bold, design: .monospaced),
+                        font: .system(size: isEnlarged ? 9.5 : 8.5, weight: .bold, design: .monospaced),
                         color: .white,
-                        maxWidth: 64
+                        maxWidth: titleMaxW
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
@@ -423,8 +601,8 @@ struct CyberMusicWingView: View {
                 CyberAudioSpectrumView(
                     barCount: isHovered ? 3 : 4,
                     isPlaying: nowPlaying.isPlaying,
-                    barWidth: 2.0,
-                    segmentHeight: 1.6,
+                    barWidth: isEnlarged ? 2.4 : 2.0,
+                    segmentHeight: isEnlarged ? 2.0 : 1.6,
                     segmentSpacing: 0.8,
                     palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
                 )
@@ -481,15 +659,25 @@ struct CyberMusicMiniPeekBanner: View {
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: 26, height: 26)
-                        .clipShape(RoundedRectangle(cornerRadius: isModernClean ? 6 : 4, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: isModernClean ? 6 : 4, style: .continuous).stroke(Color(white: 0.3), lineWidth: 0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: isModernClean ? 6 : 3.5, style: .continuous))
                         .shadow(color: Color.black.opacity(0.4), radius: 3)
                 } else {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(isModernClean ? accentColor : Color(red: 0.0, green: 0.96, blue: 0.83))
-                        .frame(width: 26, height: 26)
-                        .background(RoundedRectangle(cornerRadius: isModernClean ? 6 : 4, style: .continuous).fill(Color(white: 0.12)))
+                    ZStack {
+                        if isModernClean {
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(Color(white: 0.12))
+                                .frame(width: 26, height: 26)
+                        } else {
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(Pixel16Palette.slot)
+                                .frame(width: 26, height: 26)
+                                .pixel16Bevel(raised: false, fillColor: Pixel16Palette.slot)
+                        }
+
+                        Image(systemName: "music.note")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(isModernClean ? accentColor : Color(red: 0.0, green: 0.96, blue: 0.83))
+                    }
                 }
 
                 // Track Title & Artist
@@ -501,7 +689,7 @@ struct CyberMusicMiniPeekBanner: View {
 
                     Text(nowPlaying.artist.isEmpty ? "Now Playing" : nowPlaying.artist)
                         .font(.system(size: 8.5, design: isModernClean ? .default : .monospaced))
-                        .foregroundStyle(Color(white: 0.65))
+                        .foregroundStyle(isModernClean ? Color(white: 0.65) : Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.75))
                         .lineLimit(1)
                 }
 
@@ -516,23 +704,37 @@ struct CyberMusicMiniPeekBanner: View {
 
                 // Close button
                 Button(action: {
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-                        nowPlaying.showToast = false
-                    }
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    nowPlaying.dismissToast()
                 }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 7.5, weight: .bold))
-                        .foregroundColor(Color(white: 0.4))
-                        .frame(width: 14, height: 14)
+                    ZStack {
+                        if !isModernClean {
+                            RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                                .fill(Pixel16Palette.surface)
+                                .frame(width: 16, height: 16)
+                                .pixel16Bevel(raised: true, fillColor: Pixel16Palette.surface)
+                        }
+                        Image(systemName: "xmark")
+                            .font(.system(size: 7.5, weight: .bold))
+                            .foregroundColor(Color.white.opacity(0.65))
+                            .frame(width: 14, height: 14)
+                    }
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 11)
             .padding(.vertical, 7)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.white.opacity(0.06))
-                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 0.8))
+                Group {
+                    if isModernClean {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color(white: 0.10).opacity(0.95))
+                    } else {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Pixel16Palette.chassis)
+                            .pixel16Bevel(raised: false, fillColor: Pixel16Palette.chassis)
+                    }
+                }
             )
             .padding(.horizontal, 8)
             .padding(.bottom, 5)
@@ -559,24 +761,368 @@ extension FloatingLyricTextColor {
     }
 }
 
-// MARK: - Sub-Notch Floating Synced Lyric Bar (Mini Dynamic Island for Lyrics)
+// MARK: - Sub-Notch Floating Synced Lyric Bar Helpers
 
-struct SubNotchFloatingLyricCapsuleView: View {
+/// Dual rotating tape spools with spokes & connecting tape for Teenage Engineering TP-7 preset
+private struct TeenageTapeReelView: View {
+    let isPlaying: Bool
+    let color: Color
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.04)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let angle = isPlaying ? (t * 140.0).truncatingRemainder(dividingBy: 360.0) : 0.0
+
+            HStack(spacing: 3) {
+                singleSpool(angle: angle)
+                Rectangle()
+                    .fill(color.opacity(0.4))
+                    .frame(width: 4, height: 1)
+                singleSpool(angle: angle)
+            }
+        }
+    }
+
+    private func singleSpool(angle: Double) -> some View {
+        ZStack {
+            Circle()
+                .strokeBorder(color.opacity(0.85), lineWidth: 1.0)
+                .frame(width: 12, height: 12)
+            Circle()
+                .fill(Color.black.opacity(0.9))
+                .frame(width: 9, height: 9)
+            ForEach(0..<3, id: \.self) { i in
+                Rectangle()
+                    .fill(color.opacity(0.9))
+                    .frame(width: 1.0, height: 8)
+                    .rotationEffect(.degrees(Double(i) * 60.0))
+            }
+            Circle()
+                .fill(Color.white.opacity(0.95))
+                .frame(width: 2.5, height: 2.5)
+        }
+        .rotationEffect(.degrees(angle))
+    }
+}
+
+/// Rotating micro vinyl record with concentric grooves & metallic tonearm for Vinyl Groove preset
+private struct MicroVinylRecordView: View {
+    let isPlaying: Bool
+    let accentColor: Color
+
+    var body: some View {
+        HStack(spacing: 2) {
+            TimelineView(.periodic(from: .now, by: 0.04)) { timeline in
+                let t = timeline.date.timeIntervalSinceReferenceDate
+                let angle = isPlaying ? (t * 90.0).truncatingRemainder(dividingBy: 360.0) : 0.0
+
+                ZStack {
+                    Circle()
+                        .fill(Color(red: 0.08, green: 0.08, blue: 0.10))
+                        .frame(width: 15, height: 15)
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6)
+                        .frame(width: 12, height: 12)
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.6)
+                        .frame(width: 9, height: 9)
+                    Circle()
+                        .fill(accentColor)
+                        .frame(width: 5.5, height: 5.5)
+                    Circle()
+                        .fill(Color.black)
+                        .frame(width: 1.5, height: 1.5)
+                }
+                .rotationEffect(.degrees(angle))
+                .shadow(color: Color.black.opacity(0.6), radius: 2)
+            }
+
+            Path { p in
+                p.move(to: CGPoint(x: 0, y: 1))
+                p.addLine(to: CGPoint(x: 3.5, y: 6))
+                p.addLine(to: CGPoint(x: 2.5, y: 10))
+            }
+            .stroke(Color.white.opacity(0.65), style: StrokeStyle(lineWidth: 1.0, lineCap: .round, lineJoin: .round))
+            .frame(width: 4, height: 12)
+            .offset(y: isPlaying ? 0 : -2)
+            .animation(.spring(response: 0.35, dampingFraction: 0.75), value: isPlaying)
+        }
+    }
+}
+
+/// Dynamic silk oscilloscope wave for Apple Music Fluid Shimmer preset
+private struct FluidSilkWaveView: View {
+    let isPlaying: Bool
+    let color: Color
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.04)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                var path = Path()
+                let midY = size.height / 2
+                let width = size.width
+
+                path.move(to: CGPoint(x: 0, y: midY))
+                for x in stride(from: 0, through: width, by: 1.5) {
+                    let progress = x / width
+                    let envelope = sin(progress * .pi)
+                    let amp = isPlaying ? (size.height * 0.42 * envelope) : 0.8
+                    let y = midY + sin((x / 5.0) + (t * 4.0)) * amp
+                    path.addLine(to: CGPoint(x: x, y: y))
+                }
+
+                ctx.stroke(
+                    path,
+                    with: .linearGradient(
+                        Gradient(colors: [color.opacity(0.3), color, color.opacity(0.3)]),
+                        startPoint: CGPoint(x: 0, y: midY),
+                        endPoint: CGPoint(x: width, y: midY)
+                    ),
+                    lineWidth: 1.5
+                )
+            }
+        }
+        .frame(width: 18, height: 10)
+    }
+}
+
+// MARK: - Interactive Floating Lyric Icon View
+
+struct InteractiveFloatingLyricIconView: View {
+    let style: FloatingLyricIconStyle
     @ObservedObject var nowPlaying: NowPlayingManager
-    var onOpenFull: () -> Void
+    let accentColor: Color
+    var onAction: () -> Void = {}
 
-    @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
+    @State private var isHovered = false
+    @State private var spinAngle: Double = 0
+
+    var body: some View {
+        if style == .none {
+            EmptyView()
+        } else {
+            Button(action: {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                onAction()
+            }) {
+                iconBody
+                    .scaleEffect(isHovered ? 1.18 : 1.0)
+                    .shadow(color: isHovered ? accentColor.opacity(0.85) : Color.black.opacity(0.6), radius: isHovered ? 4 : 2)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovered)
+            }
+            .buttonStyle(.plain)
+            .onHover { hovering in
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                    isHovered = hovering
+                }
+            }
+            .help(nowPlaying.isPlaying ? "Click to Pause" : "Click to Play")
+        }
+    }
+
+    @ViewBuilder
+    private var iconBody: some View {
+        switch style {
+        case .spinningVinyl:
+            // Realistic micro vinyl record (16x16) with concentric grooves and rotating animation
+            ZStack {
+                Circle()
+                    .fill(Color(red: 0.08, green: 0.08, blue: 0.09))
+                    .frame(width: 15, height: 15)
+
+                // Grooves
+                Circle()
+                    .stroke(Color.white.opacity(0.18), lineWidth: 0.6)
+                    .frame(width: 11, height: 11)
+
+                Circle()
+                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                    .frame(width: 7, height: 7)
+
+                // Center Label / Spindle
+                Circle()
+                    .fill(accentColor)
+                    .frame(width: 4.5, height: 4.5)
+
+                Circle()
+                    .fill(Color.black)
+                    .frame(width: 1.5, height: 1.5)
+            }
+            .rotationEffect(.degrees(spinAngle))
+            .onAppear {
+                if nowPlaying.isPlaying {
+                    withAnimation(.linear(duration: 4.0).repeatForever(autoreverses: false)) {
+                        spinAngle = 360
+                    }
+                }
+            }
+            .onChange(of: nowPlaying.isPlaying) { _, isPlaying in
+                if isPlaying {
+                    withAnimation(.linear(duration: 4.0).repeatForever(autoreverses: false)) {
+                        spinAngle += 360
+                    }
+                }
+            }
+
+        case .albumTurntable:
+            // Miniature circular album art turntable disc
+            ZStack {
+                if let art = nowPlaying.artworkImage {
+                    Image(nsImage: art)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 15, height: 15)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(accentColor.opacity(0.6), lineWidth: 0.75))
+                } else {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [accentColor, Color(red: 0.1, green: 0.1, blue: 0.15)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 15, height: 15)
+                        .overlay(
+                            Image(systemName: "music.note")
+                                .font(.system(size: 7, weight: .bold))
+                                .foregroundStyle(.white)
+                        )
+                }
+
+                // Center spindle hole
+                Circle()
+                    .fill(Color.black.opacity(0.85))
+                    .frame(width: 2.5, height: 2.5)
+            }
+            .rotationEffect(.degrees(spinAngle))
+            .onAppear {
+                if nowPlaying.isPlaying {
+                    withAnimation(.linear(duration: 5.0).repeatForever(autoreverses: false)) {
+                        spinAngle = 360
+                    }
+                }
+            }
+            .onChange(of: nowPlaying.isPlaying) { _, isPlaying in
+                if isPlaying {
+                    withAnimation(.linear(duration: 5.0).repeatForever(autoreverses: false)) {
+                        spinAngle += 360
+                    }
+                }
+            }
+
+        case .dancingWave:
+            // Harmonic audio spectrum node: 3 bouncing live bars
+            HStack(alignment: .bottom, spacing: 1.5) {
+                ForEach(0..<3) { i in
+                    TimelineView(.animation(minimumInterval: 0.08)) { timeline in
+                        let time = timeline.date.timeIntervalSinceReferenceDate
+                        let h: CGFloat = nowPlaying.isPlaying
+                            ? max(3.5, 12.0 * CGFloat(abs(sin(time * 3.5 + Double(i) * 1.2))))
+                            : 3.5
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(accentColor)
+                            .frame(width: 2.2, height: h)
+                    }
+                }
+            }
+            .frame(width: 13, height: 13, alignment: .bottom)
+
+        case .pulsingNote:
+            // Neon glowing musical note with subtle pulse
+            TimelineView(.animation(minimumInterval: 0.1)) { timeline in
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                let pulse = nowPlaying.isPlaying ? 0.8 + 0.2 * sin(time * 4.0) : 0.85
+                let bounce = nowPlaying.isPlaying ? -1.0 * sin(time * 3.0) : 0.0
+
+                Image(systemName: "music.note")
+                    .font(.system(size: 8.5, weight: .bold))
+                    .foregroundStyle(accentColor)
+                    .shadow(color: accentColor.opacity(pulse), radius: 4)
+                    .offset(y: bounce)
+                    .frame(width: 12)
+            }
+
+        case .retroCassette:
+            // Miniature cassette tape spool with dual rotating teeth
+            ZStack {
+                RoundedRectangle(cornerRadius: 2.5)
+                    .fill(Color(red: 0.12, green: 0.12, blue: 0.14))
+                    .frame(width: 17, height: 11)
+                    .overlay(RoundedRectangle(cornerRadius: 2.5).stroke(accentColor.opacity(0.6), lineWidth: 0.6))
+
+                HStack(spacing: 3) {
+                    Circle()
+                        .stroke(Color.white.opacity(0.85), lineWidth: 0.8)
+                        .frame(width: 4, height: 4)
+                        .rotationEffect(.degrees(spinAngle))
+
+                    Circle()
+                        .stroke(Color.white.opacity(0.85), lineWidth: 0.8)
+                        .frame(width: 4, height: 4)
+                        .rotationEffect(.degrees(spinAngle))
+                }
+            }
+            .frame(width: 17, height: 11)
+            .onAppear {
+                if nowPlaying.isPlaying {
+                    withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
+                        spinAngle = 360
+                    }
+                }
+            }
+            .onChange(of: nowPlaying.isPlaying) { _, isPlaying in
+                if isPlaying {
+                    withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
+                        spinAngle += 360
+                    }
+                }
+            }
+
+        case .studioMic:
+            // Live studio mic with status glow
+            ZStack {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(accentColor)
+
+                Circle()
+                    .stroke(accentColor.opacity(nowPlaying.isPlaying ? 0.85 : 0.2), lineWidth: 0.8)
+                    .frame(width: 13, height: 13)
+            }
+            .frame(width: 13, height: 13)
+
+        case .hapticBubble:
+            // Tactile lyric bubble with internal pulsing soundwave dots
+            ZStack {
+                Image(systemName: "quote.bubble.fill")
+                    .font(.system(size: 8.5, weight: .bold))
+                    .foregroundStyle(accentColor)
+            }
+            .frame(width: 12)
+
+        case .none:
+            EmptyView()
+        }
+    }
+}
+
+// MARK: - Integrated Notch Chin Lyric View (Unified contiguous chin under physical notch)
+
+struct IntegratedNotchChinLyricView: View {
+    @ObservedObject var nowPlaying: NowPlayingManager
+    let width: CGFloat
+    var onOpenFull: () -> Void = {}
     @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
     @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
+    @AppStorage(SettingsKey.floatingLyricIconStyle) private var floatingLyricIconStyle = SettingsDefaults.floatingLyricIconStyle
     @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
-    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @State private var isHovered = false
-    @State private var capsuleWidth: CGFloat = 180
-
-    private var activePreset: FloatingLyricPreset {
-        FloatingLyricPreset(rawValue: floatingLyricPreset) ?? .pureText
-    }
 
     private var activeTextColor: Color {
         if (syncThemeWithAlbumArt || floatingLyricTextColor == "album" || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
@@ -590,20 +1136,147 @@ struct SubNotchFloatingLyricCapsuleView: View {
         case .rounded: return .rounded
         case .monospaced: return .monospaced
         case .system: return .default
+        case .serif: return .serif
+        case .pixel: return .monospaced
+        }
+    }
+
+    private var activeIconStyle: FloatingLyricIconStyle {
+        FloatingLyricIconStyle(rawValue: floatingLyricIconStyle) ?? .spinningVinyl
+    }
+
+    private var displayText: String {
+        let lyric = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !lyric.isEmpty { return lyric }
+        if nowPlaying.lyricsLoading { return "♫ Loading lyrics..." }
+        if nowPlaying.currentLyricIndex > 0 { return "♪ Instrumental Interlude ♪" }
+        if !nowPlaying.title.isEmpty {
+            let artist = nowPlaying.artist.isEmpty ? "" : " • \(nowPlaying.artist)"
+            return "♪ \(nowPlaying.title)\(artist)"
+        }
+        return "♪ Music Playing..."
+    }
+
+    var body: some View {
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            onOpenFull()
+        }) {
+            HStack(spacing: 8) {
+                InteractiveFloatingLyricIconView(
+                    style: activeIconStyle,
+                    nowPlaying: nowPlaying,
+                    accentColor: activeTextColor,
+                    onAction: { nowPlaying.togglePlayPause() }
+                )
+
+                Text(displayText)
+                    .font(.system(size: CGFloat(floatingLyricFontSize), weight: .bold, design: activeFontDesign))
+                    .foregroundStyle(activeTextColor)
+                    .shadow(color: Color.black.opacity(0.90), radius: 3, y: 1)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .id("\(displayText)-\(floatingLyricFontDesign)-\(floatingLyricFontSize)")
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .offset(y: 3)),
+                        removal: .opacity.combined(with: .offset(y: -3))
+                    ))
+
+                CyberAudioSpectrumView(
+                    barCount: 4,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: 1.8,
+                    segmentHeight: 1.5,
+                    segmentSpacing: 0.7,
+                    palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
+                )
+                .frame(width: 14)
+            }
+            .padding(.horizontal, 12)
+            .frame(width: max(120, width), height: 26)
+            .clipped()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .help("♫ Live Synced Lyrics (Click to open Music HUD)")
+    }
+}
+
+// MARK: - Sub-Notch Floating Synced Lyric Bar (Mini Dynamic Island for Lyrics)
+
+struct SubNotchFloatingLyricCapsuleView: View {
+    @ObservedObject var nowPlaying: NowPlayingManager
+    var onOpenFull: () -> Void
+
+    @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
+    @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
+    @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
+    @AppStorage(SettingsKey.floatingLyricIconStyle) private var floatingLyricIconStyle = SettingsDefaults.floatingLyricIconStyle
+    @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    @State private var isHovered = false
+    @State private var capsuleWidth: CGFloat = 180
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
+
+    private var activePreset: FloatingLyricPreset {
+        FloatingLyricPreset(rawValue: floatingLyricPreset) ?? .pureText
+    }
+
+    private var activeIconStyle: FloatingLyricIconStyle {
+        FloatingLyricIconStyle(rawValue: floatingLyricIconStyle) ?? .spinningVinyl
+    }
+
+    private var activeTextColor: Color {
+        if (syncThemeWithAlbumArt || floatingLyricTextColor == "album" || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
+        return FloatingLyricTextColor(rawValue: floatingLyricTextColor)?.color ?? .white
+    }
+
+    private var activeFontDesign: Font.Design {
+        if activePreset == .retroPixel { return .monospaced }
+        if activePreset == .vinylGroove && floatingLyricFontDesign == FloatingLyricFontDesign.rounded.rawValue {
+            return .serif
+        }
+        switch FloatingLyricFontDesign(rawValue: floatingLyricFontDesign) ?? .rounded {
+        case .rounded: return .rounded
+        case .monospaced: return .monospaced
+        case .system: return .default
+        case .serif: return .serif
+        case .pixel: return .monospaced
         }
     }
 
     private var activeNSFont: NSFont {
-        let size = CGFloat(floatingLyricFontSize)
+        let baseSize = CGFloat(floatingLyricFontSize)
+        let size = (activePreset == .retroPixel || floatingLyricFontDesign == FloatingLyricFontDesign.pixel.rawValue) ? max(baseSize * 1.25, 12.5) : baseSize
+        if activePreset == .vinylGroove && floatingLyricFontDesign == FloatingLyricFontDesign.rounded.rawValue {
+            if let desc = NSFont.systemFont(ofSize: size, weight: .bold).fontDescriptor.withDesign(.serif) {
+                return NSFont(descriptor: desc, size: size) ?? NSFont.boldSystemFont(ofSize: size)
+            }
+            return NSFont.boldSystemFont(ofSize: size)
+        }
         switch FloatingLyricFontDesign(rawValue: floatingLyricFontDesign) ?? .rounded {
         case .rounded:
             if let desc = NSFont.systemFont(ofSize: size, weight: .bold).fontDescriptor.withDesign(.rounded) {
                 return NSFont(descriptor: desc, size: size) ?? NSFont.boldSystemFont(ofSize: size)
             }
             return NSFont.boldSystemFont(ofSize: size)
-        case .monospaced:
+        case .monospaced, .pixel:
             return NSFont.monospacedSystemFont(ofSize: size, weight: .bold)
         case .system:
+            return NSFont.boldSystemFont(ofSize: size)
+        case .serif:
+            if let desc = NSFont.systemFont(ofSize: size, weight: .bold).fontDescriptor.withDesign(.serif) {
+                return NSFont(descriptor: desc, size: size) ?? NSFont.boldSystemFont(ofSize: size)
+            }
             return NSFont.boldSystemFont(ofSize: size)
         }
     }
@@ -649,29 +1322,41 @@ struct SubNotchFloatingLyricCapsuleView: View {
 
         switch preset {
         case .pureText:
-            chromeWidth = 62
-            minWidth = 110
+            chromeWidth = activeIconStyle == .none ? 36 : 52
+            minWidth = activeIconStyle == .none ? 44 : 64
         case .capsule:
-            chromeWidth = 72
-            minWidth = 130
+            chromeWidth = activeIconStyle == .none ? 48 : 64
+            minWidth = activeIconStyle == .none ? 56 : 74
         case .frostedGlass:
-            chromeWidth = 68
-            minWidth = 125
+            chromeWidth = activeIconStyle == .none ? 44 : 60
+            minWidth = activeIconStyle == .none ? 54 : 70
         case .neonHud:
-            chromeWidth = 84
-            minWidth = 140
+            chromeWidth = activeIconStyle == .none ? 56 : 72
+            minWidth = activeIconStyle == .none ? 64 : 80
         case .seamlessGlass:
-            chromeWidth = 44
-            minWidth = 200
+            chromeWidth = 40
+            minWidth = 50
         case .retroPixel:
-            chromeWidth = 68
-            minWidth = 135
+            chromeWidth = activeIconStyle == .none ? 46 : 60
+            minWidth = activeIconStyle == .none ? 56 : 72
         case .liquidAurora:
-            chromeWidth = 72
-            minWidth = 140
+            chromeWidth = activeIconStyle == .none ? 48 : 62
+            minWidth = activeIconStyle == .none ? 56 : 72
         case .minimalBraun:
-            chromeWidth = 76
-            minWidth = 145
+            chromeWidth = activeIconStyle == .none ? 50 : 64
+            minWidth = activeIconStyle == .none ? 60 : 76
+        case .tapeReel:
+            chromeWidth = 60
+            minWidth = 76
+        case .vinylGroove:
+            chromeWidth = 60
+            minWidth = 76
+        case .fluidKaraoke:
+            chromeWidth = activeIconStyle == .none ? 50 : 64
+            minWidth = activeIconStyle == .none ? 60 : 76
+        case .connectedChin, .bilateralWings:
+            chromeWidth = 50
+            minWidth = 60
         }
 
         let textWidth = (text as NSString).size(withAttributes: [.font: font]).width
@@ -684,14 +1369,14 @@ struct SubNotchFloatingLyricCapsuleView: View {
         switch activePreset {
         case .pureText:
             // Preset 1: Minimalist floating subtitle (No solid background)
-            // Crisp pure-white text with layered drop shadow highlight & cyan neon accent
-            HStack(spacing: 6) {
-                Image(systemName: iconName)
-                    .font(.system(size: 8.5, weight: .bold))
-                    .foregroundStyle(isHovered ? activeTextColor : activeTextColor.opacity(0.85))
-                    .shadow(color: Color.black.opacity(0.85), radius: 2, x: 0, y: 1)
-                    .shadow(color: activeTextColor.opacity(isHovered ? 0.9 : 0.6), radius: 4, x: 0, y: 0)
-                    .frame(width: 12)
+            // Crisp pure-white text with layered drop shadow highlight & interactive lead icon snugly beside lyrics
+            HStack(spacing: 8) {
+                InteractiveFloatingLyricIconView(
+                    style: activeIconStyle,
+                    nowPlaying: nowPlaying,
+                    accentColor: activeTextColor,
+                    onAction: { nowPlaying.togglePlayPause() }
+                )
 
                 ZStack {
                     Text(activeDisplayText)
@@ -703,13 +1388,13 @@ struct SubNotchFloatingLyricCapsuleView: View {
                         .shadow(color: activeTextColor.opacity(isHovered ? 0.70 : 0.30), radius: 4, x: 0, y: 0)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .id(activeDisplayText)
+                        .id("\(activeDisplayText)-\(floatingLyricFontDesign)-\(floatingLyricFontSize)")
                         .transition(.asymmetric(
                             insertion: .opacity.combined(with: .offset(y: 4)),
                             removal: .opacity.combined(with: .offset(y: -4))
                         ))
                 }
-                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: true, vertical: false)
 
                 CyberAudioSpectrumView(
                     barCount: 3,
@@ -722,16 +1407,19 @@ struct SubNotchFloatingLyricCapsuleView: View {
                 .shadow(color: Color.black.opacity(0.8), radius: 2)
                 .frame(width: 14)
             }
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
 
         case .capsule:
             // Preset 2: Original cyber capsule: solid black Dynamic Island pill with neon gradient border
-            HStack(spacing: 7) {
-                Image(systemName: iconName)
-                    .font(.system(size: 8.5, weight: .bold))
-                    .foregroundStyle(isHovered ? activeTextColor : activeTextColor.opacity(0.85))
-                    .frame(width: 12)
+            HStack(spacing: 8) {
+                InteractiveFloatingLyricIconView(
+                    style: activeIconStyle,
+                    nowPlaying: nowPlaying,
+                    accentColor: activeTextColor,
+                    onAction: { nowPlaying.togglePlayPause() }
+                )
 
                 ZStack {
                     Text(activeDisplayText)
@@ -739,13 +1427,13 @@ struct SubNotchFloatingLyricCapsuleView: View {
                         .foregroundStyle(isRealLyric ? activeTextColor : activeTextColor.opacity(0.85))
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .id(activeDisplayText)
+                        .id("\(activeDisplayText)-\(floatingLyricFontDesign)-\(floatingLyricFontSize)")
                         .transition(.asymmetric(
                             insertion: .opacity.combined(with: .offset(y: 5)),
                             removal: .opacity.combined(with: .offset(y: -5))
                         ))
                 }
-                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: true, vertical: false)
 
                 CyberAudioSpectrumView(
                     barCount: 3,
@@ -762,11 +1450,13 @@ struct SubNotchFloatingLyricCapsuleView: View {
 
         case .frostedGlass:
             // Preset 3: Apple-style translucent frosted blur pill with hairline border
-            HStack(spacing: 7) {
-                Image(systemName: iconName)
-                    .font(.system(size: 8.5, weight: .medium))
-                    .foregroundStyle(isHovered ? Color.white : Color.white.opacity(0.8))
-                    .frame(width: 12)
+            HStack(spacing: 8) {
+                InteractiveFloatingLyricIconView(
+                    style: activeIconStyle,
+                    nowPlaying: nowPlaying,
+                    accentColor: activeTextColor,
+                    onAction: { nowPlaying.togglePlayPause() }
+                )
 
                 ZStack {
                     Text(activeDisplayText)
@@ -775,13 +1465,13 @@ struct SubNotchFloatingLyricCapsuleView: View {
                         .shadow(color: Color.black.opacity(0.5), radius: 2, x: 0, y: 1)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .id(activeDisplayText)
+                        .id("\(activeDisplayText)-\(floatingLyricFontDesign)-\(floatingLyricFontSize)")
                         .transition(.asymmetric(
                             insertion: .opacity.combined(with: .offset(y: 4)),
                             removal: .opacity.combined(with: .offset(y: -4))
                         ))
                 }
-                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: true, vertical: false)
 
                 CyberAudioSpectrumView(
                     barCount: 3,
@@ -798,15 +1488,17 @@ struct SubNotchFloatingLyricCapsuleView: View {
 
         case .neonHud:
             // Preset 4: Cyberpunk HUD with technical bracket telemetry styling
-            HStack(spacing: 6) {
+            HStack(spacing: 7) {
                 Text("[")
                     .font(.system(size: CGFloat(floatingLyricFontSize), weight: .black, design: .monospaced))
                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.9))
 
-                Image(systemName: iconName)
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                    .frame(width: 11)
+                InteractiveFloatingLyricIconView(
+                    style: activeIconStyle,
+                    nowPlaying: nowPlaying,
+                    accentColor: Color(red: 0.0, green: 0.96, blue: 0.83),
+                    onAction: { nowPlaying.togglePlayPause() }
+                )
 
                 ZStack {
                     Text(activeDisplayText)
@@ -815,13 +1507,13 @@ struct SubNotchFloatingLyricCapsuleView: View {
                         .shadow(color: activeTextColor.opacity(0.4), radius: 3)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .id(activeDisplayText)
+                        .id("\(activeDisplayText)-\(floatingLyricFontDesign)-\(floatingLyricFontSize)")
                         .transition(.asymmetric(
                             insertion: .opacity.combined(with: .offset(y: 4)),
                             removal: .opacity.combined(with: .offset(y: -4))
                         ))
                 }
-                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: true, vertical: false)
 
                 CyberAudioSpectrumView(
                     barCount: 3,
@@ -865,47 +1557,53 @@ struct SubNotchFloatingLyricCapsuleView: View {
 
         case .retroPixel:
             // Preset 6: 8-Bit Retro Arcade — stepped pixel typography & live pixel audio spectrum
-            HStack(spacing: 6) {
-                Text("▶")
-                    .font(.system(size: 8, weight: .black, design: .monospaced))
-                    .foregroundStyle((MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme).color)
-                    .frame(width: 10)
+            let lyricFontSize: CGFloat = max(CGFloat(floatingLyricFontSize) * 1.25, 12.5)
+            HStack(spacing: 7) {
+                InteractiveFloatingLyricIconView(
+                    style: activeIconStyle,
+                    nowPlaying: nowPlaying,
+                    accentColor: (MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme).color,
+                    onAction: { nowPlaying.togglePlayPause() }
+                )
 
                 ZStack {
                     Text(activeDisplayText)
-                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .bold, design: .monospaced))
+                        .font(.system(size: lyricFontSize, weight: .bold, design: .monospaced))
                         .foregroundStyle(activeTextColor)
+                        .shadow(color: activeTextColor.opacity(0.4), radius: 3)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .id(activeDisplayText)
+                        .id("\(activeDisplayText)-\(floatingLyricFontDesign)-\(floatingLyricFontSize)")
                         .transition(.asymmetric(
                             insertion: .opacity.combined(with: .offset(y: 4)),
                             removal: .opacity.combined(with: .offset(y: -4))
                         ))
                 }
-                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: true, vertical: false)
 
                 CyberAudioSpectrumView(
                     barCount: 3,
                     isPlaying: nowPlaying.isPlaying,
-                    barWidth: 1.8,
-                    segmentHeight: 1.4,
-                    segmentSpacing: 0.6,
+                    barWidth: 2.0,
+                    segmentHeight: 1.6,
+                    segmentSpacing: 0.7,
                     palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
                 )
-                .frame(width: 14)
+                .frame(width: 16)
             }
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 10)
             .padding(.vertical, 4.5)
 
         case .liquidAurora:
             // Preset 7: Liquid Aurora — translucent pill with flowing multi-color ambient glow behind lyrics
             HStack(spacing: 7) {
-                Image(systemName: "music.note.sparkles")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), radius: 3)
-                    .frame(width: 12)
+                InteractiveFloatingLyricIconView(
+                    style: activeIconStyle,
+                    nowPlaying: nowPlaying,
+                    accentColor: Color(red: 0.0, green: 0.96, blue: 0.83),
+                    onAction: { nowPlaying.togglePlayPause() }
+                )
 
                 ZStack {
                     Text(activeDisplayText)
@@ -915,13 +1613,13 @@ struct SubNotchFloatingLyricCapsuleView: View {
                         .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.4), radius: 5)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .id(activeDisplayText)
+                        .id("\(activeDisplayText)-\(floatingLyricFontDesign)-\(floatingLyricFontSize)")
                         .transition(.asymmetric(
                             insertion: .opacity.combined(with: .offset(y: 4)),
                             removal: .opacity.combined(with: .offset(y: -4))
                         ))
                 }
-                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: true, vertical: false)
 
                 ModernAudioSpectrumView(
                     barCount: 3,
@@ -932,8 +1630,9 @@ struct SubNotchFloatingLyricCapsuleView: View {
                 )
                 .frame(width: 14)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 5)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4.5)
 
         case .minimalBraun:
             // Preset 8: Braun Industrial — studio monitor strip with live recording status dot & Swiss typography
@@ -958,13 +1657,13 @@ struct SubNotchFloatingLyricCapsuleView: View {
                         .foregroundStyle(Color.white.opacity(0.95))
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .id(activeDisplayText)
+                        .id("\(activeDisplayText)-\(floatingLyricFontDesign)-\(floatingLyricFontSize)")
                         .transition(.asymmetric(
                             insertion: .opacity.combined(with: .offset(y: 3)),
                             removal: .opacity.combined(with: .offset(y: -3))
                         ))
                 }
-                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: true, vertical: false)
 
                 ModernAudioSpectrumView(
                     barCount: 3,
@@ -975,8 +1674,141 @@ struct SubNotchFloatingLyricCapsuleView: View {
                 )
                 .frame(width: 12)
             }
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 10)
             .padding(.vertical, 4.5)
+
+        case .tapeReel:
+            // Preset 9: Teenage Engineering TP-7 Tape Reel
+            // Dual spinning tape spools, phosphor amber VFD glow (#FFAE19), hardware 3-dot peak LED VU meter
+            let reelAmber = Color(red: 1.0, green: 0.68, blue: 0.10)
+            HStack(spacing: 7) {
+                TeenageTapeReelView(isPlaying: nowPlaying.isPlaying, color: reelAmber)
+
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .bold, design: .monospaced))
+                        .foregroundStyle(reelAmber)
+                        .shadow(color: reelAmber.opacity(0.85), radius: 3)
+                        .shadow(color: Color.black.opacity(0.9), radius: 2, y: 1)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id("\(activeDisplayText)-\(floatingLyricFontDesign)-\(floatingLyricFontSize)")
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 4)),
+                            removal: .opacity.combined(with: .offset(y: -4))
+                        ))
+                }
+                .fixedSize(horizontal: true, vertical: false)
+
+                // 3-dot LED hardware peak meter
+                HStack(spacing: 2.5) {
+                    Circle()
+                        .fill(nowPlaying.isPlaying ? Color(red: 0.20, green: 0.88, blue: 0.65) : Color.white.opacity(0.2))
+                        .frame(width: 3.5, height: 3.5)
+                    Circle()
+                        .fill(nowPlaying.isPlaying ? reelAmber : Color.white.opacity(0.2))
+                        .frame(width: 3.5, height: 3.5)
+                    Circle()
+                        .fill(nowPlaying.isPlaying ? Color(red: 1.0, green: 0.20, blue: 0.20) : Color.white.opacity(0.2))
+                        .frame(width: 3.5, height: 3.5)
+                }
+                .frame(width: 16)
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4.5)
+
+        case .vinylGroove:
+            // Preset 10: Vinyl Groove Scribe & Tonearm
+            // Micro rotating 12-inch vinyl disc, metallic tonearm, SIDE A badge, elegant serif typography
+            HStack(spacing: 7) {
+                MicroVinylRecordView(isPlaying: nowPlaying.isPlaying, accentColor: activeTextColor)
+
+                Text("SIDE A")
+                    .font(.system(size: 6.5, weight: .black, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.6))
+                    .padding(.horizontal, 3.5)
+                    .padding(.vertical, 1.5)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 2.5))
+
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .semibold, design: .serif))
+                        .foregroundStyle(Color.white.opacity(0.95))
+                        .italic()
+                        .shadow(color: Color.black.opacity(0.75), radius: 2.5, y: 1.2)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id("\(activeDisplayText)-\(floatingLyricFontDesign)-\(floatingLyricFontSize)")
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 3)),
+                            removal: .opacity.combined(with: .offset(y: -3))
+                        ))
+                }
+                .fixedSize(horizontal: true, vertical: false)
+
+                ModernAudioSpectrumView(
+                    barCount: 3,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: 1.5,
+                    maxHeight: 8.5,
+                    color: Color.white.opacity(0.85)
+                )
+                .frame(width: 12)
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4.5)
+
+        case .fluidKaraoke:
+            // Preset 11: Apple Music Spatial Fluid Wave
+            // Liquid chromatic iridescent sweep across words, live silk sine wave spectrum
+            let waveColor = (MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme).color
+            HStack(spacing: 7) {
+                InteractiveFloatingLyricIconView(
+                    style: activeIconStyle,
+                    nowPlaying: nowPlaying,
+                    accentColor: waveColor,
+                    onAction: { nowPlaying.togglePlayPause() }
+                )
+
+                ZStack {
+                    Text(activeDisplayText)
+                        .font(.system(size: CGFloat(floatingLyricFontSize), weight: .bold, design: activeFontDesign))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [
+                                    Color.white,
+                                    Color(red: 0.95, green: 0.95, blue: 1.0),
+                                    waveColor.opacity(0.95)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .shadow(color: Color.black.opacity(0.8), radius: 3, y: 1.5)
+                        .shadow(color: waveColor.opacity(0.4), radius: 6)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .id("\(activeDisplayText)-\(floatingLyricFontDesign)-\(floatingLyricFontSize)")
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: 4)),
+                            removal: .opacity.combined(with: .offset(y: -4))
+                        ))
+                }
+                .fixedSize(horizontal: true, vertical: false)
+
+                FluidSilkWaveView(isPlaying: nowPlaying.isPlaying, color: waveColor)
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4.5)
+
+        case .connectedChin, .bilateralWings:
+            // Integrated directly into the notch bar silhouette
+            EmptyView()
         }
     }
 
@@ -1123,6 +1955,65 @@ struct SubNotchFloatingLyricCapsuleView: View {
                         )
                 )
                 .shadow(color: Color.black.opacity(0.8), radius: 6, y: 2.5)
+
+        case .tapeReel:
+            // Chiseled matte charcoal aluminum chassis with amber phosphor rim
+            let reelAmber = Color(red: 1.0, green: 0.68, blue: 0.10)
+            RoundedRectangle(cornerRadius: 5)
+                .fill(Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.96))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(
+                            reelAmber.opacity(isHovered ? 0.85 : 0.45),
+                            lineWidth: 0.8
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.9), radius: 7, y: 3)
+                .shadow(color: reelAmber.opacity(isHovered ? 0.35 : 0.12), radius: 5)
+
+        case .vinylGroove:
+            // Vintage acoustic warm charcoal capsule with brass hairline
+            Capsule()
+                .fill(Color(red: 0.06, green: 0.06, blue: 0.08).opacity(0.96))
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.85, green: 0.72, blue: 0.50).opacity(isHovered ? 0.65 : 0.35),
+                                    Color(red: 0.40, green: 0.35, blue: 0.25).opacity(0.20)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 0.75
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.85), radius: 6, y: 3)
+
+        case .fluidKaraoke:
+            // VisionOS refractive specular glass capsule with soft chromatic fringe
+            Capsule()
+                .fill(Color.black.opacity(0.68))
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(isHovered ? 0.55 : 0.32),
+                                    Color(red: 0.0, green: 0.96, blue: 0.83).opacity(isHovered ? 0.45 : 0.20),
+                                    Color(red: 1.0, green: 0.16, blue: 0.53).opacity(isHovered ? 0.35 : 0.15)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.85
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.85), radius: 8, y: 3)
+
+        case .connectedChin, .bilateralWings:
+            EmptyView()
         }
     }
 
@@ -1163,6 +2054,12 @@ struct SubNotchFloatingLyricCapsuleView: View {
             }
         }
         .onChange(of: floatingLyricFontDesign) { _, _ in
+            let target = calculateTargetWidth(for: activeDisplayText, preset: activePreset)
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.76)) {
+                capsuleWidth = target
+            }
+        }
+        .onChange(of: floatingLyricIconStyle) { _, _ in
             let target = calculateTargetWidth(for: activeDisplayText, preset: activePreset)
             withAnimation(.spring(response: 0.38, dampingFraction: 0.76)) {
                 capsuleWidth = target
@@ -1376,10 +2273,14 @@ struct ModernCleanMusicHUDContentView: View {
                     Spacer(minLength: 2)
 
                     // Di tengah: Scrubber Bar & Durasi (diberi padding kanan agar tidak mepet border)
+                    // The position comes from the anchor; a local timeline at
+                    // two ticks a second keeps the bar smooth without the
+                    // manager publishing four times a second.
+                    TimelineView(.periodic(from: .now, by: 0.5)) { timeline in
                     VStack(spacing: 2) {
                         GeometryReader { geo in
                             let totalWidth = geo.size.width
-                            let effectivePosition = dragPosition ?? nowPlaying.playerPosition
+                            let effectivePosition = dragPosition ?? nowPlaying.position(at: timeline.date)
                             let progressFraction: CGFloat = nowPlaying.trackDuration > 0
                                 ? min(1.0, max(0.0, CGFloat(effectivePosition / nowPlaying.trackDuration)))
                                 : 0.0
@@ -1416,7 +2317,7 @@ struct ModernCleanMusicHUDContentView: View {
                         .frame(height: 3)
 
                         HStack {
-                            let effectivePosition = dragPosition ?? nowPlaying.playerPosition
+                            let effectivePosition = dragPosition ?? nowPlaying.position(at: timeline.date)
                             Text(formatTime(effectivePosition))
                                 .font(.system(size: 7.5, weight: .medium, design: .monospaced))
                                 .foregroundStyle(Color.white.opacity(0.48))
@@ -1427,6 +2328,7 @@ struct ModernCleanMusicHUDContentView: View {
                         }
                     }
                     .padding(.trailing, 10)
+                    }
 
                     Spacer(minLength: 2)
 
@@ -1711,8 +2613,9 @@ struct RetroCyberMusicHUDContentView: View {
                 .help(nowPlaying.isBrowserJSHintVisible ? nowPlaying.browserJSHintText : "Click to focus active music player")
 
                 // Segmented 8-Bit Pixel Scrubber
+                TimelineView(.periodic(from: .now, by: 0.5)) { timeline in
                 let totalSegments = 18
-                let effectivePosition = dragPosition ?? nowPlaying.playerPosition
+                let effectivePosition = dragPosition ?? nowPlaying.position(at: timeline.date)
                 let progressFraction = nowPlaying.trackDuration > 0
                     ? min(1.0, max(0.0, effectivePosition / nowPlaying.trackDuration))
                     : 0.0
@@ -1763,6 +2666,7 @@ struct RetroCyberMusicHUDContentView: View {
                             .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.white.opacity(0.50))
                     }
+                }
                 }
 
                 // Transport Controls + STEREO EQUALIZER INTEGRATED SIDE-BY-SIDE
@@ -1852,18 +2756,18 @@ struct RetroCyberMusicHUDContentView: View {
                             LazyVStack(alignment: .leading, spacing: 4) {
                                 ForEach(nowPlaying.lyrics) { line in
                                     let isCurrent = (line.id == nowPlaying.currentLyricIndex)
-                                    HStack(alignment: .top, spacing: 4) {
+                                    HStack(alignment: .top, spacing: 5) {
                                         Text(isCurrent ? "▶" : " ")
-                                            .font(.system(size: 8.5, weight: .black, design: .monospaced))
+                                            .font(.system(size: 10, weight: .black, design: .monospaced))
                                             .foregroundStyle(activeProgressColor)
                                         Text(line.text)
-                                            .font(.system(size: 8.5, weight: isCurrent ? .bold : .medium, design: .monospaced))
-                                            .foregroundStyle(isCurrent ? activeProgressColor : Color.white.opacity(0.38))
-                                            .shadow(color: isCurrent ? activeProgressColor.opacity(0.6) : Color.clear, radius: 4)
+                                            .font(.system(size: isCurrent ? 11.5 : 9.5, weight: isCurrent ? .bold : .medium, design: .monospaced))
+                                            .foregroundStyle(isCurrent ? activeProgressColor : Color.white.opacity(0.42))
+                                            .shadow(color: isCurrent ? activeProgressColor.opacity(0.65) : Color.clear, radius: 5)
                                             .lineLimit(2)
                                     }
-                                    .padding(.horizontal, 2)
-                                    .padding(.vertical, 1)
+                                    .padding(.horizontal, 3)
+                                    .padding(.vertical, 1.5)
                                     .contentShape(Rectangle())
                                     .onTapGesture {
                                         nowPlaying.seek(to: line.timestamp)
