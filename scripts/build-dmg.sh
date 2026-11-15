@@ -71,6 +71,13 @@ CURRENT_VER=$(defaults read "$REPO_ROOT/Info.plist" CFBundleShortVersionString)
 sed -e "s/<string>${CURRENT_VER}<\/string>/<string>${VERSION}<\/string>/g" \
     "$REPO_ROOT/Info.plist" > "$CONTENTS_DIR/Info.plist"
 
+# Direct beta builds to the isolated beta feed URL
+if [[ "$VERSION" =~ (-dev|-beta) ]]; then
+    sed -i '' 's|https://codeisland.azhr.cloud/appcast.xml|https://codeisland.azhr.cloud/appcast-dev.xml|g' "$CONTENTS_DIR/Info.plist" 2>/dev/null || \
+    sed -i 's|https://codeisland.azhr.cloud/appcast.xml|https://codeisland.azhr.cloud/appcast-dev.xml|g' "$CONTENTS_DIR/Info.plist"
+    echo "==> Configured Sparkle Beta feed: appcast-dev.xml"
+fi
+
 # Compile app icon and asset catalog (requires Xcode.app, fallback to bundled AppIcon on CLT)
 if xcrun --find actool >/dev/null 2>&1; then
     xcrun actool \
