@@ -125,8 +125,10 @@ public final class MailManager: ObservableObject {
                 recentMails = []
                 knownLatestMailId = nil
                 hasCompletedInitialBaseline = false
-                lastProbedUnreadCount = nil
-                lastProbedTopMessageId = nil
+                baselineUnreadCount = nil
+                pendingCountTriggeredArrivals = 0
+                lastRemoteCheckTime = .distantPast
+                dockMailItemElement = nil
             }
         }
     }
@@ -146,15 +148,18 @@ public final class MailManager: ObservableObject {
     private var pollingTimer: Timer?
     private var dockObserver: AXObserver?
     private var dockObservedElement: AXUIElement?
+    private var dockMailItemElement: AXUIElement?
     private var dockDebounceWorkItem: DispatchWorkItem?
     private var workspaceObservers: [NSObjectProtocol] = []
     private var mailArrivalDismissTimer: Timer?
     private var knownLatestMailId: Int? = nil
     private var hasCompletedInitialBaseline: Bool = false
-    private var lastProbedUnreadCount: Int? = nil
-    private var lastProbedTopMessageId: Int? = nil
+    private var baselineUnreadCount: Int? = nil
+    private var pendingCountTriggeredArrivals: Int = 0
+    private var unreadObservationEpoch: Int = 0
     private var lastRemoteCheckTime: Date = .distantPast
     private var isProbing: Bool = false
+    private var isCheckingRemote: Bool = false
     private var pendingImmediateRefresh: Bool = false
 
     private init() {
@@ -164,8 +169,9 @@ public final class MailManager: ObservableObject {
             startPolling()
             startDockBadgeObserver()
             registerWorkspaceObservers()
-            // Initial delayed fetch to avoid startup race
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            // Fast initial unread probe (~0.15s) right after startup, then detail sync in background
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.fastProbeOrSync()
                 self?.refresh(checkRemote: true)
             }
         }
@@ -214,8 +220,9 @@ public final class MailManager: ObservableObject {
     public func startPolling() {
         stopPolling()
         guard isEnabled, !RuntimeEnvironment.isRunningTests else { return }
-        // Fast 3s lightweight probe catches Mail push updates promptly while Dock AXObserver triggers instantaneously (<0.2s)
-        pollingTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+        // Fast 1.5s lightweight unread-only probe (~0.15s) catches new emails promptly without saturating Mail.app;
+        // Dock AXObserver + AXStatusLabel triggers instantaneously (<0.05s) when Accessibility permission is granted.
+        pollingTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.fastProbeOrSync()
             }
@@ -228,6 +235,50 @@ public final class MailManager: ObservableObject {
     }
 
     // MARK: - Instant Dock Badge Watcher & Lightweight Fast Probe
+
+    private func findMailDockItem(dockPid: pid_t) -> AXUIElement? {
+        let dockApp = AXUIElementCreateApplication(dockPid)
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(dockApp, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let lists = childrenRef as? [AXUIElement] else {
+            return nil
+        }
+        for list in lists {
+            var itemsRef: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(list, kAXChildrenAttribute as CFString, &itemsRef) == .success,
+                  let items = itemsRef as? [AXUIElement] else {
+                continue
+            }
+            for item in items {
+                var urlRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(item, kAXURLAttribute as CFString, &urlRef) == .success,
+                   let url = urlRef as? URL, url.lastPathComponent == "Mail.app" {
+                    return item
+                }
+                var titleRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(item, kAXTitleAttribute as CFString, &titleRef) == .success,
+                   (titleRef as? String) == "Mail" {
+                    return item
+                }
+            }
+        }
+        return nil
+    }
+
+    private func readDockUnreadBadge() -> Int? {
+        guard AXIsProcessTrusted() else { return nil }
+        if dockMailItemElement == nil,
+           let dockPid = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").first?.processIdentifier {
+            dockMailItemElement = findMailDockItem(dockPid: dockPid)
+        }
+        guard let item = dockMailItemElement else { return nil }
+        var statusRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(item, "AXStatusLabel" as CFString, &statusRef) == .success,
+              let raw = statusRef as? String else {
+            return nil
+        }
+        return Self.parseDockBadgeCount(raw)
+    }
 
     private func startDockBadgeObserver() {
         stopDockBadgeObserver()
@@ -242,13 +293,19 @@ public final class MailManager: ObservableObject {
         }
 
         let dockElement = AXUIElementCreateApplication(dockPid)
+        let mailItem = findMailDockItem(dockPid: dockPid)
         let refcon = Unmanaged.passUnretained(self).toOpaque()
         AXObserverAddNotification(observer, dockElement, kAXValueChangedNotification as CFString, refcon)
         AXObserverAddNotification(observer, dockElement, kAXTitleChangedNotification as CFString, refcon)
+        if let mailItem {
+            AXObserverAddNotification(observer, mailItem, kAXValueChangedNotification as CFString, refcon)
+            AXObserverAddNotification(observer, mailItem, kAXTitleChangedNotification as CFString, refcon)
+        }
         CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
 
         self.dockObserver = observer
         self.dockObservedElement = dockElement
+        self.dockMailItemElement = mailItem
     }
 
     private func stopDockBadgeObserver() {
@@ -257,10 +314,15 @@ public final class MailManager: ObservableObject {
         if let observer = dockObserver, let dockElement = dockObservedElement {
             AXObserverRemoveNotification(observer, dockElement, kAXValueChangedNotification as CFString)
             AXObserverRemoveNotification(observer, dockElement, kAXTitleChangedNotification as CFString)
+            if let mailItem = dockMailItemElement {
+                AXObserverRemoveNotification(observer, mailItem, kAXValueChangedNotification as CFString)
+                AXObserverRemoveNotification(observer, mailItem, kAXTitleChangedNotification as CFString)
+            }
             CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
         }
         dockObserver = nil
         dockObservedElement = nil
+        dockMailItemElement = nil
     }
 
     private func registerWorkspaceObservers() {
@@ -323,62 +385,114 @@ public final class MailManager: ObservableObject {
         guard isEnabled else { return }
         dockDebounceWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
-            self?.refresh(checkRemote: false)
+            guard let self else { return }
+            if let badge = self.readDockUnreadBadge(),
+               let prev = self.baselineUnreadCount,
+               badge > prev {
+                self.handleObservedUnreadCount(badge, triggerDetailFetch: true)
+                return
+            }
+            self.fastProbeOrSync()
         }
         dockDebounceWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: work)
     }
 
     private func fastProbeOrSync() {
-        guard isEnabled, !isRefreshing, !isProbing else { return }
+        guard isEnabled else { return }
+        if dockObserver == nil && AXIsProcessTrusted() {
+            startDockBadgeObserver()
+        }
+
         let isMailRunning = !NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.mail").isEmpty
         guard isMailRunning else { return }
 
-        // Periodically kick Mail's remote IMAP/POP check every 30s alongside push
-        if Date().timeIntervalSince(lastRemoteCheckTime) >= 30.0 {
-            refresh(checkRemote: true)
-            return
+        // Instant zero-AppleScript badge jump check when Dock Accessibility is trusted
+        if let badge = readDockUnreadBadge(),
+           let prev = baselineUnreadCount,
+           badge > prev {
+            handleObservedUnreadCount(badge, triggerDetailFetch: true)
         }
 
+        // Kick Mail's remote IMAP/POP check every 45s asynchronously without blocking the fast unread probe
+        if !isCheckingRemote && !isRefreshing && Date().timeIntervalSince(lastRemoteCheckTime) >= 45.0 {
+            triggerRemoteMailCheck()
+        }
+
+        guard !isProbing else { return }
         isProbing = true
         Task.detached(priority: .utility) { [weak self] in
+            // Single-property query (`unread count of inbox`) runs in ~0.14s even on 14k+ message inboxes
+            // because it avoids resolving `count of messages` or `message 1` object indices.
             let script = """
             tell application "Mail"
-                set unreadTotal to 0
                 try
-                    set unreadTotal to unread count of inbox
+                    return unread count of inbox
+                on error
+                    return -1
                 end try
-                set topId to 0
-                try
-                    if (count of messages of inbox) > 0 then
-                        set topId to id of message 1 of inbox
-                    end if
-                end try
-                return (unreadTotal as string) & "<#>" & (topId as string)
             end tell
             """
-            let raw = AppleScriptRunner.current.evaluate(script, 4.0)
+            let raw = AppleScriptRunner.current.evaluate(script, 6.0)
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.isProbing = false
                 guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
-                      !trimmed.isEmpty else { return }
-                let parts = trimmed.components(separatedBy: "<#>")
-                guard parts.count >= 2,
-                      let count = Int(parts[0]),
-                      let topId = Int(parts[1]) else { return }
-
-                let changed = !self.hasCompletedInitialBaseline
-                    || self.lastProbedUnreadCount != count
-                    || self.lastProbedTopMessageId != topId
-
-                self.lastProbedUnreadCount = count
-                self.lastProbedTopMessageId = topId
-
-                if changed {
-                    self.refresh(checkRemote: false)
-                }
+                      let count = Int(trimmed), count >= 0 else { return }
+                self.handleObservedUnreadCount(count, triggerDetailFetch: true)
             }
+        }
+    }
+
+    private func triggerRemoteMailCheck() {
+        isCheckingRemote = true
+        lastRemoteCheckTime = Date()
+        Task.detached(priority: .utility) { [weak self] in
+            let script = """
+            tell application "Mail"
+                try
+                    check for new mail
+                end try
+            end tell
+            """
+            _ = AppleScriptRunner.current.evaluate(script, 12.0)
+            await MainActor.run { [weak self] in
+                self?.isCheckingRemote = false
+            }
+        }
+    }
+
+    private func handleObservedUnreadCount(_ count: Int, triggerDetailFetch: Bool) {
+        unreadObservationEpoch += 1
+        let jump = Self.evaluateUnreadCountJump(newCount: count, baselineUnreadCount: baselineUnreadCount)
+        let prev = baselineUnreadCount
+        baselineUnreadCount = jump.nextBaseline
+        unreadCount = count
+
+        if prev == nil {
+            if triggerDetailFetch && recentMails.isEmpty {
+                refresh(checkRemote: false)
+            }
+            return
+        }
+
+        if jump.shouldTrigger {
+            pendingCountTriggeredArrivals += 1
+            let placeholder = MailItem(
+                id: knownLatestMailId ?? 0,
+                senderRaw: "Apple Mail",
+                senderName: "New Email",
+                senderEmail: "",
+                subject: "\(count) unread in Inbox",
+                dateReceived: "just now",
+                isRead: false
+            )
+            triggerNewMailArrival(latestArrivalMail ?? placeholder)
+            if triggerDetailFetch {
+                refresh(checkRemote: false)
+            }
+        } else if let prev, count < prev, triggerDetailFetch {
+            refresh(checkRemote: false)
         }
     }
 
@@ -390,6 +504,7 @@ public final class MailManager: ObservableObject {
             return
         }
         isRefreshing = true
+        let startEpoch = unreadObservationEpoch
         if checkRemote {
             lastRemoteCheckTime = Date()
         }
@@ -421,24 +536,20 @@ public final class MailManager: ObservableObject {
                     set unreadTotal to unread count of inbox
                 end try
                 set topMsgId to 0
-                try
-                    if (count of messages of inbox) > 0 then
-                        set topMsgId to id of message 1 of inbox
-                    end if
-                end try
                 set mailList to ""
                 repeat with i from 1 to 5
                     try
                         set m to message i of inbox
+                        set msgId to id of m
+                        if i = 1 then set topMsgId to msgId
                         if not (read status of m) then
-                            set msgId to id of m as string
                             set msgSender to sender of m as string
                             set msgSubj to subject of m as string
                             set msgDate to "Recent"
                             try
                                 set msgDate to (date received of m) as «class isot» as string
                             end try
-                            set mailList to mailList & msgId & "<|>" & msgSender & "<|>" & msgSubj & "<|>" & msgDate & "<#LINE#>"
+                            set mailList to mailList & (msgId as string) & "<|>" & msgSender & "<|>" & msgSubj & "<|>" & msgDate & "<#LINE#>"
                         end if
                     end try
                 end repeat
@@ -446,14 +557,14 @@ public final class MailManager: ObservableObject {
             end tell
             """
 
-            let rawOutput = AppleScriptRunner.current.evaluate(script, 25.0)
+            let rawOutput = AppleScriptRunner.current.evaluate(script, 55.0)
 
             await MainActor.run { [weak self] in
                 guard let self = self else { return }
                 self.isRefreshing = false
                 self.lastRefreshed = Date()
                 if let output = rawOutput?.trimmingCharacters(in: .whitespacesAndNewlines), !output.isEmpty {
-                    self.parseOutput(output)
+                    self.parseOutput(output, startedAtEpoch: startEpoch)
                 }
                 if self.pendingImmediateRefresh {
                     self.pendingImmediateRefresh = false
@@ -461,6 +572,25 @@ public final class MailManager: ObservableObject {
                 }
             }
         }
+    }
+
+    /// Extracts an integer badge count from Dock's localized `AXStatusLabel` string (e.g. "14,472").
+    nonisolated public static func parseDockBadgeCount(_ raw: String?) -> Int? {
+        guard let raw else { return nil }
+        let digits = raw.filter(\.isNumber)
+        guard !digits.isEmpty else { return nil }
+        return Int(digits)
+    }
+
+    /// Evaluates whether an unread-count sample jumped upward after the initial baseline was established.
+    nonisolated public static func evaluateUnreadCountJump(
+        newCount: Int,
+        baselineUnreadCount: Int?
+    ) -> (shouldTrigger: Bool, nextBaseline: Int) {
+        guard let prev = baselineUnreadCount else {
+            return (false, newCount)
+        }
+        return (newCount > prev, newCount)
     }
 
     /// Evaluates whether the latest unread item represents a brand-new email arrival after the initial baseline
@@ -481,19 +611,17 @@ public final class MailManager: ObservableObject {
         return (true, topItem.id, true)
     }
 
-    private func parseOutput(_ output: String) {
+    private func parseOutput(_ output: String, startedAtEpoch: Int) {
         let parts = output.components(separatedBy: "<#HEADER#>")
         guard !parts.isEmpty else { return }
 
         // 1. Unread count & top inbox message ID
         let headerFields = parts[0].components(separatedBy: "<#TOP#>")
         if let count = Int(headerFields[0].trimmingCharacters(in: .whitespacesAndNewlines)) {
-            self.unreadCount = count
-            self.lastProbedUnreadCount = count
-        }
-        if headerFields.count > 1,
-           let topMsgId = Int(headerFields[1].trimmingCharacters(in: .whitespacesAndNewlines)) {
-            self.lastProbedTopMessageId = topMsgId
+            if startedAtEpoch == self.unreadObservationEpoch || self.baselineUnreadCount == nil {
+                self.unreadCount = count
+                self.baselineUnreadCount = count
+            }
         }
 
         // 2. Mail list
@@ -525,7 +653,9 @@ public final class MailManager: ObservableObject {
             }
         }
 
-        // Detect new mail arrival (handles starting from 0 unread cleanly)
+        // Detect new mail arrival (handles starting from 0 unread cleanly).
+        // If an unread-count jump already fired the arrival animation immediately, consume that pending slot
+        // and enrich `latestArrivalMail` without re-triggering a duplicate animation seconds later.
         let arrivalDecision = Self.evaluateArrival(
             topItem: parsedItems.first,
             hasCompletedBaseline: self.hasCompletedInitialBaseline,
@@ -534,7 +664,12 @@ public final class MailManager: ObservableObject {
         self.hasCompletedInitialBaseline = arrivalDecision.nextHasBaseline
         self.knownLatestMailId = arrivalDecision.nextKnownLatestId
         if arrivalDecision.shouldTrigger, let topItem = parsedItems.first {
-            self.triggerNewMailArrival(topItem)
+            if self.pendingCountTriggeredArrivals > 0 {
+                self.pendingCountTriggeredArrivals = max(0, self.pendingCountTriggeredArrivals - 1)
+                self.latestArrivalMail = topItem
+            } else {
+                self.triggerNewMailArrival(topItem)
+            }
         }
 
         self.recentMails = parsedItems
@@ -583,6 +718,8 @@ public final class MailManager: ObservableObject {
         withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
             self.recentMails.removeAll { $0.id == id }
             self.unreadCount = max(0, self.unreadCount - 1)
+            self.baselineUnreadCount = self.unreadCount
+            self.unreadObservationEpoch += 1
         }
 
         Task.detached(priority: .userInitiated) {
@@ -593,7 +730,7 @@ public final class MailManager: ObservableObject {
                 end try
             end tell
             """
-            _ = AppleScriptRunner.current.evaluate(script, 5.0)
+            _ = AppleScriptRunner.current.evaluate(script, 20.0)
         }
     }
 
@@ -608,7 +745,7 @@ public final class MailManager: ObservableObject {
                 end try
             end tell
             """
-            _ = AppleScriptRunner.current.evaluate(script, 5.0)
+            _ = AppleScriptRunner.current.evaluate(script, 20.0)
         }
     }
 

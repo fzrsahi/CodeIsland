@@ -192,4 +192,33 @@ final class MailArrivalWingTests: XCTestCase {
         XCTAssertFalse(olderRevealed.shouldTrigger)
         XCTAssertEqual(olderRevealed.nextKnownLatestId, 200)
     }
+
+    func testUnreadCountJumpAndDockBadgeParsing() {
+        // Initial unread baseline does not trigger animation on startup
+        let initial = MailManager.evaluateUnreadCountJump(newCount: 14471, baselineUnreadCount: nil)
+        XCTAssertFalse(initial.shouldTrigger)
+        XCTAssertEqual(initial.nextBaseline, 14471)
+
+        // Same unread count does not trigger
+        let unchanged = MailManager.evaluateUnreadCountJump(newCount: 14471, baselineUnreadCount: initial.nextBaseline)
+        XCTAssertFalse(unchanged.shouldTrigger)
+        XCTAssertEqual(unchanged.nextBaseline, 14471)
+
+        // Upward jump immediately triggers arrival animation
+        let arrived = MailManager.evaluateUnreadCountJump(newCount: 14472, baselineUnreadCount: unchanged.nextBaseline)
+        XCTAssertTrue(arrived.shouldTrigger)
+        XCTAssertEqual(arrived.nextBaseline, 14472)
+
+        // Decreasing unread count updates baseline without triggering arrival
+        let cleared = MailManager.evaluateUnreadCountJump(newCount: 14470, baselineUnreadCount: arrived.nextBaseline)
+        XCTAssertFalse(cleared.shouldTrigger)
+        XCTAssertEqual(cleared.nextBaseline, 14470)
+
+        // Localized Dock AXStatusLabel badge strings parse cleanly
+        XCTAssertEqual(MailManager.parseDockBadgeCount("14,472"), 14472)
+        XCTAssertEqual(MailManager.parseDockBadgeCount("14.472"), 14472)
+        XCTAssertEqual(MailManager.parseDockBadgeCount("3"), 3)
+        XCTAssertNil(MailManager.parseDockBadgeCount(""))
+        XCTAssertNil(MailManager.parseDockBadgeCount(nil))
+    }
 }
