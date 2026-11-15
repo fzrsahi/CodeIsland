@@ -407,11 +407,38 @@ struct NotchPanelView: View {
         let clampedScale = Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))
         let widthScaleFactor = CGFloat(clampedScale) / 100.0
 
+        if isBilateralWingsLyricActive {
+            // PANORAMIC NOTCH WINGS MODE (Icon - Lirik - Notch Asli - Lirik - Icon)
+            // Dynamically scale wing width based on lyric text length so text is fully legible without truncation.
+            let curLyric = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let nextLyric = nowPlaying.nextLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let maxLyricLen = max(curLyric.count, nextLyric.count, nowPlaying.title.count)
+
+            let naturalLyricWing: CGFloat = {
+                if maxLyricLen >= 35 { return 270 }
+                if maxLyricLen >= 25 { return 255 }
+                if maxLyricLen >= 15 { return 240 }
+                if maxLyricLen >= 5 { return 225 }
+                return 210
+            }()
+
+            // Floor at 205pt so wings never collapse into a tiny unreadable stub, while allowing slider to expand up to ~310pt
+            let scaledLyricWing: CGFloat = {
+                if widthScaleFactor >= 1.0 {
+                    return naturalLyricWing + (naturalLyricWing * (widthScaleFactor - 1.0) * 0.4)
+                } else {
+                    let floorWing: CGFloat = 205
+                    return floorWing + (naturalLyricWing - floorWing) * widthScaleFactor
+                }
+            }()
+
+            let maxSafeLyricBarWidth = min(screenWidth * 0.56, 740)
+            let maxAllowedWing = max(205, (maxSafeLyricBarWidth - effectiveNotchW) / 2)
+            return min(scaledLyricWing, maxAllowedWing)
+        }
+
         // 1. Natural width required for Left Wing in each phase (Agent Mascot + Tool / Thinking / Quota)
         let effectiveNaturalLeft: CGFloat = {
-            if isBilateralWingsLyricActive {
-                return isPixel ? 210 : 200
-            }
             if isThinking {
                 return isPixel ? 96 : 88
             }
@@ -434,9 +461,6 @@ struct NotchPanelView: View {
 
         // 2. Natural width required for Right Wing in each phase (Music / Prayer / Actions / Standby)
         let effectiveNaturalRight: CGFloat = {
-            if isBilateralWingsLyricActive {
-                return isPixel ? 210 : 200
-            }
             if isHoveringRightWing {
                 return 115
             }
@@ -464,15 +488,15 @@ struct NotchPanelView: View {
             }
 
             if hasBranchOrProject {
-                let targetWidth = 58 + extraBadges
                 if rightWingWidth > 0 {
-                    return max(compactWingWidth, min(rightWingWidth + 8, min(targetWidth, isPixel ? 86 : 80)))
+                    return max(compactWingWidth, min(rightWingWidth + 6, isPixel ? 98 : 92))
                 }
-                return min(targetWidth, isPixel ? 86 : 80)
+                let targetWidth = 58 + extraBadges
+                return min(targetWidth, isPixel ? 92 : 86)
             } else {
                 // Clock / Idle mode: strictly compact
                 if rightWingWidth > 0 {
-                    return max(compactWingWidth, min(rightWingWidth + 8, 52))
+                    return max(compactWingWidth, min(rightWingWidth + 6, 52))
                 }
                 return compactWingWidth
             }
@@ -509,8 +533,8 @@ struct NotchPanelView: View {
 
         // 6. Absolute safe ceiling to guarantee it NEVER collides with the macOS menu bar:
         // Normal collapsed island never exceeds 400pt wide (or 38% screen width), leaving plenty of clearance for menu items.
-        // In wide contiguous lyric island mode, allows up to 480pt; in panoramic notch wings, allows up to 620pt.
-        let maxSafeCollapsedBarWidth = min(screenWidth * 0.44, isBilateralWingsLyricActive ? 620 : (isConnectedChinLyricActive ? 480 : 400))
+        // In wide contiguous lyric island mode, allows up to 480pt.
+        let maxSafeCollapsedBarWidth = min(screenWidth * 0.44, isConnectedChinLyricActive ? 480 : 400)
         let maxSingleWingWidth = max(absoluteMinimumWing, (maxSafeCollapsedBarWidth - effectiveNotchW) / 2)
         return min(scaledWingWidth, maxSingleWingWidth)
     }
@@ -560,7 +584,9 @@ struct NotchPanelView: View {
         if signals.showMiniPeekBanner && !appState.surface.isExpanded {
             return min(max(280, requiredActiveBarWidth), maxPanelWidth)
         }
-        let maxSafeCollapsed = min(screenWidth * 0.44, isBilateralWingsLyricActive ? 620 : (isConnectedChinLyricActive ? 480 : 400))
+        let maxSafeCollapsed = isBilateralWingsLyricActive
+            ? min(screenWidth * 0.56, 740)
+            : min(screenWidth * 0.44, isConnectedChinLyricActive ? 480 : 400)
         return min(requiredActiveBarWidth, maxSafeCollapsed)
     }
 
@@ -694,7 +720,7 @@ struct NotchPanelView: View {
 
     @ViewBuilder
     private var activeCompactBar: some View {
-        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : (symmetricWingWidth < 48 ? 6 : (symmetricWingWidth < 70 ? 8 : 10))
+        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : (isBilateralWingsLyricActive ? 12 : (symmetricWingWidth < 48 ? 6 : (symmetricWingWidth < 70 ? 8 : 10)))
 
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -1292,6 +1318,27 @@ private struct CompactLeftWing: View {
     @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
+    @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
+
+    private var resolvedLyricFont: (font: Font, tracking: CGFloat) {
+        let designEnum = FloatingLyricFontDesign(rawValue: floatingLyricFontDesign) ?? .rounded
+        let size = CGFloat(floatingLyricFontSize)
+        let isPix = isPixel || designEnum == .pixel
+        let weight: Font.Weight = isPix ? .bold : .bold
+        switch designEnum {
+        case .rounded:
+            return (.system(size: size, weight: weight, design: .rounded), 0.35)
+        case .monospaced:
+            return (.system(size: size, weight: weight, design: .monospaced), 0.50)
+        case .system:
+            return (.system(size: size, weight: weight, design: .default), 0.25)
+        case .serif:
+            return (.system(size: size, weight: weight, design: .serif), 0.25)
+        case .pixel:
+            return (.system(size: max(size, 9.5), weight: .bold, design: .monospaced), 0.8)
+        }
+    }
 
     private var musicPaletteAccent: Color? {
         guard signals.isPlaying else { return nil }
@@ -1386,7 +1433,13 @@ private struct CompactLeftWing: View {
                 )
                 .transition(.opacity)
             } else if isBilateralWingsLyricActive {
-                // PANORAMIC NOTCH WING: [Icon (Mascot)] [♫] [Lirik (Current Lyric)]
+                // PANORAMIC NOTCH WING (Left Wing): [Icon (Mascot)] [♫] [Lirik (Current Lyric)]
+                let lyricText = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+                let textToDisplay = !lyricText.isEmpty ? lyricText : (nowPlaying.lyricsLoading ? "Loading lyrics..." : (nowPlaying.title.isEmpty ? "♪ Music" : nowPlaying.title))
+                let trailingNotchBuffer: CGFloat = 14
+                let availableWidth = max(80, wingWidth > 0 ? (wingWidth - mascotSize - 34 - trailingNotchBuffer) : 180)
+                let fontInfo = resolvedLyricFont
+
                 HStack(spacing: 5) {
                     ZStack(alignment: .bottomTrailing) {
                         if signals.isPlaying && displayStatus == .idle && !isThinking && shownTool == nil {
@@ -1403,22 +1456,22 @@ private struct CompactLeftWing: View {
                     .fixedSize()
 
                     Image(systemName: "music.note")
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.system(size: 8.5, weight: .bold))
                         .foregroundStyle(musicPaletteAccent ?? (isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 1.0, green: 0.65, blue: 0.45)))
+                        .shadow(color: (musicPaletteAccent ?? Color(red: 0.0, green: 0.96, blue: 0.83)).opacity(0.5), radius: 3)
                         .fixedSize()
 
-                    let lyricText = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let textToDisplay = !lyricText.isEmpty ? lyricText : (nowPlaying.lyricsLoading ? "Loading lyrics..." : (nowPlaying.title.isEmpty ? "♪ Music" : nowPlaying.title))
-                    let availableWidth = max(50, wingWidth > 0 ? (wingWidth - mascotSize - 32) : 150)
-
                     ModernMarqueeText(
-                        text: isPixel ? textToDisplay.uppercased() : textToDisplay,
-                        font: .system(size: isPixel ? 8.5 : 9.0, weight: isPixel ? .bold : .semibold, design: isPixel ? .monospaced : .rounded),
+                        text: (isPixel || floatingLyricFontDesign == FloatingLyricFontDesign.pixel.rawValue) ? textToDisplay.uppercased() : textToDisplay,
+                        font: fontInfo.font,
                         color: .white,
+                        tracking: fontInfo.tracking,
                         maxWidth: availableWidth
                     )
+                    .shadow(color: Color.black.opacity(0.85), radius: 2, y: 1)
                 }
-                .frame(maxWidth: max(50, wingWidth > 0 ? (wingWidth - 10) : 170), alignment: .leading)
+                .padding(.trailing, trailingNotchBuffer)
+                .frame(maxWidth: max(80, wingWidth > 0 ? (wingWidth - trailingNotchBuffer) : 200), alignment: .leading)
             } else {
                 ZStack {
                     if signals.isPlaying && displayStatus == .idle && !isThinking && shownTool == nil {
@@ -1984,24 +2037,28 @@ private struct CompactRightWing: View {
                         }()
                         let availableForPill = wingWidth > 0 ? max(16, wingWidth - badgesWidth - 14) : 58
                         let showChevron = availableForPill >= 50
-                        let maxCharsForBranch: Int = {
-                            if availableForPill >= 52 { return 6 }
-                            if availableForPill >= 38 { return 4 }
-                            if availableForPill >= 26 { return 2 }
-                            return 0
+                        let branchText: String = {
+                            guard let branch = gitBranch, !branch.isEmpty else { return "" }
+                            if let dashIdx = branch.firstIndex(of: "-") {
+                                let prefix = String(branch[..<dashIdx])
+                                if prefix.contains("#") { return prefix }
+                            }
+                            return branch
                         }()
+                        let branchSpace = max(16, availableForPill - (showChevron ? 18 : 10) - 12)
+                        let maxCharsForBranch: Int = max(4, Int(branchSpace / (isPixel ? 6.0 : 5.5)))
 
                         HStack(spacing: 3) {
-                            if let branch = gitBranch, !branch.isEmpty {
+                            if !branchText.isEmpty {
                                 Image(systemName: "arrow.triangle.branch")
                                     .font(.system(size: 7.5, weight: .bold))
                                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
                                     .fixedSize()
                                 if maxCharsForBranch > 0 {
                                     if isPixel {
-                                        PixelText(text: branch.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: maxCharsForBranch)
+                                        PixelText(text: branchText.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: maxCharsForBranch)
                                     } else {
-                                        Text(branch)
+                                        Text(branchText)
                                             .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                                             .foregroundStyle(Color.white.opacity(0.92))
                                             .lineLimit(1)

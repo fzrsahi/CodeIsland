@@ -301,6 +301,7 @@ struct ModernMarqueeText: View {
     let text: String
     var font: Font = .system(size: 9.5, weight: .bold, design: .rounded)
     var color: Color = .white
+    var tracking: CGFloat = 0
     var maxWidth: CGFloat? = nil
     var centerShortText: Bool = false
     @Environment(\.animationGates) private var animationGates
@@ -318,9 +319,9 @@ struct ModernMarqueeText: View {
             } else {
                 Text(text)
                     .font(font)
+                    .tracking(tracking)
                     .foregroundStyle(color)
                     .lineLimit(1)
-                    .truncationMode(.tail)
                     .frame(width: containerWidth, height: geo.size.height, alignment: (centerShortText && excess == 0) ? .center : .leading)
                     .clipped()
             }
@@ -329,6 +330,7 @@ struct ModernMarqueeText: View {
         .background(
             Text(text)
                 .font(font)
+                .tracking(tracking)
                 .lineLimit(1)
                 .fixedSize()
                 .hidden()
@@ -343,9 +345,14 @@ struct ModernMarqueeText: View {
                 self.textWidth = width
             }
         }
-        .onChange(of: text) { _, _ in
+        .onAppear {
+            if textWidth == 0 {
+                textWidth = max(CGFloat(text.count) * 7.0, 10)
+            }
+        }
+        .onChange(of: text) { _, newText in
             startDate = Date()
-            textWidth = 0
+            textWidth = max(CGFloat(newText.count) * 7.0, 10)
         }
     }
 
@@ -379,9 +386,10 @@ struct ModernMarqueeText: View {
 
                 Text(text)
                     .font(font)
+                    .tracking(tracking)
                     .foregroundStyle(color)
                     .lineLimit(1)
-                    .fixedSize()
+                    .fixedSize(horizontal: true, vertical: false)
                     .background(
                         GeometryReader { textGeo in
                             Color.clear.preference(key: ModernMarqueeTextWidthKey.self, value: textGeo.size.width)
@@ -406,6 +414,8 @@ struct CyberMusicWingView: View {
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
+    @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
 
     init(nowPlaying: NowPlayingManager, isHovered: Bool = false, isEnlarged: Bool = false, isBilateralWingsLyricActive: Bool = false, wingWidth: CGFloat = 0) {
         self.nowPlaying = nowPlaying
@@ -419,6 +429,26 @@ struct CyberMusicWingView: View {
         if islandUITheme == IslandUITheme.modern.rawValue { return true }
         if islandUITheme == IslandUITheme.pixel.rawValue { return false }
         return musicHUDTheme == MusicHUDTheme.modernClean.rawValue
+    }
+
+    private var resolvedUpcomingFont: (font: Font, tracking: CGFloat) {
+        let designEnum = FloatingLyricFontDesign(rawValue: floatingLyricFontDesign) ?? .rounded
+        let baseSize = CGFloat(floatingLyricFontSize)
+        let size = max(8.5, baseSize - 1.0)
+        let isPix = islandUITheme == IslandUITheme.pixel.rawValue || designEnum == .pixel
+        let weight: Font.Weight = isPix ? .medium : .semibold
+        switch designEnum {
+        case .rounded:
+            return (.system(size: size, weight: weight, design: .rounded), 0.30)
+        case .monospaced:
+            return (.system(size: size, weight: weight, design: .monospaced), 0.45)
+        case .system:
+            return (.system(size: size, weight: weight, design: .default), 0.20)
+        case .serif:
+            return (.system(size: size, weight: weight, design: .serif), 0.20)
+        case .pixel:
+            return (.system(size: max(size, 8.5), weight: .medium, design: .monospaced), 0.6)
+        }
     }
 
     private var accentColor: Color {
@@ -449,16 +479,20 @@ struct CyberMusicWingView: View {
             // BILATERAL WING MODE (Right Wing): [Upcoming Lyric] [Album Art] [Equalizer]
             let nextText = nowPlaying.nextLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
             let displayUpcoming = !nextText.isEmpty ? nextText : (nowPlaying.artist.isEmpty ? "" : "— " + nowPlaying.artist)
-            let availableForLyric = max(40, wingWidth > 0 ? (wingWidth - artSize - 32) : 140)
+            let leadingNotchBuffer: CGFloat = 14
+            let availableForLyric = max(70, wingWidth > 0 ? (wingWidth - artSize - 34 - leadingNotchBuffer) : 170)
+            let fontInfo = resolvedUpcomingFont
 
             HStack(alignment: .center, spacing: 5) {
                 if !displayUpcoming.isEmpty {
                     ModernMarqueeText(
-                        text: isModernClean ? displayUpcoming : displayUpcoming.uppercased(),
-                        font: .system(size: isModernClean ? 8.5 : 8.0, weight: isModernClean ? .regular : .medium, design: isModernClean ? .rounded : .monospaced),
-                        color: Color.white.opacity(0.70),
+                        text: (islandUITheme == IslandUITheme.pixel.rawValue || floatingLyricFontDesign == FloatingLyricFontDesign.pixel.rawValue) ? displayUpcoming.uppercased() : displayUpcoming,
+                        font: fontInfo.font,
+                        color: Color.white.opacity(0.72),
+                        tracking: fontInfo.tracking,
                         maxWidth: availableForLyric
                     )
+                    .shadow(color: Color.black.opacity(0.85), radius: 2, y: 1)
                 }
 
                 if let art = nowPlaying.artworkImage {
@@ -467,6 +501,10 @@ struct CyberMusicWingView: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(width: artSize, height: artSize)
                         .clipShape(RoundedRectangle(cornerRadius: isModernClean ? 4 : 3.5, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: isModernClean ? 4 : 3.5, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
+                        )
                 } else {
                     RoundedRectangle(cornerRadius: isModernClean ? 4 : 3.5, style: .continuous)
                         .fill(Color.white.opacity(0.12))
@@ -483,7 +521,8 @@ struct CyberMusicWingView: View {
                 )
             }
             .fixedSize()
-            .padding(.horizontal, 2)
+            .padding(.leading, leadingNotchBuffer)
+            .padding(.trailing, 2)
             .padding(.vertical, 1)
         } else if isModernClean {
             // MODERN CLEAN: Langsung album cover, marquee title (saat di-hover), dan visualizer tanpa border
