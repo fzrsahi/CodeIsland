@@ -86,3 +86,6 @@ tickets.md
 # Local wayfinder map + tickets (never committed)
 .scratch/
 .codegraph/
+
+# Local developer handoffs and research
+docs-dev/
