@@ -151,6 +151,12 @@ CodeIsland uses a **Four-Tier Verification Architecture** to keep the `main` bra
 4. **Tier 4 (Post-Build Artifact Smoke Test)**:
    Release packaging steps verify DMG size (> 1MB), application bundle layout, and Sparkle Ed25519 cryptographic signatures before triggering automated deployment.
 
+### 🔒 GitHub Branch Protection Settings
+The CI pipeline publishes granular commit status checks to the GitHub REST API, allowing maintainers to require specific checks under **Settings > Branches > Require status checks to pass**:
+* `CodeIsland / Syntax & Git Hygiene Guard`: Verifies syntax and git hygiene.
+* `CodeIsland / XCTest Core Harness`: Enforces that all 1,098 unit tests pass before merge.
+* `CodeIsland / Artifact Integrity Smoke Test`: Asserts that production DMG artifacts are valid (> 1MB).
+
 ---
 
 ## 📄 License
