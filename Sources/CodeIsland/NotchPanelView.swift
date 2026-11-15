@@ -379,7 +379,7 @@ struct NotchPanelView: View {
             return 118
         }
         if mailManager.showMailArrivalAnimation && !shouldShowExpanded {
-            return isActive ? 118 : 62
+            return 52
         }
         if isHoveringRightWing && !shouldShowExpanded {
             return 128
@@ -426,12 +426,12 @@ struct NotchPanelView: View {
             return min(max(baseWidth, minWidth), maxPanelWidth)
         }
         if showIdleIndicator {
-            let wing = mailManager.showMailArrivalAnimation ? 62 : (idleHovered ? (compactWingWidth + 6) : compactWingWidth)
+            let wing = mailManager.showMailArrivalAnimation ? 52 : (idleHovered ? (compactWingWidth + 6) : compactWingWidth)
             return nw + wing * 2
         }
         if !isActive {
             if mailManager.showMailArrivalAnimation {
-                return nw + 62 * 2
+                return nw + 52 * 2
             }
             return nw
         }
@@ -1502,11 +1502,11 @@ private struct CompactRightWing: View {
             } else {
                 let prayerManager = PrayerTimeManager.shared
                 if mailManager.showMailArrivalAnimation {
-                    // MAIL ARRIVAL MICRO-INTERACTION: 360° Loop-de-loop roller coaster into suburban mailbox
+                    // MAIL ARRIVAL MICRO-INTERACTION: compact sealed envelope (52pt) when idle, roller-coaster mailbox (118pt) when thinking
                     MailArrivalWingView(
                         isRetro: islandUITheme == IslandUITheme.pixel.rawValue,
                         accentColor: mailAccentColor,
-                        isCompact: !(isThinking || !appState.sessions.isEmpty),
+                        isCompact: !isThinking,
                         onTap: {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                 mailManager.dismissMailArrival()
@@ -1516,7 +1516,7 @@ private struct CompactRightWing: View {
                         }
                     )
                     .frame(maxWidth: .infinity, alignment: .trailing)
-                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
+                    .transition(.opacity)
                 } else if prayerManager.isPrayerPrioritized {
                     // SMART PRIORITY: Prayer countdown takes active priority at T <= 15m
                     PrayerCompactWingView(isHovered: shouldExpandRightWing) {
@@ -1616,48 +1616,52 @@ private struct CompactRightWing: View {
                     }
                 }
 
-                // Quiet hours active — explains why event sounds are silent.
-                if inQuietHours {
-                    Image(systemName: "moon.fill")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.5))
-                        .help(l10n["quiet_hours"])
-                }
+                // Quiet hours & status badges are shown when not playing the mail arrival animation
+                // so MailArrivalWingView keeps the full right-wing runway.
+                if !mailManager.showMailArrivalAnimation {
+                    // Quiet hours active — explains why event sounds are silent.
+                    if inQuietHours {
+                        Image(systemName: "moon.fill")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.5))
+                            .help(l10n["quiet_hours"])
+                    }
 
-                // Glance completion badge
-                if appState.glanceCompletionActive {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                        .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), radius: 2)
-                }
+                    // Glance completion badge
+                    if appState.glanceCompletionActive {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                            .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), radius: 2)
+                    }
 
-                // Question / Approval badges
-                if appState.hiddenPendingQuestionSessionId != nil {
-                    Image(systemName: "questionmark.bubble.fill")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
-                        .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
-                        .symbolEffect(.bounce, value: appState.followUps.hintPulse)
-                        .help(l10n["question_waiting_hint"])
-                } else if appState.followUps.hintActive {
-                    Image(systemName: "bell.badge.fill")
-                        .font(.system(size: 8.5, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
-                        .symbolEffect(.bounce, value: appState.followUps.hintPulse)
-                        .help(l10n["follow_up_hint"])
-                } else if appState.status == .waitingApproval || appState.status == .waitingQuestion {
-                    Image(systemName: "bell.fill")
-                        .font(.system(size: 8.5, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
-                        .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+                    // Question / Approval badges
+                    if appState.hiddenPendingQuestionSessionId != nil {
+                        Image(systemName: "questionmark.bubble.fill")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
+                            .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+                            .symbolEffect(.bounce, value: appState.followUps.hintPulse)
+                            .help(l10n["question_waiting_hint"])
+                    } else if appState.followUps.hintActive {
+                        Image(systemName: "bell.badge.fill")
+                            .font(.system(size: 8.5, weight: .bold))
+                            .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
+                            .symbolEffect(.bounce, value: appState.followUps.hintPulse)
+                            .help(l10n["follow_up_hint"])
+                    } else if appState.status == .waitingApproval || appState.status == .waitingQuestion {
+                        Image(systemName: "bell.fill")
+                            .font(.system(size: 8.5, weight: .bold))
+                            .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
+                            .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+                    }
                 }
             }
         }
         .padding(.horizontal, expanded ? 10 : 3)
         // Its natural width, reported so the collapsed bar can make room for
         // it clear of the notch (CompactRightWingLayout).
-        .fixedSize(horizontal: true, vertical: false)
+        .fixedSize(horizontal: !mailManager.showMailArrivalAnimation, vertical: false)
         .background(GeometryReader { geo in
             Color.clear.preference(key: CompactRightWingWidthKey.self, value: expanded ? 0 : geo.size.width)
         })
@@ -2524,7 +2528,7 @@ private struct IdleIndicatorBar: View {
 
     private var wingWidth: CGFloat {
         if mailManager.showMailArrivalAnimation {
-            return 62
+            return 52
         }
         return hovered ? (compactWingWidth + 6) : compactWingWidth
     }
@@ -2565,7 +2569,7 @@ private struct IdleIndicatorBar: View {
                         }
                     )
                     .frame(maxWidth: .infinity, alignment: .trailing)
-                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
+                    .transition(.opacity)
                 } else {
                     Spacer(minLength: 0)
                     if prayerManager.isEnabled {
@@ -2583,7 +2587,7 @@ private struct IdleIndicatorBar: View {
                 }
             }
             .frame(
-                width: mailManager.showMailArrivalAnimation ? 62 : (prayerManager.isEnabled ? max(wingWidth, Self.idlePrayerWingMinWidth) : wingWidth),
+                width: mailManager.showMailArrivalAnimation ? 52 : (prayerManager.isEnabled ? max(wingWidth, Self.idlePrayerWingMinWidth) : wingWidth),
                 alignment: .trailing
             )
             .contentShape(Rectangle())

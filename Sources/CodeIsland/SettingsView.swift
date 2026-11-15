@@ -3860,22 +3860,9 @@ private struct MailSettingsPage: View {
             if mailEnabled {
                 Section("Notch Behavior") {
                     Toggle("Auto-Peek on New Email", isOn: $autoPeek)
-                    Text("When a new unread email arrives, the right wing of the notch plays a roller coaster mailbox animation with +1 badge, then returns smoothly.")
+                    Text("When a new unread email arrives, the right wing of the notch immediately plays an arrival animation with a +1 badge, then returns smoothly.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-
-                    Button {
-                        mailManager.dismissMailArrival()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                            mailManager.triggerTestPeek()
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "bell.badge")
-                            Text("Test Animasi Email Masuk")
-                        }
-                    }
-                    .padding(.top, 2)
                 }
 
                 Section("Inbox Status") {

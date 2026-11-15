@@ -143,28 +143,8 @@ private struct ModernCleanMailHUDContentView: View {
 
                 Spacer()
 
-                HStack(spacing: 6) {
-                    Button {
-                        mailManager.dismissMailArrival()
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                            appState.surface = .collapsed
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
-                            mailManager.triggerTestPeek()
-                        }
-                    } label: {
-                        Image(systemName: "bell.badge")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.white.opacity(0.55))
-                            .frame(width: 22, height: 22)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .help("Test animasi email masuk di notch kanan")
-
-                    // Minimal Modern Refresh Icon Button
-                    ModernRefreshButton(mailManager: mailManager, color: themeColor)
-                }
+                // Minimal Modern Refresh Icon Button
+                ModernRefreshButton(mailManager: mailManager, color: themeColor)
             }
             .padding(.horizontal, 16)
             .padding(.top, 4)
@@ -383,30 +363,8 @@ private struct RetroCyberMailHUDContentView: View {
 
                 Spacer()
 
-                HStack(spacing: 8) {
-                    Button {
-                        mailManager.dismissMailArrival()
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                            appState.surface = .collapsed
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
-                            mailManager.triggerTestPeek()
-                        }
-                    } label: {
-                        Text("[TEST]")
-                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                            .foregroundStyle(themeColor.opacity(0.70))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2)
-                            .background(Color.white.opacity(0.06))
-                            .clipShape(RoundedRectangle(cornerRadius: 3))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Test animasi email masuk di notch kanan")
-
-                    // 8-bit Pixel Refresh Button (Discrete 90° Step Rotation)
-                    PixelRefreshButton(mailManager: mailManager, color: themeColor)
-                }
+                // 8-bit Pixel Refresh Button (Discrete 90° Step Rotation)
+                PixelRefreshButton(mailManager: mailManager, color: themeColor)
             }
             .padding(.horizontal, 16)
             .padding(.top, 4)
