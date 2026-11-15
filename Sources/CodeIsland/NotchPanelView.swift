@@ -144,10 +144,7 @@ struct NotchPanelView: View {
         FloatingLyricPreset(rawValue: floatingLyricPreset) ?? .pureText
     }
     private var isConnectedChinLyricActive: Bool {
-        shouldShowSubNotchLyrics && activeFloatingPreset == .connectedChin
-    }
-    private var isBilateralWingsLyricActive: Bool {
-        shouldShowSubNotchLyrics && activeFloatingPreset == .bilateralWings && (!nowPlaying.lyrics.isEmpty || nowPlaying.lyricsLoading)
+        shouldShowSubNotchLyrics && (activeFloatingPreset == .connectedChin || activeFloatingPreset == .bilateralWings)
     }
     private var effectiveNotchHeight: CGFloat {
         isConnectedChinLyricActive ? (notchHeight + 26) : notchHeight
@@ -400,73 +397,94 @@ struct NotchPanelView: View {
 
     /// Symmetrical wing width calculated dynamically — guarantees zero clipping against notch corner curves
     /// and scales adaptively across all phases based on the Island Width setting (0% - 200%).
-    /// Never exceeds safe menu-bar bounds, ensuring the island NEVER overlaps macOS menu items.
+    /// Snugly hugs minimal content without excessive black space and NEVER overlaps macOS menu items.
     private var symmetricWingWidth: CGFloat {
         guard !shouldShowExpanded else { return expandedWingWidth }
 
         let clampedScale = Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))
         let widthScaleFactor = CGFloat(clampedScale) / 100.0
 
-        let isAgentActive = isThinking || appState.status != .idle || appState.currentTool != nil || appState.sessions.values.contains {
-            $0.status == .processing || $0.status == .running || $0.currentTool != nil
-        }
-        let isToolVisible = showToolStatus && showAgentDetails && (isAgentActive || appState.currentTool != nil)
-
         // 1. Natural width required for Left Wing in each phase (Agent Mascot + Tool / Thinking / Quota)
-        var naturalLeft: CGFloat = compactWingWidth
-        if isThinking {
-            naturalLeft = max(naturalLeft, isPixel ? 104 : 96)
-        } else if isToolVisible {
-            naturalLeft = max(naturalLeft, isPixel ? 116 : 108)
-        } else if hasQuotaChip {
-            naturalLeft = max(naturalLeft, quotaWingWidth)
-        }
-        if isBilateralWingsLyricActive {
-            naturalLeft = max(naturalLeft, isPixel ? 140 : 130)
-        }
-        let contentLeft = (!isBilateralWingsLyricActive && leftWingWidth > 0) ? (leftWingWidth + 14) : naturalLeft
-        let effectiveNaturalLeft = max(naturalLeft, min(contentLeft, isBilateralWingsLyricActive ? 140 : 126))
+        let effectiveNaturalLeft: CGFloat = {
+            if isThinking {
+                return isPixel ? 96 : 88
+            }
+            if hasQuotaChip {
+                return quotaWingWidth
+            }
+            let isToolActive = showToolStatus && showAgentDetails && (appState.currentTool != nil || appState.status == .running || appState.status == .processing)
+            if isToolActive {
+                if leftWingWidth > 0 {
+                    return max(compactWingWidth, min(leftWingWidth + 8, isPixel ? 92 : 84))
+                }
+                return isPixel ? 76 : 70
+            }
+            // Idle / Standby: strictly hug measured mascot content + breathing room
+            if leftWingWidth > 0 {
+                return max(compactWingWidth, min(leftWingWidth + 8, 48))
+            }
+            return compactWingWidth
+        }()
 
-        // 2. Natural width required for Right Wing in each phase (Music / Prayer / Actions)
-        var naturalRight: CGFloat = compactWingWidth
-        if prayerManager.isPrayerPrioritized {
-            naturalRight = max(naturalRight, isHoveringRightWing ? 115 : 85)
-        } else if signals.isPlaying || nowPlaying.isPlaying {
-            if isBilateralWingsLyricActive {
-                naturalRight = max(naturalRight, isPixel ? 140 : 130)
-            } else if isHoveringRightWing {
-                naturalRight = max(naturalRight, isPixel ? 116 : 108)
+        // 2. Natural width required for Right Wing in each phase (Music / Prayer / Actions / Standby)
+        let effectiveNaturalRight: CGFloat = {
+            if isHoveringRightWing {
+                return 115
+            }
+            if prayerManager.isPrayerPrioritized {
+                return 80
+            }
+            if signals.isPlaying || nowPlaying.isPlaying {
+                if isConnectedChinLyricActive {
+                    return 52
+                }
+                if rightWingWidth > 0 {
+                    return max(compactWingWidth, min(rightWingWidth + 8, 76))
+                }
+                return 44
+            }
+            // Standby / Agent mode:
+            let hasBranchOrProject = appState.sessions.values.contains {
+                !($0.gitBranch ?? "").isEmpty || !($0.cwd ?? "").isEmpty
+            }
+            var extraBadges: CGFloat = 0
+            if signals.inQuietHours { extraBadges += 10 }
+            if appState.glanceCompletionActive { extraBadges += 12 }
+            if appState.hiddenPendingQuestionSessionId != nil || appState.status == .waitingApproval || appState.status == .waitingQuestion {
+                extraBadges += 12
+            }
+
+            if hasBranchOrProject {
+                let targetWidth = 58 + extraBadges
+                if rightWingWidth > 0 {
+                    return max(compactWingWidth, min(rightWingWidth + 8, min(targetWidth, isPixel ? 86 : 80)))
+                }
+                return min(targetWidth, isPixel ? 86 : 80)
             } else {
-                naturalRight = max(naturalRight, isConnectedChinLyricActive ? 52 : 44)
+                // Clock / Idle mode: strictly compact
+                if rightWingWidth > 0 {
+                    return max(compactWingWidth, min(rightWingWidth + 8, 52))
+                }
+                return compactWingWidth
             }
-        } else {
-            // Standby / Agent mode: ensure adequate width for branch/project pill + badges
-            var standbyWidth: CGFloat = isPixel ? 54 : 48
-            let hasBranch = appState.sessions.values.contains { !($0.gitBranch ?? "").isEmpty }
-            if hasBranch {
-                standbyWidth += 34
-            } else if !appState.sessions.isEmpty {
-                standbyWidth += 28
-            }
-            if signals.inQuietHours {
-                standbyWidth += 12
-            }
-            naturalRight = max(naturalRight, standbyWidth)
-        }
-        if isHoveringRightWing {
-            naturalRight = max(naturalRight, 115)
-        }
-        if appState.glanceCompletionActive {
-            naturalRight += 18
-        }
-        if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion {
-            naturalRight += 18
-        }
-        let contentRight = (!isBilateralWingsLyricActive && rightWingWidth > 0) ? (rightWingWidth + 14) : naturalRight
-        let effectiveNaturalRight = max(naturalRight, min(contentRight, isBilateralWingsLyricActive ? 140 : 126))
+        }()
 
         // 3. Balanced Dynamic Island natural width for current phase
-        let naturalPhaseWidth = max(effectiveNaturalLeft, effectiveNaturalRight)
+        let naturalPhaseWidth: CGFloat = {
+            if isConnectedChinLyricActive {
+                let lyric = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+                let textLen = max(lyric.count, nowPlaying.title.count)
+                let targetWide: CGFloat = {
+                    if textLen >= 30 { return 440 }
+                    if textLen >= 20 { return 400 }
+                    if textLen >= 10 { return 360 }
+                    return 320
+                }()
+                let wingNeeded = max(compactWingWidth, (targetWide - effectiveNotchW) / 2)
+                return max(wingNeeded, max(effectiveNaturalLeft, effectiveNaturalRight))
+            }
+            return max(effectiveNaturalLeft, effectiveNaturalRight)
+        }()
 
         // 4. Absolute compact floor at 0% slider (fits mascot / essential indicators cleanly)
         let absoluteMinimumWing: CGFloat = 36
@@ -474,15 +492,16 @@ struct NotchPanelView: View {
         // 5. Scale adaptively across all phases based on user's Island Width setting (0% - 200%)
         let scaledWingWidth: CGFloat = {
             if widthScaleFactor >= 1.0 {
-                return naturalPhaseWidth + (naturalPhaseWidth * (widthScaleFactor - 1.0) * 0.6)
+                return naturalPhaseWidth + (naturalPhaseWidth * (widthScaleFactor - 1.0) * 0.5)
             } else {
                 return absoluteMinimumWing + (naturalPhaseWidth - absoluteMinimumWing) * widthScaleFactor
             }
         }()
 
         // 6. Absolute safe ceiling to guarantee it NEVER collides with the macOS menu bar:
-        // Collapsed bar width must never crowd the left/right screen menus.
-        let maxSafeCollapsedBarWidth = min(screenWidth * 0.40, isBilateralWingsLyricActive ? 470 : 440)
+        // Normal collapsed island never exceeds 400pt wide (or 38% screen width), leaving plenty of clearance for menu items.
+        // In wide contiguous lyric island mode, allows up to 480pt.
+        let maxSafeCollapsedBarWidth = min(screenWidth * 0.40, isConnectedChinLyricActive ? 480 : 400)
         let maxSingleWingWidth = max(absoluteMinimumWing, (maxSafeCollapsedBarWidth - effectiveNotchW) / 2)
         return min(scaledWingWidth, maxSingleWingWidth)
     }
@@ -532,7 +551,7 @@ struct NotchPanelView: View {
         if signals.showMiniPeekBanner && !appState.surface.isExpanded {
             return min(max(280, requiredActiveBarWidth), maxPanelWidth)
         }
-        let maxSafeCollapsed = min(screenWidth * 0.40, isBilateralWingsLyricActive ? 470 : 440)
+        let maxSafeCollapsed = min(screenWidth * 0.40, isConnectedChinLyricActive ? 480 : 400)
         return min(requiredActiveBarWidth, maxSafeCollapsed)
     }
 
@@ -666,7 +685,7 @@ struct NotchPanelView: View {
 
     @ViewBuilder
     private var activeCompactBar: some View {
-        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : (symmetricWingWidth < 46 ? 6 : (symmetricWingWidth < 60 ? 9 : 14))
+        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : (symmetricWingWidth < 48 ? 6 : (symmetricWingWidth < 70 ? 8 : 10))
 
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -679,8 +698,7 @@ struct NotchPanelView: View {
                     showToolStatus: showToolStatus,
                     expandedTab: expandedTabBinding,
                     workspaceManager: workspaceManager,
-                    wingWidth: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
-                    isBilateralWingsLyricActive: isBilateralWingsLyricActive
+                    wingWidth: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth
                 )
                     .padding(.leading, wingOuterPadding)
                     .frame(
@@ -710,7 +728,6 @@ struct NotchPanelView: View {
                     workspaceManager: workspaceManager,
                     expandedWingWidth: expandedWingWidth,
                     isEnlarged: isConnectedChinLyricActive,
-                    isBilateralWingsLyricActive: isBilateralWingsLyricActive,
                     wingWidth: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth
                 )
                     .padding(.trailing, wingOuterPadding)
@@ -732,14 +749,8 @@ struct NotchPanelView: View {
 
             // Integrated contiguous notch chin: seamlessly housing synced lyrics directly under MacBook notch
             if isConnectedChinLyricActive && !shouldShowExpanded {
-                HStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                        .frame(width: symmetricWingWidth)
-                    IntegratedNotchChinLyricView(nowPlaying: nowPlaying, width: effectiveNotchW) {
-                        handleChinLyricTap()
-                    }
-                    Spacer(minLength: 0)
-                        .frame(width: symmetricWingWidth)
+                IntegratedNotchChinLyricView(nowPlaying: nowPlaying, width: panelWidth - 20) {
+                    handleChinLyricTap()
                 }
                 .frame(height: 26)
                 .transition(.asymmetric(
@@ -1064,8 +1075,8 @@ struct NotchPanelView: View {
             // Outside onHover on purpose: the hover region moves with the bar.
             .offset(x: 0)
 
-            // SUB-NOTCH FLOATING LYRIC CAPSULE: Floats freely beneath the notch cutout (when not using unified chin mode or bilateral wings)
-            if shouldShowSubNotchLyrics && !isConnectedChinLyricActive && !isBilateralWingsLyricActive {
+            // SUB-NOTCH FLOATING LYRIC CAPSULE: Floats freely beneath the notch cutout (when not using unified chin mode)
+            if shouldShowSubNotchLyrics && !isConnectedChinLyricActive {
                 SubNotchFloatingLyricCapsuleView(nowPlaying: nowPlaying) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         expandedTab = .music
@@ -1253,7 +1264,6 @@ private struct CompactLeftWing: View {
     @Environment(\.animationGates) private var animationGates
     var workspaceManager: WorkspaceMonitorManager? = nil
     var wingWidth: CGFloat = 0
-    var isBilateralWingsLyricActive: Bool = false
     private let nowPlaying = NowPlayingManager.shared
     private let signals = IslandSignals.shared
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
@@ -1363,67 +1373,6 @@ private struct CompactLeftWing: View {
                     workspaceManager: workspaceManager ?? WorkspaceMonitorManager.shared
                 )
                 .transition(.opacity)
-            } else if isBilateralWingsLyricActive {
-                // PANORAMIC BILATERAL WING: Active synced lyric flowing beside mascot
-                HStack(spacing: 5) {
-                    ZStack(alignment: .bottomTrailing) {
-                        if signals.isPlaying && displayStatus == .idle && !isThinking && shownTool == nil {
-                            CAMusicGlowView(kind: .aura, mascotSize: mascotSize,
-                                          animating: animationGates.allows(.music))
-                                .frame(width: mascotSize + 8, height: mascotSize + 8)
-                        }
-
-                        MascotView(source: displaySource, status: effectiveMascotStatus, size: mascotSize)
-                            .frame(width: mascotSize, height: mascotSize)
-                            .fixedSize()
-                            .id("\(displaySource)-\(effectiveMascotStatus)")
-
-                        // If a tool is executing or agent is thinking, overlay subtle indicator badge on mascot
-                        if let tool = shownTool, showToolStatus && showAgentDetails {
-                            Image(systemName: "wrench.and.screwdriver.fill")
-                                .font(.system(size: 6, weight: .bold))
-                                .foregroundStyle(effectiveToolColor(tool))
-                                .padding(1.5)
-                                .background(Circle().fill(Color.black))
-                                .offset(x: 2, y: 2)
-                        }
-                    }
-                    .fixedSize()
-
-                    let lyricText = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let availableWidth = max(24, wingWidth > 0 ? (wingWidth - mascotSize - 16) : 90)
-
-                    HStack(spacing: 3.5) {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 7.5, weight: .bold))
-                            .foregroundStyle(musicPaletteAccent ?? (isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 1.0, green: 0.65, blue: 0.45)))
-                            .fixedSize()
-
-                        if !lyricText.isEmpty {
-                            if isPixel {
-                                ModernMarqueeText(
-                                    text: lyricText.uppercased(),
-                                    font: .system(size: 8.5, weight: .bold, design: .monospaced),
-                                    color: .white,
-                                    maxWidth: availableWidth - 12
-                                )
-                            } else {
-                                ModernMarqueeText(
-                                    text: lyricText,
-                                    font: .system(size: 9.0, weight: .semibold, design: .rounded),
-                                    color: .white,
-                                    maxWidth: availableWidth - 12
-                                )
-                            }
-                        } else {
-                            Text("♪ ...")
-                                .font(.system(size: 8.5, weight: .medium, design: isPixel ? .monospaced : .rounded))
-                                .foregroundStyle(Color.white.opacity(0.5))
-                        }
-                    }
-                    .frame(maxWidth: availableWidth, alignment: .leading)
-                    .transition(.opacity)
-                }
             } else {
                 ZStack {
                     if signals.isPlaying && displayStatus == .idle && !isThinking && shownTool == nil {
@@ -1648,7 +1597,6 @@ private struct CompactRightWing: View {
     let workspaceManager: WorkspaceMonitorManager
     var expandedWingWidth: CGFloat = 240
     var isEnlarged: Bool = false
-    var isBilateralWingsLyricActive: Bool = false
     var wingWidth: CGFloat = 0
     @Environment(\.animationGates) private var animationGates
     @ObservedObject private var l10n = L10n.shared
@@ -1763,7 +1711,6 @@ private struct CompactRightWing: View {
                         nowPlaying: nowPlaying,
                         isHovered: shouldExpandRightWing,
                         isEnlarged: isEnlarged,
-                        isBilateralWingsLyricActive: isBilateralWingsLyricActive,
                         wingWidth: wingWidth
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
