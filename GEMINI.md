@@ -45,7 +45,11 @@ Setiap ada task baru, wajib mengikuti urutan langkah ini secara disiplin:
 4. **Konfirmasi User:** Tanyakan ke user sebelum branch dibuat dan sebelum coding dimulai.
 
 ### Langkah Saat Pengerjaan & Commit:
-- Kerjakan perubahan kode dan uji dengan `swift test` atau `./build.sh`.
+- **Aktivasi Native Git Hooks (Sekali saja saat setup repo):**
+  ```bash
+  git config core.hooksPath .githooks
+  ```
+- Kerjakan perubahan kode dan uji dengan `swift test` atau `./build.sh`. Hook `.githooks/pre-commit` otomatis memvalidasi sintaks staged files & conflict markers (< 0.5s), sedangkan `.githooks/pre-push` otomatis memverifikasi `swift build --build-tests` sebelum git push dieksekusi.
 - Lakukan commit berkala menggunakan Conventional Commits:
   - `fix(#<id>): <deskripsi>`
   - `feat(#<id>): <deskripsi>`
