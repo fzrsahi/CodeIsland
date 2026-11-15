@@ -97,14 +97,20 @@ struct NotchHoopsView: View {
                     .foregroundStyle(.white.opacity(0.6))
             }
 
-            // Current shot zone value badge (1P / 2P / 3P)
-            Text("\(engine.currentShotZone.points)PT")
-                .font(.system(size: 9.5, weight: .heavy, design: .monospaced))
-                .foregroundStyle(zoneColor(engine.currentShotZone))
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
-                .background(zoneColor(engine.currentShotZone).opacity(0.16))
-                .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+            // Highlighted 3PT indicator shown exclusively when shooting from 3-point range
+            if engine.currentShotZone == .threePoint {
+                Text("3PT")
+                    .font(.system(size: 9.5, weight: .black, design: .monospaced))
+                    .foregroundStyle(Self.green)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Self.green.opacity(0.18))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .stroke(Self.green.opacity(0.55), lineWidth: 0.8)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+            }
 
             if engine.streak >= 2 {
                 HStack(spacing: 2) {
@@ -199,14 +205,6 @@ struct NotchHoopsView: View {
                     }
                 }
             }
-        }
-    }
-
-    private func zoneColor(_ zone: NotchHoopsEngine.ShotZone) -> Color {
-        switch zone {
-        case .onePoint: return .white.opacity(0.9)
-        case .twoPoint: return Self.cyan
-        case .threePoint: return Self.green
         }
     }
 
@@ -330,7 +328,7 @@ struct NotchHoopsView: View {
             }
             context.stroke(scanPath, with: .color(.white.opacity(0.028)), lineWidth: 1)
 
-            // 3. Court floor + 3PT / 2PT / 1PT distance zone ticks
+            // 3. Clean court floor baseline (1P/2P/3P distances handled by system)
             let floorY = pt(0, NotchHoopsEngine.launchY + NotchHoopsEngine.ballRadius + 4).y
             context.fill(
                 Path(CGRect(x: 0, y: floorY, width: size.width, height: max(0, size.height - floorY))),
@@ -340,28 +338,6 @@ struct NotchHoopsView: View {
             floorLine.move(to: CGPoint(x: 0, y: floorY))
             floorLine.addLine(to: CGPoint(x: size.width, y: floorY))
             context.stroke(floorLine, with: .color(Self.cyan.opacity(0.20)), lineWidth: 1)
-
-            let threePtX = pt(NotchHoopsEngine.threePointLineX, 0).x
-            let onePtX = pt(NotchHoopsEngine.onePointLineX, 0).x
-            var zoneTicks = Path()
-            zoneTicks.move(to: CGPoint(x: threePtX, y: floorY - 3))
-            zoneTicks.addLine(to: CGPoint(x: threePtX, y: floorY + 6))
-            zoneTicks.move(to: CGPoint(x: onePtX, y: floorY - 3))
-            zoneTicks.addLine(to: CGPoint(x: onePtX, y: floorY + 6))
-            context.stroke(zoneTicks, with: .color(Self.cyan.opacity(0.45)), lineWidth: 1.5)
-
-            context.draw(
-                Text("3PT").font(.system(size: 7.5, weight: .bold, design: .monospaced)).foregroundColor(Self.green.opacity(0.55)),
-                at: CGPoint(x: threePtX - 18, y: floorY + 8)
-            )
-            context.draw(
-                Text("2PT").font(.system(size: 7.5, weight: .bold, design: .monospaced)).foregroundColor(Self.cyan.opacity(0.55)),
-                at: CGPoint(x: (threePtX + onePtX) / 2, y: floorY + 8)
-            )
-            context.draw(
-                Text("1PT").font(.system(size: 7.5, weight: .bold, design: .monospaced)).foregroundColor(.white.opacity(0.5)),
-                at: CGPoint(x: onePtX + 18, y: floorY + 8)
-            )
 
             // 4. Pixel-art Backboard + Bracket + Rim Glow
             let hoopCenter = pt(NotchHoopsEngine.rimCenterX, NotchHoopsEngine.rimY)
