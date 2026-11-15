@@ -506,10 +506,10 @@ struct NotchPanelView: View {
         if !isActive { return nw }
         let requiredActiveBarWidth = nw + symmetricWingWidth * 2
         if signals.showChargingBanner && !appState.surface.isExpanded {
-            return min(max(320, requiredActiveBarWidth), maxPanelWidth)
+            return min(max(280, requiredActiveBarWidth), maxPanelWidth)
         }
         if signals.showMiniPeekBanner && !appState.surface.isExpanded {
-            return min(max(330, requiredActiveBarWidth), maxPanelWidth)
+            return min(max(280, requiredActiveBarWidth), maxPanelWidth)
         }
         let maxSafeCollapsed = min(screenWidth * 0.38, 440)
         return min(requiredActiveBarWidth, maxSafeCollapsed)

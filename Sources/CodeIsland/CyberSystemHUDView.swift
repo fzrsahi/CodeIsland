@@ -48,66 +48,51 @@ public struct MagSafeChargingBanner: View {
     // MARK: - 1. Pixel Retro 16-Bit Cyber Cartridge Banner (Impeccable Lineless)
 
     private var pixelChargingBanner: some View {
-        let filledBlocks = max(1, min(10, Int(ceil(Double(batteryLevel) / 10.0))))
-
-        return HStack(spacing: 10) {
+        HStack(spacing: 8) {
             // Recessed Energy Core Slot
             ZStack {
                 Image(systemName: "bolt.fill")
                     .font(.system(size: 11, weight: .black))
                     .foregroundStyle(chargingGreen)
                     .shadow(color: chargingGreen.opacity(0.85), radius: 3)
-                    .scaleEffect(pixelPulse ? 1.15 : 0.95)
+                    .scaleEffect(pixelPulse ? 1.12 : 0.95)
             }
-            .frame(width: 26, height: 26)
-            .pixel16Bevel(raised: false, cornerRadius: 4.5, fillColor: Pixel16Palette.slot)
+            .frame(width: 24, height: 24)
+            .pixel16Bevel(raised: false, cornerRadius: 4, fillColor: Pixel16Palette.slot)
 
-            // Monospace Dot-Matrix Telemetry
-            VStack(alignment: .leading, spacing: 2.5) {
-                HStack(spacing: 5) {
-                    Text("POWER: AC_CONNECTED")
-                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Pixel16Palette.cyan)
+            // Minimalist Typography
+            VStack(alignment: .leading, spacing: 1.5) {
+                Text("MAGSAFE")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.white)
+                    .lineLimit(1)
 
-                    Text(batteryLevel >= 100 ? "FULL" : "CHARGING")
-                        .font(.system(size: 7.5, weight: .black, design: .monospaced))
-                        .foregroundStyle(chargingGreen)
-                        .padding(.horizontal, 4.5)
-                        .padding(.vertical, 1.5)
-                        .pixel16Bevel(raised: false, cornerRadius: 2.5, fillColor: Pixel16Palette.slot)
-                }
-
-                Text(batteryLevel >= 100 ? "BATTERY FULL // TRICKLE_MODE" : "FAST_CHARGE // STATUS: OPTIMAL")
-                    .font(.system(size: 8, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Pixel16Palette.textMuted)
+                Text(batteryLevel >= 100 ? "FULLY CHARGED" : "CHARGING")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(chargingGreen)
                     .lineLimit(1)
             }
 
             Spacer(minLength: 6)
 
-            // 10-Segment Lineless Solid LED Battery Cells & Readout
-            VStack(alignment: .trailing, spacing: 3.5) {
+            // Percentage & 5-Segment Discrete Solid Charge Meter
+            HStack(spacing: 5) {
                 Text("\(batteryLevel)%")
-                    .font(.system(size: 13, weight: .black, design: .monospaced))
-                    .foregroundStyle(Pixel16Palette.textWhite)
+                    .font(.system(size: 12.5, weight: .black, design: .monospaced))
+                    .foregroundStyle(Color.white)
 
-                // 10-Segment Discrete Solid Blocks (No wireframe outlines)
-                HStack(spacing: 2) {
-                    ForEach(0..<10, id: \.self) { idx in
-                        let isFilled = idx < filledBlocks
-                        let isHead = idx == (filledBlocks - 1)
+                // 5-Segment discrete solid charge bar
+                HStack(spacing: 1.5) {
+                    ForEach(0..<5, id: \.self) { idx in
+                        let isFilled = batteryLevel >= (idx * 20 + 10)
                         Rectangle()
-                            .fill(
-                                isFilled
-                                    ? (isHead && pixelPulse ? Pixel16Palette.cyan : chargingGreen)
-                                    : Color.white.opacity(0.12)
-                            )
-                            .frame(width: 3.5, height: 7)
+                            .fill(isFilled ? chargingGreen : Color.white.opacity(0.12))
+                            .frame(width: 3, height: 7.5)
                     }
                 }
-                .padding(.horizontal, 4)
-                .padding(.vertical, 2.5)
-                .pixel16Bevel(raised: false, cornerRadius: 3, fillColor: Pixel16Palette.slot)
+                .padding(.horizontal, 3.5)
+                .padding(.vertical, 2)
+                .pixel16Bevel(raised: false, cornerRadius: 2.5, fillColor: Pixel16Palette.slot)
             }
 
             if let onDismiss = onDismiss {
@@ -116,100 +101,71 @@ public struct MagSafeChargingBanner: View {
                     onDismiss()
                 }) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 7.5, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.55))
-                        .frame(width: 16, height: 16)
-                        .pixel16Bevel(raised: false, cornerRadius: 3.5, fillColor: Pixel16Palette.slot)
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.45))
+                        .frame(width: 14, height: 14)
                 }
                 .buttonStyle(.plain)
                 .help("Dismiss")
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .pixel16Bevel(raised: false, cornerRadius: 8, fillColor: Pixel16Palette.chassis)
-        .padding(.horizontal, 8)
-        .padding(.bottom, 5)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5.5)
+        .pixel16Bevel(raised: false, cornerRadius: 7, fillColor: Pixel16Palette.chassis)
+        .padding(.horizontal, 6)
+        .padding(.bottom, 4)
     }
 
     // MARK: - 2. Modern Clean Dynamic Island Fluid Glass Banner
 
     private var modernChargingBanner: some View {
-        HStack(spacing: 11) {
+        HStack(spacing: 8) {
             // Glowing MagSafe Energy Puck
             ZStack {
-                // Background Track
                 Circle()
-                    .stroke(Color.white.opacity(0.12), lineWidth: 2.6)
-                    .frame(width: 26, height: 26)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 2)
+                    .frame(width: 24, height: 24)
 
-                // Dynamic Charge Progress Arc
                 Circle()
-                    .trim(from: 0.0, to: max(0.06, CGFloat(batteryLevel) / 100.0))
-                    .stroke(
-                        AngularGradient(
-                            gradient: Gradient(colors: [
-                                chargingGreen.opacity(0.7),
-                                chargingGreen
-                            ]),
-                            center: .center,
-                            startAngle: .degrees(-90),
-                            endAngle: .degrees(270)
-                        ),
-                        style: StrokeStyle(lineWidth: 2.6, lineCap: .round)
-                    )
-                    .frame(width: 26, height: 26)
+                    .trim(from: 0.0, to: max(0.08, CGFloat(batteryLevel) / 100.0))
+                    .stroke(chargingGreen, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .frame(width: 24, height: 24)
                     .rotationEffect(.degrees(-90))
-                    .shadow(color: chargingGreen.opacity(0.45), radius: 3)
+                    .shadow(color: chargingGreen.opacity(0.4), radius: 2)
 
-                // Center Pulsing Bolt
                 Image(systemName: "bolt.fill")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(chargingGreen)
-                    .scaleEffect(pulseRing ? 1.12 : 0.92)
+                    .scaleEffect(pulseRing ? 1.1 : 0.95)
             }
 
-            // Power Details
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4.5) {
-                    Text("MAGSAFE")
-                        .font(.system(size: 9.5, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.white)
-                        .tracking(0.6)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("MagSafe")
+                    .font(.system(size: 10.5, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
 
-                    Text("•")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.28))
-
-                    Text("CHARGING")
-                        .font(.system(size: 8.5, weight: .bold, design: .rounded))
-                        .foregroundStyle(chargingGreen)
-                        .tracking(0.5)
-                }
-
-                Text(batteryLevel >= 100 ? "Battery Fully Charged" : "Fast Power Delivery Connected")
+                Text(batteryLevel >= 100 ? "Fully Charged" : "Charging")
                     .font(.system(size: 8.5, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.white.opacity(0.55))
+                    .foregroundStyle(chargingGreen)
             }
 
-            Spacer(minLength: 8)
+            Spacer(minLength: 6)
 
-            // Battery Percentage & Hardware Capsule
-            HStack(spacing: 5.5) {
+            HStack(spacing: 5) {
                 Text("\(batteryLevel)%")
-                    .font(.system(size: 13.5, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.white)
+                    .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
 
-                // Mini Hardware Battery Indicator
+                // Mini hardware battery indicator
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                        .stroke(Color.white.opacity(0.35), lineWidth: 0.9)
-                        .frame(width: 19, height: 9.5)
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .stroke(Color.white.opacity(0.35), lineWidth: 0.8)
+                        .frame(width: 17, height: 8.5)
 
-                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                    RoundedRectangle(cornerRadius: 1, style: .continuous)
                         .fill(chargingGreen)
-                        .frame(width: max(2, 15 * CGFloat(batteryLevel) / 100.0), height: 5.5)
-                        .padding(.leading, 2)
+                        .frame(width: max(2, 13 * CGFloat(batteryLevel) / 100.0), height: 5)
+                        .padding(.leading, 1.8)
                 }
             }
 
@@ -219,27 +175,26 @@ public struct MagSafeChargingBanner: View {
                     onDismiss()
                 }) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(Color.white.opacity(0.55))
-                        .frame(width: 16, height: 16)
-                        .background(Circle().fill(Color.white.opacity(0.12)))
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.45))
+                        .frame(width: 14, height: 14)
                 }
                 .buttonStyle(.plain)
                 .help("Dismiss")
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5.5)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Color.white.opacity(0.06))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.white.opacity(0.10), lineWidth: 0.6)
                 )
         )
-        .padding(.horizontal, 8)
-        .padding(.bottom, 5)
+        .padding(.horizontal, 6)
+        .padding(.bottom, 4)
     }
 }
 
