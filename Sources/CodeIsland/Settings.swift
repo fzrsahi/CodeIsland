@@ -163,7 +163,7 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .vinylGroove: return "Vinyl Groove (Spinning Record & Tonearm)"
         case .fluidKaraoke: return "Fluid Shimmer (Spatial Silk Wave)"
         case .connectedChin: return "Unified Notch Chin (Contiguous Extension)"
-        case .bilateralWings: return "Panoramic Wide Notch (Full Width Island)"
+        case .bilateralWings: return "Panoramic Notch Wings (Icon - Lirik - Notch - Lirik - Icon)"
         }
     }
 
@@ -181,7 +181,7 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .vinylGroove: return "VINYL"
         case .fluidKaraoke: return "FLUID"
         case .connectedChin: return "NOTCH CHIN"
-        case .bilateralWings: return "WIDE NOTCH"
+        case .bilateralWings: return "NOTCH WINGS"
         }
     }
 
@@ -199,7 +199,7 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .vinylGroove: return "Audiophile micro vinyl record with concentric grooves, angled tonearm needle, and Swiss editorial typography."
         case .fluidKaraoke: return "VisionOS spatial glass capsule with liquid iridescent shimmer sweeping across syllables and silk oscilloscope ribbon."
         case .connectedChin: return "The notch seamlessly extends downwards under the MacBook notch, housing synced lyrics with enlarged wing icons."
-        case .bilateralWings: return "Elongates the notch into a wide, seamless dynamic island with full, unobstructed synced lyrics directly beneath the cutout."
+        case .bilateralWings: return "The normal small notch widens horizontally on both wings: Mascot + Current Lyric on left, Upcoming Lyric + Album Art on right, with no chin."
         }
     }
 }

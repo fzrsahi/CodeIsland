@@ -144,7 +144,10 @@ struct NotchPanelView: View {
         FloatingLyricPreset(rawValue: floatingLyricPreset) ?? .pureText
     }
     private var isConnectedChinLyricActive: Bool {
-        shouldShowSubNotchLyrics && (activeFloatingPreset == .connectedChin || activeFloatingPreset == .bilateralWings)
+        shouldShowSubNotchLyrics && activeFloatingPreset == .connectedChin
+    }
+    private var isBilateralWingsLyricActive: Bool {
+        shouldShowSubNotchLyrics && activeFloatingPreset == .bilateralWings && (signals.isPlaying || nowPlaying.isPlaying)
     }
     private var effectiveNotchHeight: CGFloat {
         isConnectedChinLyricActive ? (notchHeight + 26) : notchHeight
@@ -406,6 +409,9 @@ struct NotchPanelView: View {
 
         // 1. Natural width required for Left Wing in each phase (Agent Mascot + Tool / Thinking / Quota)
         let effectiveNaturalLeft: CGFloat = {
+            if isBilateralWingsLyricActive {
+                return isPixel ? 210 : 200
+            }
             if isThinking {
                 return isPixel ? 96 : 88
             }
@@ -428,6 +434,9 @@ struct NotchPanelView: View {
 
         // 2. Natural width required for Right Wing in each phase (Music / Prayer / Actions / Standby)
         let effectiveNaturalRight: CGFloat = {
+            if isBilateralWingsLyricActive {
+                return isPixel ? 210 : 200
+            }
             if isHoveringRightWing {
                 return 115
             }
@@ -500,8 +509,8 @@ struct NotchPanelView: View {
 
         // 6. Absolute safe ceiling to guarantee it NEVER collides with the macOS menu bar:
         // Normal collapsed island never exceeds 400pt wide (or 38% screen width), leaving plenty of clearance for menu items.
-        // In wide contiguous lyric island mode, allows up to 480pt.
-        let maxSafeCollapsedBarWidth = min(screenWidth * 0.40, isConnectedChinLyricActive ? 480 : 400)
+        // In wide contiguous lyric island mode, allows up to 480pt; in panoramic notch wings, allows up to 620pt.
+        let maxSafeCollapsedBarWidth = min(screenWidth * 0.44, isBilateralWingsLyricActive ? 620 : (isConnectedChinLyricActive ? 480 : 400))
         let maxSingleWingWidth = max(absoluteMinimumWing, (maxSafeCollapsedBarWidth - effectiveNotchW) / 2)
         return min(scaledWingWidth, maxSingleWingWidth)
     }
@@ -551,7 +560,7 @@ struct NotchPanelView: View {
         if signals.showMiniPeekBanner && !appState.surface.isExpanded {
             return min(max(280, requiredActiveBarWidth), maxPanelWidth)
         }
-        let maxSafeCollapsed = min(screenWidth * 0.40, isConnectedChinLyricActive ? 480 : 400)
+        let maxSafeCollapsed = min(screenWidth * 0.44, isBilateralWingsLyricActive ? 620 : (isConnectedChinLyricActive ? 480 : 400))
         return min(requiredActiveBarWidth, maxSafeCollapsed)
     }
 
@@ -698,7 +707,8 @@ struct NotchPanelView: View {
                     showToolStatus: showToolStatus,
                     expandedTab: expandedTabBinding,
                     workspaceManager: workspaceManager,
-                    wingWidth: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth
+                    wingWidth: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
+                    isBilateralWingsLyricActive: isBilateralWingsLyricActive
                 )
                     .padding(.leading, wingOuterPadding)
                     .frame(
@@ -728,6 +738,7 @@ struct NotchPanelView: View {
                     workspaceManager: workspaceManager,
                     expandedWingWidth: expandedWingWidth,
                     isEnlarged: isConnectedChinLyricActive,
+                    isBilateralWingsLyricActive: isBilateralWingsLyricActive,
                     wingWidth: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth
                 )
                     .padding(.trailing, wingOuterPadding)
@@ -1075,8 +1086,8 @@ struct NotchPanelView: View {
             // Outside onHover on purpose: the hover region moves with the bar.
             .offset(x: 0)
 
-            // SUB-NOTCH FLOATING LYRIC CAPSULE: Floats freely beneath the notch cutout (when not using unified chin mode)
-            if shouldShowSubNotchLyrics && !isConnectedChinLyricActive {
+            // SUB-NOTCH FLOATING LYRIC CAPSULE: Floats freely beneath the notch cutout (when not using unified chin or bilateral wings mode)
+            if shouldShowSubNotchLyrics && !isConnectedChinLyricActive && !isBilateralWingsLyricActive {
                 SubNotchFloatingLyricCapsuleView(nowPlaying: nowPlaying) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         expandedTab = .music
@@ -1264,6 +1275,7 @@ private struct CompactLeftWing: View {
     @Environment(\.animationGates) private var animationGates
     var workspaceManager: WorkspaceMonitorManager? = nil
     var wingWidth: CGFloat = 0
+    var isBilateralWingsLyricActive: Bool = false
     private let nowPlaying = NowPlayingManager.shared
     private let signals = IslandSignals.shared
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
@@ -1373,6 +1385,40 @@ private struct CompactLeftWing: View {
                     workspaceManager: workspaceManager ?? WorkspaceMonitorManager.shared
                 )
                 .transition(.opacity)
+            } else if isBilateralWingsLyricActive {
+                // PANORAMIC NOTCH WING: [Icon (Mascot)] [♫] [Lirik (Current Lyric)]
+                HStack(spacing: 5) {
+                    ZStack(alignment: .bottomTrailing) {
+                        if signals.isPlaying && displayStatus == .idle && !isThinking && shownTool == nil {
+                            CAMusicGlowView(kind: .aura, mascotSize: mascotSize,
+                                          animating: animationGates.allows(.music))
+                                .frame(width: mascotSize + 8, height: mascotSize + 8)
+                        }
+
+                        MascotView(source: displaySource, status: effectiveMascotStatus, size: mascotSize)
+                            .frame(width: mascotSize, height: mascotSize)
+                            .fixedSize()
+                            .id("\(displaySource)-\(effectiveMascotStatus)")
+                    }
+                    .fixedSize()
+
+                    Image(systemName: "music.note")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(musicPaletteAccent ?? (isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 1.0, green: 0.65, blue: 0.45)))
+                        .fixedSize()
+
+                    let lyricText = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let textToDisplay = !lyricText.isEmpty ? lyricText : (nowPlaying.lyricsLoading ? "Loading lyrics..." : (nowPlaying.title.isEmpty ? "♪ Music" : nowPlaying.title))
+                    let availableWidth = max(50, wingWidth > 0 ? (wingWidth - mascotSize - 32) : 150)
+
+                    ModernMarqueeText(
+                        text: isPixel ? textToDisplay.uppercased() : textToDisplay,
+                        font: .system(size: isPixel ? 8.5 : 9.0, weight: isPixel ? .bold : .semibold, design: isPixel ? .monospaced : .rounded),
+                        color: .white,
+                        maxWidth: availableWidth
+                    )
+                }
+                .frame(maxWidth: max(50, wingWidth > 0 ? (wingWidth - 10) : 170), alignment: .leading)
             } else {
                 ZStack {
                     if signals.isPlaying && displayStatus == .idle && !isThinking && shownTool == nil {
@@ -1597,6 +1643,7 @@ private struct CompactRightWing: View {
     let workspaceManager: WorkspaceMonitorManager
     var expandedWingWidth: CGFloat = 240
     var isEnlarged: Bool = false
+    var isBilateralWingsLyricActive: Bool = false
     var wingWidth: CGFloat = 0
     @Environment(\.animationGates) private var animationGates
     @ObservedObject private var l10n = L10n.shared
@@ -1711,6 +1758,7 @@ private struct CompactRightWing: View {
                         nowPlaying: nowPlaying,
                         isHovered: shouldExpandRightWing,
                         isEnlarged: isEnlarged,
+                        isBilateralWingsLyricActive: isBilateralWingsLyricActive,
                         wingWidth: wingWidth
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))

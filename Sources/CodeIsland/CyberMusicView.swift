@@ -400,16 +400,18 @@ struct CyberMusicWingView: View {
     @ObservedObject var nowPlaying: NowPlayingManager
     var isHovered: Bool = false
     var isEnlarged: Bool = false
+    var isBilateralWingsLyricActive: Bool = false
     var wingWidth: CGFloat = 0
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
 
-    init(nowPlaying: NowPlayingManager, isHovered: Bool = false, isEnlarged: Bool = false, wingWidth: CGFloat = 0) {
+    init(nowPlaying: NowPlayingManager, isHovered: Bool = false, isEnlarged: Bool = false, isBilateralWingsLyricActive: Bool = false, wingWidth: CGFloat = 0) {
         self.nowPlaying = nowPlaying
         self.isHovered = isHovered
         self.isEnlarged = isEnlarged
+        self.isBilateralWingsLyricActive = isBilateralWingsLyricActive
         self.wingWidth = wingWidth
     }
 
@@ -443,7 +445,47 @@ struct CyberMusicWingView: View {
         let artSize: CGFloat = isEnlarged ? 23 : 17
         let spectrumMaxH: CGFloat = isEnlarged ? 14.0 : 11.0
 
-        if isModernClean {
+        if isBilateralWingsLyricActive {
+            // BILATERAL WING MODE (Right Wing): [Upcoming Lyric] [Album Art] [Equalizer]
+            let nextText = nowPlaying.nextLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let displayUpcoming = !nextText.isEmpty ? nextText : (nowPlaying.artist.isEmpty ? "" : "— " + nowPlaying.artist)
+            let availableForLyric = max(40, wingWidth > 0 ? (wingWidth - artSize - 32) : 140)
+
+            HStack(alignment: .center, spacing: 5) {
+                if !displayUpcoming.isEmpty {
+                    ModernMarqueeText(
+                        text: isModernClean ? displayUpcoming : displayUpcoming.uppercased(),
+                        font: .system(size: isModernClean ? 8.5 : 8.0, weight: isModernClean ? .regular : .medium, design: isModernClean ? .rounded : .monospaced),
+                        color: Color.white.opacity(0.70),
+                        maxWidth: availableForLyric
+                    )
+                }
+
+                if let art = nowPlaying.artworkImage {
+                    Image(nsImage: art)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: artSize, height: artSize)
+                        .clipShape(RoundedRectangle(cornerRadius: isModernClean ? 4 : 3.5, style: .continuous))
+                } else {
+                    RoundedRectangle(cornerRadius: isModernClean ? 4 : 3.5, style: .continuous)
+                        .fill(Color.white.opacity(0.12))
+                        .frame(width: artSize, height: artSize)
+                        .overlay(Image(systemName: "music.note").font(.system(size: 8)).foregroundStyle(.white))
+                }
+
+                ModernAudioSpectrumView(
+                    barCount: 3,
+                    isPlaying: nowPlaying.isPlaying,
+                    barWidth: 2.0,
+                    maxHeight: spectrumMaxH,
+                    color: accentColor
+                )
+            }
+            .fixedSize()
+            .padding(.horizontal, 2)
+            .padding(.vertical, 1)
+        } else if isModernClean {
             // MODERN CLEAN: Langsung album cover, marquee title (saat di-hover), dan visualizer tanpa border
             HStack(alignment: .center, spacing: isEnlarged ? 5 : 4) {
                 if isHovered && (wingWidth == 0 || wingWidth >= 75) {
