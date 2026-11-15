@@ -21,9 +21,28 @@ public final class SystemMonitorManager: ObservableObject {
 
     @Published public private(set) var metrics = SystemMetrics()
     @Published public var showChargingBanner: Bool = false
-    /// Not `@Published`: nothing renders the timer, and publishing it every
-    /// charge event re-rendered every observer for no visible change.
-    public var chargingBannerDismissTimer: Timer?
+    private var chargingDismissWorkItem: DispatchWorkItem?
+
+    public func dismissChargingBanner() {
+        chargingDismissWorkItem?.cancel()
+        chargingDismissWorkItem = nil
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            self.showChargingBanner = false
+        }
+    }
+
+    public func triggerChargingBanner() {
+        showChargingBanner = true
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+        chargingDismissWorkItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                self?.showChargingBanner = false
+            }
+        }
+        chargingDismissWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: item)
+    }
 
     private var monitorTimer: Timer?
     /// How many gauge views are on screen. Sampling runs only while one is.
@@ -166,19 +185,6 @@ public final class SystemMonitorManager: ObservableObject {
             isACPowered: isAC
         )
         if metrics != newMetrics { metrics = newMetrics }
-    }
-
-    public func triggerChargingBanner() {
-        showChargingBanner = true
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-        chargingBannerDismissTimer?.invalidate()
-        chargingBannerDismissTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: false) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    self?.showChargingBanner = false
-                }
-            }
-        }
     }
 
     // MARK: - CPU Load via host_statistics

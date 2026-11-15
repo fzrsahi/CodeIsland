@@ -600,7 +600,6 @@ final class NowPlayingManager: ObservableObject {
             self.setAnchor(position: position ?? 0.0, playing: playing)
             self.currentLyricIndex = 0
             self.lyrics = []
-            triggerToast()
             fetchLyrics(title: title, artist: artist)
         } else if let position = position {
             self.setAnchor(position: position, playing: isPlaying)
@@ -623,18 +622,37 @@ final class NowPlayingManager: ObservableObject {
         }
     }
 
-    func triggerToast() {
+    private var toastDismissWorkItem: DispatchWorkItem?
+
+    public func dismissToast() {
+        toastDismissWorkItem?.cancel()
+        toastDismissWorkItem = nil
         toastDismissTimer?.invalidate()
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
-            showToast = true
-        }
-        toastDismissTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: false) { [weak self] _ in
-            Task { @MainActor in
-                withAnimation(.spring(response: 0.42, dampingFraction: 0.84)) {
-                    self?.showToast = false
-                }
-            }
-        }
+        toastDismissTimer = nil
+        showToast = false
+    }
+
+    func triggerToast() {
+        // Music notifications disabled: music is smoothly presented in Dynamic Island wing & chin lyrics
+    }
+
+    public func triggerTestTrackChange() {
+        let testTracks = [
+            ("Midnight City", "M83"),
+            ("Starman", "David Bowie"),
+            ("Bohemian Rhapsody", "Queen"),
+            ("Viva La Vida", "Coldplay")
+        ]
+        let current = title
+        let next = testTracks.first(where: { $0.0 != current }) ?? testTracks[0]
+        title = next.0
+        artist = next.1
+        isPlaying = true
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+    }
+
+    public func triggerTestToast() {
+        triggerTestTrackChange()
     }
 
     // MARK: - Playback Progress & Adaptive Polling
@@ -682,6 +700,27 @@ final class NowPlayingManager: ObservableObject {
         }
         if currentLyricIndex >= 0 && currentLyricIndex < lyrics.count {
             return lyrics[currentLyricIndex].text
+        }
+        return ""
+    }
+
+    var nextLyricText: String {
+        guard !lyrics.isEmpty else { return "" }
+        let currentIndex: Int? = {
+            if let idx = lyrics.firstIndex(where: { $0.id == currentLyricIndex }) {
+                return idx
+            }
+            if currentLyricIndex >= 0 && currentLyricIndex < lyrics.count {
+                return currentLyricIndex
+            }
+            return nil
+        }()
+        guard let currentIndex else { return "" }
+        for nextIdx in (currentIndex + 1)..<lyrics.count {
+            let lineText = lyrics[nextIdx].text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !lineText.isEmpty {
+                return lineText
+            }
         }
         return ""
     }
@@ -1296,9 +1335,6 @@ final class NowPlayingManager: ObservableObject {
             )
             self.currentLyricIndex = 0
             self.lyrics = []
-            if chosen.isPlaying {
-                self.triggerToast()
-            }
             self.fetchLyrics(title: chosen.title, artist: chosen.artist)
         } else if chosen.isJSBridgeAvailable && chosen.position >= 0 {
             if abs(self.playerPosition - chosen.position) > 0.75 || self.playerPosition == 0 {
@@ -1364,7 +1400,6 @@ final class NowPlayingManager: ObservableObject {
         artworkURL = ""
         artworkImage = artwork
         isPlaying = true
-        triggerToast()
         startProgressTimer()
     }
 
@@ -1691,7 +1726,6 @@ final class NowPlayingManager: ObservableObject {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
             self?.fetchPlaybackDetails()
-            self?.triggerToast()
         }
     }
 
@@ -1717,7 +1751,6 @@ final class NowPlayingManager: ObservableObject {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
             self?.fetchPlaybackDetails()
-            self?.triggerToast()
         }
     }
 
