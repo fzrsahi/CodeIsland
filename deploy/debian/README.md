@@ -173,10 +173,59 @@ Secrets are securely maintained in Woodpecker Server (`https://ci-codeisland.azh
 |---|---|---|
 | `codeisland_webhook_secret` | Shared secret token for `/api/deploy-webhook` | Injected into `build-dev-dmg` & `build-release-dmg` |
 | `sparkle_private_key` | Ed25519 private key used to sign DMG releases | Injected in-memory to `sign_update` |
+| `github_token` | GitHub API Personal Access Token (classic `repo:status` or fine-grained) | Injected into `test` & `report-pr-failure` |
 
 ---
 
-## 5. Release Execution & Verification
+## 5. Woodpecker CI Server GitHub Status Reporting & Rulesets Integration
+
+### 1. Root Cause Analysis: Why Checks Were Missing in GitHub Rulesets
+1. **Commit Status API vs Checks API**: Woodpecker CI (v2.8.3) integrates with GitHub via the **Commit Statuses API** (`POST /repos/{owner}/{repo}/statuses/{sha}`), not the GitHub Checks API (Check Runs).
+   * Commit statuses appear on the **Conversation** tab (merge box at the bottom of the PR), **not** in the PR "Checks" tab (which is reserved exclusively for GitHub Apps).
+   * **GitHub Branch Rulesets fully support Commit Statuses.** The absence of entries in the Checks tab does not prevent status check enforcement.
+2. **Event-Variable Mismatch in Context Name**: By default, Woodpecker generates context names with `{{ .event }}`:
+   * Push to `main`: `ci/woodpecker/push/woodpecker`
+   * Pull Request: `ci/woodpecker/pr/woodpecker`
+   Because GitHub Rulesets for `main` only index checks that have been reported to `main`, `ci/woodpecker/pr/woodpecker` is not surfaced in the `main` ruleset picker unless searched explicitly or configured with a stable context format.
+
+### 2. Recommended Server-Side Configuration (AWS EC2 Woodpecker Server)
+To ensure Woodpecker reports an identical, event-independent status context across both PRs and direct pushes, configure the following environment variable on the Woodpecker server (`ci-codeisland.azhr.cloud`):
+
+```bash
+# In Woodpecker Server environment file (e.g. /etc/woodpecker/server.env or docker-compose.yml):
+WOODPECKER_STATUS_CONTEXT=ci/woodpecker
+WOODPECKER_STATUS_CONTEXT_FORMAT="{{ .context }}/{{ .workflow }}"
+```
+
+With this setting:
+- On `push`: Woodpecker reports `ci/woodpecker/woodpecker`
+- On `pull_request`: Woodpecker reports `ci/woodpecker/woodpecker`
+
+Restart Woodpecker Server to apply:
+```bash
+sudo systemctl restart woodpecker-server
+# or: docker compose restart woodpecker-server
+```
+
+### 3. Configuring GitHub Branch Rulesets
+1. In the GitHub repository, navigate to **Settings > Rules > Rulesets**.
+2. Select your branch protection ruleset for `main` (or click **New ruleset > New branch ruleset**).
+3. Under **Rules**, enable **Require status checks to pass before merging**.
+4. In the **Required status checks** section, click **+ Add checks**.
+5. In the search box, search for:
+   * **`CodeIsland / XCTest Core Harness`** (Recommended: verifies all 1,098 unit tests pass; stable across all events)
+   * **`ci/woodpecker/pr/woodpecker`** (or `ci/woodpecker/woodpecker` / `ci/woodpecker` after server format update)
+6. Select the status check, check **Do not require branches to be up to date before merging** (or enable strict mode if preferred), and click **Save changes**.
+
+### 4. Verification CLI Tool
+Maintainers can verify live GitHub commit statuses for any commit or PR using:
+```bash
+python3 ./scripts/verify-ci-status.py --sha HEAD
+```
+
+---
+
+## 6. Release Execution & Verification
 
 ### Production Release (Stable)
 Push a semantic version tag to `main`:

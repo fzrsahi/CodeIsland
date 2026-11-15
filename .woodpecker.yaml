@@ -38,7 +38,7 @@ steps:
         branch: [dev, main]
 
   # --------------------------------------------------------------------------
-  # 1b. Failure Notification: Report test failures directly to GitHub PR
+  # 1b. Failure Notification: Report test failures directly to GitHub PR & status
   # --------------------------------------------------------------------------
   - name: report-pr-failure
     image: bash
@@ -49,7 +49,7 @@ steps:
       - python3 ./scripts/report-status.py --context "CodeIsland / XCTest Core Harness" --state failure --description "XCTest execution failed. See PR details." || true
       - python3 ./scripts/report-pr-failure.py /tmp/test-output.log
     when:
-      - event: pull_request
+      - event: [pull_request, push]
         status: failure
 
   # --------------------------------------------------------------------------

@@ -151,11 +151,21 @@ CodeIsland uses a **Four-Tier Verification Architecture** to keep the `main` bra
 4. **Tier 4 (Post-Build Artifact Smoke Test)**:
    Release packaging steps verify DMG size (> 1MB), application bundle layout, and Sparkle Ed25519 cryptographic signatures before triggering automated deployment.
 
-### 🔒 GitHub Branch Protection Settings
-The CI pipeline publishes granular commit status checks to the GitHub REST API, allowing maintainers to require specific checks under **Settings > Branches > Require status checks to pass**:
-* `CodeIsland / Syntax & Git Hygiene Guard`: Verifies syntax and git hygiene.
-* `CodeIsland / XCTest Core Harness`: Enforces that all 1,098 unit tests pass before merge.
+### 🔒 GitHub Branch Protection & Ruleset Settings
+The CI pipeline publishes granular commit status checks to the GitHub REST API (Commit Statuses API), allowing maintainers to require specific checks under **Settings > Rules > Rulesets** (or **Settings > Branches > Require status checks to pass**):
+
+* `CodeIsland / XCTest Core Harness`: Enforces that all 1,098 unit tests pass before merge. This status check uses a unified context name across both `push` and `pull_request` events.
+* `CodeIsland / Syntax & Git Hygiene Guard`: Verifies syntax and git hygiene (conflict markers, branch hygiene).
 * `CodeIsland / Artifact Integrity Smoke Test`: Asserts that production DMG artifacts are valid (> 1MB).
+* `ci/woodpecker/pr/woodpecker` (or `ci/woodpecker/woodpecker` with server template fix): Native Woodpecker CI pipeline status.
+
+> [!TIP]
+> **GitHub Ruleset "Add checks" Search**:
+> Status checks appear in the PR **Conversation** tab (merge box), rather than the "Checks" tab (which is reserved exclusively for GitHub Apps using the Checks API). In GitHub Rulesets under *"Require status checks to pass before merging"*, click **+ Add checks**, and type `CodeIsland / XCTest Core Harness` or `woodpecker` in the search box to select and require it.
+> You can verify the active commit statuses on any branch or PR at any time using:
+> ```bash
+> python3 ./scripts/verify-ci-status.py --sha HEAD
+> ```
 
 ---
 
