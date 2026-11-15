@@ -258,7 +258,7 @@ struct NotchHoopsView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             }
         }
-        .frame(height: 174)
+        .frame(height: 250)
         .background(Self.crtBg)
         .contentShape(Rectangle())
         .gesture(

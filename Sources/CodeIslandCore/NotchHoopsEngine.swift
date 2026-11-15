@@ -42,16 +42,17 @@ public struct NotchHoopsEngine: Sendable {
     }
 
     public static let courtWidth: Double = 460
-    public static let courtHeight: Double = 176
+    public static let courtHeight: Double = 256
     public static let ballRadius: Double = 12
-    public static let launchY: Double = 138
+    public static let launchY: Double = 212
+    public static let floorY: Double = launchY + ballRadius + 4
     public static let rimCenterX: Double = 396
-    public static let rimY: Double = 94
+    public static let rimY: Double = 124
     public static let rimHalfWidth: Double = 22
     public static let rimPostRadius: Double = 3.5
     public static let backboardX: Double = 424
-    public static let backboardTopY: Double = 44
-    public static let backboardBottomY: Double = 104
+    public static let backboardTopY: Double = 70
+    public static let backboardBottomY: Double = 134
     public static let gravity: Double = 580
     public static let maxBalls: Int = 3
 
@@ -92,6 +93,7 @@ public struct NotchHoopsEngine: Sendable {
     private var prevBallY: Double = launchY
     private var touchedRimOrBackboard: Bool = false
     private var scoredCurrentShot: Bool = false
+    private var floorBounces: Int = 0
 
     public init(highScore: Int = 0, positionMode: PositionMode = .random, initialLaunchX: Double? = nil) {
         self.highScore = max(0, highScore)
@@ -173,6 +175,7 @@ public struct NotchHoopsEngine: Sendable {
         prevBallY = ballY
         touchedRimOrBackboard = false
         scoredCurrentShot = false
+        floorBounces = 0
         feedbackText = nil
         feedbackPoints = 0
         feedbackTimer = 0
@@ -183,10 +186,10 @@ public struct NotchHoopsEngine: Sendable {
     /// Intentionally unassisted horizontally so players must judge distance & angle for 1P/2P/3P shots.
     public static func launchVelocity(dragDeltaX: Double, dragDeltaY: Double) -> (vx: Double, vy: Double)? {
         guard dragDeltaY < -14 else { return nil }
-        let pullUp = min(190.0, max(14.0, -dragDeltaY))
-        let pullRight = min(210.0, max(-60.0, dragDeltaX))
+        let pullUp = min(210.0, max(14.0, -dragDeltaY))
+        let pullRight = min(220.0, max(-80.0, dragDeltaX))
 
-        let vy = -(180.0 + pullUp * 2.65)
+        let vy = -(250.0 + pullUp * 2.55)
         let vx = max(40.0, min(520.0, 65.0 + pullRight * 2.15))
         return (vx, vy)
     }
@@ -285,24 +288,42 @@ public struct NotchHoopsEngine: Sendable {
             feedbackTimer = 1.1
         }
 
-        // Out-of-bounds / floor resolution
-        if ballY > Self.courtHeight + Self.ballRadius * 1.5 ||
-            ballX > Self.courtWidth + Self.ballRadius * 2 ||
-            ballX < -Self.ballRadius * 2 {
-            if !scoredCurrentShot {
-                streak = 0
-                ballsRemaining = max(0, ballsRemaining - 1)
-                feedbackText = "MISS"
-                feedbackPoints = 0
-                feedbackTimer = 0.85
-            }
+        // Side walls & ceiling containment so the ball never disappears off-screen
+        if ballX - Self.ballRadius <= 0 {
+            ballX = Self.ballRadius
+            ballVX = abs(ballVX) * 0.65
+        } else if ballX + Self.ballRadius >= Self.courtWidth {
+            ballX = Self.courtWidth - Self.ballRadius
+            ballVX = -abs(ballVX) * 0.65
+        }
+        if ballY - Self.ballRadius <= 2 {
+            ballY = Self.ballRadius + 2
+            ballVY = abs(ballVY) * 0.55
+        }
 
-            if ballsRemaining > 0 {
-                pickNextLaunchPosition()
-                phase = .ready
-            } else {
-                resetBall()
-                phase = .gameOver
+        // Court floor bounce & turn resolution
+        if ballY + Self.ballRadius >= Self.floorY {
+            ballY = Self.floorY - Self.ballRadius
+            floorBounces += 1
+            ballVY = -abs(ballVY) * 0.50
+            ballVX *= 0.80
+
+            if floorBounces >= 2 || abs(ballVY) < 55 {
+                if !scoredCurrentShot {
+                    streak = 0
+                    ballsRemaining = max(0, ballsRemaining - 1)
+                    feedbackText = "MISS"
+                    feedbackPoints = 0
+                    feedbackTimer = 0.85
+                }
+
+                if ballsRemaining > 0 {
+                    pickNextLaunchPosition()
+                    phase = .ready
+                } else {
+                    resetBall()
+                    phase = .gameOver
+                }
             }
         }
     }

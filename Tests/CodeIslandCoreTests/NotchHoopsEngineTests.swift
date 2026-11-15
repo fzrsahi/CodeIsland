@@ -44,8 +44,11 @@ final class NotchHoopsEngineTests: XCTestCase {
             XCTAssertEqual(engine.phase, .flying)
             XCTAssertTrue(engine.needsTick)
 
-            for _ in 0..<240 {
+            for _ in 0..<400 {
                 engine.step(dt: 1.0 / 60.0)
+                XCTAssertGreaterThanOrEqual(engine.ballX, NotchHoopsEngine.ballRadius - 0.01)
+                XCTAssertLessThanOrEqual(engine.ballX, NotchHoopsEngine.courtWidth - NotchHoopsEngine.ballRadius + 0.01)
+                XCTAssertLessThanOrEqual(engine.ballY, NotchHoopsEngine.floorY - NotchHoopsEngine.ballRadius + 0.01)
                 if engine.phase != .flying { break }
             }
 

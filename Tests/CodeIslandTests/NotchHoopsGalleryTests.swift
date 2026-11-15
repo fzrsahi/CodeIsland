@@ -26,7 +26,7 @@ final class NotchHoopsGalleryTests: XCTestCase {
         state.activeTabLabel = .game
         state.isTabTransitioning = false
 
-        let size = CGSize(width: 720, height: 230)
+        let size = CGSize(width: 720, height: 306)
 
         // 1. Render static screenshot of the Arena design
         let initialEngine = NotchHoopsEngine(highScore: 12, positionMode: .random, initialLaunchX: 85)
@@ -59,7 +59,7 @@ final class NotchHoopsGalleryTests: XCTestCase {
             }
 
             _ = engine.launch(dragDeltaX: swipe.dx, dragDeltaY: swipe.dy)
-            for _ in 0..<48 {
+            for _ in 0..<65 {
                 engine.step(dt: 1.0 / 60.0)
                 engine.step(dt: 1.0 / 60.0)
                 let view = arenaContainer(state: state, engine: engine, drag: nil)
