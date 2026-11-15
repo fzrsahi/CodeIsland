@@ -4111,6 +4111,8 @@ private struct MailSettingsPage: View {
     @ObservedObject private var mailManager = MailManager.shared
     @AppStorage(SettingsKey.mailIntegrationEnabled) private var mailEnabled = SettingsDefaults.mailIntegrationEnabled
     @AppStorage(SettingsKey.mailAutoPeekNewEmail) private var autoPeek = SettingsDefaults.mailAutoPeekNewEmail
+    @AppStorage(SettingsKey.mailSoundEnabled) private var mailSoundEnabled = SettingsDefaults.mailSoundEnabled
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
 
     var body: some View {
         Form {
@@ -4122,11 +4124,31 @@ private struct MailSettingsPage: View {
             }
 
             if mailEnabled {
-                Section("Notch Behavior") {
+                Section("Notch Behavior & Sound") {
                     Toggle("Auto-Peek on New Email", isOn: $autoPeek)
                     Text("When a new unread email arrives, the right wing of the notch immediately plays an arrival animation with a +1 badge, then returns smoothly.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    Toggle("Sound on New Email", isOn: $mailSoundEnabled)
+                    if mailSoundEnabled {
+                        let isRetro = (islandUITheme == IslandUITheme.pixel.rawValue)
+                        HStack {
+                            Text(isRetro
+                                ? "Theme sound: 8-Bit Chiptune Mail (respects Quiet Hours & Auto-Mute)."
+                                : "Theme sound: Classic Inbox Tri-Tone (respects Quiet Hours & Auto-Mute).")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button {
+                                SoundManager.shared.previewMailArrival(isRetro: isRetro)
+                            } label: {
+                                Label("Preview", systemImage: "speaker.wave.2")
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    }
                 }
 
                 Section("Inbox Status") {

@@ -504,6 +504,7 @@ enum SettingsKey {
     // Apple Mail Integration
     static let mailIntegrationEnabled = "mailIntegrationEnabled"
     static let mailAutoPeekNewEmail = "mailAutoPeekNewEmail"
+    static let mailSoundEnabled = "mailSoundEnabled"
     static let mailPollingIntervalSeconds = "mailPollingIntervalSeconds"
 }
 
@@ -648,6 +649,7 @@ struct SettingsDefaults {
     // Apple Mail Integration
     static let mailIntegrationEnabled = true
     static let mailAutoPeekNewEmail = true
+    static let mailSoundEnabled = true
     static let mailPollingIntervalSeconds = 45
 }
 
@@ -769,6 +771,7 @@ class SettingsManager {
             SettingsKey.prayerUsePreciseLocation: SettingsDefaults.prayerUsePreciseLocation,
             SettingsKey.mailIntegrationEnabled: SettingsDefaults.mailIntegrationEnabled,
             SettingsKey.mailAutoPeekNewEmail: SettingsDefaults.mailAutoPeekNewEmail,
+            SettingsKey.mailSoundEnabled: SettingsDefaults.mailSoundEnabled,
             SettingsKey.mailPollingIntervalSeconds: SettingsDefaults.mailPollingIntervalSeconds,
         ])
     }

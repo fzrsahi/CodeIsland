@@ -677,6 +677,8 @@ public final class MailManager: ObservableObject {
 
     /// Triggers a brief 3.8-second roller coaster mail arrival animation in the notch right wing
     public func triggerNewMailArrival(_ item: MailItem) {
+        SoundManager.shared.playMailArrivalSound()
+
         let isAutoPeek = UserDefaults.standard.object(forKey: SettingsKey.mailAutoPeekNewEmail) as? Bool ?? SettingsDefaults.mailAutoPeekNewEmail
         guard isAutoPeek else { return }
         self.latestArrivalMail = item

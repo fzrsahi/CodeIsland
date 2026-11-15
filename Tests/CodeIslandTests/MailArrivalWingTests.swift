@@ -251,4 +251,52 @@ final class MailArrivalWingTests: XCTestCase {
         XCTAssertLessThan(AppColorTheme.relativeLuminance(of: AppColorTheme.envelopeAccentStroke(for: silverAlbum)), 0.15)
         XCTAssertLessThan(AppColorTheme.relativeLuminance(of: AppColorTheme.envelopeAccentStroke(for: lightGray)), 0.40)
     }
+
+    @MainActor
+    func testMailSoundRoutingGatingAndResourceLoading() throws {
+        // 1. Theme mapping selects the dedicated Modern vs 8-Bit Pixel WAV
+        XCTAssertEqual(SoundManager.mailSoundName(forUITheme: IslandUITheme.modern.rawValue), "modern_mail")
+        XCTAssertEqual(SoundManager.mailSoundName(forUITheme: IslandUITheme.pixel.rawValue), "8bit_mail")
+
+        // 2. Both WAV assets must exist in the SPM resource bundle
+        XCTAssertNotNil(Bundle.appModule.url(forResource: "modern_mail", withExtension: "wav", subdirectory: "Resources"))
+        XCTAssertNotNil(Bundle.appModule.url(forResource: "8bit_mail", withExtension: "wav", subdirectory: "Resources"))
+
+        let defaults = UserDefaults.standard
+        let prevMailSound = defaults.object(forKey: SettingsKey.mailSoundEnabled)
+        let prevTheme = defaults.object(forKey: SettingsKey.islandUITheme)
+        let prevQuiet = defaults.object(forKey: SettingsKey.quietHoursEnabled)
+        let prevAway = defaults.object(forKey: SettingsKey.autoMuteWhenAway)
+        let prevSink = SoundManager.shared.playSink
+        defer {
+            SoundManager.shared.playSink = prevSink
+            if let prevMailSound { defaults.set(prevMailSound, forKey: SettingsKey.mailSoundEnabled) } else { defaults.removeObject(forKey: SettingsKey.mailSoundEnabled) }
+            if let prevTheme { defaults.set(prevTheme, forKey: SettingsKey.islandUITheme) } else { defaults.removeObject(forKey: SettingsKey.islandUITheme) }
+            if let prevQuiet { defaults.set(prevQuiet, forKey: SettingsKey.quietHoursEnabled) } else { defaults.removeObject(forKey: SettingsKey.quietHoursEnabled) }
+            if let prevAway { defaults.set(prevAway, forKey: SettingsKey.autoMuteWhenAway) } else { defaults.removeObject(forKey: SettingsKey.autoMuteWhenAway) }
+        }
+
+        var played: [String] = []
+        SoundManager.shared.playSink = { played.append($0) }
+        defaults.set(false, forKey: SettingsKey.quietHoursEnabled)
+        defaults.set(false, forKey: SettingsKey.autoMuteWhenAway)
+
+        // 3. Disabled toggle suppresses sound
+        defaults.set(false, forKey: SettingsKey.mailSoundEnabled)
+        let baseDate = Date(timeIntervalSince1970: 2_000_000_000)
+        SoundManager.shared.playMailArrivalSound(now: baseDate)
+        XCTAssertEqual(played, [])
+
+        // 4. Enabled toggle plays Modern sound, while immediate burst within 4s is debounced
+        defaults.set(true, forKey: SettingsKey.mailSoundEnabled)
+        defaults.set(IslandUITheme.modern.rawValue, forKey: SettingsKey.islandUITheme)
+        SoundManager.shared.playMailArrivalSound(now: baseDate)
+        SoundManager.shared.playMailArrivalSound(now: baseDate.addingTimeInterval(1.5))
+        XCTAssertEqual(played, ["modern_mail"])
+
+        // 5. After burst window passes, switching to Pixel theme plays 8bit_mail
+        defaults.set(IslandUITheme.pixel.rawValue, forKey: SettingsKey.islandUITheme)
+        SoundManager.shared.playMailArrivalSound(now: baseDate.addingTimeInterval(5.0))
+        XCTAssertEqual(played, ["modern_mail", "8bit_mail"])
+    }
 }
