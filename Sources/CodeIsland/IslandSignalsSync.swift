@@ -44,11 +44,13 @@ final class IslandSignalsSync {
             nowPlaying.$lyricsLoading.map { _ in () }.eraseToAnyPublisher(),
         ] {
             publisher
+                .receive(on: RunLoop.main)
                 .sink { [weak self] in self?.publishMusic() }
                 .store(in: &cancellables)
         }
 
         workspace.$isExpandedDetail
+            .receive(on: RunLoop.main)
             .sink { [weak self] expanded in self?.signals.setDetailExpanded(expanded) }
             .store(in: &cancellables)
 
@@ -57,6 +59,7 @@ final class IslandSignalsSync {
             system.$metrics.map { _ in () }.eraseToAnyPublisher(),
         ] {
             publisher
+                .receive(on: RunLoop.main)
                 .sink { [weak self] in
                     self?.signals.setChargingBanner(
                         visible: system.showChargingBanner,
@@ -67,6 +70,7 @@ final class IslandSignalsSync {
         }
 
         prayer.$showMiniPeekBanner
+            .receive(on: RunLoop.main)
             .sink { [weak self] visible in self?.signals.setMiniPeekBanner(visible) }
             .store(in: &cancellables)
 
@@ -78,6 +82,7 @@ final class IslandSignalsSync {
             prayer.$minutesUntilNextPrayer.map { _ in () }.eraseToAnyPublisher(),
         ] {
             publisher
+                .receive(on: RunLoop.main)
                 .sink { [weak self] in
                     let minutes = prayer.minutesUntilNextPrayer
                     self?.signals.setPrayerPrioritized(minutes <= 15 && minutes >= -5)
@@ -86,8 +91,11 @@ final class IslandSignalsSync {
         }
 
         volume.$isHUDVisible
+            .receive(on: RunLoop.main)
             .sink { [weak self] visible in self?.signals.setVolumeHUDVisible(visible) }
             .store(in: &cancellables)
+
+        publishMusic()
 
         refreshQuietHours()
         NotificationCenter.default.addObserver(
@@ -97,7 +105,7 @@ final class IslandSignalsSync {
         }
     }
 
-    private func publishMusic() {
+    func publishMusic() {
         let nowPlaying = NowPlayingManager.shared
         signals.setMusic(
             isPlaying: nowPlaying.isPlaying,

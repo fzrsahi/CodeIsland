@@ -147,7 +147,7 @@ struct NotchPanelView: View {
         shouldShowSubNotchLyrics && activeFloatingPreset == .connectedChin
     }
     private var isBilateralWingsLyricActive: Bool {
-        shouldShowSubNotchLyrics && activeFloatingPreset == .bilateralWings && !nowPlaying.lyrics.isEmpty
+        shouldShowSubNotchLyrics && activeFloatingPreset == .bilateralWings && (!nowPlaying.lyrics.isEmpty || nowPlaying.lyricsLoading)
     }
     private var effectiveNotchHeight: CGFloat {
         isConnectedChinLyricActive ? (notchHeight + 26) : notchHeight
@@ -257,7 +257,7 @@ struct NotchPanelView: View {
         }
     }
 
-    private var isActive: Bool { !appState.sessions.isEmpty || signals.isPlaying }
+    private var isActive: Bool { !appState.sessions.isEmpty || signals.isPlaying || nowPlaying.isPlaying }
     /// First launch / no-session state should still render a visible marker so the app
     /// doesn't disappear completely behind the physical notch.
     private var showIdleIndicator: Bool {
@@ -265,7 +265,7 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if signals.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner { return true }
+        if signals.isPlaying || nowPlaying.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
@@ -280,13 +280,13 @@ struct NotchPanelView: View {
     private var shouldShowSubNotchLyrics: Bool {
         guard !signals.isVolumeHUDVisible,
               showCompactLyrics,
-              signals.isPlaying,
+              signals.isPlaying || nowPlaying.isPlaying,
               !shouldShowExpanded,
               !appState.surface.isExpanded,
-              signals.hasTitle
+              signals.hasTitle || !nowPlaying.title.isEmpty
         else { return false }
-        // No lyrics for this track (and none on the way): hide the capsule.
-        return signals.hasLyrics
+        // Lyrics available for this track (or currently loading):
+        return signals.hasLyrics || !nowPlaying.lyrics.isEmpty || nowPlaying.lyricsLoading
     }
 
     private var isToastOnly: Bool {
@@ -431,7 +431,7 @@ struct NotchPanelView: View {
         var naturalRight: CGFloat = compactWingWidth
         if prayerManager.isPrayerPrioritized {
             naturalRight = max(naturalRight, isHoveringRightWing ? 115 : 85)
-        } else if signals.isPlaying {
+        } else if signals.isPlaying || nowPlaying.isPlaying {
             if isBilateralWingsLyricActive {
                 naturalRight = max(naturalRight, isPixel ? 140 : 130)
             } else if isHoveringRightWing {
@@ -439,6 +439,19 @@ struct NotchPanelView: View {
             } else {
                 naturalRight = max(naturalRight, isConnectedChinLyricActive ? 52 : 44)
             }
+        } else {
+            // Standby / Agent mode: ensure adequate width for branch/project pill + badges
+            var standbyWidth: CGFloat = isPixel ? 54 : 48
+            let hasBranch = appState.sessions.values.contains { !($0.gitBranch ?? "").isEmpty }
+            if hasBranch {
+                standbyWidth += 34
+            } else if !appState.sessions.isEmpty {
+                standbyWidth += 28
+            }
+            if signals.inQuietHours {
+                standbyWidth += 12
+            }
+            naturalRight = max(naturalRight, standbyWidth)
         }
         if isHoveringRightWing {
             naturalRight = max(naturalRight, 115)
@@ -772,7 +785,7 @@ struct NotchPanelView: View {
                             withAnimation(NotchAnimation.open) {
                                 if signals.isPrayerPrioritized {
                                     appState.transitionToTab(.prayer)
-                                } else if signals.isPlaying {
+                                } else if signals.isPlaying || nowPlaying.isPlaying {
                                     appState.transitionToTab(.music)
                                 } else {
                                     appState.transitionToTab(.agents)
@@ -1745,7 +1758,7 @@ private struct CompactRightWing: View {
                         appState.surface = .sessionList
                     }
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                } else if signals.isPlaying {
+                } else if signals.isPlaying || nowPlaying.isPlaying {
                     CyberMusicWingView(
                         nowPlaying: nowPlaying,
                         isHovered: shouldExpandRightWing,
@@ -1967,34 +1980,56 @@ private struct CompactRightWing: View {
                         }
                     } else {
                         // "STANDBY DYNAMIC ISLAND PILL" - Interactive & Alive
-                        HStack(spacing: 3.5) {
+                        let badgesWidth: CGFloat = {
+                            var w: CGFloat = 0
+                            if inQuietHours { w += 13 }
+                            if appState.glanceCompletionActive { w += 13 }
+                            if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion { w += 15 }
+                            return w
+                        }()
+                        let availableForPill = wingWidth > 0 ? max(16, wingWidth - badgesWidth - 14) : 58
+                        let showChevron = availableForPill >= 50
+                        let maxCharsForBranch: Int = {
+                            if availableForPill >= 52 { return 6 }
+                            if availableForPill >= 38 { return 4 }
+                            if availableForPill >= 26 { return 2 }
+                            return 0
+                        }()
+
+                        HStack(spacing: 3) {
                             if let branch = gitBranch, !branch.isEmpty {
                                 Image(systemName: "arrow.triangle.branch")
                                     .font(.system(size: 7.5, weight: .bold))
                                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                if isPixel {
-                                    PixelText(text: branch.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: 6)
-                                } else {
-                                    Text(branch)
-                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color.white.opacity(0.92))
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                        .frame(maxWidth: 48)
+                                    .fixedSize()
+                                if maxCharsForBranch > 0 {
+                                    if isPixel {
+                                        PixelText(text: branch.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: maxCharsForBranch)
+                                    } else {
+                                        Text(branch)
+                                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(Color.white.opacity(0.92))
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                            .frame(maxWidth: max(16, availableForPill - (showChevron ? 18 : 10)))
+                                    }
                                 }
                             } else if let proj = projectName, !proj.isEmpty {
                                 Image(systemName: "folder.fill")
                                     .font(.system(size: 7, weight: .bold))
                                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                if isPixel {
-                                    PixelText(text: proj.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: 6)
-                                } else {
-                                    Text(proj)
-                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color.white.opacity(0.92))
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                        .frame(maxWidth: 48)
+                                    .fixedSize()
+                                if maxCharsForBranch > 0 {
+                                    if isPixel {
+                                        PixelText(text: proj.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: maxCharsForBranch)
+                                    } else {
+                                        Text(proj)
+                                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(Color.white.opacity(0.90))
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                            .frame(maxWidth: max(16, availableForPill - (showChevron ? 18 : 10)))
+                                    }
                                 }
                             } else {
                                 Circle()
@@ -2012,11 +2047,13 @@ private struct CompactRightWing: View {
                                 }
                             }
 
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 6.5, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.50))
+                            if showChevron {
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 6.5, weight: .bold))
+                                    .foregroundStyle(Color.white.opacity(0.50))
+                            }
                         }
-                        .padding(.horizontal, 6.5)
+                        .padding(.horizontal, availableForPill < 36 ? 4 : 6)
                         .padding(.vertical, 3)
                         .background(
                             Group {
@@ -2082,8 +2119,8 @@ private struct CompactRightWing: View {
                 }
             }
         }
-        .padding(.leading, 8)
-        .padding(.trailing, expanded ? 10 : 3)
+        .padding(.leading, 6)
+        .padding(.trailing, expanded ? 10 : 8)
         // Its natural width, reported so the collapsed bar can make room for
         // it clear of the notch (CompactRightWingLayout).
         .fixedSize(horizontal: true, vertical: false)
