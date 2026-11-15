@@ -1715,21 +1715,6 @@ private struct AppearancePage: View {
                                 .padding(.vertical, 3.5)
                             }
                             .buttonStyle(.bordered)
-
-                            Button(action: {
-                                NowPlayingManager.shared.triggerTestToast()
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "music.note")
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundStyle(Color(red: 1.0, green: 0.16, blue: 0.53))
-                                    Text("Test Music Track Change")
-                                        .font(.system(size: 11, weight: .medium))
-                                }
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 3.5)
-                            }
-                            .buttonStyle(.bordered)
                         }
                     }
                     .padding(.top, 4)

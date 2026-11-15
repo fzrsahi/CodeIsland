@@ -600,7 +600,6 @@ final class NowPlayingManager: ObservableObject {
             self.setAnchor(position: position ?? 0.0, playing: playing)
             self.currentLyricIndex = 0
             self.lyrics = []
-            triggerToast()
             fetchLyrics(title: title, artist: artist)
         } else if let position = position {
             self.setAnchor(position: position, playing: isPlaying)
@@ -630,34 +629,15 @@ final class NowPlayingManager: ObservableObject {
         toastDismissWorkItem = nil
         toastDismissTimer?.invalidate()
         toastDismissTimer = nil
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            showToast = false
-        }
+        showToast = false
     }
 
     func triggerToast() {
-        toastDismissTimer?.invalidate()
-        toastDismissTimer = nil
-        toastDismissWorkItem?.cancel()
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            showToast = true
-        }
-        let item = DispatchWorkItem { [weak self] in
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                self?.showToast = false
-            }
-        }
-        toastDismissWorkItem = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: item)
+        // Music notifications disabled: music is smoothly presented in Dynamic Island wing & chin lyrics
     }
 
     public func triggerTestToast() {
-        if title.isEmpty {
-            title = "Midnight City"
-            artist = "M83"
-        }
-        triggerToast()
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+        // No-op
     }
 
     // MARK: - Playback Progress & Adaptive Polling
@@ -1319,9 +1299,6 @@ final class NowPlayingManager: ObservableObject {
             )
             self.currentLyricIndex = 0
             self.lyrics = []
-            if chosen.isPlaying {
-                self.triggerToast()
-            }
             self.fetchLyrics(title: chosen.title, artist: chosen.artist)
         } else if chosen.isJSBridgeAvailable && chosen.position >= 0 {
             if abs(self.playerPosition - chosen.position) > 0.75 || self.playerPosition == 0 {
@@ -1387,7 +1364,6 @@ final class NowPlayingManager: ObservableObject {
         artworkURL = ""
         artworkImage = artwork
         isPlaying = true
-        triggerToast()
         startProgressTimer()
     }
 
@@ -1714,7 +1690,6 @@ final class NowPlayingManager: ObservableObject {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
             self?.fetchPlaybackDetails()
-            self?.triggerToast()
         }
     }
 
@@ -1740,7 +1715,6 @@ final class NowPlayingManager: ObservableObject {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
             self?.fetchPlaybackDetails()
-            self?.triggerToast()
         }
     }
 

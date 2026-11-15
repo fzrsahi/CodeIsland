@@ -261,7 +261,7 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if signals.isPlaying || signals.showToast || signals.showMiniPeekBanner || signals.showChargingBanner { return true }
+        if signals.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
@@ -286,7 +286,7 @@ struct NotchPanelView: View {
     }
 
     private var isToastOnly: Bool {
-        (signals.showToast || signals.showMiniPeekBanner || signals.showChargingBanner) && !appState.surface.isExpanded
+        (signals.showMiniPeekBanner || signals.showChargingBanner) && !appState.surface.isExpanded
     }
 
 
@@ -480,9 +480,6 @@ struct NotchPanelView: View {
         }
         if signals.showMiniPeekBanner && !appState.surface.isExpanded {
             return min(max(330, requiredActiveBarWidth), maxPanelWidth)
-        }
-        if signals.showToast && !appState.surface.isExpanded {
-            return min(max(320, requiredActiveBarWidth), maxPanelWidth)
         }
         let maxSafeCollapsed = min(screenWidth * 0.38, 440)
         return min(requiredActiveBarWidth, maxSafeCollapsed)
@@ -760,7 +757,6 @@ struct NotchPanelView: View {
             .clipped()
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: panelWidth)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: shouldShowExpanded)
-            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showToast)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showMiniPeekBanner)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showChargingBanner)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: expandedTab)
@@ -1080,18 +1076,6 @@ struct NotchPanelView: View {
                 insertion: .move(edge: .top).combined(with: .opacity),
                 removal: .move(edge: .top).combined(with: .opacity)
             ))
-        } else if signals.showToast && !appState.surface.isExpanded {
-            // Music Track Change Mini Peek Banner
-            CyberMusicMiniPeekBanner(nowPlaying: nowPlaying) {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    appState.transitionToTab(.music)
-                    appState.surface = .sessionList
-                }
-            }
-                .transition(.asymmetric(
-                    insertion: .move(edge: .top).combined(with: .opacity),
-                    removal: .move(edge: .top).combined(with: .opacity)
-                ))
         } else {
             expandedSurfaceContent
         }
