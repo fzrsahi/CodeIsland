@@ -22,10 +22,19 @@ import CodeIslandCore
 //   factory     — Factory/Droid CLI single session
 //   codebuddy   — CodeBuddy CLI single session
 //   allcli      — All CLIs running simultaneously
+//   idle        — no sessions
+//   music       — no sessions, simulated track playing (no AppleScript)
+//   stress      — 30 sessions
+//
+// Debug builds always honour --preview; release builds only when isolated
+// (CODEISLAND_ISOLATED=1), which is how scripts/perf/bench.sh measures them.
 
 enum PreviewScenario: String, CaseIterable {
     case working
     case approval
+    /// Collapsed island with one session parked on an approval and a tool in
+    /// flight — the state `bench.sh` measures as `waiting-long`.
+    case waiting
     case question
     case completion
     case multi
@@ -44,6 +53,11 @@ enum PreviewScenario: String, CaseIterable {
     case allcli
     // Special states
     case idle
+    /// No preview sessions and discovery left running — what
+    /// `bench.sh`'s `discovery-active` scenario measures.
+    case discovery
+    /// No sessions; NowPlaying plays a simulated track (no AppleScript).
+    case music
     // Performance stress test
     case stress
 }
@@ -70,6 +84,8 @@ enum DebugHarness {
             applyWorking(to: appState)
         case .approval:
             applyApproval(to: appState)
+        case .waiting:
+            applyWaiting(to: appState)
         case .question:
             applyQuestion(to: appState)
         case .completion:
@@ -91,6 +107,8 @@ enum DebugHarness {
         case .kimi: applyKimi(to: appState)
         case .allcli: applyAllCLI(to: appState)
         case .idle: applyIdle(to: appState)
+        case .discovery: applyDiscovery(to: appState)
+        case .music: applyMusic(to: appState)
         case .stress: applyStress(to: appState)
         }
     }
@@ -130,6 +148,27 @@ enum DebugHarness {
         state.sessions["preview-approval"] = s
         state.activeSessionId = "preview-approval"
         state.surface = .approvalCard(sessionId: "preview-approval")
+    }
+
+    /// The collapsed waiting state: an approval is pending and its tool is
+    /// still named on the bar, which is the shape the wing renders. Derived
+    /// state is refreshed so the bar sees the session at once.
+    private static func applyWaiting(to state: AppState) {
+        var s = SessionSnapshot()
+        s.status = .waitingApproval
+        s.cwd = "/Users/dev/api-server"
+        s.model = "claude-opus-4-20250514"
+        s.source = "claude"
+        s.currentTool = "Bash"
+        s.toolDescription = "npm run test -- --coverage"
+        s.lastUserPrompt = "Run the test suite"
+        s.addRecentMessage(ChatMessage(isUser: true, text: "Run the test suite"))
+        s.termApp = "iTerm.app"
+
+        state.sessions["preview-waiting"] = s
+        state.activeSessionId = "preview-waiting"
+        state.surface = .collapsed
+        state.refreshDerivedState()
     }
 
     private static func applyQuestion(to state: AppState) {
@@ -535,6 +574,10 @@ enum DebugHarness {
         state.sessions.removeAll()
         state.activeSessionId = nil
         state.surface = .collapsed
+        // An isolated instance discovers nothing and hears only its own
+        // socket, so there is nothing to clear, and a timer here would be
+        // counted against idle by the benchmark.
+        guard !RuntimeEnvironment.isIsolated else { return }
         // Continuously clear sessions to block hook events during preview
         Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
             Task { @MainActor in
@@ -545,6 +588,32 @@ enum DebugHarness {
                 }
             }
         }
+    }
+
+    /// Clear whatever discovery found and keep it running: the benchmark wants
+    /// discovery's own cost, not the preview's.
+    private static func applyDiscovery(to state: AppState) {
+        state.sessions.removeAll()
+        state.activeSessionId = nil
+        state.surface = .collapsed
+    }
+
+    // MARK: - Music (simulated NowPlaying)
+
+    private static func applyMusic(to state: AppState) {
+        applyIdle(to: state)
+        // One synced line every 4 s, longer than any benchmark window.
+        let lrc = (0..<150).map { i in
+            String(format: "[%02d:%02d.00]Benchmark lyric line %d", (i * 4) / 60, (i * 4) % 60, i + 1)
+        }.joined(separator: "\n")
+        NowPlayingManager.shared.startSimulatedPlayback(
+            title: "Benchmark Track",
+            artist: "CodeIsland",
+            album: "Perf Harness",
+            duration: 600,
+            lrc: lrc,
+            artwork: NSImage(named: NSImage.applicationIconName)
+        )
     }
 
     // MARK: - Stress Test (30 sessions)

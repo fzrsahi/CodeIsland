@@ -1,0 +1,102 @@
+# ==============================================================================
+# Woodpecker CI Pipeline for CodeIsland
+# Dual-Track: Development (dev) & Production Stable (main)
+# Runs natively on macOS Sonoma KVM runner via 'local' backend
+# ==============================================================================
+
+clone:
+  git:
+    image: bash
+    settings:
+      lfs: false
+
+when:
+  - event: pull_request
+  - event: push
+    branch: [dev, main]
+  - event: tag
+
+steps:
+  # --------------------------------------------------------------------------
+  # 1. Automated Test Suite: PRs, push to dev/main, and release tags
+  # --------------------------------------------------------------------------
+  - name: test
+    image: bash
+    commands:
+      - echo "==> Running Swift tests on macOS Sonoma runner..."
+      - swift --version
+      - swift test
+    when:
+      - event: [pull_request, tag]
+      - event: push
+        branch: [dev, main]
+
+  # --------------------------------------------------------------------------
+  # 2. Development Track: Auto-build beta DMG & update appcast-dev.xml on dev push
+  # --------------------------------------------------------------------------
+  - name: build-dev-dmg
+    image: bash
+    environment:
+      CODEISLAND_WEBHOOK_SECRET:
+        from_secret: codeisland_webhook_secret
+      SPARKLE_PRIVATE_KEY:
+        from_secret: sparkle_private_key
+    commands:
+      - 'echo "==> Dev build triggered on branch dev (commit: ${CI_COMMIT_SHA:0:7})"'
+      - BASE_VER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist 2>/dev/null || echo "1.0.42")
+      - DEV_VERSION="${BASE_VER}-dev.${CI_PIPELINE_NUMBER}"
+      - 'echo "==> Building CodeIsland Beta version: $DEV_VERSION"'
+      - SKIP_SIGN=1 SKIP_NOTARIZE=1 BUILD_ARCH=arm64 ./scripts/build-dmg.sh "$DEV_VERSION"
+      - |
+        echo "==> Updating appcast-dev.xml and signing with Sparkle Ed25519 key..."
+        ./scripts/update-appcast.sh "$DEV_VERSION" .build/CodeIsland.dmg appcast-dev.xml
+      - |
+        echo "==> Generating SHA256SUMS.txt for dev build..."
+        shasum -a 256 .build/CodeIsland.dmg > .build/SHA256SUMS.txt
+        cat .build/SHA256SUMS.txt
+      - |
+        echo "==> Triggering dev deployment webhook..."
+        SHA=$(awk '{print $1}' .build/SHA256SUMS.txt)
+        curl -f -X POST \
+          -H "Content-Type: application/json" \
+          -H "X-Webhook-Secret: $CODEISLAND_WEBHOOK_SECRET" \
+          -d "{\"version\":\"$DEV_VERSION\",\"tag\":\"dev\",\"repository\":\"$CI_REPO\",\"sha256\":\"$SHA\",\"channel\":\"dev\"}" \
+          https://codeisland.azhr.cloud/api/deploy-webhook || true
+        echo "==> Dev pipeline finished successfully!"
+    when:
+      - event: push
+        branch: dev
+
+  # --------------------------------------------------------------------------
+  # 3. Production Track: Build stable release DMG & update appcast.xml on tag
+  # --------------------------------------------------------------------------
+  - name: build-release-dmg
+    image: bash
+    environment:
+      CODEISLAND_WEBHOOK_SECRET:
+        from_secret: codeisland_webhook_secret
+      SPARKLE_PRIVATE_KEY:
+        from_secret: sparkle_private_key
+    commands:
+      - 'echo "==> Production release tag detected: $CI_COMMIT_TAG"'
+      - VERSION="${CI_COMMIT_TAG#[vV]}"
+      - 'echo "==> Building CodeIsland Production DMG version: $VERSION"'
+      - SKIP_SIGN=1 SKIP_NOTARIZE=1 BUILD_ARCH=arm64 ./scripts/build-dmg.sh "$VERSION"
+      - |
+        echo "==> Updating appcast.xml and signing with Sparkle Ed25519 key..."
+        ./scripts/update-appcast.sh "$VERSION" .build/CodeIsland.dmg appcast.xml
+      - |
+        echo "==> Generating SHA256SUMS.txt..."
+        shasum -a 256 .build/CodeIsland.dmg > .build/SHA256SUMS.txt
+        cat .build/SHA256SUMS.txt
+      - |
+        echo "==> Triggering production deployment webhook..."
+        SHA=$(awk '{print $1}' .build/SHA256SUMS.txt)
+        curl -f -X POST \
+          -H "Content-Type: application/json" \
+          -H "X-Webhook-Secret: $CODEISLAND_WEBHOOK_SECRET" \
+          -d "{\"version\":\"$VERSION\",\"tag\":\"$CI_COMMIT_TAG\",\"repository\":\"$CI_REPO\",\"sha256\":\"$SHA\",\"channel\":\"stable\"}" \
+          https://codeisland.azhr.cloud/api/deploy-webhook || true
+        echo "==> Production pipeline finished successfully!"
+    when:
+      - event: tag

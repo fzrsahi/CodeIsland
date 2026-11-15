@@ -48,15 +48,17 @@ struct ClawdView: View {
     private struct V {
         let ox: CGFloat, oy: CGFloat, s: CGFloat
         let y0: CGFloat
+        let x0: CGFloat
 
-        init(_ sz: CGSize, svgW: CGFloat = 15, svgH: CGFloat = 10, svgY0: CGFloat = 6) {
+        init(_ sz: CGSize, svgW: CGFloat = 15, svgH: CGFloat = 10, svgY0: CGFloat = 6, svgX0: CGFloat = 0) {
             s = min(sz.width / svgW, sz.height / svgH)
             ox = (sz.width - svgW * s) / 2
             oy = (sz.height - svgH * s) / 2
             y0 = svgY0
+            x0 = svgX0
         }
         func r(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, dy: CGFloat = 0) -> CGRect {
-            CGRect(x: ox + x * s, y: oy + (y - y0 + dy) * s, width: w * s, height: h * s)
+            CGRect(x: ox + (x - x0) * s, y: oy + (y - y0 + dy) * s, width: w * s, height: h * s)
         }
     }
 
@@ -75,7 +77,7 @@ struct ClawdView: View {
         for (i, (cx, cy)) in corners.enumerated() {
             let rx = cx * ca - cy * sa + pivotX
             let ry = cx * sa + cy * ca + pivotY
-            let pt = CGPoint(x: v.ox + rx * v.s, y: v.oy + (ry - v.y0 + dy) * v.s)
+            let pt = CGPoint(x: v.ox + (rx - v.x0) * v.s, y: v.oy + (ry - v.y0 + dy) * v.s)
             if i == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
         }
         path.closeSubpath()
@@ -171,7 +173,7 @@ struct ClawdView: View {
         let breathe = MascotMotion.breathe(t, period: 4.5)
 
         return Canvas { c, sz in
-            let v = V(sz, svgW: 17, svgH: 7, svgY0: 9)
+            let v = V(sz, svgW: 18, svgH: 7, svgY0: 9, svgX0: -1)
             drawSleeping(c, v: v, breathe: breathe, t: t)
         }
     }

@@ -86,12 +86,66 @@ public enum WorkspaceHUDTheme: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+public enum AgentsHUDTheme: String, CaseIterable, Identifiable, Sendable {
+    case modern = "modern"
+    case pixelRetro = "pixelRetro"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .modern: return "Modern Clean (Island)"
+        case .pixelRetro: return "Pixel Retro 8-Bit (Arcade)"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .modern:
+            return "Sleek Apple SF Symbols, smooth continuous squircles, and dynamic island glass."
+        case .pixelRetro:
+            return "Authentic 8-bit arcade terminal with dot-matrix pixel headers, phosphor accents, and sharp stepped frames."
+        }
+    }
+}
+
+public enum PrayerCardDisplayMode: String, CaseIterable, Identifiable, Sendable {
+    case compact = "compact"
+    case panoramic = "panoramic"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .compact: return "Compact Ribbon (120pt)"
+        case .panoramic: return "Panoramic Diorama (242pt)"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .compact:
+            return "Minimal single-strip timeline matching Music HUD height for distraction-free glance."
+        case .panoramic:
+            return "Immersive landscape diorama featuring authentic mosque architecture, sun/moon arch, and rich details."
+        }
+    }
+}
+
 public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
     case pureText = "pureText"
     case capsule = "capsule"
     case frostedGlass = "frostedGlass"
     case neonHud = "neonHud"
     case seamlessGlass = "seamlessGlass"
+    case retroPixel = "retroPixel"
+    case liquidAurora = "liquidAurora"
+    case minimalBraun = "minimalBraun"
+    case tapeReel = "tapeReel"
+    case vinylGroove = "vinylGroove"
+    case fluidKaraoke = "fluidKaraoke"
+    case connectedChin = "connectedChin"
+    case bilateralWings = "bilateralWings"
 
     public var id: String { rawValue }
 
@@ -102,6 +156,14 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .frostedGlass: return "Frosted Glass (Blur Pill)"
         case .neonHud: return "Cyberpunk HUD (Brackets)"
         case .seamlessGlass: return "Seamless Glass (No Border)"
+        case .retroPixel: return "8-Bit Retro Arcade (Pixel Strip)"
+        case .liquidAurora: return "Liquid Aurora (Dynamic Glow)"
+        case .minimalBraun: return "Braun Industrial (Studio Strip)"
+        case .tapeReel: return "Teenage Engineering TP-7 (Tape Reel)"
+        case .vinylGroove: return "Vinyl Groove (Spinning Record & Tonearm)"
+        case .fluidKaraoke: return "Fluid Shimmer (Spatial Silk Wave)"
+        case .connectedChin: return "Unified Notch Chin (Contiguous Extension)"
+        case .bilateralWings: return "Panoramic Notch Wings (Icon - Lirik - Notch - Lirik - Icon)"
         }
     }
 
@@ -112,6 +174,14 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .frostedGlass: return "GLASS"
         case .neonHud: return "HUD"
         case .seamlessGlass: return "SEAMLESS"
+        case .retroPixel: return "8-BIT"
+        case .liquidAurora: return "AURORA"
+        case .minimalBraun: return "STUDIO"
+        case .tapeReel: return "TAPE"
+        case .vinylGroove: return "VINYL"
+        case .fluidKaraoke: return "FLUID"
+        case .connectedChin: return "NOTCH CHIN"
+        case .bilateralWings: return "NOTCH WINGS"
         }
     }
 
@@ -122,6 +192,14 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .frostedGlass: return "Apple-style translucent frosted blur pill."
         case .neonHud: return "Futuristic HUD with bracket accents and monospace telemetry."
         case .seamlessGlass: return "Borderless translucent frosted glass with smooth vertical roll-up lyrics and pure text focus."
+        case .retroPixel: return "Authentic 8-bit stepped pixel frame, monospaced typography, and dancing retro spectrum visualizer."
+        case .liquidAurora: return "Luxurious translucent glass with animated shifting multi-color aurora ambient glow behind lyrics."
+        case .minimalBraun: return "Ultra-clean Dieter Rams / Teenage Engineering audio monitor strip with live emerald recording dot."
+        case .tapeReel: return "Tactile hardware tape recorder with dual rotating reels, amber phosphor VFD luminescence, and peak VU meter."
+        case .vinylGroove: return "Audiophile micro vinyl record with concentric grooves, angled tonearm needle, and Swiss editorial typography."
+        case .fluidKaraoke: return "VisionOS spatial glass capsule with liquid iridescent shimmer sweeping across syllables and silk oscilloscope ribbon."
+        case .connectedChin: return "The notch seamlessly extends downwards under the MacBook notch, housing synced lyrics with enlarged wing icons."
+        case .bilateralWings: return "The normal small notch widens horizontally on both wings: Mascot + Current Lyric on left, Upcoming Lyric + Album Art on right, with no chin."
         }
     }
 }
@@ -130,6 +208,8 @@ public enum FloatingLyricFontDesign: String, CaseIterable, Identifiable, Sendabl
     case rounded = "rounded"
     case monospaced = "monospaced"
     case system = "system"
+    case serif = "serif"
+    case pixel = "pixel"
 
     public var id: String { rawValue }
 
@@ -138,11 +218,53 @@ public enum FloatingLyricFontDesign: String, CaseIterable, Identifiable, Sendabl
         case .rounded: return "Modern Rounded"
         case .monospaced: return "Monospaced Cyber"
         case .system: return "System Clean"
+        case .serif: return "Elegant Serif"
+        case .pixel: return "8-Bit Arcade Pixel"
+        }
+    }
+}
+
+public enum FloatingLyricIconStyle: String, CaseIterable, Identifiable, Sendable {
+    case spinningVinyl = "spinningVinyl"
+    case albumTurntable = "albumTurntable"
+    case dancingWave = "dancingWave"
+    case pulsingNote = "pulsingNote"
+    case retroCassette = "retroCassette"
+    case studioMic = "studioMic"
+    case hapticBubble = "hapticBubble"
+    case none = "none"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .spinningVinyl: return "Spinning Micro Vinyl"
+        case .albumTurntable: return "Rotating Album Disc"
+        case .dancingWave: return "Harmonic Waveform"
+        case .pulsingNote: return "Pulsing Neon Note"
+        case .retroCassette: return "Retro Cassette Spool"
+        case .studioMic: return "Live Studio Microphone"
+        case .hapticBubble: return "Tactile Lyric Bubble"
+        case .none: return "Hidden (Text Only)"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .spinningVinyl: return "Realistic micro vinyl record with concentric grooves that smoothly spins while music plays (Tap to play/pause)."
+        case .albumTurntable: return "Live spinning miniature album art disc with glowing grooved rim (Tap to play/pause)."
+        case .dancingWave: return "Dynamic harmonic soundwave node with rhythmically dancing peak bars."
+        case .pulsingNote: return "Vibrant neon musical eighth note with ambient breathing glow."
+        case .retroCassette: return "Miniature cassette tape spool with counter-rotating mechanical gears."
+        case .studioMic: return "Broadcast studio condenser mic with live luminescence ring."
+        case .hapticBubble: return "Frosted glass capsule with pulsating audio syllable dots."
+        case .none: return "No leading icon — pure minimalist floating typography."
         }
     }
 }
 
 public enum FloatingLyricTextColor: String, CaseIterable, Identifiable, Sendable {
+    case album = "album"
     case white = "white"
     case cyan = "cyan"
     case pink = "pink"
@@ -153,6 +275,7 @@ public enum FloatingLyricTextColor: String, CaseIterable, Identifiable, Sendable
 
     public var title: String {
         switch self {
+        case .album: return "Adaptive Album"
         case .white: return "Pure White"
         case .cyan: return "Cyber Cyan"
         case .pink: return "Neon Pink"
@@ -163,6 +286,7 @@ public enum FloatingLyricTextColor: String, CaseIterable, Identifiable, Sendable
 }
 
 public enum MusicProgressColor: String, CaseIterable, Identifiable, Sendable {
+    case album = "album"
     case theme = "theme"
     case white = "white"
     case cyan = "cyan"
@@ -174,6 +298,7 @@ public enum MusicProgressColor: String, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
+        case .album: return "Adaptive Album"
         case .theme: return "Match Theme"
         case .white: return "Pure White"
         case .cyan: return "Cyber Cyan"
@@ -225,10 +350,13 @@ enum SettingsKey {
     static let showCompactLyrics = "showCompactLyrics"
     static let musicHUDTheme = "musicHUDTheme"
     static let workspaceHUDTheme = "workspaceHUDTheme"
+    static let agentsHUDTheme = "agentsHUDTheme"
     static let musicHUDProgressColor = "musicHUDProgressColor"
+    static let syncThemeWithAlbumArt = "syncThemeWithAlbumArt"
     static let floatingLyricPreset = "floatingLyricPreset"
     static let floatingLyricFontSize = "floatingLyricFontSize"
     static let floatingLyricFontDesign = "floatingLyricFontDesign"
+    static let floatingLyricIconStyle = "floatingLyricIconStyle"
     static let floatingLyricTextColor = "floatingLyricTextColor"
     static let floatingLyricVerticalGap = "floatingLyricVerticalGap"
     static let lyricSyncOffset = "lyricSyncOffset"
@@ -280,8 +408,14 @@ enum SettingsKey {
     // boolean autoExpandOnCompletion — see AppState.completionStyle migration.
     static let completionNotificationStyle = "completionNotificationStyle"
 
+    // Master Feature Toggles (Memory & Energy Optimization)
+    static let agentsEnabled = "agentsEnabled"
+    static let workspaceEnabled = "workspaceEnabled"
+    static let musicEnabled = "musicEnabled"
+
     // Prayer & Living Diorama Clock
     static let prayerEnabled = "prayerEnabled"
+    static let prayerCardDisplayMode = "prayerCardDisplayMode"
     static let prayerCalculationMethod = "prayerCalculationMethod"
     static let prayerHijriCalendarSource = "prayerHijriCalendarSource"
     static let prayerHijriDayOffset = "prayerHijriDayOffset"
@@ -321,7 +455,7 @@ enum SettingsKey {
     // Tool status display
     static let showToolStatus = "showToolStatus"              // true = detailed, false = simple
 
-    // Island collapsed width scale (percentage: 50–150, default 100)
+    // Island collapsed width scale (percentage: 0–200, default 100)
     static let collapsedWidthScale = "collapsedWidthScale"
 
     // Default mascot source when no sessions exist (falls back to this instead of always "claude")
@@ -405,10 +539,13 @@ struct SettingsDefaults {
     static let showCompactLyrics = true
     static let musicHUDTheme = MusicHUDTheme.modernClean.rawValue
     static let workspaceHUDTheme = WorkspaceHUDTheme.modern.rawValue
+    static let agentsHUDTheme = AgentsHUDTheme.pixelRetro.rawValue
     static let musicHUDProgressColor = MusicProgressColor.theme.rawValue
+    static let syncThemeWithAlbumArt = false
     static let floatingLyricPreset = FloatingLyricPreset.pureText.rawValue
     static let floatingLyricFontSize: Double = 10.0
     static let floatingLyricFontDesign = FloatingLyricFontDesign.rounded.rawValue
+    static let floatingLyricIconStyle = FloatingLyricIconStyle.spinningVinyl.rawValue
     static let floatingLyricTextColor = FloatingLyricTextColor.white.rawValue
     static let floatingLyricVerticalGap: Double = 2.5
     static let lyricSyncOffset = 0.0
@@ -486,8 +623,14 @@ struct SettingsDefaults {
     static let pushSummaryLength = PushMessageFormatter.defaultSummaryLimit
     static let pushChannels = ""
 
+    // Master Feature Toggles (Memory & Energy Optimization)
+    static let agentsEnabled = true
+    static let workspaceEnabled = true
+    static let musicEnabled = true
+
     // Prayer & Living Diorama Clock
     static let prayerEnabled = false
+    static let prayerCardDisplayMode = PrayerCardDisplayMode.compact.rawValue
     static let prayerCalculationMethod = "kemenag"
     static let prayerHijriCalendarSource = "neoMABIMS"
     static let prayerHijriDayOffset = 0
@@ -545,10 +688,13 @@ class SettingsManager {
             SettingsKey.showCompactLyrics: SettingsDefaults.showCompactLyrics,
             SettingsKey.musicHUDTheme: SettingsDefaults.musicHUDTheme,
             SettingsKey.workspaceHUDTheme: SettingsDefaults.workspaceHUDTheme,
+            SettingsKey.agentsHUDTheme: SettingsDefaults.agentsHUDTheme,
             SettingsKey.musicHUDProgressColor: SettingsDefaults.musicHUDProgressColor,
+            SettingsKey.syncThemeWithAlbumArt: SettingsDefaults.syncThemeWithAlbumArt,
             SettingsKey.floatingLyricPreset: SettingsDefaults.floatingLyricPreset,
             SettingsKey.floatingLyricFontSize: SettingsDefaults.floatingLyricFontSize,
             SettingsKey.floatingLyricFontDesign: SettingsDefaults.floatingLyricFontDesign,
+            SettingsKey.floatingLyricIconStyle: SettingsDefaults.floatingLyricIconStyle,
             SettingsKey.floatingLyricTextColor: SettingsDefaults.floatingLyricTextColor,
             SettingsKey.floatingLyricVerticalGap: SettingsDefaults.floatingLyricVerticalGap,
             SettingsKey.lyricSyncOffset: SettingsDefaults.lyricSyncOffset,
@@ -604,6 +750,10 @@ class SettingsManager {
             SettingsKey.pushSummaryLength: SettingsDefaults.pushSummaryLength,
             SettingsKey.pushChannels: SettingsDefaults.pushChannels,
             SettingsKey.prayerEnabled: SettingsDefaults.prayerEnabled,
+            SettingsKey.prayerCardDisplayMode: SettingsDefaults.prayerCardDisplayMode,
+            SettingsKey.agentsEnabled: SettingsDefaults.agentsEnabled,
+            SettingsKey.workspaceEnabled: SettingsDefaults.workspaceEnabled,
+            SettingsKey.musicEnabled: SettingsDefaults.musicEnabled,
             SettingsKey.prayerCalculationMethod: SettingsDefaults.prayerCalculationMethod,
             SettingsKey.prayerHijriCalendarSource: SettingsDefaults.prayerHijriCalendarSource,
             SettingsKey.prayerHijriDayOffset: SettingsDefaults.prayerHijriDayOffset,

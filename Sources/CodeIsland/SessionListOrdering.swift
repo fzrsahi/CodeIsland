@@ -86,11 +86,11 @@ enum SessionCardStatus: Equatable, CaseIterable {
     /// card's near-black fill.
     var color: Color {
         switch self {
-        case .needsYou: return Color(red: 1.0, green: 0.6, blue: 0.2)
-        case .working, .thinking: return Color(red: 0.3, green: 0.85, blue: 0.4)
-        case .done: return .white.opacity(0.62)
+        case .needsYou: return Color(red: 1.0, green: 0.72, blue: 0.20)
+        case .working, .thinking: return Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .done: return .white.opacity(0.85)
         case .idle: return .white.opacity(0.55)
-        case .stopped: return Color(red: 1.0, green: 0.55, blue: 0.4)
+        case .stopped: return Color(red: 1.0, green: 0.55, blue: 0.40)
         case .error: return Color(red: 1.0, green: 0.38, blue: 0.42)
         }
     }

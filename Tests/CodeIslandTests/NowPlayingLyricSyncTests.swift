@@ -14,8 +14,9 @@ final class NowPlayingLyricSyncTests: XCTestCase {
         ]
         manager.trackDuration = 180.0
 
-        // At position 0, current lyric should be id 0
-        manager.playerPosition = 0.0
+        // At position 0, current lyric should be id 0. The position comes from
+        // the anchor now, so a test seeks rather than assigning it.
+        manager.seek(to: 0.0)
         XCTAssertEqual(manager.currentLyricText, "Break my heart again, yeah, yeah")
 
         // Seek past 4.5s
@@ -49,5 +50,39 @@ final class NowPlayingLyricSyncTests: XCTestCase {
         }
 
         XCTAssertEqual(manager.trackDuration, 40.0)
+    }
+}
+
+// MARK: - Next-line scheduling from the anchor (idle-perf ticket 08)
+
+final class NowPlayingLyricWakeTests: XCTestCase {
+    private let lines = [
+        LyricLine(id: 0, timestamp: 0.0, text: "one"),
+        LyricLine(id: 1, timestamp: 4.5, text: "two"),
+        LyricLine(id: 2, timestamp: 8.2, text: "three"),
+    ]
+
+    func testTheNextLineDecidesTheDelay() {
+        XCTAssertEqual(NowPlayingManager.nextLyricDelay(lyrics: lines, position: 2.0) ?? -1, 2.5, accuracy: 0.001)
+        XCTAssertEqual(NowPlayingManager.nextLyricDelay(lyrics: lines, position: 0.0) ?? -1, 4.5, accuracy: 0.001)
+    }
+
+    func testTheLastLineNeedsNoWake() {
+        XCTAssertNil(NowPlayingManager.nextLyricDelay(lyrics: lines, position: 9.0))
+    }
+
+    func testAPositionJustBeforeTheLineStillWakes() {
+        let delay = NowPlayingManager.nextLyricDelay(lyrics: lines, position: 8.199)
+        XCTAssertNotNil(delay)
+        XCTAssertGreaterThanOrEqual(delay!, 0.05, "a zero-length timer would spin")
+    }
+
+    func testTheSyncOffsetShiftsWhichLineIsNext() {
+        // A positive offset moves the effective position forward, so a later
+        // line is already current.
+        let withoutOffset = NowPlayingManager.nextLyricDelay(lyrics: lines, position: 5.0)
+        let withOffset = NowPlayingManager.nextLyricDelay(lyrics: lines, position: 5.0 + 4.0)
+        XCTAssertEqual(withoutOffset!, 3.2, accuracy: 0.001)
+        XCTAssertNil(withOffset)
     }
 }

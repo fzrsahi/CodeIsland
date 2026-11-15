@@ -50,7 +50,10 @@ final class L10n: ObservableObject {
         "appearance": "Appearance",
         "mascots": "Mascots",
         "sound": "Sound",
-        "prayer": "Prayer & Clock",
+        "prayer": "Sholat & Adhan",
+        "agents": "Agents",
+        "workspace": "Workspace",
+        "music": "Music",
         "mail": "Apple Mail",
         "remote": "Remote",
         "hooks": "Hooks",
@@ -2439,7 +2442,7 @@ final class L10n: ObservableObject {
         "hosted_by_harness_hint": "執行於 %@ 中",
     ]
 
-    private static let ja: [String: String] = [
+    private static let ja: [String: String] = en.merging([
         // Settings pages
         "general": "一般",
         "behavior": "動作",
@@ -3036,9 +3039,9 @@ final class L10n: ObservableObject {
         "reply_failed_placeholder": "返信失敗",
         "reply_aborted_placeholder": "返信中断",
         "hosted_by_harness_hint": "%@ 上で実行中",
-    ]
+    ]) { _, localized in localized }
 
-    private static let ko: [String: String] = [
+    private static let ko: [String: String] = en.merging([
         // Settings pages
         "general": "일반",
         "behavior": "동작",
@@ -3635,9 +3638,9 @@ final class L10n: ObservableObject {
         "reply_failed_placeholder": "답변 실패",
         "reply_aborted_placeholder": "답변 중단",
         "hosted_by_harness_hint": "%@에서 실행 중",
-    ]
+    ]) { _, localized in localized }
 
-    private static let tr: [String: String] = [
+    private static let tr: [String: String] = en.merging([
         // Settings pages
         "general": "Genel",
         "behavior": "Davranış",
@@ -4234,5 +4237,5 @@ final class L10n: ObservableObject {
         "reply_failed_placeholder": "Yanıt başarısız",
         "reply_aborted_placeholder": "Yanıt kesildi",
         "hosted_by_harness_hint": "%@ altında çalışıyor",
-    ]
+    ]) { _, localized in localized }
 }

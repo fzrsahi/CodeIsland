@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: ./scripts/update-appcast.sh <version> <dmg-path>
+# Usage: ./scripts/update-appcast.sh <version> <dmg-path> [appcast-file]
 # Example: ./scripts/update-appcast.sh 1.0.22 .build/CodeIsland.dmg
+# Example: ./scripts/update-appcast.sh 1.0.42-dev .build/CodeIsland.dmg appcast-dev.xml
 #
 # Produces / updates appcast.xml at the repo root. Signs the DMG with the
 # private EdDSA key that lives in the macOS Keychain (added by Sparkle's
@@ -29,7 +30,16 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$REPO_ROOT/.build"
-APPCAST="$REPO_ROOT/appcast.xml"
+if [[ -n "${3:-}" ]]; then
+    if [[ "$3" = /* ]]; then
+        APPCAST="$3"
+    else
+        APPCAST="$REPO_ROOT/$3"
+    fi
+else
+    APPCAST="$REPO_ROOT/appcast.xml"
+fi
+APPCAST_BASENAME="$(basename "$APPCAST")"
 SIGN_UPDATE="$BUILD_DIR/artifacts/sparkle/Sparkle/bin/sign_update"
 
 if [[ ! -x "$SIGN_UPDATE" ]]; then
@@ -89,7 +99,7 @@ if [[ ! -f "$APPCAST" ]]; then
      version="2.0">
   <channel>
     <title>CodeIsland</title>
-    <link>https://codeisland.azhr.cloud/appcast.xml</link>
+    <link>https://codeisland.azhr.cloud/${APPCAST_BASENAME}</link>
     <description>Most recent CodeIsland updates</description>
     <language>en</language>
 ${NEW_ITEM}
@@ -100,7 +110,7 @@ else
     echo "==> Prepending version ${VERSION} to $APPCAST"
     # Reject if the same version is already in the feed.
     if /usr/bin/grep -q "<sparkle:version>${VERSION}</sparkle:version>" "$APPCAST"; then
-        echo "ERROR: ${VERSION} is already in appcast.xml. Bump the version or edit by hand." >&2
+        echo "ERROR: ${VERSION} is already in ${APPCAST_BASENAME}. Bump the version or edit by hand." >&2
         exit 1
     fi
     # Use perl for portable insertion before the first <item> (or before </channel>
