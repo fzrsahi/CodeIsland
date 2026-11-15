@@ -388,16 +388,18 @@ struct CyberMusicWingView: View {
     @ObservedObject var nowPlaying: NowPlayingManager
     var isHovered: Bool = false
     var isEnlarged: Bool = false
+    var isBilateralWingsLyricActive: Bool = false
     var wingWidth: CGFloat = 0
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
 
-    init(nowPlaying: NowPlayingManager, isHovered: Bool = false, isEnlarged: Bool = false, wingWidth: CGFloat = 0) {
+    init(nowPlaying: NowPlayingManager, isHovered: Bool = false, isEnlarged: Bool = false, isBilateralWingsLyricActive: Bool = false, wingWidth: CGFloat = 0) {
         self.nowPlaying = nowPlaying
         self.isHovered = isHovered
         self.isEnlarged = isEnlarged
+        self.isBilateralWingsLyricActive = isBilateralWingsLyricActive
         self.wingWidth = wingWidth
     }
 
@@ -434,6 +436,30 @@ struct CyberMusicWingView: View {
         if isModernClean {
             // MODERN CLEAN: Langsung album cover, marquee title (saat di-hover), dan visualizer tanpa border
             HStack(alignment: .center, spacing: isEnlarged ? 5 : 4) {
+                if isBilateralWingsLyricActive {
+                    // UPCOMING LYRIC STREAM (Right Wing Preview)
+                    let nextText = nowPlaying.nextLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let displayUpcoming = !nextText.isEmpty ? nextText : (nowPlaying.title.isEmpty ? "" : "— " + nowPlaying.title)
+                    let availableForLyric = max(24, wingWidth > 0 ? (wingWidth - artSize - 22) : 84)
+
+                    if !displayUpcoming.isEmpty {
+                        ModernMarqueeText(
+                            text: displayUpcoming,
+                            font: .system(size: 8.5, weight: .regular, design: .rounded),
+                            color: Color.white.opacity(0.65),
+                            maxWidth: availableForLyric
+                        )
+                        .transition(.opacity)
+                    }
+                } else if isHovered && (wingWidth == 0 || wingWidth >= 75) {
+                    let titleMaxW = max(36, min(isEnlarged ? 76 : 64, wingWidth > 0 ? (wingWidth - 44) : 64))
+                    ModernMarqueeText(
+                        text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
+                        maxWidth: titleMaxW
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                }
+
                 if let art = nowPlaying.artworkImage {
                     Image(nsImage: art)
                         .resizable()
@@ -451,15 +477,6 @@ struct CyberMusicWingView: View {
                         )
                 }
 
-                if isHovered && (wingWidth == 0 || wingWidth >= 75) {
-                    let titleMaxW = max(36, min(isEnlarged ? 76 : 64, wingWidth > 0 ? (wingWidth - 44) : 64))
-                    ModernMarqueeText(
-                        text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
-                        maxWidth: titleMaxW
-                    )
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                }
-
                 ModernAudioSpectrumView(
                     barCount: 3,
                     isPlaying: nowPlaying.isPlaying,
@@ -474,6 +491,23 @@ struct CyberMusicWingView: View {
         } else {
             // RETRO CYBER: Seamless Frameless, Sharp Album Art, Marquee Monospaced Title saat hover, Dancing Spectrum
             HStack(alignment: .center, spacing: isEnlarged ? 5 : 4) {
+                if isBilateralWingsLyricActive {
+                    // UPCOMING LYRIC STREAM (Retro Monospace Preview)
+                    let nextText = nowPlaying.nextLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let displayUpcoming = !nextText.isEmpty ? nextText.uppercased() : (nowPlaying.title.isEmpty ? "" : "— " + nowPlaying.title.uppercased())
+                    let availableForLyric = max(24, wingWidth > 0 ? (wingWidth - artSize - 22) : 84)
+
+                    if !displayUpcoming.isEmpty {
+                        ModernMarqueeText(
+                            text: displayUpcoming,
+                            font: .system(size: 8.0, weight: .medium, design: .monospaced),
+                            color: Color.white.opacity(0.60),
+                            maxWidth: availableForLyric
+                        )
+                        .transition(.opacity)
+                    }
+                }
+
                 // Album Art (crisp rounded corner, no outer bounding pill)
                 if let art = nowPlaying.artworkImage {
                     Image(nsImage: art)
@@ -493,7 +527,7 @@ struct CyberMusicWingView: View {
                 }
 
                 // Title: Marquee scrolling text in retro monospace font (vertically centered, never truncated)
-                if isHovered && (wingWidth == 0 || wingWidth >= 75) {
+                if !isBilateralWingsLyricActive && isHovered && (wingWidth == 0 || wingWidth >= 75) {
                     let titleMaxW = max(36, min(isEnlarged ? 76 : 64, wingWidth > 0 ? (wingWidth - 44) : 64))
                     ModernMarqueeText(
                         text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
@@ -506,7 +540,7 @@ struct CyberMusicWingView: View {
 
                 // Equalizer: Pixel dancing spectrum using active theme accent as base
                 CyberAudioSpectrumView(
-                    barCount: isHovered ? 3 : 4,
+                    barCount: (isHovered || isBilateralWingsLyricActive) ? 3 : 4,
                     isPlaying: nowPlaying.isPlaying,
                     barWidth: isEnlarged ? 2.4 : 2.0,
                     segmentHeight: isEnlarged ? 2.0 : 1.6,
@@ -1260,7 +1294,7 @@ struct SubNotchFloatingLyricCapsuleView: View {
         case .fluidKaraoke:
             chromeWidth = activeIconStyle == .none ? 50 : 64
             minWidth = activeIconStyle == .none ? 60 : 76
-        case .connectedChin:
+        case .connectedChin, .bilateralWings:
             chromeWidth = 50
             minWidth = 60
         }
@@ -1712,8 +1746,8 @@ struct SubNotchFloatingLyricCapsuleView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 4.5)
 
-        case .connectedChin:
-            // Unified chin is integrated directly into the notch bar silhouette
+        case .connectedChin, .bilateralWings:
+            // Integrated directly into the notch bar silhouette
             EmptyView()
         }
     }
@@ -1918,7 +1952,7 @@ struct SubNotchFloatingLyricCapsuleView: View {
                 )
                 .shadow(color: Color.black.opacity(0.85), radius: 8, y: 3)
 
-        case .connectedChin:
+        case .connectedChin, .bilateralWings:
             EmptyView()
         }
     }

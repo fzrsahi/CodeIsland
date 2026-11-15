@@ -704,6 +704,27 @@ final class NowPlayingManager: ObservableObject {
         return ""
     }
 
+    var nextLyricText: String {
+        guard !lyrics.isEmpty else { return "" }
+        let currentIndex: Int? = {
+            if let idx = lyrics.firstIndex(where: { $0.id == currentLyricIndex }) {
+                return idx
+            }
+            if currentLyricIndex >= 0 && currentLyricIndex < lyrics.count {
+                return currentLyricIndex
+            }
+            return nil
+        }()
+        guard let currentIndex else { return "" }
+        for nextIdx in (currentIndex + 1)..<lyrics.count {
+            let lineText = lyrics[nextIdx].text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !lineText.isEmpty {
+                return lineText
+            }
+        }
+        return ""
+    }
+
     private func updateCurrentLyricIndex() {
         guard !lyrics.isEmpty else { return }
         let offset = UserDefaults.standard.double(forKey: SettingsKey.lyricSyncOffset)

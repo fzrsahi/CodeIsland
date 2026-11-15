@@ -145,6 +145,7 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
     case vinylGroove = "vinylGroove"
     case fluidKaraoke = "fluidKaraoke"
     case connectedChin = "connectedChin"
+    case bilateralWings = "bilateralWings"
 
     public var id: String { rawValue }
 
@@ -162,6 +163,7 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .vinylGroove: return "Vinyl Groove (Spinning Record & Tonearm)"
         case .fluidKaraoke: return "Fluid Shimmer (Spatial Silk Wave)"
         case .connectedChin: return "Unified Notch Chin (Contiguous Extension)"
+        case .bilateralWings: return "Bilateral Notch Wings (Left & Right Stream)"
         }
     }
 
@@ -179,6 +181,7 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .vinylGroove: return "VINYL"
         case .fluidKaraoke: return "FLUID"
         case .connectedChin: return "NOTCH CHIN"
+        case .bilateralWings: return "DUAL WINGS"
         }
     }
 
@@ -196,6 +199,7 @@ public enum FloatingLyricPreset: String, CaseIterable, Identifiable, Sendable {
         case .vinylGroove: return "Audiophile micro vinyl record with concentric grooves, angled tonearm needle, and Swiss editorial typography."
         case .fluidKaraoke: return "VisionOS spatial glass capsule with liquid iridescent shimmer sweeping across syllables and silk oscilloscope ribbon."
         case .connectedChin: return "The notch seamlessly extends downwards under the MacBook notch, housing synced lyrics with enlarged wing icons."
+        case .bilateralWings: return "The compact notch widens into dual panoramic wings, streaming the current lyric on the left wing and upcoming lyric on the right wing."
         }
     }
 }
