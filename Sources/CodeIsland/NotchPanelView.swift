@@ -1780,395 +1780,24 @@ private struct CompactRightWing: View {
         isHovered
     }
 
+    private var extraBadgeCount: Int {
+        var count = 0
+        if inQuietHours { count += 1 }
+        if appState.glanceCompletionActive { count += 1 }
+        if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion { count += 1 }
+        return count
+    }
+
+    private var maxBranchWidth: CGFloat {
+        extraBadgeCount > 0 ? 54 : 76
+    }
+
     var body: some View {
         HStack(spacing: 5) {
             if expanded {
-                HStack(spacing: 6) {
-                    if expandedTab == .agents {
-                        SessionGroupingTabs(
-                            mode: $groupingMode,
-                            expandedTab: $expandedTab
-                        )
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                    }
-
-                    Spacer(minLength: 4)
-
-                    // System controls (Mute, Settings, Quit)
-                    ExpandedHeaderControls(soundEnabled: $soundEnabled)
-                }
-                .padding(.horizontal, 4)
+                expandedWingContent
             } else {
-                if signals.isPrayerPrioritized {
-                    // SMART PRIORITY: Prayer countdown takes active priority at T <= 15m
-                    PrayerCompactWingView(isHovered: shouldExpandRightWing) {
-                        expandedTab = .prayer
-                        appState.surface = .sessionList
-                    }
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                } else if signals.isPlaying || nowPlaying.isPlaying {
-                    CyberMusicWingView(
-                        nowPlaying: nowPlaying,
-                        isHovered: shouldExpandRightWing,
-                        isEnlarged: isEnlarged,
-                        isBilateralWingsLyricActive: isBilateralWingsLyricActive,
-                        wingWidth: wingWidth
-                    )
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                } else {
-                    // AGENT / STANDBY MODE:
-                    let extraBadgeCount: Int = {
-                        var count = 0
-                        if inQuietHours { count += 1 }
-                        if appState.glanceCompletionActive { count += 1 }
-                        if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion { count += 1 }
-                        return count
-                    }()
-                    let maxBranchWidth: CGFloat = extraBadgeCount > 0 ? 54 : 76
-
-                    if shouldExpandRightWing {
-                        if isHovered {
-                            // "INTERACTIVE QUICK-ACTION DOCK" - Tactile Micro Controls
-                            HStack(spacing: 3) {
-                                // 1. Workspace Button
-                                Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                                    withAnimation(NotchAnimation.open) {
-                                        expandedTab = .workspace
-                                        appState.surface = .sessionList
-                                    }
-                                }) {
-                                    HStack(spacing: 2.5) {
-                                        Image(systemName: (gitBranch != nil && !gitBranch!.isEmpty) ? "arrow.triangle.branch" : "folder.fill")
-                                            .font(.system(size: 7, weight: .bold))
-                                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                        Text(gitBranch ?? projectName ?? "work")
-                                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.95))
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                            .frame(maxWidth: 44)
-                                    }
-                                    .padding(.horizontal, 4.5)
-                                    .padding(.vertical, 2.5)
-                                    .background(
-                                        Capsule()
-                                            .fill(hoveredAction == "workspace" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.25) : Color.white.opacity(0.06))
-                                            .overlay(Capsule().strokeBorder(hoveredAction == "workspace" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6) : Color.white.opacity(0.10), lineWidth: 0.5))
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                                .onHover { if $0 { hoveredAction = "workspace" } else if hoveredAction == "workspace" { hoveredAction = nil } }
-                                .help("Open Workspace (Git & Files)")
-
-                                // 2. Agents Button
-                                Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                                    withAnimation(NotchAnimation.open) {
-                                        expandedTab = .agents
-                                        appState.surface = .sessionList
-                                    }
-                                }) {
-                                    let active = appState.activeSessionCount
-                                    let total = appState.totalSessionCount
-                                    HStack(spacing: 2.5) {
-                                        if active > 0 {
-                                            Circle()
-                                                .fill(Color(red: 0.20, green: 0.88, blue: 0.65))
-                                                .frame(width: 3.5, height: 3.5)
-                                                .shadow(color: Color(red: 0.20, green: 0.88, blue: 0.65).opacity(0.8), radius: 2)
-                                        } else {
-                                            Image(systemName: "terminal.fill")
-                                                .font(.system(size: 6, weight: .bold))
-                                                .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                        }
-                                        Text("\(active)/\(total)")
-                                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.95))
-                                    }
-                                    .padding(.horizontal, 4.5)
-                                    .padding(.vertical, 2.5)
-                                    .background(
-                                        Capsule()
-                                            .fill(hoveredAction == "agents" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.25) : Color.white.opacity(0.06))
-                                            .overlay(Capsule().strokeBorder(hoveredAction == "agents" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6) : Color.white.opacity(0.10), lineWidth: 0.5))
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                                .onHover { if $0 { hoveredAction = "agents" } else if hoveredAction == "agents" { hoveredAction = nil } }
-                                .help("Open Agents & Sessions")
-
-                                // 3. Expand Chevron Button
-                                Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                                    withAnimation(NotchAnimation.open) {
-                                        appState.surface = .sessionList
-                                    }
-                                }) {
-                                    Image(systemName: "chevron.down")
-                                        .font(.system(size: 6.5, weight: .bold))
-                                        .foregroundStyle(Color.white.opacity(hoveredAction == "expand" ? 1.0 : 0.6))
-                                        .frame(width: 15, height: 15)
-                                        .background(
-                                            Circle()
-                                                .fill(hoveredAction == "expand" ? Color.white.opacity(0.2) : Color.white.opacity(0.06))
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                                .onHover { if $0 { hoveredAction = "expand" } else if hoveredAction == "expand" { hoveredAction = nil } }
-                                .help("Expand Dynamic Island")
-                            }
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2.5)
-                            .background(
-                                Capsule()
-                                    .fill(Color.white.opacity(0.09))
-                                    .overlay(Capsule().strokeBorder(Color.white.opacity(0.16), lineWidth: 0.6))
-                            )
-                            .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
-                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                        } else {
-                            // "THINKING ACTIVE" - Sleek Dynamic Island Capsule
-                            HStack(spacing: 4.5) {
-                                if let branch = gitBranch, !branch.isEmpty {
-                                    HStack(spacing: 3) {
-                                        Image(systemName: "arrow.triangle.branch")
-                                            .font(.system(size: 7.5, weight: .bold))
-                                            .foregroundStyle(Color(red: 0.20, green: 0.88, blue: 0.65))
-
-                                        if isPixel {
-                                            PixelText(text: branch.uppercased(), color: Color(red: 0.20, green: 0.88, blue: 0.65), pixelSize: 1.0, maxChars: 8)
-                                        } else {
-                                            Text(branch)
-                                                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                                .foregroundStyle(Color.white.opacity(0.92))
-                                                .lineLimit(1)
-                                                .truncationMode(.middle)
-                                                .frame(maxWidth: maxBranchWidth, alignment: .leading)
-                                        }
-                                    }
-                                } else if let proj = projectName, !proj.isEmpty {
-                                    HStack(spacing: 3) {
-                                        Image(systemName: "folder.fill")
-                                            .font(.system(size: 7, weight: .bold))
-                                            .foregroundStyle(Color.white.opacity(0.60))
-
-                                        if isPixel {
-                                            PixelText(text: proj.uppercased(), color: Color.white.opacity(0.90), pixelSize: 1.0, maxChars: 8)
-                                        } else {
-                                            Text(proj)
-                                                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                                .foregroundStyle(Color.white.opacity(0.90))
-                                                .lineLimit(1)
-                                                .truncationMode(.middle)
-                                                .frame(maxWidth: maxBranchWidth, alignment: .leading)
-                                        }
-                                    }
-                                } else {
-                                    HStack(spacing: 3) {
-                                        Image(systemName: "cpu")
-                                            .font(.system(size: 7, weight: .bold))
-                                            .foregroundStyle(Color.white.opacity(0.60))
-
-                                        if isPixel {
-                                            PixelText(text: agentDisplayLabel.uppercased(), color: Color.white.opacity(0.90), pixelSize: 1.0, maxChars: 8)
-                                        } else {
-                                            Text(agentDisplayLabel.lowercased())
-                                                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                                                .foregroundStyle(Color.white.opacity(0.90))
-                                                .lineLimit(1)
-                                                .frame(maxWidth: maxBranchWidth, alignment: .leading)
-                                        }
-                                    }
-                                }
-
-                                Rectangle()
-                                    .fill(Color.white.opacity(0.18))
-                                    .frame(width: 1, height: 9)
-
-                                let active = appState.activeSessionCount
-                                let total = appState.totalSessionCount
-                                HStack(spacing: 3) {
-                                    if active > 0 {
-                                        Circle()
-                                            .fill(Color(red: 0.20, green: 0.88, blue: 0.65))
-                                            .frame(width: 4, height: 4)
-                                            .shadow(color: Color(red: 0.20, green: 0.88, blue: 0.65).opacity(0.7), radius: 2)
-                                    } else {
-                                        Image(systemName: "terminal")
-                                            .font(.system(size: 6.5, weight: .semibold))
-                                            .foregroundStyle(Color.white.opacity(0.40))
-                                    }
-
-                                    if isPixel {
-                                        PixelText(text: "\(active)/\(total)", color: active > 0 ? Color.white : Color.white.opacity(0.65), pixelSize: 1.0)
-                                    } else {
-                                        Text("\(active)/\(total)")
-                                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                            .foregroundStyle(active > 0 ? Color.white : Color.white.opacity(0.65))
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 6.5)
-                            .padding(.vertical, 3)
-                            .background(
-                                Group {
-                                    if isPixel {
-                                        RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-                                            .fill(Color.white.opacity(0.08))
-                                    } else {
-                                        Capsule()
-                                            .fill(Color.white.opacity(0.08))
-                                            .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
-                                    }
-                                }
-                            )
-                            .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
-                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                        }
-                    } else {
-                        // "STANDBY DYNAMIC ISLAND PILL" - Interactive & Alive
-                        let badgesWidth: CGFloat = {
-                            var w: CGFloat = 0
-                            if inQuietHours { w += 13 }
-                            if appState.glanceCompletionActive { w += 13 }
-                            if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion { w += 15 }
-                            return w
-                        }()
-                        let availableForPill = wingWidth > 0 ? max(16, wingWidth - badgesWidth - 14) : 58
-                        let showChevron = availableForPill >= 50
-                        let branchText: String = {
-                            guard let branch = gitBranch, !branch.isEmpty else { return "" }
-                            if let dashIdx = branch.firstIndex(of: "-") {
-                                let prefix = String(branch[..<dashIdx])
-                                if prefix.contains("#") { return prefix }
-                            }
-                            return branch
-                        }()
-                        let branchSpace = max(16, availableForPill - (showChevron ? 18 : 10) - 12)
-                        let maxCharsForBranch: Int = max(4, Int(branchSpace / (isPixel ? 6.0 : 5.5)))
-
-                        HStack(spacing: 3) {
-                            if !branchText.isEmpty {
-                                Image(systemName: "arrow.triangle.branch")
-                                    .font(.system(size: 7.5, weight: .bold))
-                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                    .fixedSize()
-                                if maxCharsForBranch > 0 {
-                                    if isPixel {
-                                        PixelText(text: branchText.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: maxCharsForBranch)
-                                    } else {
-                                        Text(branchText)
-                                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.92))
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                            .frame(maxWidth: max(16, availableForPill - (showChevron ? 18 : 10)))
-                                    }
-                                }
-                            } else if let proj = projectName, !proj.isEmpty {
-                                Image(systemName: "folder.fill")
-                                    .font(.system(size: 7, weight: .bold))
-                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                    .fixedSize()
-                                if maxCharsForBranch > 0 {
-                                    if isPixel {
-                                        PixelText(text: proj.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: maxCharsForBranch)
-                                    } else {
-                                        Text(proj)
-                                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.90))
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                            .frame(maxWidth: max(16, availableForPill - (showChevron ? 18 : 10)))
-                                    }
-                                }
-                            } else {
-                                Circle()
-                                    .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                    .frame(width: 4, height: 4)
-                                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), radius: 2)
-                                TimelineView(.periodic(from: .now, by: 10.0)) { _ in
-                                    if isPixel {
-                                        PixelText(text: currentTimeString, color: Color.white.opacity(0.92), pixelSize: 1.0)
-                                    } else {
-                                        Text(currentTimeString)
-                                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                            .foregroundStyle(Color.white.opacity(0.92))
-                                    }
-                                }
-                            }
-
-                            if showChevron {
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 6.5, weight: .bold))
-                                    .foregroundStyle(Color.white.opacity(0.50))
-                            }
-                        }
-                        .padding(.horizontal, availableForPill < 36 ? 4 : 6)
-                        .padding(.vertical, 3)
-                        .background(
-                            Group {
-                                if isPixel {
-                                    RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-                                        .fill(Color.white.opacity(0.08))
-                                } else {
-                                    Capsule()
-                                        .fill(Color.white.opacity(0.08))
-                                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
-                                }
-                            }
-                        )
-                        .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                            withAnimation(NotchAnimation.open) {
-                                expandedTab = .agents
-                                appState.surface = .sessionList
-                            }
-                        }
-                        .help("Click to expand island")
-                    }
-                }
-
-                // Quiet hours active — explains why event sounds are silent.
-                if inQuietHours {
-                    Image(systemName: "moon.fill")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.5))
-                        .help(l10n["quiet_hours"])
-                }
-
-                // Glance completion badge
-                if appState.glanceCompletionActive {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                        .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), radius: 2)
-                }
-
-                // Question / Approval badges
-                if appState.hiddenPendingQuestionSessionId != nil {
-                    Image(systemName: "questionmark.bubble.fill")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
-                        .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
-                        .symbolEffect(.bounce, value: appState.followUps.hintPulse)
-                        .help(l10n["question_waiting_hint"])
-                } else if appState.followUps.hintActive {
-                    Image(systemName: "bell.badge.fill")
-                        .font(.system(size: 8.5, weight: .bold))
-                        .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
-                        .symbolEffect(.bounce, value: appState.followUps.hintPulse)
-                        .help(l10n["follow_up_hint"])
-                } else if appState.status == .waitingApproval || appState.status == .waitingQuestion {
-                    // A repeating `.symbolEffect` costs a layout pass per
-                    // display frame; the bell pulses on the render server
-                    // instead and keeps pulsing after the island goes quiet.
-                    PulsingBellView(animating: !reduceMotion)
-                        .frame(width: 10, height: 10)
-                }
+                collapsedWingContent
             }
         }
         .padding(.leading, 6)
@@ -2179,6 +1808,428 @@ private struct CompactRightWing: View {
         .background(GeometryReader { geo in
             Color.clear.preference(key: CompactRightWingWidthKey.self, value: expanded ? 0 : geo.size.width)
         })
+    }
+
+    @ViewBuilder
+    private var expandedWingContent: some View {
+        HStack(spacing: 6) {
+            if expandedTab == .agents {
+                SessionGroupingTabs(
+                    mode: $groupingMode,
+                    expandedTab: $expandedTab
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+
+            Spacer(minLength: 4)
+
+            // System controls (Mute, Settings, Quit)
+            ExpandedHeaderControls(soundEnabled: $soundEnabled)
+        }
+        .padding(.horizontal, 4)
+    }
+
+    @ViewBuilder
+    private var collapsedWingContent: some View {
+        if signals.isPrayerPrioritized {
+            // SMART PRIORITY: Prayer countdown takes active priority at T <= 15m
+            PrayerCompactWingView(isHovered: shouldExpandRightWing) {
+                expandedTab = .prayer
+                appState.surface = .sessionList
+            }
+            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        } else if signals.isPlaying || nowPlaying.isPlaying {
+            CyberMusicWingView(
+                nowPlaying: nowPlaying,
+                isHovered: shouldExpandRightWing,
+                isEnlarged: isEnlarged,
+                isBilateralWingsLyricActive: isBilateralWingsLyricActive,
+                wingWidth: wingWidth
+            )
+            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        } else {
+            // AGENT / STANDBY MODE:
+            if shouldExpandRightWing {
+                if isHovered {
+                    interactiveQuickActionDock
+                } else {
+                    thinkingCapsule
+                }
+            } else {
+                standbyPill
+            }
+        }
+
+        statusBadges
+    }
+
+    private func dockButtonFill(isHovered: Bool) -> Color {
+        isHovered ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.25) : Color.white.opacity(0.06)
+    }
+
+    private func dockButtonStroke(isHovered: Bool) -> Color {
+        isHovered ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6) : Color.white.opacity(0.10)
+    }
+
+    @ViewBuilder
+    private var dockWorkspaceButton: some View {
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            withAnimation(NotchAnimation.open) {
+                expandedTab = .workspace
+                appState.surface = .sessionList
+            }
+        }) {
+            HStack(spacing: 2.5) {
+                Image(systemName: (gitBranch != nil && !gitBranch!.isEmpty) ? "arrow.triangle.branch" : "folder.fill")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                Text(gitBranch ?? projectName ?? "work")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.95))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: 44)
+            }
+            .padding(.horizontal, 4.5)
+            .padding(.vertical, 2.5)
+            .background(
+                Capsule()
+                    .fill(dockButtonFill(isHovered: hoveredAction == "workspace"))
+                    .overlay(Capsule().strokeBorder(dockButtonStroke(isHovered: hoveredAction == "workspace"), lineWidth: 0.5))
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { if $0 { hoveredAction = "workspace" } else if hoveredAction == "workspace" { hoveredAction = nil } }
+        .help("Open Workspace (Git & Files)")
+    }
+
+    @ViewBuilder
+    private var dockAgentsButton: some View {
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            withAnimation(NotchAnimation.open) {
+                expandedTab = .agents
+                appState.surface = .sessionList
+            }
+        }) {
+            let active = appState.activeSessionCount
+            let total = appState.totalSessionCount
+            HStack(spacing: 2.5) {
+                if active > 0 {
+                    Circle()
+                        .fill(Color(red: 0.20, green: 0.88, blue: 0.65))
+                        .frame(width: 3.5, height: 3.5)
+                        .shadow(color: Color(red: 0.20, green: 0.88, blue: 0.65).opacity(0.8), radius: 2)
+                } else {
+                    Image(systemName: "terminal.fill")
+                        .font(.system(size: 6, weight: .bold))
+                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                }
+                Text("\(active)/\(total)")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.95))
+            }
+            .padding(.horizontal, 4.5)
+            .padding(.vertical, 2.5)
+            .background(
+                Capsule()
+                    .fill(dockButtonFill(isHovered: hoveredAction == "agents"))
+                    .overlay(Capsule().strokeBorder(dockButtonStroke(isHovered: hoveredAction == "agents"), lineWidth: 0.5))
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { if $0 { hoveredAction = "agents" } else if hoveredAction == "agents" { hoveredAction = nil } }
+        .help("Open Agents & Sessions")
+    }
+
+    @ViewBuilder
+    private var dockExpandButton: some View {
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            withAnimation(NotchAnimation.open) {
+                appState.surface = .sessionList
+            }
+        }) {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 6.5, weight: .bold))
+                .foregroundStyle(Color.white.opacity(hoveredAction == "expand" ? 1.0 : 0.6))
+                .frame(width: 15, height: 15)
+                .background(
+                    Circle()
+                        .fill(hoveredAction == "expand" ? Color.white.opacity(0.2) : Color.white.opacity(0.06))
+                )
+        }
+        .buttonStyle(.plain)
+        .onHover { if $0 { hoveredAction = "expand" } else if hoveredAction == "expand" { hoveredAction = nil } }
+        .help("Expand Dynamic Island")
+    }
+
+    @ViewBuilder
+    private var interactiveQuickActionDock: some View {
+        // "INTERACTIVE QUICK-ACTION DOCK" - Tactile Micro Controls
+        HStack(spacing: 3) {
+            dockWorkspaceButton
+            dockAgentsButton
+            dockExpandButton
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2.5)
+        .background(
+            Capsule()
+                .fill(Color.white.opacity(0.09))
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.16), lineWidth: 0.6))
+        )
+        .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
+        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+    }
+
+    @ViewBuilder
+    private var thinkingCapsule: some View {
+        // "THINKING ACTIVE" - Sleek Dynamic Island Capsule
+        HStack(spacing: 4.5) {
+            if let branch = gitBranch, !branch.isEmpty {
+                HStack(spacing: 3) {
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.system(size: 7.5, weight: .bold))
+                        .foregroundStyle(Color(red: 0.20, green: 0.88, blue: 0.65))
+
+                    if isPixel {
+                        PixelText(text: branch.uppercased(), color: Color(red: 0.20, green: 0.88, blue: 0.65), pixelSize: 1.0, maxChars: 8)
+                    } else {
+                        Text(branch)
+                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.92))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                    }
+                }
+            } else if let proj = projectName, !proj.isEmpty {
+                HStack(spacing: 3) {
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.60))
+
+                    if isPixel {
+                        PixelText(text: proj.uppercased(), color: Color.white.opacity(0.90), pixelSize: 1.0, maxChars: 8)
+                    } else {
+                        Text(proj)
+                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.90))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                    }
+                }
+            } else {
+                HStack(spacing: 3) {
+                    Image(systemName: "cpu")
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.60))
+
+                    if isPixel {
+                        PixelText(text: agentDisplayLabel.uppercased(), color: Color.white.opacity(0.90), pixelSize: 1.0, maxChars: 8)
+                    } else {
+                        Text(agentDisplayLabel.lowercased())
+                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.90))
+                            .lineLimit(1)
+                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                    }
+                }
+            }
+
+            Rectangle()
+                .fill(Color.white.opacity(0.18))
+                .frame(width: 1, height: 9)
+
+            let active = appState.activeSessionCount
+            let total = appState.totalSessionCount
+            HStack(spacing: 3) {
+                if active > 0 {
+                    Circle()
+                        .fill(Color(red: 0.20, green: 0.88, blue: 0.65))
+                        .frame(width: 4, height: 4)
+                        .shadow(color: Color(red: 0.20, green: 0.88, blue: 0.65).opacity(0.7), radius: 2)
+                } else {
+                    Image(systemName: "terminal")
+                        .font(.system(size: 6.5, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.40))
+                }
+
+                if isPixel {
+                    PixelText(text: "\(active)/\(total)", color: active > 0 ? Color.white : Color.white.opacity(0.65), pixelSize: 1.0)
+                } else {
+                    Text("\(active)/\(total)")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundStyle(active > 0 ? Color.white : Color.white.opacity(0.65))
+                }
+            }
+        }
+        .padding(.horizontal, 6.5)
+        .padding(.vertical, 3)
+        .background(
+            Group {
+                if isPixel {
+                    RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                } else {
+                    Capsule()
+                        .fill(Color.white.opacity(0.08))
+                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+                }
+            }
+        )
+        .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
+        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+    }
+
+    @ViewBuilder
+    private var standbyPill: some View {
+        // "STANDBY DYNAMIC ISLAND PILL" - Interactive & Alive
+        let badgesWidth: CGFloat = {
+            var w: CGFloat = 0
+            if inQuietHours { w += 13 }
+            if appState.glanceCompletionActive { w += 13 }
+            if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion { w += 15 }
+            return w
+        }()
+        let availableForPill = wingWidth > 0 ? max(16, wingWidth - badgesWidth - 14) : 58
+        let showChevron = availableForPill >= 50
+        let branchText: String = {
+            guard let branch = gitBranch, !branch.isEmpty else { return "" }
+            if let dashIdx = branch.firstIndex(of: "-") {
+                let prefix = String(branch[..<dashIdx])
+                if prefix.contains("#") { return prefix }
+            }
+            return branch
+        }()
+        let branchSpace = max(16, availableForPill - (showChevron ? 18 : 10) - 12)
+        let maxCharsForBranch: Int = max(4, Int(branchSpace / (isPixel ? 6.0 : 5.5)))
+
+        HStack(spacing: 3) {
+            if !branchText.isEmpty {
+                Image(systemName: "arrow.triangle.branch")
+                    .font(.system(size: 7.5, weight: .bold))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .fixedSize()
+                if maxCharsForBranch > 0 {
+                    if isPixel {
+                        PixelText(text: branchText.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: maxCharsForBranch)
+                    } else {
+                        Text(branchText)
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.92))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .frame(maxWidth: max(16, availableForPill - (showChevron ? 18 : 10)))
+                    }
+                }
+            } else if let proj = projectName, !proj.isEmpty {
+                Image(systemName: "folder.fill")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .fixedSize()
+                if maxCharsForBranch > 0 {
+                    if isPixel {
+                        PixelText(text: proj.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: maxCharsForBranch)
+                    } else {
+                        Text(proj)
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.90))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .frame(maxWidth: max(16, availableForPill - (showChevron ? 18 : 10)))
+                    }
+                }
+            } else {
+                Circle()
+                    .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .frame(width: 4, height: 4)
+                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), radius: 2)
+                TimelineView(.periodic(from: .now, by: 10.0)) { _ in
+                    if isPixel {
+                        PixelText(text: currentTimeString, color: Color.white.opacity(0.92), pixelSize: 1.0)
+                    } else {
+                        Text(currentTimeString)
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.92))
+                    }
+                }
+            }
+
+            if showChevron {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 6.5, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.50))
+            }
+        }
+        .padding(.horizontal, availableForPill < 36 ? 4 : 6)
+        .padding(.vertical, 3)
+        .background(
+            Group {
+                if isPixel {
+                    RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                } else {
+                    Capsule()
+                        .fill(Color.white.opacity(0.08))
+                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+                }
+            }
+        )
+        .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            withAnimation(NotchAnimation.open) {
+                expandedTab = .agents
+                appState.surface = .sessionList
+            }
+        }
+        .help("Click to expand island")
+    }
+
+    @ViewBuilder
+    private var statusBadges: some View {
+        // Quiet hours active — explains why event sounds are silent.
+        if inQuietHours {
+            Image(systemName: "moon.fill")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(.white.opacity(0.5))
+                .help(l10n["quiet_hours"])
+        }
+
+        // Glance completion badge
+        if appState.glanceCompletionActive {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), radius: 2)
+        }
+
+        // Question / Approval badges
+        if appState.hiddenPendingQuestionSessionId != nil {
+            Image(systemName: "questionmark.bubble.fill")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
+                .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+                .symbolEffect(.bounce, value: appState.followUps.hintPulse)
+                .help(l10n["question_waiting_hint"])
+        } else if appState.followUps.hintActive {
+            Image(systemName: "bell.badge.fill")
+                .font(.system(size: 8.5, weight: .bold))
+                .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
+                .symbolEffect(.bounce, value: appState.followUps.hintPulse)
+                .help(l10n["follow_up_hint"])
+        } else if appState.status == .waitingApproval || appState.status == .waitingQuestion {
+            // A repeating `.symbolEffect` costs a layout pass per
+            // display frame; the bell pulses on the render server
+            // instead and keeps pulsing after the island goes quiet.
+            PulsingBellView(animating: !reduceMotion)
+                .frame(width: 10, height: 10)
+        }
     }
 }
 

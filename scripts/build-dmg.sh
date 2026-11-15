@@ -71,18 +71,29 @@ CURRENT_VER=$(defaults read "$REPO_ROOT/Info.plist" CFBundleShortVersionString)
 sed -e "s/<string>${CURRENT_VER}<\/string>/<string>${VERSION}<\/string>/g" \
     "$REPO_ROOT/Info.plist" > "$CONTENTS_DIR/Info.plist"
 
-# Compile app icon and asset catalog
-xcrun actool \
-    --output-format human-readable-text \
-    --notices --warnings --errors \
-    --platform macosx \
-    --target-device mac \
-    --minimum-deployment-target 14.0 \
-    --app-icon AppIcon \
-    --output-partial-info-plist /dev/null \
-    --compile "$CONTENTS_DIR/Resources" \
-    "$REPO_ROOT/Assets.xcassets" \
-    "$REPO_ROOT/AppIcon.icon"
+# Direct beta builds to the isolated beta feed URL
+if [[ "$VERSION" =~ (-dev|-beta) ]]; then
+    sed -i '' 's|https://codeisland.azhr.cloud/appcast.xml|https://codeisland.azhr.cloud/appcast-dev.xml|g' "$CONTENTS_DIR/Info.plist" 2>/dev/null || \
+    sed -i 's|https://codeisland.azhr.cloud/appcast.xml|https://codeisland.azhr.cloud/appcast-dev.xml|g' "$CONTENTS_DIR/Info.plist"
+    echo "==> Configured Sparkle Beta feed: appcast-dev.xml"
+fi
+
+# Compile app icon and asset catalog (requires Xcode.app, fallback to bundled AppIcon on CLT)
+if xcrun --find actool >/dev/null 2>&1; then
+    xcrun actool \
+        --output-format human-readable-text \
+        --notices --warnings --errors \
+        --platform macosx \
+        --target-device mac \
+        --minimum-deployment-target 14.0 \
+        --app-icon AppIcon \
+        --output-partial-info-plist /dev/null \
+        --compile "$CONTENTS_DIR/Resources" \
+        "$REPO_ROOT/Assets.xcassets" \
+        "$REPO_ROOT/AppIcon.icon"
+else
+    echo "==> xcrun actool not found (CLT environment). Using fallback AppIcon.icns."
+fi
 
 # Finder still relies on CFBundleIconFile/AppIcon.icns for some copied or
 # unsigned bundles. Keep a checked-in fallback so CI artifacts do not regress to
