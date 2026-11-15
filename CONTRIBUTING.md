@@ -129,20 +129,26 @@ The counters are only on when the app is launched with `CODEISLAND_PERF_COUNTERS
 
 ## 🧪 Quality Assurance & CI/CD Testing Flow
 
-CodeIsland uses a **Three-Tier Verification Architecture** to keep the `main` branch green and prevent CI runner queue congestion:
+CodeIsland uses a **Four-Tier Verification Architecture** to keep the `main` branch green and eliminate CI runner queue congestion without adding external dependencies (zero Node.js/Husky bloat):
 
-1. **Tier 1 (Local Pre-Push Guard)**:
+1. **Tier 1 (Local Pre-Commit Staged Guard)**:
+   Whenever you run `git commit`, `.githooks/pre-commit` inspects staged files in under 0.5 seconds:
+   - Validates Swift syntax on staged `.swift` files (`swiftc -parse`).
+   - Detects and rejects accidental merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
+   - Blocks accidental commits of oversized binary assets (> 5MB).
+
+2. **Tier 2 (Local Pre-Push Build & Test Guard)**:
    Activate the repository's native git hooks once:
    ```bash
    git config core.hooksPath .githooks
    ```
-   Whenever you run `git push`, the hook automatically runs `swift build --build-tests -q`. If your changes introduce a compiler timeout or test regression, the push is rejected immediately on your local machine in under 10 seconds.
+   Whenever you run `git push`, `.githooks/pre-push` automatically runs `swift build --build-tests -q`. If your changes introduce a compiler timeout or test regression, the push is rejected immediately on your local machine in under 10 seconds before code leaves your machine.
 
-2. **Tier 2 (Clean-Room Pre-Build CI Gate)**:
+3. **Tier 3 (Clean-Room Pre-Build CI Gate)**:
    Every Pull Request targeting `main` or `dev` runs our standalone XCTest harness on macOS Sonoma runner (`python3 ./scripts/run-xctest-runner.py --target core`).
    - If a test fails, our automated CI bot posts the exact error line directly as a sticky status comment on your PR thread so you don't have to inspect raw runner logs.
 
-3. **Tier 3 (Post-Build Artifact Smoke Test)**:
+4. **Tier 4 (Post-Build Artifact Smoke Test)**:
    Release packaging steps verify DMG size (> 1MB), application bundle layout, and Sparkle Ed25519 cryptographic signatures before triggering automated deployment.
 
 ---
