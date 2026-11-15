@@ -476,18 +476,24 @@ private struct MailPlusOneBadgeView: View {
 
     var body: some View {
         if progress > 0.01 {
+            let fgColor = AppColorTheme.contrastingForeground(on: accentColor)
+            let isLight = AppColorTheme.isLightColor(accentColor)
             Text("+1")
                 .font(.system(
                     size: isCompact ? 7.2 : 6.8,
                     weight: .heavy,
                     design: isRetro ? .monospaced : .rounded
                 ))
-                .foregroundStyle(.white)
+                .foregroundStyle(fgColor)
                 .padding(.horizontal, isCompact ? 2.7 : 2.8)
                 .padding(.vertical, isCompact ? 0.7 : 0.8)
                 .background(
                     RoundedRectangle(cornerRadius: 2.8)
                         .fill(accentColor)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 2.8)
+                                .stroke(Color.black.opacity(isLight ? 0.28 : 0.0), lineWidth: 0.45)
+                        )
                         .shadow(color: accentColor.opacity(0.45), radius: 1.2, y: 0.4)
                 )
                 .scaleEffect(0.5 + 0.5 * progress)
@@ -553,6 +559,8 @@ private struct CompactModernEnvelopeView: View {
             flapPath.move(to: leftHinge)
             flapPath.addLine(to: CGPoint(x: bodyRect.midX, y: tipY))
             flapPath.addLine(to: rightHinge)
+            let inkAccent = AppColorTheme.envelopeAccentStroke(for: accentColor)
+
             if clampedOpen > 0.5 {
                 flapPath.closeSubpath()
                 context.fill(
@@ -563,7 +571,7 @@ private struct CompactModernEnvelopeView: View {
                         endPoint: leftHinge
                     )
                 )
-                context.stroke(flapPath, with: .color(accentColor.opacity(0.85)), lineWidth: 1.0)
+                context.stroke(flapPath, with: .color(inkAccent.opacity(0.88)), lineWidth: 1.0)
             } else {
                 var closedFill = flapPath
                 closedFill.closeSubpath()
@@ -577,7 +585,7 @@ private struct CompactModernEnvelopeView: View {
                 )
                 context.stroke(
                     flapPath,
-                    with: .color(accentColor),
+                    with: .color(inkAccent),
                     style: StrokeStyle(lineWidth: 1.35, lineCap: .round, lineJoin: .round)
                 )
             }
@@ -593,7 +601,7 @@ private struct CompactModernEnvelopeView: View {
                     width: sealRadius * 2,
                     height: sealRadius * 2
                 )
-                context.fill(Path(ellipseIn: sealRect), with: .color(accentColor))
+                context.fill(Path(ellipseIn: sealRect), with: .color(inkAccent))
                 context.stroke(Path(ellipseIn: sealRect), with: .color(Color.white.opacity(0.92)), lineWidth: 0.85)
 
                 let highlightRect = CGRect(
@@ -733,7 +741,10 @@ private struct ModernMiniEnvelopeView: View {
                 path.addLine(to: CGPoint(x: 6.25, y: 4.7))
                 path.addLine(to: CGPoint(x: 12.1, y: 0.4))
             }
-            .stroke(accentColor, style: StrokeStyle(lineWidth: 0.95, lineCap: .round, lineJoin: .round))
+            .stroke(
+                AppColorTheme.envelopeAccentStroke(for: accentColor),
+                style: StrokeStyle(lineWidth: 0.95, lineCap: .round, lineJoin: .round)
+            )
             .frame(width: 12.5, height: 8.5)
         }
         .clipShape(RoundedRectangle(cornerRadius: 2.0, style: .continuous))
@@ -767,6 +778,7 @@ private struct PixelMiniEnvelopeView: View {
         Canvas { ctx, _ in
             let shade = Color(red: 0.78, green: 0.82, blue: 0.89)
             let seal = Color(red: 0.96, green: 0.26, blue: 0.38)
+            let inkAccent = AppColorTheme.envelopeAccentStroke(for: accentColor)
 
             for (r, row) in Self.rows.enumerated() {
                 for (c, cell) in row.enumerated() where cell != 0 {
@@ -780,7 +792,7 @@ private struct PixelMiniEnvelopeView: View {
                     switch cell {
                     case 1: color = .white
                     case 2: color = shade
-                    case 3: color = accentColor
+                    case 3: color = inkAccent
                     default: color = seal
                     }
                     ctx.fill(Path(rect), with: .color(color))

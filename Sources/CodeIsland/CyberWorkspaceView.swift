@@ -775,8 +775,9 @@ struct PixelRetroWorkspaceView: View {
                         manager.chooseWorkspaceFolder()
                     }) {
                         HStack(spacing: 6) {
-                            WorkspacePixelIcon(glyph: .folder, color: Color.black, pixelSize: 1.1)
-                            PixelText(text: "CHOOSE FOLDER", color: Color.black, pixelSize: 1.05)
+                            let buttonFg = AppColorTheme.contrastingForeground(on: accentColor)
+                            WorkspacePixelIcon(glyph: .folder, color: buttonFg, pixelSize: 1.1)
+                            PixelText(text: "CHOOSE FOLDER", color: buttonFg, pixelSize: 1.05)
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4.5)
@@ -1006,8 +1007,9 @@ struct PixelRetroWorkspaceView: View {
                                 NSWorkspace.shared.open(URL(fileURLWithPath: manager.currentCwd))
                             }) {
                                 HStack(spacing: 4) {
-                                    WorkspacePixelIcon(glyph: .folder, color: openHovered ? Color.black : accentColor, pixelSize: 1.0)
-                                    PixelText(text: "OPEN", color: openHovered ? Color.black : accentColor, pixelSize: 1.0)
+                                    let hoveredFg = AppColorTheme.contrastingForeground(on: accentColor)
+                                    WorkspacePixelIcon(glyph: .folder, color: openHovered ? hoveredFg : accentColor, pixelSize: 1.0)
+                                    PixelText(text: "OPEN", color: openHovered ? hoveredFg : accentColor, pixelSize: 1.0)
                                 }
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3.5)
@@ -1033,8 +1035,9 @@ struct PixelRetroWorkspaceView: View {
                                 }
                             }) {
                                 HStack(spacing: 3) {
-                                    WorkspacePixelIcon(glyph: .sparkle, color: aiHovered ? Color.black : accentColor, pixelSize: 1.0)
-                                    PixelText(text: "AI", color: aiHovered ? Color.black : accentColor, pixelSize: 1.0)
+                                    let hoveredFg = AppColorTheme.contrastingForeground(on: accentColor)
+                                    WorkspacePixelIcon(glyph: .sparkle, color: aiHovered ? hoveredFg : accentColor, pixelSize: 1.0)
+                                    PixelText(text: "AI", color: aiHovered ? hoveredFg : accentColor, pixelSize: 1.0)
                                 }
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3.5)
@@ -1108,14 +1111,15 @@ struct PixelRetroWorkspaceView: View {
                                 manager.executeCommit(message: manager.proposedCommitMessage, push: true)
                             }) {
                                 HStack(spacing: 3) {
+                                    let hoveredFg = AppColorTheme.contrastingForeground(on: accentColor)
                                     WorkspacePixelIcon(
                                         glyph: .push,
-                                        color: pushHovered ? Color.black : MinimalPixelPalette.textWhite,
+                                        color: pushHovered ? hoveredFg : MinimalPixelPalette.textWhite,
                                         pixelSize: 1.0
                                     )
                                     PixelText(
                                         text: "PUSH",
-                                        color: pushHovered ? Color.black : MinimalPixelPalette.textWhite,
+                                        color: pushHovered ? hoveredFg : MinimalPixelPalette.textWhite,
                                         pixelSize: 1.0
                                     )
                                 }

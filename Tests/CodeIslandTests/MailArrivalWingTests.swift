@@ -221,4 +221,34 @@ final class MailArrivalWingTests: XCTestCase {
         XCTAssertNil(MailManager.parseDockBadgeCount(""))
         XCTAssertNil(MailManager.parseDockBadgeCount(nil))
     }
+
+    func testThemeContrastingForegroundAndEnvelopeStroke() {
+        // Light backgrounds (white, light gray, silver, cyan, amber) require dark foreground ink
+        let lightGray = Color(red: 0.75, green: 0.75, blue: 0.75)
+        let silverAlbum = Color(red: 0.90, green: 0.92, blue: 0.95)
+        let cyan = Color(red: 0.0, green: 0.96, blue: 0.83)
+        let amber = Color(red: 1.0, green: 0.72, blue: 0.20)
+
+        for bg in [Color.white, lightGray, silverAlbum, cyan, amber] {
+            XCTAssertTrue(AppColorTheme.isLightColor(bg))
+            let fg = AppColorTheme.contrastingForeground(on: bg)
+            XCTAssertLessThan(AppColorTheme.relativeLuminance(of: fg), 0.05)
+        }
+
+        // Darker/saturated backgrounds (pink, royal blue, dark slate) keep crisp white foreground
+        let pink = Color(red: 1.0, green: 0.16, blue: 0.53)
+        let royalBlue = Color(red: 0.15, green: 0.35, blue: 0.90)
+        let darkGray = Color(red: 0.22, green: 0.22, blue: 0.26)
+
+        for bg in [pink, royalBlue, darkGray] {
+            XCTAssertFalse(AppColorTheme.isLightColor(bg))
+            let fg = AppColorTheme.contrastingForeground(on: bg)
+            XCTAssertGreaterThan(AppColorTheme.relativeLuminance(of: fg), 0.95)
+        }
+
+        // Envelope strokes/seals on white paper darken sufficiently for white and light-gray themes
+        XCTAssertLessThan(AppColorTheme.relativeLuminance(of: AppColorTheme.envelopeAccentStroke(for: .white)), 0.15)
+        XCTAssertLessThan(AppColorTheme.relativeLuminance(of: AppColorTheme.envelopeAccentStroke(for: silverAlbum)), 0.15)
+        XCTAssertLessThan(AppColorTheme.relativeLuminance(of: AppColorTheme.envelopeAccentStroke(for: lightGray)), 0.40)
+    }
 }

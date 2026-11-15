@@ -2925,7 +2925,7 @@ private struct HeaderNavigationMenuTabs: View {
                             if MailManager.shared.unreadCount > 0 {
                                 Text("\(min(999, MailManager.shared.unreadCount))")
                                     .font(.system(size: 8, weight: .bold, design: .rounded))
-                                    .foregroundStyle(mailColor == .white ? Color.black : Color.white)
+                                    .foregroundStyle(AppColorTheme.contrastingForeground(on: mailColor))
                                     .padding(.horizontal, 4)
                                     .padding(.vertical, 1)
                                     .background(Capsule().fill(mailColor))
@@ -3124,7 +3124,7 @@ private struct HeaderNavigationMenuTabs: View {
                             if MailManager.shared.unreadCount > 0 {
                                 Text("\(min(999, MailManager.shared.unreadCount))")
                                     .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(Color.black)
+                                    .foregroundStyle(AppColorTheme.contrastingForeground(on: cyberMailColor))
                                     .padding(.horizontal, 3)
                                     .padding(.vertical, 1)
                                     .background(cyberMailColor)
