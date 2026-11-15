@@ -527,15 +527,6 @@ struct CyberMusicWingView: View {
         } else if isModernClean {
             // MODERN CLEAN: Langsung album cover, marquee title (saat di-hover), dan visualizer tanpa border
             HStack(alignment: .center, spacing: isEnlarged ? 5 : 4) {
-                if isHovered && (wingWidth == 0 || wingWidth >= 75) {
-                    let titleMaxW = max(36, min(isEnlarged ? 76 : 64, wingWidth > 0 ? (wingWidth - 44) : 64))
-                    ModernMarqueeText(
-                        text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
-                        maxWidth: titleMaxW
-                    )
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                }
-
                 if let art = nowPlaying.artworkImage {
                     Image(nsImage: art)
                         .resizable()
@@ -551,6 +542,15 @@ struct CyberMusicWingView: View {
                                 .font(.system(size: isEnlarged ? 10 : 8, weight: .semibold))
                                 .foregroundStyle(Color.white.opacity(0.85))
                         )
+                }
+
+                if isHovered && (wingWidth == 0 || wingWidth >= 75) {
+                    let titleMaxW = max(36, min(isEnlarged ? 76 : 64, wingWidth > 0 ? (wingWidth - 44) : 64))
+                    ModernMarqueeText(
+                        text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
+                        maxWidth: titleMaxW
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
 
                 ModernAudioSpectrumView(

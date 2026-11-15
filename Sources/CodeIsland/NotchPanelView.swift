@@ -440,7 +440,10 @@ struct NotchPanelView: View {
         // 1. Natural width required for Left Wing in each phase (Agent Mascot + Tool / Thinking / Quota)
         let effectiveNaturalLeft: CGFloat = {
             if isThinking {
-                return isPixel ? 96 : 88
+                if leftWingWidth > 0 {
+                    return max(compactWingWidth, min(leftWingWidth + 12, isPixel ? 126 : 120))
+                }
+                return isPixel ? 120 : 116
             }
             if hasQuotaChip {
                 return quotaWingWidth
@@ -1537,7 +1540,9 @@ private struct CompactLeftWing: View {
                         .help(tool)
                     }
                 } else if isThinking {
-                    if availableForTool >= 40 {
+                    let trailingNotchCushion: CGFloat = 8
+                    let safeAvailable = max(0, availableForTool - trailingNotchCushion)
+                    if safeAvailable >= 62 {
                         TypingIndicator(
                             fontSize: 9,
                             label: L10n.shared["typing_thinking"],
@@ -1546,11 +1551,12 @@ private struct CompactLeftWing: View {
                             showDots: true
                         )
                         .fixedSize(horizontal: true, vertical: false)
+                        .padding(.trailing, trailingNotchCushion)
                         .transition(.asymmetric(
                             insertion: .opacity.combined(with: .scale(scale: 0.9)),
                             removal: .opacity
                         ))
-                    } else if availableForTool >= 14 {
+                    } else if safeAvailable >= 16 {
                         TypingIndicator(
                             fontSize: 9,
                             label: "",
@@ -1559,6 +1565,7 @@ private struct CompactLeftWing: View {
                             showDots: true
                         )
                         .fixedSize(horizontal: true, vertical: false)
+                        .padding(.trailing, trailingNotchCushion)
                         .transition(.opacity)
                     }
                 } else if !nowPlaying.isPlaying && showAgentDetails,
@@ -1776,9 +1783,6 @@ private struct CompactRightWing: View {
     /// Derived in `AppState.refreshDerivedState()`; walking every session here
     /// ran on each render of the bar.
     private var isThinking: Bool { appState.isThinking }
-    private var shouldExpandRightWing: Bool {
-        isHovered
-    }
 
     private var extraBadgeCount: Int {
         var count = 0
@@ -1833,7 +1837,7 @@ private struct CompactRightWing: View {
     private var collapsedWingContent: some View {
         if signals.isPrayerPrioritized {
             // SMART PRIORITY: Prayer countdown takes active priority at T <= 15m
-            PrayerCompactWingView(isHovered: shouldExpandRightWing) {
+            PrayerCompactWingView(isHovered: isHovered) {
                 expandedTab = .prayer
                 appState.surface = .sessionList
             }
@@ -1841,7 +1845,7 @@ private struct CompactRightWing: View {
         } else if signals.isPlaying || nowPlaying.isPlaying {
             CyberMusicWingView(
                 nowPlaying: nowPlaying,
-                isHovered: shouldExpandRightWing,
+                isHovered: isHovered,
                 isEnlarged: isEnlarged,
                 isBilateralWingsLyricActive: isBilateralWingsLyricActive,
                 wingWidth: wingWidth
@@ -1849,12 +1853,10 @@ private struct CompactRightWing: View {
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
         } else {
             // AGENT / STANDBY MODE:
-            if shouldExpandRightWing {
-                if isHovered {
-                    interactiveQuickActionDock
-                } else {
-                    thinkingCapsule
-                }
+            if isHovered {
+                interactiveQuickActionDock
+            } else if isThinking {
+                thinkingCapsule
             } else {
                 standbyPill
             }
