@@ -202,7 +202,9 @@ def main():
 
     # 5. Execute the test runner
     print(f"==> Launching {runner_bin}...")
-    run_res = subprocess.run([runner_bin])
+    run_env = os.environ.copy()
+    run_env["XCTestConfigurationFilePath"] = "/tmp/xctest.plist"
+    run_res = subprocess.run([runner_bin], env=run_env)
     sys.exit(run_res.returncode)
 
 if __name__ == "__main__":
