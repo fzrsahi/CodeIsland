@@ -127,6 +127,26 @@ The counters are only on when the app is launched with `CODEISLAND_PERF_COUNTERS
 
 ---
 
+## 🧪 Quality Assurance & CI/CD Testing Flow
+
+CodeIsland uses a **Three-Tier Verification Architecture** to keep the `main` branch green and prevent CI runner queue congestion:
+
+1. **Tier 1 (Local Pre-Push Guard)**:
+   Activate the repository's native git hooks once:
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+   Whenever you run `git push`, the hook automatically runs `swift build --build-tests -q`. If your changes introduce a compiler timeout or test regression, the push is rejected immediately on your local machine in under 10 seconds.
+
+2. **Tier 2 (Clean-Room Pre-Build CI Gate)**:
+   Every Pull Request targeting `main` or `dev` runs our standalone XCTest harness on macOS Sonoma runner (`python3 ./scripts/run-xctest-runner.py --target core`).
+   - If a test fails, our automated CI bot posts the exact error line directly as a sticky status comment on your PR thread so you don't have to inspect raw runner logs.
+
+3. **Tier 3 (Post-Build Artifact Smoke Test)**:
+   Release packaging steps verify DMG size (> 1MB), application bundle layout, and Sparkle Ed25519 cryptographic signatures before triggering automated deployment.
+
+---
+
 ## 📄 License
 CodeIsland is licensed under the [MIT License](LICENSE).
 Original upstream project by [wxtsky](https://github.com/wxtsky/CodeIsland).
