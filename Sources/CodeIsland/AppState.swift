@@ -289,7 +289,7 @@ final class AppState {
             if target == .workspace {
                 WorkspaceMonitorManager.shared.resolveAndRefreshWorkspace(appState: self)
             } else if target == .mail {
-                MailManager.shared.refresh()
+                MailManager.shared.refreshIfNeededOnTabOpen()
             }
             withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                 if target == .agents {

@@ -199,6 +199,15 @@ final class MailArrivalWingTests: XCTestCase {
         XCTAssertFalse(initial.shouldTrigger)
         XCTAssertEqual(initial.nextBaseline, 14471)
 
+        // Upward jump while initial baseline is still settling MUST NOT trigger spam sound/animation
+        let unsettled = MailManager.evaluateUnreadCountJump(
+            newCount: 14472,
+            baselineUnreadCount: initial.nextBaseline,
+            isBaselineSettled: false
+        )
+        XCTAssertFalse(unsettled.shouldTrigger)
+        XCTAssertEqual(unsettled.nextBaseline, 14472)
+
         // Same unread count does not trigger
         let unchanged = MailManager.evaluateUnreadCountJump(newCount: 14471, baselineUnreadCount: initial.nextBaseline)
         XCTAssertFalse(unchanged.shouldTrigger)
@@ -220,6 +229,24 @@ final class MailArrivalWingTests: XCTestCase {
         XCTAssertEqual(MailManager.parseDockBadgeCount("3"), 3)
         XCTAssertNil(MailManager.parseDockBadgeCount(""))
         XCTAssertNil(MailManager.parseDockBadgeCount(nil))
+    }
+
+    func testBadgeFormattingAndSevenDayWindowFilter() {
+        XCTAssertEqual(MailManager.formatBadgeCount(0), "0")
+        XCTAssertEqual(MailManager.formatBadgeCount(1), "1")
+        XCTAssertEqual(MailManager.formatBadgeCount(99), "99")
+        XCTAssertEqual(MailManager.formatBadgeCount(100), "99+")
+        XCTAssertEqual(MailManager.formatBadgeCount(5159), "99+")
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]
+        let now = Date()
+        let twoDaysAgo = formatter.string(from: now.addingTimeInterval(-2 * 86400))
+        let eightDaysAgo = formatter.string(from: now.addingTimeInterval(-8 * 86400))
+
+        XCTAssertTrue(MailItem.isDateWithinRecentWindow(twoDaysAgo, days: 7, now: now))
+        XCTAssertFalse(MailItem.isDateWithinRecentWindow(eightDaysAgo, days: 7, now: now))
+        XCTAssertTrue(MailItem.isDateWithinRecentWindow("Recent", days: 7, now: now))
     }
 
     func testThemeContrastingForegroundAndEnvelopeStroke() {

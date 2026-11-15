@@ -4130,32 +4130,38 @@ private struct MailSettingsPage: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Toggle("Sound on New Email", isOn: $mailSoundEnabled)
-                    if mailSoundEnabled {
-                        let isRetro = (islandUITheme == IslandUITheme.pixel.rawValue)
-                        HStack {
+                    let isRetro = (islandUITheme == IslandUITheme.pixel.rawValue)
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Sound on New Email")
                             Text(isRetro
-                                ? "Theme sound: 8-Bit Chiptune Mail (respects Quiet Hours & Auto-Mute)."
-                                : "Theme sound: Classic Inbox Tri-Tone (respects Quiet Hours & Auto-Mute).")
-                                .font(.caption)
+                                ? "8-Bit Chiptune Mail • respects Quiet Hours & Auto-Mute"
+                                : "Classic Inbox Tri-Tone • respects Quiet Hours & Auto-Mute")
+                                .font(.system(size: 11))
                                 .foregroundStyle(.secondary)
-                            Spacer()
-                            Button {
-                                SoundManager.shared.previewMailArrival(isRetro: isRetro)
-                            } label: {
-                                Label("Preview", systemImage: "speaker.wave.2")
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
                         }
+                        Spacer(minLength: 16)
+                        Button {
+                            SoundManager.shared.previewMailArrival(isRetro: isRetro)
+                        } label: {
+                            Image(systemName: "play.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Preview Mail Sound")
+                        Toggle("", isOn: $mailSoundEnabled)
+                            .labelsHidden()
                     }
                 }
 
                 Section("Inbox Status") {
                     HStack {
-                        Text("Unread Inbox Count")
+                        Text("Recent Unread (7d)")
                         Spacer()
-                        Text("\(mailManager.unreadCount) emails")
+                        Text(mailManager.totalInboxUnreadCount > mailManager.unreadCount
+                             ? "\(MailManager.formatBadgeCount(mailManager.unreadCount)) recent (\(mailManager.totalInboxUnreadCount.formatted()) total)"
+                             : "\(mailManager.unreadCount) emails")
                             .foregroundStyle(.secondary)
                     }
 

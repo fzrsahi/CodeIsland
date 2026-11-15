@@ -363,12 +363,12 @@ public struct MailArrivalWingView: View {
                                 isRetro: isRetro,
                                 isCompact: true,
                                 accentColor: accentColor,
-                                xOffset: 3.8,
+                                xOffset: 3.4,
                                 baseY: 0.5,
                                 yDrop: 2.5
                             )
                         }
-                        .padding(.trailing, 5)
+                        .padding(.trailing, 4)
                     }
                     .frame(width: w, height: h, alignment: .trailing)
                     .transaction { $0.animation = nil }
@@ -436,7 +436,7 @@ public struct MailArrivalWingView: View {
                                 )
                             }
                             .frame(width: 19, height: 16.5)
-                            .padding(.trailing, 6)
+                            .padding(.trailing, 4)
                         }
                         .frame(width: w, height: h, alignment: .trailing)
                         .zIndex(2)

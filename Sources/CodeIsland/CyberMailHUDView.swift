@@ -136,7 +136,7 @@ private struct ModernCleanMailHUDContentView: View {
                         .foregroundStyle(Color.white)
                         .tracking(0.6)
 
-                    Text("\(mailManager.unreadCount.formatted()) unread")
+                    Text("\(MailManager.formatBadgeCount(mailManager.unreadCount)) unread · 7d")
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.48))
                 }
@@ -150,7 +150,7 @@ private struct ModernCleanMailHUDContentView: View {
             .padding(.top, 4)
 
             // Content List, Loading Skeleton, or Empty State
-            if mailManager.recentMails.isEmpty && mailManager.isRefreshing {
+            if mailManager.recentMails.isEmpty && (!mailManager.hasCompletedInitialBaseline || (mailManager.isRefreshing && mailManager.unreadCount > 0)) {
                 loadingSkeletonView
             } else if mailManager.recentMails.isEmpty {
                 emptyInboxView
@@ -297,45 +297,19 @@ private struct ModernCleanMailHUDContentView: View {
         VStack(spacing: 8) {
             Image(systemName: "envelope.open.fill")
                 .font(.system(size: 26, weight: .medium))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [themeColor, Color(red: 0.12, green: 0.84, blue: 0.38)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .foregroundStyle(themeColor)
                 .padding(.top, 4)
 
             Text("All Caught Up!")
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.white)
 
-            Text(mailManager.unreadCount == 0 ? "Kotak masuk Anda bersih • 0 email belum dibaca" : "\(mailManager.unreadCount.formatted()) email belum dibaca di inbox")
+            Text(mailManager.totalInboxUnreadCount > 0 ? "0 unread in 7 days • \(mailManager.totalInboxUnreadCount.formatted()) older in inbox" : "0 unread in the last 7 days")
                 .font(.system(size: 10, weight: .medium, design: .rounded))
                 .foregroundStyle(Color.white.opacity(0.55))
-
-            Button {
-                mailManager.openMailInbox()
-            } label: {
-                HStack(spacing: 5) {
-                    Text("Buka Apple Mail")
-                        .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    Image(systemName: "arrow.up.forward.app")
-                        .font(.system(size: 9, weight: .semibold))
-                }
-                .foregroundStyle(Color.white.opacity(0.92))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
-                .background(
-                    Capsule()
-                        .fill(Color.white.opacity(0.12))
-                )
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 2)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .padding(.vertical, 14)
     }
 }
 
@@ -356,7 +330,7 @@ private struct RetroCyberMailHUDContentView: View {
 
                     PixelText(text: "INBOX", color: themeColor, pixelSize: 1.15)
 
-                    Text("\(mailManager.unreadCount.formatted()) unread")
+                    Text("\(MailManager.formatBadgeCount(mailManager.unreadCount)) unread · 7d")
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.48))
                 }
@@ -370,7 +344,7 @@ private struct RetroCyberMailHUDContentView: View {
             .padding(.top, 4)
 
             // Content List, Loading, or Empty State
-            if mailManager.recentMails.isEmpty && mailManager.isRefreshing {
+            if mailManager.recentMails.isEmpty && (!mailManager.hasCompletedInitialBaseline || (mailManager.isRefreshing && mailManager.unreadCount > 0)) {
                 retroLoadingView
             } else if mailManager.recentMails.isEmpty {
                 retroEmptyView
@@ -510,7 +484,7 @@ private struct RetroCyberMailHUDContentView: View {
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundStyle(themeColor)
 
-            Text("0 unread in inbox")
+            Text(mailManager.totalInboxUnreadCount > 0 ? "0 unread in 7d · \(mailManager.totalInboxUnreadCount.formatted()) older" : "0 unread in last 7 days")
                 .font(.system(size: 9, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.white.opacity(0.45))
         }

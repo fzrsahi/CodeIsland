@@ -1886,7 +1886,7 @@ private struct CompactRightWing: View {
             }
         }
         .padding(.leading, 6)
-        .padding(.trailing, expanded ? 10 : 8)
+        .padding(.trailing, expanded ? 10 : (mailManager.showMailArrivalAnimation ? 2 : 8))
         // Its natural width, reported so the collapsed bar can make room for
         // it clear of the notch (CompactRightWingLayout).
         .fixedSize(horizontal: !mailManager.showMailArrivalAnimation, vertical: false)
@@ -2974,7 +2974,7 @@ private struct HeaderNavigationMenuTabs: View {
                                     ))
                             }
                             if MailManager.shared.unreadCount > 0 {
-                                Text("\(min(999, MailManager.shared.unreadCount))")
+                                Text(MailManager.formatBadgeCount(MailManager.shared.unreadCount))
                                     .font(.system(size: 8, weight: .bold, design: .rounded))
                                     .foregroundStyle(AppColorTheme.contrastingForeground(on: mailColor))
                                     .padding(.horizontal, 4)
@@ -2992,7 +2992,7 @@ private struct HeaderNavigationMenuTabs: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help("Apple Mail (\(MailManager.shared.unreadCount) unread)")
+                    .help("Apple Mail (\(MailManager.shared.unreadCount) unread in 7d)")
                 }
             }
             .padding(.vertical, 2)
@@ -3173,7 +3173,7 @@ private struct HeaderNavigationMenuTabs: View {
                                 ))
                             }
                             if MailManager.shared.unreadCount > 0 {
-                                Text("\(min(999, MailManager.shared.unreadCount))")
+                                Text(MailManager.formatBadgeCount(MailManager.shared.unreadCount))
                                     .font(.system(size: 8, weight: .bold, design: .monospaced))
                                     .foregroundStyle(AppColorTheme.contrastingForeground(on: cyberMailColor))
                                     .padding(.horizontal, 3)
@@ -3191,7 +3191,7 @@ private struct HeaderNavigationMenuTabs: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help("Apple Mail (\(MailManager.shared.unreadCount) unread)")
+                    .help("Apple Mail (\(MailManager.shared.unreadCount) unread in 7d)")
                 }
             }
             .padding(.vertical, 2)
