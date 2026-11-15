@@ -52,33 +52,25 @@ public struct MagSafeChargingBanner: View {
             // Recessed Energy Core Slot
             ZStack {
                 Image(systemName: "bolt.fill")
-                    .font(.system(size: 11, weight: .black))
+                    .font(.system(size: 10, weight: .black))
                     .foregroundStyle(chargingGreen)
                     .shadow(color: chargingGreen.opacity(0.85), radius: 3)
-                    .scaleEffect(pixelPulse ? 1.12 : 0.95)
+                    .scaleEffect(pixelPulse ? 1.1 : 0.95)
             }
-            .frame(width: 24, height: 24)
-            .pixel16Bevel(raised: false, cornerRadius: 4, fillColor: Pixel16Palette.slot)
+            .frame(width: 22, height: 22)
+            .pixel16Bevel(raised: false, cornerRadius: 3.5, fillColor: Pixel16Palette.slot)
 
-            // Minimalist Typography
-            VStack(alignment: .leading, spacing: 1.5) {
-                Text("MAGSAFE")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.white)
-                    .lineLimit(1)
+            Text("MAGSAFE")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.white)
+                .lineLimit(1)
 
-                Text(batteryLevel >= 100 ? "FULLY CHARGED" : "CHARGING")
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    .foregroundStyle(chargingGreen)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 6)
+            Spacer(minLength: 8)
 
             // Percentage & 5-Segment Discrete Solid Charge Meter
             HStack(spacing: 5) {
                 Text("\(batteryLevel)%")
-                    .font(.system(size: 12.5, weight: .black, design: .monospaced))
+                    .font(.system(size: 12, weight: .black, design: .monospaced))
                     .foregroundStyle(Color.white)
 
                 // 5-Segment discrete solid charge bar
@@ -87,12 +79,12 @@ public struct MagSafeChargingBanner: View {
                         let isFilled = batteryLevel >= (idx * 20 + 10)
                         Rectangle()
                             .fill(isFilled ? chargingGreen : Color.white.opacity(0.12))
-                            .frame(width: 3, height: 7.5)
+                            .frame(width: 3, height: 7)
                     }
                 }
-                .padding(.horizontal, 3.5)
+                .padding(.horizontal, 3)
                 .padding(.vertical, 2)
-                .pixel16Bevel(raised: false, cornerRadius: 2.5, fillColor: Pixel16Palette.slot)
+                .pixel16Bevel(raised: false, cornerRadius: 2, fillColor: Pixel16Palette.slot)
             }
 
             if let onDismiss = onDismiss {
@@ -102,18 +94,18 @@ public struct MagSafeChargingBanner: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 7, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.45))
+                        .foregroundStyle(Color.white.opacity(0.4))
                         .frame(width: 14, height: 14)
                 }
                 .buttonStyle(.plain)
                 .help("Dismiss")
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5.5)
-        .pixel16Bevel(raised: false, cornerRadius: 7, fillColor: Pixel16Palette.chassis)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4.5)
+        .pixel16Bevel(raised: false, cornerRadius: 6, fillColor: Pixel16Palette.chassis)
         .padding(.horizontal, 6)
-        .padding(.bottom, 4)
+        .padding(.bottom, 3)
     }
 
     // MARK: - 2. Modern Clean Dynamic Island Fluid Glass Banner
@@ -123,49 +115,44 @@ public struct MagSafeChargingBanner: View {
             // Glowing MagSafe Energy Puck
             ZStack {
                 Circle()
-                    .stroke(Color.white.opacity(0.12), lineWidth: 2)
-                    .frame(width: 24, height: 24)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1.8)
+                    .frame(width: 22, height: 22)
 
                 Circle()
                     .trim(from: 0.0, to: max(0.08, CGFloat(batteryLevel) / 100.0))
-                    .stroke(chargingGreen, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                    .frame(width: 24, height: 24)
+                    .stroke(chargingGreen, style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+                    .frame(width: 22, height: 22)
                     .rotationEffect(.degrees(-90))
                     .shadow(color: chargingGreen.opacity(0.4), radius: 2)
 
                 Image(systemName: "bolt.fill")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: 8.5, weight: .bold))
                     .foregroundStyle(chargingGreen)
                     .scaleEffect(pulseRing ? 1.1 : 0.95)
             }
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text("MagSafe")
-                    .font(.system(size: 10.5, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+            Text("MagSafe")
+                .font(.system(size: 10.5, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(1)
 
-                Text(batteryLevel >= 100 ? "Fully Charged" : "Charging")
-                    .font(.system(size: 8.5, weight: .medium, design: .rounded))
-                    .foregroundStyle(chargingGreen)
-            }
-
-            Spacer(minLength: 6)
+            Spacer(minLength: 8)
 
             HStack(spacing: 5) {
                 Text("\(batteryLevel)%")
-                    .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
 
                 // Mini hardware battery indicator
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 2, style: .continuous)
                         .stroke(Color.white.opacity(0.35), lineWidth: 0.8)
-                        .frame(width: 17, height: 8.5)
+                        .frame(width: 16, height: 8)
 
                     RoundedRectangle(cornerRadius: 1, style: .continuous)
                         .fill(chargingGreen)
-                        .frame(width: max(2, 13 * CGFloat(batteryLevel) / 100.0), height: 5)
-                        .padding(.leading, 1.8)
+                        .frame(width: max(2, 12 * CGFloat(batteryLevel) / 100.0), height: 4.8)
+                        .padding(.leading, 1.6)
                 }
             }
 
@@ -176,25 +163,25 @@ public struct MagSafeChargingBanner: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 7, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.45))
+                        .foregroundStyle(Color.white.opacity(0.4))
                         .frame(width: 14, height: 14)
                 }
                 .buttonStyle(.plain)
                 .help("Dismiss")
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5.5)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4.5)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(Color.white.opacity(0.06))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
                         .stroke(Color.white.opacity(0.10), lineWidth: 0.6)
                 )
         )
         .padding(.horizontal, 6)
-        .padding(.bottom, 4)
+        .padding(.bottom, 3)
     }
 }
 
