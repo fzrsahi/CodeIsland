@@ -1,22 +1,23 @@
 import SwiftUI
 import CodeIslandCore
 
-/// Shared bounds for the collapsed-width scale setting — keeps the settings
-/// slider and the width math in lockstep. Percent of the (simulated) notch width.
-enum NotchWidthScale {
-    static let min = 0
-    static let max = 200
-    static let step = 1
-}
-
 enum NotchWidthMetrics {
     /// On notched displays the island can grow beyond the physical notch but never
     /// shrink under it — narrower would expose the bare hardware cutout (#268).
-    static func effectiveNotchWidth(notchW: CGFloat, collapsedWidthScale: Int, hasNotch: Bool) -> CGFloat {
-        let clampedScale = Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))
-        let scaled = notchW * CGFloat(clampedScale) / 100.0
-        if hasNotch { return Swift.max(notchW, scaled) }
-        return scaled
+    /// On non-notch displays in Dynamic Island mode, collapses the simulated
+    /// center dead space down to a sleek pill separator.
+    static func effectiveNotchWidth(
+        notchW: CGFloat,
+        collapsedWidthScale: Int,
+        hasNotch: Bool,
+        displayMode: IslandDisplayMode = .notch
+    ) -> CGFloat {
+        CGFloat(IslandDisplayMetrics.centerGapWidth(
+            notchWidth: Double(notchW),
+            scalePercent: collapsedWidthScale,
+            hasNotch: hasNotch,
+            displayMode: displayMode
+        ))
     }
 }
 
@@ -123,6 +124,10 @@ struct NotchPanelView: View {
     @AppStorage(SettingsKey.hideWhenNoSession) private var hideWhenNoSession = SettingsDefaults.hideWhenNoSession
     @AppStorage(SettingsKey.showToolStatus) private var showToolStatus = SettingsDefaults.showToolStatus
     @AppStorage(SettingsKey.collapsedWidthScale) private var collapsedWidthScale = SettingsDefaults.collapsedWidthScale
+    @AppStorage(SettingsKey.islandDisplayMode) private var islandDisplayModeRaw = SettingsDefaults.islandDisplayMode
+    private var displayMode: IslandDisplayMode {
+        IslandDisplayMode.resolved(from: islandDisplayModeRaw)
+    }
     @AppStorage(SettingsKey.showClaudeQuota) private var showClaudeQuota = SettingsDefaults.showClaudeQuota
     @AppStorage(SettingsKey.claudeQuotaChip) private var claudeQuotaChip = SettingsDefaults.claudeQuotaChip
     @AppStorage(SettingsKey.hapticOnHover) private var hapticOnHover = SettingsDefaults.hapticOnHover
@@ -371,8 +376,25 @@ struct NotchPanelView: View {
         NotchWidthMetrics.effectiveNotchWidth(
             notchW: notchW,
             collapsedWidthScale: collapsedWidthScale,
-            hasNotch: hasNotch
+            hasNotch: hasNotch,
+            displayMode: displayMode
         )
+    }
+
+    private var dynamicIslandCornerRadius: CGFloat {
+        CGFloat(IslandDisplayMetrics.pillCornerRadius(
+            height: Double(effectiveNotchHeight),
+            isExpanded: shouldShowExpanded,
+            isExtendedPill: isConnectedChinLyricActive || isToastOnly
+        ))
+    }
+
+    private var dynamicIslandShape: AnyShape {
+        if !shouldShowExpanded && !isConnectedChinLyricActive && !isToastOnly {
+            // Circular capsule avoids macOS SwiftUI's .continuous hairline offset when cornerRadius == height / 2.
+            return AnyShape(Capsule(style: .circular))
+        }
+        return AnyShape(RoundedRectangle(cornerRadius: dynamicIslandCornerRadius, style: .continuous))
     }
 
     /// Derived in `AppState.refreshDerivedState()`; walking every session here
@@ -571,19 +593,27 @@ struct NotchPanelView: View {
             }
             return min(max(baseWidth, minWidth), maxPanelWidth)
         }
+        if isToastOnly {
+            let requiredActiveBarWidth = nw + symmetricWingWidth * 2
+            return min(max(280, requiredActiveBarWidth), maxPanelWidth)
+        }
         if showIdleIndicator {
-            let baseWing = idleHovered ? (compactWingWidth + 6) : compactWingWidth
-            let wing = prayerManager.isEnabled ? max(baseWing, IdleIndicatorBar.idlePrayerWingMinWidth) : baseWing
+            let wing = IdleIndicatorBar.wingWidth(
+                compactWingWidth: compactWingWidth,
+                hovered: idleHovered,
+                prayerEnabled: prayerManager.isEnabled
+            )
             return nw + wing * 2
         }
-        if !isActive { return nw }
+        if !isActive {
+            return CGFloat(IslandDisplayMetrics.restingWidth(
+                notchWidth: Double(notchW),
+                scalePercent: collapsedWidthScale,
+                hasNotch: hasNotch,
+                displayMode: displayMode
+            ))
+        }
         let requiredActiveBarWidth = nw + symmetricWingWidth * 2
-        if signals.showChargingBanner && !appState.surface.isExpanded {
-            return min(max(280, requiredActiveBarWidth), maxPanelWidth)
-        }
-        if signals.showMiniPeekBanner && !appState.surface.isExpanded {
-            return min(max(280, requiredActiveBarWidth), maxPanelWidth)
-        }
         let maxSafeCollapsed = isBilateralWingsLyricActive
             ? min(screenWidth * 0.56, 740)
             : min(screenWidth * 0.44, isConnectedChinLyricActive ? 480 : 400)
@@ -720,7 +750,12 @@ struct NotchPanelView: View {
 
     @ViewBuilder
     private var activeCompactBar: some View {
-        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : (isBilateralWingsLyricActive ? 12 : (symmetricWingWidth < 48 ? 6 : (symmetricWingWidth < 70 ? 8 : 10)))
+        let wingOuterPadding = CGFloat(IslandDisplayMetrics.outerPadding(
+            wingWidth: Double(symmetricWingWidth),
+            expanded: shouldShowExpanded,
+            bilateral: isBilateralWingsLyricActive,
+            displayMode: displayMode
+        ))
 
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -816,6 +851,43 @@ struct NotchPanelView: View {
         .onPreferenceChange(CompactRightWingWidthKey.self) { if $0 > 0 { rightWingWidth = $0 } }
     }
 
+    @ViewBuilder
+    private var panelChromeBackground: some View {
+        if displayMode == .dynamicIsland {
+            dynamicIslandShape
+                .fill(Color.black)
+                .overlay(
+                    dynamicIslandShape
+                        .stroke(Color.white.opacity(0.24), lineWidth: 1.2)
+                )
+                .clipShape(dynamicIslandShape)
+                .shadow(color: Color.black.opacity(0.45), radius: 10, y: 4)
+        } else if appState.isFullscreenMode {
+            RoundedRectangle(cornerRadius: 7)
+                .fill(Color.black)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7)
+                        .stroke(Color(red: 0.16, green: 0.19, blue: 0.24), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.8), radius: 8, y: 4)
+        } else {
+            NotchPanelShape(
+                topExtension: currentTopExt,
+                bottomRadius: currentBottomRadius,
+                minHeight: effectiveNotchHeight
+            )
+            .fill(Color.black)
+            .overlay(
+                NotchPanelShape(
+                    topExtension: currentTopExt,
+                    bottomRadius: currentBottomRadius,
+                    minHeight: effectiveNotchHeight
+                )
+                .stroke(currentStrokeColor, lineWidth: currentStrokeWidth)
+            )
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
@@ -829,6 +901,7 @@ struct NotchPanelView: View {
                         notchHeight: notchHeight,
                         hasNotch: hasNotch,
                         hovered: idleHovered,
+                        displayMode: displayMode,
                         onExpand: {
                             withAnimation(NotchAnimation.open) {
                                 if signals.isPrayerPrioritized {
@@ -855,40 +928,14 @@ struct NotchPanelView: View {
             }
             .recordsCompletionCardChrome(in: cardSpace)
             .frame(width: panelWidth)
-            .clipped()
+            .clipShape(displayMode == .dynamicIsland ? dynamicIslandShape : AnyShape(Rectangle()))
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: panelWidth)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: shouldShowExpanded)
+            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: displayMode)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showMiniPeekBanner)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showChargingBanner)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: expandedTab)
-            .background(
-                Group {
-                    if appState.isFullscreenMode {
-                        RoundedRectangle(cornerRadius: 7)
-                            .fill(Color.black)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 7)
-                                    .stroke(Color(red: 0.16, green: 0.19, blue: 0.24), lineWidth: 1)
-                            )
-                            .shadow(color: Color.black.opacity(0.8), radius: 8, y: 4)
-                    } else {
-                        NotchPanelShape(
-                            topExtension: currentTopExt,
-                            bottomRadius: currentBottomRadius,
-                            minHeight: effectiveNotchHeight
-                        )
-                        .fill(Color.black)
-                        .overlay(
-                            NotchPanelShape(
-                                topExtension: currentTopExt,
-                                bottomRadius: currentBottomRadius,
-                                minHeight: effectiveNotchHeight
-                            )
-                            .stroke(currentStrokeColor, lineWidth: currentStrokeWidth)
-                        )
-                    }
-                }
-            )
+            .background(panelChromeBackground)
             .offset(y: curtainOffset)
             .opacity(curtainOpacity)
             .onChange(of: showToolStatus) { _, newValue in
@@ -3126,14 +3173,32 @@ private struct IdleIndicatorBar: View {
     let notchHeight: CGFloat
     let hasNotch: Bool
     let hovered: Bool
+    var displayMode: IslandDisplayMode = .notch
     var onExpand: (() -> Void)? = nil
     @AppStorage(SettingsKey.defaultSource) private var defaultSource = SettingsDefaults.defaultSource
 
     static let idlePrayerWingMinWidth: CGFloat = 124
 
+    static func wingWidth(compactWingWidth: CGFloat, hovered: Bool, prayerEnabled: Bool) -> CGFloat {
+        let base = hovered ? (compactWingWidth + 6) : compactWingWidth
+        return prayerEnabled ? max(base, idlePrayerWingMinWidth) : base
+    }
+
     private var effectiveWingWidth: CGFloat {
-        let base = hovered ? (compactWingWidth + 8) : compactWingWidth
-        return PrayerTimeManager.shared.isEnabled ? max(base, Self.idlePrayerWingMinWidth) : base
+        Self.wingWidth(
+            compactWingWidth: compactWingWidth,
+            hovered: hovered,
+            prayerEnabled: PrayerTimeManager.shared.isEnabled
+        )
+    }
+
+    private var trailingOuterPadding: CGFloat {
+        CGFloat(IslandDisplayMetrics.outerPadding(
+            wingWidth: Double(effectiveWingWidth),
+            expanded: false,
+            bilateral: false,
+            displayMode: displayMode
+        ))
     }
 
     var body: some View {
@@ -3162,7 +3227,7 @@ private struct IdleIndicatorBar: View {
                 Spacer(minLength: 0)
                 if prayerManager.isEnabled {
                     PrayerCompactWingView(isHovered: hovered, onExpand: onExpand)
-                        .padding(.trailing, 8)
+                        .padding(.trailing, trailingOuterPadding)
                 } else {
                     Image(systemName: "chevron.down")
                         .font(.system(size: hovered ? 8 : 7.5, weight: .semibold))
@@ -3172,7 +3237,7 @@ private struct IdleIndicatorBar: View {
                             Circle()
                                 .fill(Color.white.opacity(hovered ? 0.12 : 0))
                         )
-                        .padding(.trailing, 8)
+                        .padding(.trailing, trailingOuterPadding)
                 }
             }
             .frame(width: effectiveWingWidth, alignment: .trailing)

@@ -241,7 +241,7 @@ struct DefaultsSandbox {
         [
             SettingsKey.appLanguage, SettingsKey.contentFontSize, SettingsKey.showAgentDetails,
             SettingsKey.smartSuppress, SettingsKey.hideWhenNoSession, SettingsKey.showToolStatus,
-            SettingsKey.collapsedWidthScale, SettingsKey.hapticOnHover, SettingsKey.hapticIntensity,
+            SettingsKey.islandDisplayMode, SettingsKey.collapsedWidthScale, SettingsKey.hapticOnHover, SettingsKey.hapticIntensity,
             SettingsKey.sessionGroupingMode, SettingsKey.defaultSource, SettingsKey.soundEnabled,
             SettingsKey.quietHoursEnabled, SettingsKey.quietHoursStart, SettingsKey.quietHoursEnd,
             SettingsKey.autoCollapseAfterSessionJump, SettingsKey.maxVisibleSessions,

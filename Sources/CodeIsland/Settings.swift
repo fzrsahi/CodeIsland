@@ -340,6 +340,7 @@ enum SettingsKey {
     static let sessionTimeout = "sessionTimeout"
 
     // Display
+    static let islandDisplayMode = "islandDisplayMode"          // IslandDisplayMode raw value: "notch" | "dynamicIsland"
     static let maxPanelHeight = "maxPanelHeight"
     static let maxVisibleSessions = "maxVisibleSessions"
     static let sessionListDensity = "sessionListDensity"  // SessionListDensity raw value: "comfortable" | "compact"
@@ -525,6 +526,7 @@ struct SettingsDefaults {
     static let autoExpandOnQuestion = true
     static let sessionTimeout = 30
 
+    static let islandDisplayMode = IslandDisplayMode.notch.rawValue
     static let maxPanelHeight = 560
     static let maxVisibleSessions = 5
     static let sessionListDensity = SessionListDensity.comfortable.rawValue
@@ -670,6 +672,7 @@ class SettingsManager {
             SettingsKey.showProjectName: SettingsDefaults.showProjectName,
             SettingsKey.autoExpandOnQuestion: SettingsDefaults.autoExpandOnQuestion,
             SettingsKey.sessionTimeout: SettingsDefaults.sessionTimeout,
+            SettingsKey.islandDisplayMode: SettingsDefaults.islandDisplayMode,
             SettingsKey.maxPanelHeight: SettingsDefaults.maxPanelHeight,
             SettingsKey.maxVisibleSessions: SettingsDefaults.maxVisibleSessions,
             SettingsKey.sessionListDensity: SettingsDefaults.sessionListDensity,
@@ -856,6 +859,11 @@ class SettingsManager {
     var workspaceHUDTheme: String {
         get { defaults.string(forKey: SettingsKey.workspaceHUDTheme) ?? SettingsDefaults.workspaceHUDTheme }
         set { defaults.set(newValue, forKey: SettingsKey.workspaceHUDTheme) }
+    }
+
+    var islandDisplayMode: IslandDisplayMode {
+        get { IslandDisplayMode.resolved(from: defaults.string(forKey: SettingsKey.islandDisplayMode)) }
+        set { defaults.set(newValue.rawValue, forKey: SettingsKey.islandDisplayMode) }
     }
 
     var notchHeightMode: NotchHeightMode {

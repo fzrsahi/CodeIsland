@@ -1498,12 +1498,20 @@ private struct AppearancePage: View {
     @AppStorage(SettingsKey.workspaceHUDTheme) private var workspaceHUDTheme = SettingsDefaults.workspaceHUDTheme
     @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.islandDisplayMode) private var islandDisplayModeRaw = SettingsDefaults.islandDisplayMode
     @AppStorage(SettingsKey.collapsedWidthScale) private var collapsedWidthScale = SettingsDefaults.collapsedWidthScale
     @AppStorage(SettingsKey.notchHeightMode) private var notchHeightModeRaw = SettingsDefaults.notchHeightMode
     @AppStorage(SettingsKey.customNotchHeight) private var customNotchHeight = SettingsDefaults.customNotchHeight
     @AppStorage(SettingsKey.notchAnimationSpeed) private var notchAnimationSpeed = SettingsDefaults.notchAnimationSpeed
     @AppStorage(SettingsKey.notchScrollVolumeControl) private var notchScrollVolumeControl = SettingsDefaults.notchScrollVolumeControl
     @AppStorage(SettingsKey.notchScrollTabSwitch) private var notchScrollTabSwitch = SettingsDefaults.notchScrollTabSwitch
+
+    private var islandDisplayMode: Binding<IslandDisplayMode> {
+        Binding(
+            get: { IslandDisplayMode.resolved(from: islandDisplayModeRaw) },
+            set: { islandDisplayModeRaw = $0.rawValue }
+        )
+    }
 
     private var notchHeightMode: Binding<NotchHeightMode> {
         Binding(
@@ -1603,6 +1611,16 @@ private struct AppearancePage: View {
             }
 
             Section(l10n["panel"]) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Picker(l10n["display_mode"], selection: islandDisplayMode) {
+                        Text(l10n["display_mode_notch"]).tag(IslandDisplayMode.notch)
+                        Text(l10n["display_mode_dynamic_island"]).tag(IslandDisplayMode.dynamicIsland)
+                    }
+                    .pickerStyle(.segmented)
+                    Text(l10n["display_mode_desc"])
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(l10n["notch_animation_speed"])
