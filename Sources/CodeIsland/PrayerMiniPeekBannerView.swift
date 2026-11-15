@@ -1,16 +1,13 @@
 import SwiftUI
 import CodeIslandCore
 
-/// Interactive Mini Peek Toast Banner that gently rolls down from under the notch
-/// upon approaching prayer time (T <= 10m) or when prayer time arrives.
-/// Supports both Pixel Retro (8-Bit) and Modern Clean themes with direct micro-actions (Open Tab, Snooze 5m, Dismiss).
+/// Minimalist, Impeccable Mini Peek Notification Banner for Prayer times.
+/// Single-line ultra-clean Dynamic Island design.
 public struct PrayerMiniPeekBannerView: View {
     @ObservedObject var manager: PrayerTimeManager
     var onOpenFull: () -> Void
 
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
-    @State private var isHovering = false
-    @State private var hoveredButton: String? = nil
 
     private var isPixel: Bool {
         islandUITheme == IslandUITheme.pixel.rawValue
@@ -21,257 +18,173 @@ public struct PrayerMiniPeekBannerView: View {
         self.onOpenFull = onOpenFull
     }
 
-    public var body: some View {
-        Group {
-            if isPixel {
-                pixelBanner
-            } else {
-                modernBanner
+    private var prayerName: String {
+        if let next = manager.upcomingPrayer {
+            return next.prayer.displayName
+        }
+        let lower = manager.miniPeekBannerTitle.lowercased()
+        for prayer in PrayerType.allCases {
+            if lower.contains(prayer.rawValue) {
+                return prayer.displayName
             }
         }
-        .onHover { isHovering = $0 }
+        return "Maghrib"
     }
 
-    // MARK: - 1. Pixel Retro (8-Bit) Banner
+    private var statusBadge: String {
+        let diff = manager.minutesUntilNextPrayer
+        if diff <= 0 {
+            return "NOW"
+        }
+        return "-\(diff)M"
+    }
+
+    private var prayerTimeString: String {
+        if let next = manager.upcomingPrayer {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm"
+            return formatter.string(from: next.date)
+        }
+        return manager.currentTimeString
+    }
+
+    public var body: some View {
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            onOpenFull()
+        }) {
+            Group {
+                if isPixel {
+                    pixelBanner
+                } else {
+                    modernBanner
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - 1. Pixel Retro Single-Line Minimalist Banner
 
     private var pixelBanner: some View {
         HStack(spacing: 8) {
-            // 8-bit Mosque / Crescent Icon Box
+            // Recessed Celestial Slot
             ZStack {
-                Rectangle()
-                    .fill(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18))
-                    .frame(width: 26, height: 26)
-                    .overlay(
-                        Rectangle()
-                            .stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.6), lineWidth: 1)
-                    )
-
                 Image(systemName: "moon.stars.fill")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 10, weight: .black))
                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.85), radius: 3)
             }
+            .frame(width: 22, height: 22)
+            .pixel16Bevel(raised: false, cornerRadius: 3.5, fillColor: Pixel16Palette.slot)
 
-            // Text Info
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 5) {
-                    Text(manager.miniPeekBannerTitle.uppercased())
-                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white)
-                        .lineLimit(1)
+            // Prayer Name
+            Text(prayerName.uppercased())
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.white)
+                .lineLimit(1)
 
-                    if manager.upcomingPrayer != nil {
-                        let diffMins = manager.minutesUntilNextPrayer
-                        Text(diffMins <= 0 ? "[NOW]" : "[-\(diffMins)M]")
-                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                    }
-                }
+            Spacer(minLength: 8)
 
-                Text(manager.miniPeekBannerSubtitle.uppercased())
-                    .font(.system(size: 8, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.65))
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 4)
-
-            // Interactive Actions Strip
-            HStack(spacing: 4) {
-                // Open Tab Button
-                Button(action: {
-                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                    onOpenFull()
-                }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "arrow.up.right.square")
-                            .font(.system(size: 8, weight: .bold))
-                        Text("OPEN")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    }
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 3)
-                    .background(
-                        Rectangle()
-                            .fill(hoveredButton == "open" ? Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.35) : Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18))
-                            .overlay(Rectangle().stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), lineWidth: 0.8))
-                    )
+            // Status Badge & Time
+            HStack(spacing: 4.5) {
+                Text(statusBadge)
+                    .font(.system(size: 8, weight: .black, design: .monospaced))
                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                }
-                .buttonStyle(.plain)
-                .onHover { if $0 { hoveredButton = "open" } else if hoveredButton == "open" { hoveredButton = nil } }
-                .help("Open Prayer Tab")
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1.5)
+                    .pixel16Bevel(raised: false, cornerRadius: 2, fillColor: Pixel16Palette.slot)
 
-                // Snooze 5m Button
-                Button(action: {
-                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                    manager.snoozeMiniPeekBanner(minutes: 5)
-                }) {
-                    Text("+5M")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .padding(.horizontal, 4.5)
-                        .padding(.vertical, 3)
-                        .background(
-                            Rectangle()
-                                .fill(hoveredButton == "snooze" ? Color.white.opacity(0.20) : Color.white.opacity(0.08))
-                                .overlay(Rectangle().stroke(Color.white.opacity(0.3), lineWidth: 0.8))
-                        )
-                        .foregroundStyle(Color.white.opacity(0.85))
-                }
-                .buttonStyle(.plain)
-                .onHover { if $0 { hoveredButton = "snooze" } else if hoveredButton == "snooze" { hoveredButton = nil } }
-                .help("Snooze reminder 5 minutes")
-
-                // Dismiss Button
-                Button(action: {
-                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        manager.dismissMiniPeekBanner()
-                    }
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 7.5, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(hoveredButton == "dismiss" ? 1.0 : 0.45))
-                        .frame(width: 16, height: 16)
-                        .background(
-                            Rectangle()
-                                .fill(hoveredButton == "dismiss" ? Color.white.opacity(0.15) : Color.clear)
-                        )
-                }
-                .buttonStyle(.plain)
-                .onHover { if $0 { hoveredButton = "dismiss" } else if hoveredButton == "dismiss" { hoveredButton = nil } }
-                .help("Dismiss reminder")
+                Text(prayerTimeString)
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Pixel16Palette.textMuted)
             }
+
+            // Minimal dismiss button
+            Button(action: {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    manager.dismissMiniPeekBanner()
+                }
+            }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.4))
+                    .frame(width: 14, height: 14)
+            }
+            .buttonStyle(.plain)
+            .help("Dismiss")
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(
-            Rectangle()
-                .fill(Color(red: 0.05, green: 0.07, blue: 0.10))
-                .overlay(
-                    Rectangle()
-                        .stroke(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.55), lineWidth: 1)
-                )
-        )
-        .padding(.horizontal, 8)
-        .padding(.bottom, 5)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4.5)
+        .pixel16Bevel(raised: false, cornerRadius: 6, fillColor: Pixel16Palette.chassis)
+        .padding(.horizontal, 6)
+        .padding(.bottom, 3)
     }
 
-    // MARK: - 2. Modern Clean Banner
+    // MARK: - 2. Modern Clean Single-Line Minimalist Banner
 
     private var modernBanner: some View {
         HStack(spacing: 8) {
-            // Phase / Prayer Icon Capsule
+            // Phase icon capsule
             ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
                     .fill(manager.currentPhase.accentColor.opacity(0.18))
-                    .frame(width: 30, height: 30)
+                    .frame(width: 22, height: 22)
                 Image(systemName: manager.currentPhase.systemImage)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(manager.currentPhase.accentColor)
             }
 
-            // Announcement text
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 5) {
-                    Text(manager.miniPeekBannerTitle)
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
+            Text(prayerName)
+                .font(.system(size: 10.5, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(1)
 
-                    if manager.upcomingPrayer != nil {
-                        let diffMins = manager.minutesUntilNextPrayer
-                        Text(diffMins <= 0 ? "NOW" : "-\(diffMins)m")
-                            .font(.system(size: 8.5, weight: .bold, design: .rounded))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1.5)
-                            .background(
-                                Capsule()
-                                    .fill(manager.currentPhase.accentColor.opacity(0.25))
-                            )
-                            .foregroundStyle(manager.currentPhase.accentColor)
-                    }
-                }
+            Spacer(minLength: 8)
 
-                Text(manager.miniPeekBannerSubtitle)
-                    .font(.system(size: 9, design: .rounded))
-                    .foregroundStyle(Color.white.opacity(0.65))
-                    .lineLimit(1)
+            HStack(spacing: 4.5) {
+                Text(statusBadge)
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .padding(.horizontal, 4.5)
+                    .padding(.vertical, 1.5)
+                    .background(
+                        Capsule()
+                            .fill(manager.currentPhase.accentColor.opacity(0.25))
+                    )
+                    .foregroundStyle(manager.currentPhase.accentColor)
+
+                Text(prayerTimeString)
+                    .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.55))
             }
 
-            Spacer(minLength: 4)
-
-            // Modern Interactive Action Strip
-            HStack(spacing: 4) {
-                // Open Tab Button
-                Button(action: {
-                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                    onOpenFull()
-                }) {
-                    Text("Open")
-                        .font(.system(size: 9.5, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3.5)
-                        .background(
-                            Capsule()
-                                .fill(manager.currentPhase.accentColor.opacity(hoveredButton == "open" ? 0.45 : 0.25))
-                                .overlay(Capsule().stroke(manager.currentPhase.accentColor.opacity(0.6), lineWidth: 0.6))
-                        )
+            // Minimal dismiss button
+            Button(action: {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    manager.dismissMiniPeekBanner()
                 }
-                .buttonStyle(.plain)
-                .onHover { if $0 { hoveredButton = "open" } else if hoveredButton == "open" { hoveredButton = nil } }
-
-                // Snooze 5m Button
-                Button(action: {
-                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                    manager.snoozeMiniPeekBanner(minutes: 5)
-                }) {
-                    Text("+5m")
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.white.opacity(0.85))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3.5)
-                        .background(
-                            Capsule()
-                                .fill(Color.white.opacity(hoveredButton == "snooze" ? 0.16 : 0.08))
-                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
-                        )
-                }
-                .buttonStyle(.plain)
-                .onHover { if $0 { hoveredButton = "snooze" } else if hoveredButton == "snooze" { hoveredButton = nil } }
-                .help("Snooze 5 minutes")
-
-                // Dismiss Button
-                Button(action: {
-                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        manager.dismissMiniPeekBanner()
-                    }
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(Color.white.opacity(hoveredButton == "dismiss" ? 0.9 : 0.45))
-                        .frame(width: 16, height: 16)
-                        .background(
-                            Circle()
-                                .fill(hoveredButton == "dismiss" ? Color.white.opacity(0.15) : Color.clear)
-                        )
-                }
-                .buttonStyle(.plain)
-                .onHover { if $0 { hoveredButton = "dismiss" } else if hoveredButton == "dismiss" { hoveredButton = nil } }
+            }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.4))
+                    .frame(width: 14, height: 14)
             }
+            .buttonStyle(.plain)
+            .help("Dismiss")
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4.5)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(0.07))
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Color.white.opacity(0.06))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .stroke(Color.white.opacity(0.10), lineWidth: 0.6)
                 )
         )
-        .padding(.horizontal, 8)
-        .padding(.bottom, 5)
+        .padding(.horizontal, 6)
+        .padding(.bottom, 3)
     }
 }

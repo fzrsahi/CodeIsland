@@ -4,8 +4,8 @@ import CodeIslandCore
 /// Shared bounds for the collapsed-width scale setting — keeps the settings
 /// slider and the width math in lockstep. Percent of the (simulated) notch width.
 enum NotchWidthScale {
-    static let min = 50
-    static let max = 150
+    static let min = 0
+    static let max = 200
     static let step = 1
 }
 
@@ -133,8 +133,31 @@ struct NotchPanelView: View {
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @AppStorage(SettingsKey.floatingLyricPreset) private var floatingLyricPreset = SettingsDefaults.floatingLyricPreset
+
+    private var activeFloatingPreset: FloatingLyricPreset {
+        FloatingLyricPreset(rawValue: floatingLyricPreset) ?? .pureText
+    }
+    private var isConnectedChinLyricActive: Bool {
+        shouldShowSubNotchLyrics && activeFloatingPreset == .connectedChin
+    }
+    private var isBilateralWingsLyricActive: Bool {
+        shouldShowSubNotchLyrics && activeFloatingPreset == .bilateralWings && !nowPlaying.lyrics.isEmpty
+    }
+    private var effectiveNotchHeight: CGFloat {
+        isConnectedChinLyricActive ? (notchHeight + 26) : notchHeight
+    }
+    private var effectiveMascotSize: CGFloat {
+        if isConnectedChinLyricActive {
+            return min(33, effectiveNotchHeight - 8)
+        }
+        return mascotSize
+    }
 
     private var modernMusicAccent: Color {
         if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
@@ -156,11 +179,19 @@ struct NotchPanelView: View {
         }
     }
     @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
-    @ObservedObject private var nowPlaying = NowPlayingManager.shared
-    @ObservedObject private var workspaceManager = WorkspaceMonitorManager.shared
-    @ObservedObject private var sys = SystemMonitorManager.shared
-    @ObservedObject private var prayerManager = PrayerTimeManager.shared
-    @ObservedObject private var volumeManager = SystemVolumeManager.shared
+    /// Managers are plain references here: the root does not observe them.
+    /// Everything it *shows* comes from `signals`, so a track position or a
+    /// CPU sample no longer re-renders the whole bar. Leaf views still
+    /// observe their own manager fully.
+    private let nowPlaying = NowPlayingManager.shared
+    private let workspaceManager = WorkspaceMonitorManager.shared
+    private let sys = SystemMonitorManager.shared
+    private let prayerManager = PrayerTimeManager.shared
+    private let volumeManager = SystemVolumeManager.shared
+    private let signals = IslandSignals.shared
+    /// The single source of truth for which animation classes may run. Read
+    /// here, at the panel root, so every loop below inherits one decision.
+    @ObservedObject private var animationGate = MascotAnimationGate.shared
 
     /// Delayed hover: prevents accidental expansion when mouse passes through
     @State private var hoverTimer: Timer?
@@ -177,10 +208,13 @@ struct NotchPanelView: View {
     /// Measured width of the plan-limit chip (0 until first laid out) — the
     /// bar reserves exactly this instead of guessing from the label length.
     @State private var quotaChipWidth: CGFloat = 0
+    /// Measured width of the collapsed left wing (0 until first laid out).
+    @State private var leftWingWidth: CGFloat = 0
     /// Measured width of the collapsed right wing (0 until first laid out).
     @State private var rightWingWidth: CGFloat = 0
     @State private var isHoveringRightWing = false
     @State private var musicAutoCollapseTimer: Timer?
+    @State private var musicAutoCollapseWorkItem: DispatchWorkItem?
     @State private var musicDeferCollapseOnMouseLeave = false
 
     private var expandedTabBinding: Binding<ExpandedContentTab> {
@@ -223,7 +257,7 @@ struct NotchPanelView: View {
         }
     }
 
-    private var isActive: Bool { !appState.sessions.isEmpty || nowPlaying.isPlaying }
+    private var isActive: Bool { !appState.sessions.isEmpty || signals.isPlaying }
     /// First launch / no-session state should still render a visible marker so the app
     /// doesn't disappear completely behind the physical notch.
     private var showIdleIndicator: Bool {
@@ -231,7 +265,7 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if nowPlaying.isPlaying || nowPlaying.showToast || prayerManager.showMiniPeekBanner || sys.showChargingBanner { return true }
+        if signals.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
@@ -244,27 +278,27 @@ struct NotchPanelView: View {
     }
 
     private var shouldShowSubNotchLyrics: Bool {
-        guard !volumeManager.isHUDVisible,
+        guard !signals.isVolumeHUDVisible,
               showCompactLyrics,
-              nowPlaying.isPlaying,
+              signals.isPlaying,
               !shouldShowExpanded,
               !appState.surface.isExpanded,
-              !nowPlaying.title.isEmpty
+              signals.hasTitle
         else { return false }
-        // If not currently fetching and no lyrics found for this track, hide capsule
-        if !nowPlaying.lyricsLoading && nowPlaying.lyrics.isEmpty {
-            return false
-        }
-        return true
+        // No lyrics for this track (and none on the way): hide the capsule.
+        return signals.hasLyrics
     }
 
     private var isToastOnly: Bool {
-        (prayerManager.showMiniPeekBanner || sys.showChargingBanner) && !appState.surface.isExpanded
+        (signals.showMiniPeekBanner || signals.showChargingBanner) && !appState.surface.isExpanded
     }
 
     private func triggerMusicAutoPeek() {
         guard !appState.surface.isPrompting else { return }
+        musicAutoCollapseWorkItem?.cancel()
+        musicAutoCollapseWorkItem = nil
         musicAutoCollapseTimer?.invalidate()
+        musicAutoCollapseTimer = nil
         musicDeferCollapseOnMouseLeave = false
 
         withAnimation(NotchAnimation.open) {
@@ -272,20 +306,23 @@ struct NotchPanelView: View {
             appState.surface = .sessionList
         }
 
-        musicAutoCollapseTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
-            Task { @MainActor in
-                if isHovered || appState.followUps.pointerOverIsland {
-                    musicDeferCollapseOnMouseLeave = true
-                } else {
-                    withAnimation(NotchAnimation.close) {
-                        if appState.surface == .sessionList && expandedTab == .music {
-                            appState.surface = .collapsed
-                        }
+        let item = DispatchWorkItem { [weak appState] in
+            guard let appState else { return }
+            if isHovered || appState.followUps.pointerOverIsland {
+                musicDeferCollapseOnMouseLeave = true
+            } else {
+                withAnimation(NotchAnimation.close) {
+                    if appState.surface == .sessionList && expandedTab == .music {
+                        appState.surface = .collapsed
                     }
                 }
             }
         }
+        musicAutoCollapseWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: item)
     }
+
+
     private var isBarVisible: Bool {
         showBar || shouldShowExpanded || showIdleIndicator || isToastOnly
     }
@@ -338,17 +375,9 @@ struct NotchPanelView: View {
         )
     }
 
-    private var isThinking: Bool {
-        if appState.status == .processing || appState.status == .running {
-            return true
-        }
-        for session in appState.sessions.values {
-            if session.status == .processing || session.status == .running || session.currentTool != nil {
-                return true
-            }
-        }
-        return false
-    }
+    /// Derived in `AppState.refreshDerivedState()`; walking every session here
+    /// ran on each render of the bar.
+    private var isThinking: Bool { appState.isThinking }
 
     private var hasQuotaChip: Bool {
         guard showAgentDetails, showClaudeQuota, !shouldShowExpanded, !nowPlaying.isPlaying,
@@ -369,39 +398,80 @@ struct NotchPanelView: View {
         return max(148, mascotSize + chipWidth + 32)
     }
 
-    /// Symmetrical wing width calculated dynamically — ultra-compact, sleek, and balanced
+    /// Symmetrical wing width calculated dynamically — guarantees zero clipping against notch corner curves
+    /// and scales adaptively across all phases based on the Island Width setting (0% - 200%).
+    /// Never exceeds safe menu-bar bounds, ensuring the island NEVER overlaps macOS menu items.
     private var symmetricWingWidth: CGFloat {
-        if isThinking && !shouldShowExpanded {
-            return 148
+        guard !shouldShowExpanded else { return expandedWingWidth }
+
+        let clampedScale = Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))
+        let widthScaleFactor = CGFloat(clampedScale) / 100.0
+
+        let isAgentActive = isThinking || appState.status != .idle || appState.currentTool != nil || appState.sessions.values.contains {
+            $0.status == .processing || $0.status == .running || $0.currentTool != nil
         }
-        if isHoveringRightWing && !shouldShowExpanded {
-            return 154
+        let isToolVisible = showToolStatus && showAgentDetails && (isAgentActive || appState.currentTool != nil)
+
+        // 1. Natural width required for Left Wing in each phase (Agent Mascot + Tool / Thinking / Quota)
+        var naturalLeft: CGFloat = compactWingWidth
+        if isThinking {
+            naturalLeft = max(naturalLeft, isPixel ? 104 : 96)
+        } else if isToolVisible {
+            naturalLeft = max(naturalLeft, isPixel ? 116 : 108)
+        } else if hasQuotaChip {
+            naturalLeft = max(naturalLeft, quotaWingWidth)
         }
-        if prayerManager.isPrayerPrioritized && !shouldShowExpanded {
-            let needed = rightWingWidth > 0 ? (rightWingWidth + 18) : 80
-            return max(80, needed)
+        if isBilateralWingsLyricActive {
+            naturalLeft = max(naturalLeft, isPixel ? 140 : 130)
         }
-        if nowPlaying.isPlaying && !shouldShowExpanded {
-            var width: CGFloat = 68
-            if appState.glanceCompletionActive {
-                width += 26
+        let contentLeft = (!isBilateralWingsLyricActive && leftWingWidth > 0) ? (leftWingWidth + 14) : naturalLeft
+        let effectiveNaturalLeft = max(naturalLeft, min(contentLeft, isBilateralWingsLyricActive ? 140 : 126))
+
+        // 2. Natural width required for Right Wing in each phase (Music / Prayer / Actions)
+        var naturalRight: CGFloat = compactWingWidth
+        if prayerManager.isPrayerPrioritized {
+            naturalRight = max(naturalRight, isHoveringRightWing ? 115 : 85)
+        } else if signals.isPlaying {
+            if isBilateralWingsLyricActive {
+                naturalRight = max(naturalRight, isPixel ? 140 : 130)
+            } else if isHoveringRightWing {
+                naturalRight = max(naturalRight, isPixel ? 116 : 108)
+            } else {
+                naturalRight = max(naturalRight, isConnectedChinLyricActive ? 52 : 44)
             }
-            if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion {
-                width += 26
+        }
+        if isHoveringRightWing {
+            naturalRight = max(naturalRight, 115)
+        }
+        if appState.glanceCompletionActive {
+            naturalRight += 18
+        }
+        if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion {
+            naturalRight += 18
+        }
+        let contentRight = (!isBilateralWingsLyricActive && rightWingWidth > 0) ? (rightWingWidth + 14) : naturalRight
+        let effectiveNaturalRight = max(naturalRight, min(contentRight, isBilateralWingsLyricActive ? 140 : 126))
+
+        // 3. Balanced Dynamic Island natural width for current phase
+        let naturalPhaseWidth = max(effectiveNaturalLeft, effectiveNaturalRight)
+
+        // 4. Absolute compact floor at 0% slider (fits mascot / essential indicators cleanly)
+        let absoluteMinimumWing: CGFloat = 36
+
+        // 5. Scale adaptively across all phases based on user's Island Width setting (0% - 200%)
+        let scaledWingWidth: CGFloat = {
+            if widthScaleFactor >= 1.0 {
+                return naturalPhaseWidth + (naturalPhaseWidth * (widthScaleFactor - 1.0) * 0.6)
+            } else {
+                return absoluteMinimumWing + (naturalPhaseWidth - absoluteMinimumWing) * widthScaleFactor
             }
-            if rightWingWidth > 0 {
-                width = max(width, rightWingWidth + 24)
-            }
-            return width
-        }
-        var width: CGFloat = 88
-        if hasQuotaChip {
-            width = max(width, quotaWingWidth)
-        }
-        if rightWingWidth > 0 {
-            width = max(width, rightWingWidth + 18)
-        }
-        return width
+        }()
+
+        // 6. Absolute safe ceiling to guarantee it NEVER collides with the macOS menu bar:
+        // Collapsed bar width must never crowd the left/right screen menus.
+        let maxSafeCollapsedBarWidth = min(screenWidth * 0.40, isBilateralWingsLyricActive ? 470 : 440)
+        let maxSingleWingWidth = max(absoluteMinimumWing, (maxSafeCollapsedBarWidth - effectiveNotchW) / 2)
+        return min(scaledWingWidth, maxSingleWingWidth)
     }
 
     /// Notch cutout reserved in the center of the expanded header.
@@ -431,7 +501,7 @@ struct NotchPanelView: View {
         if shouldShowExpanded {
             let baseWidth = nw + 500
             let minWidth: CGFloat = 680
-            if expandedTab == .workspace && workspaceManager.isExpandedDetail {
+            if expandedTab == .workspace && signals.isDetailExpanded {
                 return min(max(baseWidth, 720), maxPanelWidth)
             }
             return min(max(baseWidth, minWidth), maxPanelWidth)
@@ -442,16 +512,15 @@ struct NotchPanelView: View {
             return nw + wing * 2
         }
         if !isActive { return nw }
-        if sys.showChargingBanner && !appState.surface.isExpanded {
-            return min(320, maxPanelWidth)
+        let requiredActiveBarWidth = nw + symmetricWingWidth * 2
+        if signals.showChargingBanner && !appState.surface.isExpanded {
+            return min(max(280, requiredActiveBarWidth), maxPanelWidth)
         }
-        // Mini peek banner width: sleek ~330pt when toast is showing while collapsed
-        if (nowPlaying.showToast || prayerManager.showMiniPeekBanner) && !appState.surface.isExpanded {
-            return min(330, maxPanelWidth)
+        if signals.showMiniPeekBanner && !appState.surface.isExpanded {
+            return min(max(280, requiredActiveBarWidth), maxPanelWidth)
         }
-        let wing = symmetricWingWidth
-        let clearance: CGFloat = 0
-        return nw + wing * 2 + clearance
+        let maxSafeCollapsed = min(screenWidth * 0.40, isBilateralWingsLyricActive ? 470 : 440)
+        return min(requiredActiveBarWidth, maxSafeCollapsed)
     }
 
     /// Room the collapsed right wing lacks to clear the notch; 0 whenever it fits.
@@ -509,107 +578,188 @@ struct NotchPanelView: View {
         }
     }
 
+    private func handleLeftWingTap() {
+        guard !shouldShowExpanded else { return }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            expandedTab = .agents
+            appState.surface = .sessionList
+        }
+    }
+
+    private func handleRightWingTap() {
+        guard !shouldShowExpanded else { return }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            expandedTab = (signals.isPlaying || signals.hasTitle) ? .music : .agents
+            appState.surface = .sessionList
+        }
+    }
+
+    private func handleChinLyricTap() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            expandedTab = .music
+            appState.surface = .sessionList
+        }
+    }
+
+    private func handleSurfaceChange(_ newSurface: IslandSurface) {
+        if newSurface == .collapsed && !isHovered {
+            hoverPhase = .collapsed
+        } else if newSurface.isExpanded && hoverPhase != .expanded {
+            hoverPhase = .expanded
+        }
+
+        switch newSurface {
+        case .completionCard, .approvalCard, .questionCard:
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                expandedTab = .agents
+            }
+        default:
+            break
+        }
+    }
+
+    private func handleStatusTransition(oldStatus: AgentStatus, newStatus: AgentStatus) {
+        let wasWorking = (oldStatus == .processing || oldStatus == .running)
+        let isNowIdle = (newStatus == .idle)
+        if wasWorking && isNowIdle {
+            let isSecondaryTab = (expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer)
+            if isSecondaryTab {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                    expandedTab = .agents
+                }
+            }
+        }
+    }
+
+    private func handleCompletedSession(_ completedId: String?) {
+        guard completedId != nil else { return }
+        if expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                expandedTab = .agents
+            }
+        }
+    }
+
+    private func handleExpandedTabChange(_ newTab: ExpandedContentTab) {
+        if newTab != .music {
+            musicAutoCollapseTimer?.invalidate()
+            musicAutoCollapseTimer = nil
+            musicDeferCollapseOnMouseLeave = false
+        }
+        if newTab == .workspace {
+            workspaceManager.resolveAndRefreshWorkspace(appState: appState)
+        }
+    }
+
+    @ViewBuilder
+    private var activeCompactBar: some View {
+        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : (symmetricWingWidth < 46 ? 6 : (symmetricWingWidth < 60 ? 9 : 14))
+
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                // Left Wing: Strictly isolated to Agents & Terminal status (aligned snug against notch)
+                CompactLeftWing(
+                    appState: appState,
+                    expanded: shouldShowExpanded,
+                    mascotSize: effectiveMascotSize,
+                    hasNotch: hasNotch,
+                    showToolStatus: showToolStatus,
+                    expandedTab: expandedTabBinding,
+                    workspaceManager: workspaceManager,
+                    wingWidth: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
+                    isBilateralWingsLyricActive: isBilateralWingsLyricActive
+                )
+                    .padding(.leading, wingOuterPadding)
+                    .frame(
+                        width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
+                        alignment: .leading
+                    )
+                    .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
+                    .contentShape(Rectangle())
+                    .onTapGesture { handleLeftWingTap() }
+                    .help("Agents & Terminal Sessions (Click to view)")
+
+                if hasNotch || shouldShowExpanded {
+                    Spacer(minLength: 0)
+                        .frame(width: shouldShowExpanded ? expandedNotchCutoutWidth : effectiveNotchW)
+                } else {
+                    Spacer(minLength: 0)
+                        .frame(width: effectiveNotchW)
+                }
+
+                // Right Wing: Strictly isolated to Music Player & Token HUD (aligned snug against notch)
+                CompactRightWing(
+                    appState: appState,
+                    expanded: shouldShowExpanded,
+                    hasNotch: hasNotch,
+                    isHovered: $isHoveringRightWing,
+                    expandedTab: expandedTabBinding,
+                    workspaceManager: workspaceManager,
+                    expandedWingWidth: expandedWingWidth,
+                    isEnlarged: isConnectedChinLyricActive,
+                    isBilateralWingsLyricActive: isBilateralWingsLyricActive,
+                    wingWidth: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth
+                )
+                    .padding(.trailing, wingOuterPadding)
+                    .frame(
+                        width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
+                        alignment: .trailing
+                    )
+                    .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
+                    .contentShape(Rectangle())
+                    .onHover { hovering in
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            isHoveringRightWing = hovering
+                        }
+                    }
+                    .onTapGesture { handleRightWingTap() }
+                    .help(signals.musicTooltip)
+            }
+            .frame(height: notchHeight)
+
+            // Integrated contiguous notch chin: seamlessly housing synced lyrics directly under MacBook notch
+            if isConnectedChinLyricActive && !shouldShowExpanded {
+                HStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                        .frame(width: symmetricWingWidth)
+                    IntegratedNotchChinLyricView(nowPlaying: nowPlaying, width: effectiveNotchW) {
+                        handleChinLyricTap()
+                    }
+                    Spacer(minLength: 0)
+                        .frame(width: symmetricWingWidth)
+                }
+                .frame(height: 26)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .opacity),
+                    removal: .move(edge: .top).combined(with: .opacity)
+                ))
+            }
+        }
+        .frame(height: shouldShowExpanded ? notchHeight : effectiveNotchHeight)
+        // Recap on hover while collapsed — shows whenever hover
+        // doesn't expand the panel (smart suppress with the
+        // terminal frontmost); expanded cards show it inline.
+        .help(collapsedRecapTooltip)
+        .contentShape(Rectangle())
+        .gesture(
+            TapGesture().onEnded {
+                hoverTimer?.invalidate()
+                hoverTimer = nil
+                appState.openPendingQuestionCard()
+            },
+            including: !shouldShowExpanded && appState.hiddenPendingQuestionSessionId != nil
+                ? .all : .subviews
+        )
+        .onPreferenceChange(QuotaChipWidthKey.self) { if $0 > 0 { quotaChipWidth = $0 } }
+        .onPreferenceChange(CompactLeftWingWidthKey.self) { if $0 > 0 { leftWingWidth = $0 } }
+        .onPreferenceChange(CompactRightWingWidthKey.self) { if $0 > 0 { rightWingWidth = $0 } }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
                 if showBar || shouldShowExpanded {
-                    // Active: compact bar — wider version when expanded
-                    HStack(spacing: 0) {
-                        // Left Wing: Strictly isolated to Agents & Terminal status (aligned snug against notch)
-                        CompactLeftWing(
-                            appState: appState,
-                            expanded: shouldShowExpanded,
-                            mascotSize: mascotSize,
-                            hasNotch: hasNotch,
-                            showToolStatus: showToolStatus,
-                            expandedTab: expandedTabBinding,
-                            workspaceManager: workspaceManager
-                        )
-                            .padding(.leading, 12)
-                            .frame(
-                                width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
-                                alignment: .leading
-                            )
-                            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                guard !shouldShowExpanded else { return }
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    expandedTab = .agents
-                                    appState.surface = .sessionList
-                                }
-                            }
-                            .help("Agents & Terminal Sessions (Click to view)")
-
-                        if hasNotch || shouldShowExpanded {
-                            Spacer(minLength: 0)
-                                .frame(width: shouldShowExpanded ? expandedNotchCutoutWidth : effectiveNotchW)
-                        } else if showToolStatus {
-                            CompactToolStatus(appState: appState)
-                            Spacer(minLength: 0)
-                        } else {
-                            Spacer(minLength: 0)
-                        }
-
-                        // Right Wing: Strictly isolated to Music Player & Token HUD (aligned snug against notch)
-                        CompactRightWing(
-                            appState: appState,
-                            expanded: shouldShowExpanded,
-                            hasNotch: hasNotch,
-                            isHovered: $isHoveringRightWing,
-                            expandedTab: expandedTabBinding,
-                            workspaceManager: workspaceManager,
-                            expandedWingWidth: expandedWingWidth
-                        )
-                            .padding(.trailing, 12)
-                            .frame(
-                                width: shouldShowExpanded ? expandedWingWidth : symmetricWingWidth,
-                                alignment: .trailing
-                            )
-                            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
-                            .contentShape(Rectangle())
-                            .onHover { hovering in
-                                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                                    isHoveringRightWing = hovering
-                                }
-                            }
-                            .onTapGesture {
-                                guard !shouldShowExpanded else { return }
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    if nowPlaying.isPlaying || !nowPlaying.title.isEmpty {
-                                        expandedTab = .music
-                                    } else {
-                                        expandedTab = .agents
-                                    }
-                                    appState.surface = .sessionList
-                                }
-                            }
-                            .help(nowPlaying.isPlaying ? "♫ \(nowPlaying.title) - \(nowPlaying.artist) (Click for Music HUD)" : "Session & Token Usage")
-                    }
-                    .frame(height: notchHeight)
-                    // Recap on hover while collapsed — shows whenever hover
-                    // doesn't expand the panel (smart suppress with the
-                    // terminal frontmost); expanded cards show it inline.
-                    .help(collapsedRecapTooltip)
-                    // With a question waiting off-screen, a click on the collapsed
-                    // bar opens its card. Otherwise the gesture is off entirely so
-                    // the bar keeps behaving exactly as before.
-                    .contentShape(Rectangle())
-                    .gesture(
-                        TapGesture().onEnded {
-                            hoverTimer?.invalidate()
-                            hoverTimer = nil
-                            appState.openPendingQuestionCard()
-                        },
-                        including: !shouldShowExpanded && appState.hiddenPendingQuestionSessionId != nil
-                            ? .all : .subviews
-                    )
-                    // 0 means the chip isn't drawn right now (a tool name holds
-                    // the slot) — keep the last width so the bar doesn't twitch.
-                    .onPreferenceChange(QuotaChipWidthKey.self) { if $0 > 0 { quotaChipWidth = $0 } }
-                    // 0 while expanded (only the collapsed wing reports) — keep
-                    // the last width for the next collapse.
-                    .onPreferenceChange(CompactRightWingWidthKey.self) { if $0 > 0 { rightWingWidth = $0 } }
+                    activeCompactBar
                 } else if showIdleIndicator {
                     IdleIndicatorBar(
                         mascotSize: mascotSize,
@@ -620,9 +770,9 @@ struct NotchPanelView: View {
                         hovered: idleHovered,
                         onExpand: {
                             withAnimation(NotchAnimation.open) {
-                                if prayerManager.isPrayerPrioritized {
+                                if signals.isPrayerPrioritized {
                                     appState.transitionToTab(.prayer)
-                                } else if nowPlaying.isPlaying {
+                                } else if signals.isPlaying {
                                     appState.transitionToTab(.music)
                                 } else {
                                     appState.transitionToTab(.agents)
@@ -638,127 +788,8 @@ struct NotchPanelView: View {
                 }
 
                 // Below-notch expanded content
-                if shouldShowExpanded || isToastOnly || sys.showChargingBanner {
-                    if sys.showChargingBanner && !appState.surface.isExpanded {
-                        // MagSafe Dynamic Island Charging Notification
-                        MagSafeChargingBanner(batteryLevel: sys.metrics.batteryLevel)
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .top).combined(with: .opacity),
-                                removal: .move(edge: .top).combined(with: .opacity)
-                            ))
-                    } else if prayerManager.showMiniPeekBanner && !appState.surface.isExpanded {
-                        // PRAYER MINI PEEK BANNER: Buka tipis saat T-10m & saat masuk waktu salat
-                        PrayerMiniPeekBannerView(manager: prayerManager) {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                appState.transitionToTab(.prayer)
-                                appState.surface = .sessionList
-                            }
-                        }
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .top).combined(with: .opacity),
-                            removal: .move(edge: .top).combined(with: .opacity)
-                        ))
-                    } else {
-                        // High-priority cards always take precedence over secondary tabs
-                        switch appState.surface {
-                        case .approvalCard(let sid):
-                            // Card is addressed by session — render that session's
-                            // request, not whatever is at the head of the queue. (#308)
-                            if let pending = appState.pendingPermission(forSession: sid) {
-                                let session = appState.sessions[sid]
-                                ApprovalBar(
-                                    tool: pending.event.toolName ?? "Unknown",
-                                    toolInput: pending.event.toolInput,
-                                    queuePosition: appState.permissionQueuePosition(forSession: sid),
-                                    queueTotal: appState.permissionQueue.count,
-                                    session: session,
-                                    sessionId: sid,
-                                    appState: appState,
-                                    alwaysScope: ApprovalAlwaysScope(for: pending.event),
-                                    onAllow: { appState.approvePermission(always: false, expectedSessionId: sid) },
-                                    onAlwaysAllow: { appState.approvePermission(always: true, expectedSessionId: sid) },
-                                    onDeny: { appState.denyPermission(expectedSessionId: sid) },
-                                    onDismiss: { appState.dismissPermissionPrompt(expectedSessionId: sid) }
-                                )
-                                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
-                            }
-                        case .questionCard(let sid):
-                            let session = appState.sessions[sid]
-                            if let q = appState.pendingQuestion(forSession: sid) {
-                                QuestionBar(
-                                    question: q.question.question,
-                                    options: q.question.options,
-                                    descriptions: q.question.descriptions,
-                                    allQuestions: q.askUserQuestionState?.items ?? [],
-                                    requestId: q.id,
-                                    sessionSource: session?.source,
-                                    sessionContext: session?.cwd,
-                                    session: session,
-                                    sessionId: sid,
-                                    appState: appState,
-                                    queuePosition: appState.questionQueuePosition(forSession: sid),
-                                    queueTotal: appState.questionQueue.count,
-                                    onAnswer: { appState.answerQuestion($0, expectedSessionId: sid) },
-                                    onAnswerMulti: { appState.answerQuestionMulti($0, expectedSessionId: sid) },
-                                    onSkip: { appState.skipQuestion(expectedSessionId: sid) },
-                                    onDismiss: { appState.dismissQuestion(expectedSessionId: sid) }
-                                )
-                                // One view per request. Answering a card promotes the
-                                // next session's request into this same slot, and
-                                // without a new identity SwiftUI hands it the previous
-                                // card's @State — answers, selection and typed text
-                                // included. (#333)
-                                .id(q.id)
-                                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
-                            } else if let preview = appState.previewQuestionPayload {
-                                QuestionBar(
-                                    question: preview.question,
-                                    options: preview.options,
-                                    descriptions: preview.descriptions,
-                                    allQuestions: [],
-                                    requestId: nil,
-                                    sessionSource: session?.source,
-                                    sessionContext: session?.cwd,
-                                    session: session,
-                                    sessionId: sid,
-                                    appState: appState,
-                                    queuePosition: 1,
-                                    queueTotal: 1,
-                                    onAnswer: { _ in },
-                                    onAnswerMulti: { _ in },
-                                    onSkip: { },
-                                    onDismiss: { }
-                                )
-                                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
-                            }
-                        case .completionCard:
-                            SessionListView(appState: appState, onlySessionId: appState.justCompletedSessionId)
-                                .transition(.blurFade.combined(with: .move(edge: .top)))
-                        case .quickPrompt:
-                            CyberQuickPromptView(appState: appState)
-                                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
-                        case .sessionList:
-                            // Priority 2: General expanded surface respects expandedTab (Music, Workspace, Prayer, or Agent SessionList)
-                            ZStack(alignment: .top) {
-                                switch expandedTab {
-                                case .music:
-                                    CyberMusicHUDView(nowPlaying: nowPlaying, appState: appState)
-                                        .transition(tabContentTransition)
-                                case .workspace:
-                                    CyberWorkspaceView(manager: workspaceManager, appState: appState)
-                                        .transition(tabContentTransition)
-                                case .prayer:
-                                    PrayerExpandedCardView(manager: prayerManager)
-                                        .transition(tabContentTransition)
-                                case .agents:
-                                    SessionListView(appState: appState, onlySessionId: nil)
-                                        .transition(tabContentTransition)
-                                }
-                            }
-                        case .collapsed:
-                            EmptyView()
-                        }
-                    }
+                if shouldShowExpanded || isToastOnly || signals.showChargingBanner {
+                    belowNotchContent
                 }
             }
             .recordsCompletionCardChrome(in: cardSpace)
@@ -766,13 +797,9 @@ struct NotchPanelView: View {
             .clipped()
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: panelWidth)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: shouldShowExpanded)
-            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: nowPlaying.showToast)
-            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: prayerManager.showMiniPeekBanner)
-            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: isThinking)
-            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
-            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: nowPlaying.isPlaying)
+            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showMiniPeekBanner)
+            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showChargingBanner)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: expandedTab)
-            .animation(.spring(response: 0.38, dampingFraction: 0.82), value: workspaceManager.isExpandedDetail)
             .background(
                 Group {
                     if appState.isFullscreenMode {
@@ -787,14 +814,14 @@ struct NotchPanelView: View {
                         NotchPanelShape(
                             topExtension: currentTopExt,
                             bottomRadius: currentBottomRadius,
-                            minHeight: notchHeight
+                            minHeight: effectiveNotchHeight
                         )
                         .fill(Color.black)
                         .overlay(
                             NotchPanelShape(
                                 topExtension: currentTopExt,
                                 bottomRadius: currentBottomRadius,
-                                minHeight: notchHeight
+                                minHeight: effectiveNotchHeight
                             )
                             .stroke(currentStrokeColor, lineWidth: currentStrokeWidth)
                         )
@@ -825,17 +852,12 @@ struct NotchPanelView: View {
                 displayedToolStatus = showToolStatus
                 prayerManager.appState = appState
             }
-            .onChange(of: nowPlaying.title) { oldTitle, newTitle in
-                if !newTitle.isEmpty && newTitle != oldTitle && nowPlaying.isPlaying {
+            .onChange(of: signals.musicTitle) { oldTitle, newTitle in
+                if !newTitle.isEmpty && newTitle != oldTitle && signals.isPlaying {
                     triggerMusicAutoPeek()
                 }
             }
-            .onChange(of: nowPlaying.showToast) { _, isToast in
-                if isToast && nowPlaying.isPlaying && !nowPlaying.title.isEmpty {
-                    triggerMusicAutoPeek()
-                }
-            }
-            .onChange(of: nowPlaying.isPlaying) { _, isPlaying in
+            .onChange(of: signals.isPlaying) { _, isPlaying in
                 if isPlaying && expandedTab == .music && appState.surface.isExpanded {
                     appState.transitionToTab(.music)
                 }
@@ -878,7 +900,7 @@ struct NotchPanelView: View {
                                     NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 }
                                 withAnimation(NotchAnimation.open) {
-                                    if nowPlaying.isPlaying {
+                                    if signals.isPlaying {
                                         expandedTab = .music
                                     }
                                     appState.surface = .sessionList
@@ -928,6 +950,8 @@ struct NotchPanelView: View {
                 isHovered = hovering
                 if !hovering && musicDeferCollapseOnMouseLeave {
                     musicDeferCollapseOnMouseLeave = false
+                    musicAutoCollapseWorkItem?.cancel()
+                    musicAutoCollapseWorkItem = nil
                     musicAutoCollapseTimer?.invalidate()
                     musicAutoCollapseTimer = nil
                     withAnimation(NotchAnimation.close) {
@@ -938,7 +962,9 @@ struct NotchPanelView: View {
                     return
                 }
                 if hovering {
-                    if musicAutoCollapseTimer != nil {
+                    if musicAutoCollapseWorkItem != nil || musicAutoCollapseTimer != nil {
+                        musicAutoCollapseWorkItem?.cancel()
+                        musicAutoCollapseWorkItem = nil
                         musicAutoCollapseTimer?.invalidate()
                         musicAutoCollapseTimer = nil
                         musicDeferCollapseOnMouseLeave = true
@@ -1002,43 +1028,18 @@ struct NotchPanelView: View {
                 }
             }
             .onChange(of: appState.surface) { _, newSurface in
-                // The surface can change from outside the hover flow (auto-expand
-                // cards, click-to-close, …) — keep the phase from going stale.
-                if newSurface == .collapsed && !isHovered {
-                    hoverPhase = .collapsed
-                } else if newSurface.isExpanded && hoverPhase != .expanded {
-                    hoverPhase = .expanded
-                }
-
-                // Switch expanded tab to .agents when attention or completion is required
-                switch newSurface {
-                case .completionCard, .approvalCard, .questionCard:
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                        expandedTab = .agents
-                    }
-                default:
-                    break
-                }
+                handleSurfaceChange(newSurface)
             }
             .onChange(of: appState.status) { oldStatus, newStatus in
-                // Switch to .agents if task completes while viewing secondary tabs
-                if (oldStatus == .processing || oldStatus == .running) && newStatus == .idle {
-                    if expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                            expandedTab = .agents
-                        }
-                    }
-                }
+                handleStatusTransition(oldStatus: oldStatus, newStatus: newStatus)
             }
             .onChange(of: appState.justCompletedSessionId) { _, completedId in
-                if completedId != nil && (expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                        expandedTab = .agents
-                    }
-                }
+                handleCompletedSession(completedId)
             }
             .onChange(of: appState.expandedTab) { _, newTab in
                 if newTab != .music {
+                    musicAutoCollapseWorkItem?.cancel()
+                    musicAutoCollapseWorkItem = nil
                     musicAutoCollapseTimer?.invalidate()
                     musicAutoCollapseTimer = nil
                     musicDeferCollapseOnMouseLeave = false
@@ -1050,8 +1051,8 @@ struct NotchPanelView: View {
             // Outside onHover on purpose: the hover region moves with the bar.
             .offset(x: 0)
 
-            // SUB-NOTCH FLOATING LYRIC CAPSULE: Floats freely beneath the notch cutout
-            if shouldShowSubNotchLyrics {
+            // SUB-NOTCH FLOATING LYRIC CAPSULE: Floats freely beneath the notch cutout (when not using unified chin mode or bilateral wings)
+            if shouldShowSubNotchLyrics && !isConnectedChinLyricActive && !isBilateralWingsLyricActive {
                 SubNotchFloatingLyricCapsuleView(nowPlaying: nowPlaying) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         expandedTab = .music
@@ -1066,7 +1067,7 @@ struct NotchPanelView: View {
             }
 
             // NOTCH VOLUME HUD: Sleek dynamic island pill when scrolling volume
-            if volumeManager.isHUDVisible {
+            if signals.isVolumeHUDVisible {
                 NotchVolumeHUDView(volumeManager: volumeManager)
                     .padding(.top, 4)
                     .transition(.asymmetric(
@@ -1092,7 +1093,136 @@ struct NotchPanelView: View {
         .environment(\.sessionGroupingTabsRoom, SessionGroupingTabsLayout.room(
             panelWidth: panelWidth, notchWidth: notchW, hasNotch: hasNotch
         ))
+        .environment(\.animationGates, animationGate.gates)
+        .environment(\.mascotAnimationsActive, animationGate.animationsActive)
+        .environment(\.mascotAnimationEpoch, animationGate.epoch)
         .animation(NotchAnimation.open, value: appState.surface)
+    }
+
+    // MARK: - Below-Notch Dynamic Island Banners & Expanded Cards
+
+    @ViewBuilder
+    private var belowNotchContent: some View {
+        if signals.showChargingBanner && !appState.surface.isExpanded {
+            // MagSafe Dynamic Island Charging Notification
+            MagSafeChargingBanner(batteryLevel: signals.batteryLevel) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    sys.dismissChargingBanner()
+                }
+            }
+            .transition(.asymmetric(
+                insertion: .move(edge: .top).combined(with: .opacity),
+                removal: .move(edge: .top).combined(with: .opacity)
+            ))
+        } else if signals.showMiniPeekBanner && !appState.surface.isExpanded {
+            // PRAYER MINI PEEK BANNER: Buka tipis saat T-10m & saat masuk waktu salat
+            PrayerMiniPeekBannerView(manager: prayerManager) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    appState.transitionToTab(.prayer)
+                    appState.surface = .sessionList
+                }
+            }
+            .transition(.asymmetric(
+                insertion: .move(edge: .top).combined(with: .opacity),
+                removal: .move(edge: .top).combined(with: .opacity)
+            ))
+        } else {
+            expandedSurfaceContent
+        }
+    }
+
+    @ViewBuilder
+    private var expandedSurfaceContent: some View {
+        switch appState.surface {
+        case .approvalCard(let sid):
+            if let pending = appState.pendingPermission(forSession: sid) {
+                let session = appState.sessions[sid]
+                ApprovalBar(
+                    tool: pending.event.toolName ?? "Unknown",
+                    toolInput: pending.event.toolInput,
+                    queuePosition: appState.permissionQueuePosition(forSession: sid),
+                    queueTotal: appState.permissionQueue.count,
+                    session: session,
+                    sessionId: sid,
+                    appState: appState,
+                    alwaysScope: ApprovalAlwaysScope(for: pending.event),
+                    onAllow: { appState.approvePermission(always: false, expectedSessionId: sid) },
+                    onAlwaysAllow: { appState.approvePermission(always: true, expectedSessionId: sid) },
+                    onDeny: { appState.denyPermission(expectedSessionId: sid) },
+                    onDismiss: { appState.dismissPermissionPrompt(expectedSessionId: sid) }
+                )
+                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
+            }
+        case .questionCard(let sid):
+            let session = appState.sessions[sid]
+            if let q = appState.pendingQuestion(forSession: sid) {
+                QuestionBar(
+                    question: q.question.question,
+                    options: q.question.options,
+                    descriptions: q.question.descriptions,
+                    allQuestions: q.askUserQuestionState?.items ?? [],
+                    requestId: q.id,
+                    sessionSource: session?.source,
+                    sessionContext: session?.cwd,
+                    session: session,
+                    sessionId: sid,
+                    appState: appState,
+                    queuePosition: appState.questionQueuePosition(forSession: sid),
+                    queueTotal: appState.questionQueue.count,
+                    onAnswer: { appState.answerQuestion($0, expectedSessionId: sid) },
+                    onAnswerMulti: { appState.answerQuestionMulti($0, expectedSessionId: sid) },
+                    onSkip: { appState.skipQuestion(expectedSessionId: sid) },
+                    onDismiss: { appState.dismissQuestion(expectedSessionId: sid) }
+                )
+                .id(q.id)
+                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
+            } else if let preview = appState.previewQuestionPayload {
+                QuestionBar(
+                    question: preview.question,
+                    options: preview.options,
+                    descriptions: preview.descriptions,
+                    allQuestions: [],
+                    requestId: nil,
+                    sessionSource: session?.source,
+                    sessionContext: session?.cwd,
+                    session: session,
+                    sessionId: sid,
+                    appState: appState,
+                    queuePosition: 1,
+                    queueTotal: 1,
+                    onAnswer: { _ in },
+                    onAnswerMulti: { _ in },
+                    onSkip: { },
+                    onDismiss: { }
+                )
+                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
+            }
+        case .completionCard:
+            SessionListView(appState: appState, onlySessionId: appState.justCompletedSessionId)
+                .transition(.blurFade.combined(with: .move(edge: .top)))
+        case .quickPrompt:
+            CyberQuickPromptView(appState: appState)
+                .transition(.blurFade.combined(with: .scale(scale: 0.96, anchor: .top)))
+        case .sessionList:
+            ZStack(alignment: .top) {
+                switch expandedTab {
+                case .music:
+                    CyberMusicHUDView(nowPlaying: nowPlaying, appState: appState)
+                        .transition(tabContentTransition)
+                case .workspace:
+                    CyberWorkspaceView(manager: workspaceManager, appState: appState)
+                        .transition(tabContentTransition)
+                case .prayer:
+                    PrayerExpandedCardView(manager: prayerManager)
+                        .transition(tabContentTransition)
+                case .agents:
+                    SessionListView(appState: appState, onlySessionId: nil)
+                        .transition(tabContentTransition)
+                }
+            }
+        case .collapsed:
+            EmptyView()
+        }
     }
 }
 
@@ -1107,26 +1237,79 @@ private struct CompactLeftWing: View {
     let hasNotch: Bool
     let showToolStatus: Bool
     @Binding var expandedTab: ExpandedContentTab
+    @Environment(\.animationGates) private var animationGates
     var workspaceManager: WorkspaceMonitorManager? = nil
-    @ObservedObject private var nowPlaying = NowPlayingManager.shared
+    var wingWidth: CGFloat = 0
+    var isBilateralWingsLyricActive: Bool = false
+    private let nowPlaying = NowPlayingManager.shared
+    private let signals = IslandSignals.shared
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
     // Bound via @AppStorage so flipping the default mascot in Settings rerenders this view
     // even when AppState.primarySource wasn't recomputed (no session mutations in flight).
     @AppStorage(SettingsKey.defaultSource) private var settingsDefaultSource = SettingsDefaults.defaultSource
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
     @AppStorage(SettingsKey.showClaudeQuota) private var showClaudeQuota = SettingsDefaults.showClaudeQuota
     @AppStorage(SettingsKey.claudeQuotaChip) private var claudeQuotaChip = SettingsDefaults.claudeQuotaChip
     @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+
+    private var musicPaletteAccent: Color? {
+        guard signals.isPlaying else { return nil }
+        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album"),
+           nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
+        let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
+        switch pc {
+        case .album:
+            return nowPlaying.artworkImage != nil ? nowPlaying.albumPalette.primary : Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .theme: return Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .white: return .white
+        case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
+        case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
+        case .green: return Color(red: 0.12, green: 0.84, blue: 0.38)
+        case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
+        }
+    }
+
+    private func effectiveToolColor(_ tool: String) -> Color {
+        if let musicAccent = musicPaletteAccent {
+            return musicAccent
+        }
+        return toolStatusColor(tool)
+    }
+
+    private var effectiveThinkingColor: Color {
+        if let musicAccent = musicPaletteAccent {
+            return musicAccent
+        }
+        return isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 0.0, green: 0.96, blue: 0.83)
+    }
 
     private var displaySession: SessionSnapshot? {
-        let sid = appState.rotatingSessionId ?? appState.activeSessionId ?? appState.sessions.keys.sorted().first
-        guard let sid else { return nil }
-        return appState.sessions[sid]
+        if let sid = appState.rotatingSessionId, let s = appState.sessions[sid] {
+            return s
+        }
+        // Always prioritize the actively working agent (processing, running, or executing tool)
+        if let working = appState.sessions.values.first(where: {
+            $0.status == .processing || $0.status == .running || $0.currentTool != nil
+        }) {
+            return working
+        }
+        if let sid = appState.activeSessionId, let s = appState.sessions[sid] {
+            return s
+        }
+        if let firstSid = appState.sessions.keys.sorted().first {
+            return appState.sessions[firstSid]
+        }
+        return nil
     }
     private var displaySource: String {
-        // Honor user's configured default mascot whenever nothing is actively
-        // happening. Covers no-session and all-idle equally (#149) — without
-        // this, an idle session's source overrides the user preference.
-        if displayStatus == .idle { return settingsDefaultSource }
         // Prefer mascotSource so a Cursor/Codex session with empty hook source
         // still resolves via termBundleId instead of falling through to Clawd.
         if let s = displaySession {
@@ -1134,19 +1317,26 @@ private struct CompactLeftWing: View {
             if !resolved.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return resolved
             }
+            if !s.source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return s.source
+            }
+        }
+        if displayStatus == .idle && !isThinking && shownTool == nil {
+            return settingsDefaultSource
         }
         return appState.primarySource
     }
     private var displayStatus: AgentStatus { displaySession?.status ?? .idle }
+    /// The mascot shows the session's active status.
+    /// When thinking or running a tool, show working animation instead of idle sleep.
     private var effectiveMascotStatus: MascotAgentStatus {
-        if displayStatus == .idle && nowPlaying.isPlaying {
-            return .running
+        if isThinking || shownTool != nil {
+            return (displayStatus == .running) ? .running : .processing
         }
         return displayStatus
     }
-    private var isThinking: Bool {
-        displayStatus == .processing || displayStatus == .running || appState.status == .processing || appState.status == .running
-    }
+
+    private var isThinking: Bool { appState.isThinking }
     private var liveTool: String? { displaySession?.currentTool }
     @State private var shownTool: String?
     @State private var lingerTimer: Timer?
@@ -1160,99 +1350,156 @@ private struct CompactLeftWing: View {
                     workspaceManager: workspaceManager ?? WorkspaceMonitorManager.shared
                 )
                 .transition(.opacity)
-            } else {
-                ZStack {
-                    if nowPlaying.isPlaying && displayStatus == .idle {
-                        // Neon beat aura when music is vibing
-                        TimelineView(.animation(minimumInterval: 0.05)) { timeline in
-                            let t = timeline.date.timeIntervalSinceReferenceDate
-                            let beat = (sin(t * 3.5) + 1.0) / 2.0 // 0.0 ... 1.0
-                            Circle()
-                                .fill(
-                                    RadialGradient(
-                                        colors: [
-                                            Color(red: 1.0, green: 0.16, blue: 0.53).opacity(0.24 + beat * 0.18),
-                                            Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.12 + beat * 0.10),
-                                            Color.clear
-                                        ],
-                                        center: .center,
-                                        startRadius: 2,
-                                        endRadius: mascotSize * 0.6 + CGFloat(beat * 3.0)
-                                    )
-                                )
+            } else if isBilateralWingsLyricActive {
+                // PANORAMIC BILATERAL WING: Active synced lyric flowing beside mascot
+                HStack(spacing: 5) {
+                    ZStack(alignment: .bottomTrailing) {
+                        if signals.isPlaying && displayStatus == .idle && !isThinking && shownTool == nil {
+                            CAMusicGlowView(kind: .aura, mascotSize: mascotSize,
+                                          animating: animationGates.allows(.music))
                                 .frame(width: mascotSize + 8, height: mascotSize + 8)
                         }
-                    } else if displayStatus == .idle {
-                        TimelineView(.animation(minimumInterval: 0.06)) { timeline in
-                            let t = timeline.date.timeIntervalSinceReferenceDate
-                            let breath = (sin(t * 2.0) + 1.0) / 2.0 // 0.0 ... 1.0
-                            Circle()
-                                .fill(
-                                    RadialGradient(
-                                        colors: [
-                                            Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.18 + breath * 0.14),
-                                            Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.0)
-                                        ],
-                                        center: .center,
-                                        startRadius: 2,
-                                        endRadius: mascotSize * 0.55 + CGFloat(breath * 2.0)
-                                    )
-                                )
-                                .frame(width: mascotSize + 4, height: mascotSize + 4)
+
+                        MascotView(source: displaySource, status: effectiveMascotStatus, size: mascotSize)
+                            .frame(width: mascotSize, height: mascotSize)
+                            .fixedSize()
+                            .id("\(displaySource)-\(effectiveMascotStatus)")
+
+                        // If a tool is executing or agent is thinking, overlay subtle indicator badge on mascot
+                        if let tool = shownTool, showToolStatus && showAgentDetails {
+                            Image(systemName: "wrench.and.screwdriver.fill")
+                                .font(.system(size: 6, weight: .bold))
+                                .foregroundStyle(effectiveToolColor(tool))
+                                .padding(1.5)
+                                .background(Circle().fill(Color.black))
+                                .offset(x: 2, y: 2)
                         }
+                    }
+                    .fixedSize()
+
+                    let lyricText = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let availableWidth = max(24, wingWidth > 0 ? (wingWidth - mascotSize - 16) : 90)
+
+                    HStack(spacing: 3.5) {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 7.5, weight: .bold))
+                            .foregroundStyle(musicPaletteAccent ?? (isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 1.0, green: 0.65, blue: 0.45)))
+                            .fixedSize()
+
+                        if !lyricText.isEmpty {
+                            if isPixel {
+                                ModernMarqueeText(
+                                    text: lyricText.uppercased(),
+                                    font: .system(size: 8.5, weight: .bold, design: .monospaced),
+                                    color: .white,
+                                    maxWidth: availableWidth - 12
+                                )
+                            } else {
+                                ModernMarqueeText(
+                                    text: lyricText,
+                                    font: .system(size: 9.0, weight: .semibold, design: .rounded),
+                                    color: .white,
+                                    maxWidth: availableWidth - 12
+                                )
+                            }
+                        } else {
+                            Text("♪ ...")
+                                .font(.system(size: 8.5, weight: .medium, design: isPixel ? .monospaced : .rounded))
+                                .foregroundStyle(Color.white.opacity(0.5))
+                        }
+                    }
+                    .frame(maxWidth: availableWidth, alignment: .leading)
+                    .transition(.opacity)
+                }
+            } else {
+                ZStack {
+                    if signals.isPlaying && displayStatus == .idle && !isThinking && shownTool == nil {
+                        // Neon beat aura when music is vibing: a CA layer pulsed
+                        // by the render server, gated on the Music class. Held
+                        // at mid-beat when the class may not animate.
+                        CAMusicGlowView(kind: .aura, mascotSize: mascotSize,
+                                      animating: animationGates.allows(.music))
+                            .frame(width: mascotSize + 8, height: mascotSize + 8)
+                    } else if displayStatus == .idle && !isThinking && shownTool == nil {
+                        // Slow idle glow, same treatment under Ambient Idle.
+                        CAMusicGlowView(kind: .breath, mascotSize: mascotSize,
+                                      animating: animationGates.allows(.ambientIdle))
+                            .frame(width: mascotSize + 4, height: mascotSize + 4)
                     }
 
                     MascotView(source: displaySource, status: effectiveMascotStatus, size: mascotSize)
-                        .id(displaySource)
+                        .frame(width: mascotSize, height: mascotSize)
+                        .fixedSize()
+                        .id("\(displaySource)-\(effectiveMascotStatus)")
                         .transition(.opacity)
                         .animation(.easeInOut(duration: 0.3), value: displaySource)
 
-                    if nowPlaying.isPlaying && displayStatus == .idle {
-                        // Floating cyberpunk neon music notes
-                        TimelineView(.animation(minimumInterval: 0.08)) { timeline in
-                            let t = timeline.date.timeIntervalSinceReferenceDate
-                            let yOffset = CGFloat(sin(t * 2.5) * 2.0) - 5
-                            let xOffset = CGFloat(cos(t * 2.0) * 2.0) + (mascotSize * 0.38)
-                            Text("♪")
-                                .font(.system(size: 7.5, weight: .bold))
-                                .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                                .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7), radius: 2)
-                                .offset(x: xOffset, y: yOffset)
-                        }
-                    }
                 }
+                .fixedSize()
 
                 // Tool name or thinking indicator
+                let availableForTool: CGFloat = wingWidth > 0 ? max(0, wingWidth - mascotSize - 20) : 110
+
                 if let tool = shownTool, showToolStatus && showAgentDetails {
-                    HStack(spacing: 3) {
-                        Image(systemName: "wrench.and.screwdriver.fill")
-                            .font(.system(size: 7, weight: .bold))
-                            .foregroundStyle(toolStatusColor(tool))
-                        Text(ToolNameDisplay.compact(tool))
-                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                            .foregroundStyle(toolStatusColor(tool))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                    if availableForTool >= 14 {
+                        HStack(spacing: 3) {
+                            Image(systemName: "wrench.and.screwdriver.fill")
+                                .font(.system(size: 7, weight: .bold))
+                                .foregroundStyle(effectiveToolColor(tool))
+                                .fixedSize()
+                            if availableForTool >= 34 {
+                                let maxChars: Int = {
+                                    if availableForTool >= 75 { return 16 }
+                                    if availableForTool >= 50 { return 8 }
+                                    return 4
+                                }()
+                                if isPixel {
+                                    PixelText(
+                                        text: ToolNameDisplay.compact(tool, maxCharacters: maxChars).uppercased(),
+                                        color: effectiveToolColor(tool),
+                                        pixelSize: 1.05
+                                    )
+                                } else {
+                                    Text(ToolNameDisplay.compact(tool, maxCharacters: maxChars))
+                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(effectiveToolColor(tool))
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                }
+                            }
+                        }
+                        .frame(maxWidth: max(14, availableForTool), alignment: .leading)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.9)),
+                            removal: .opacity
+                        ))
+                        .help(tool)
                     }
-                    .frame(maxWidth: 82, alignment: .leading)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.9)),
-                        removal: .opacity
-                    ))
-                    .help(tool)
                 } else if isThinking {
-                    TypingIndicator(
-                        fontSize: 9,
-                        label: L10n.shared["typing_thinking"],
-                        bright: true,
-                        color: Color(red: 0.0, green: 0.96, blue: 0.83),
-                        showDots: true
-                    )
-                    .fixedSize(horizontal: true, vertical: false)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.9)),
-                        removal: .opacity
-                    ))
+                    if availableForTool >= 40 {
+                        TypingIndicator(
+                            fontSize: 9,
+                            label: L10n.shared["typing_thinking"],
+                            bright: true,
+                            color: effectiveThinkingColor,
+                            showDots: true
+                        )
+                        .fixedSize(horizontal: true, vertical: false)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.9)),
+                            removal: .opacity
+                        ))
+                    } else if availableForTool >= 14 {
+                        TypingIndicator(
+                            fontSize: 9,
+                            label: "",
+                            bright: true,
+                            color: effectiveThinkingColor,
+                            showDots: true
+                        )
+                        .fixedSize(horizontal: true, vertical: false)
+                        .transition(.opacity)
+                    }
                 } else if !nowPlaying.isPlaying && showAgentDetails,
                           let limit = QuotaChip.limit(appState: appState, enabled: showClaudeQuota, modeRaw: claudeQuotaChip),
                           let snapshot = appState.claudeQuota.snapshot {
@@ -1274,6 +1521,10 @@ private struct CompactLeftWing: View {
             }
         }
         .padding(.horizontal, expanded ? 10 : 3)
+        .fixedSize(horizontal: true, vertical: false)
+        .background(GeometryReader { geo in
+            Color.clear.preference(key: CompactLeftWingWidthKey.self, value: expanded ? 0 : geo.size.width)
+        })
         .onChange(of: liveTool) { _, newTool in
             lingerTimer?.invalidate()
             if let newTool {
@@ -1381,16 +1632,18 @@ private struct CompactRightWing: View {
     let hasNotch: Bool
     @Binding var isHovered: Bool
     @Binding var expandedTab: ExpandedContentTab
-    @ObservedObject var workspaceManager: WorkspaceMonitorManager
+    let workspaceManager: WorkspaceMonitorManager
     var expandedWingWidth: CGFloat = 240
+    var isEnlarged: Bool = false
+    var isBilateralWingsLyricActive: Bool = false
+    var wingWidth: CGFloat = 0
+    @Environment(\.animationGates) private var animationGates
     @ObservedObject private var l10n = L10n.shared
-    @ObservedObject private var nowPlaying = NowPlayingManager.shared
+    private let nowPlaying = NowPlayingManager.shared
+    private let signals = IslandSignals.shared
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
     @AppStorage(SettingsKey.soundEnabled) private var soundEnabled = SettingsDefaults.soundEnabled
     @AppStorage(SettingsKey.showToolStatus) private var showToolStatus = SettingsDefaults.showToolStatus
-    @AppStorage(SettingsKey.quietHoursEnabled) private var quietHoursEnabled = SettingsDefaults.quietHoursEnabled
-    @AppStorage(SettingsKey.quietHoursStart) private var quietHoursStart = SettingsDefaults.quietHoursStart
-    @AppStorage(SettingsKey.quietHoursEnd) private var quietHoursEnd = SettingsDefaults.quietHoursEnd
     @AppStorage(SettingsKey.showCompactLyrics) private var showCompactLyrics = SettingsDefaults.showCompactLyrics
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
@@ -1398,6 +1651,10 @@ private struct CompactRightWing: View {
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
     @State private var hoveredAction: String? = nil
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
 
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -1432,21 +1689,12 @@ private struct CompactRightWing: View {
     /// (a one-off follow-up bounce still marks a reminder).
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Re-evaluated on every re-render; the compact bar redraws often enough
-    /// that the moon appears/disappears close to the window edges.
-    private var inQuietHours: Bool {
-        guard soundEnabled, quietHoursEnabled else { return false }
-        let c = Calendar.current.dateComponents([.hour, .minute], from: Date())
-        return SoundManager.isInQuietHours(
-            minutesSinceMidnight: (c.hour ?? 0) * 60 + (c.minute ?? 0),
-            start: quietHoursStart,
-            end: quietHoursEnd
-        )
-    }
+    /// The moon used to be recomputed from `UserDefaults` and the calendar on
+    /// every render. `IslandSignalsSync` owns that clock now and arms a single
+    /// timer for the next boundary.
+    private var inQuietHours: Bool { signals.inQuietHours }
 
-    private var displaySessionId: String? {
-        appState.rotatingSessionId ?? appState.activeSessionId ?? appState.sessions.keys.sorted().first
-    }
+    private var displaySessionId: String? { appState.displaySessionId }
     private var projectName: String? {
         guard let sid = displaySessionId, let cwd = appState.sessions[sid]?.cwd, !cwd.isEmpty else { return nil }
         return (cwd as NSString).lastPathComponent
@@ -1464,23 +1712,11 @@ private struct CompactRightWing: View {
         guard let sid = displaySessionId else { return nil }
         return appState.sessions[sid]?.gitBranch
     }
-    private var isThinking: Bool {
-        if appState.status == .processing || appState.status == .running {
-            return true
-        }
-        for session in appState.sessions.values {
-            if session.status == .processing || session.status == .running || session.currentTool != nil {
-                return true
-            }
-        }
-        return false
-    }
+    /// Derived in `AppState.refreshDerivedState()`; walking every session here
+    /// ran on each render of the bar.
+    private var isThinking: Bool { appState.isThinking }
     private var shouldExpandRightWing: Bool {
-        isHovered || isThinking
-    }
-
-    private var prayerManager: PrayerTimeManager {
-        PrayerTimeManager.shared
+        isHovered
     }
 
     private var extraBadgeCount: Int {
@@ -1534,16 +1770,22 @@ private struct CompactRightWing: View {
 
     @ViewBuilder
     private var collapsedWingContent: some View {
-        if prayerManager.isPrayerPrioritized {
+        if signals.isPrayerPrioritized {
             // SMART PRIORITY: Prayer countdown takes active priority at T <= 15m
             PrayerCompactWingView(isHovered: shouldExpandRightWing) {
                 expandedTab = .prayer
                 appState.surface = .sessionList
             }
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
-        } else if nowPlaying.isPlaying {
-            CyberMusicWingView(nowPlaying: nowPlaying, isHovered: shouldExpandRightWing)
-                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        } else if signals.isPlaying {
+            CyberMusicWingView(
+                nowPlaying: nowPlaying,
+                isHovered: shouldExpandRightWing,
+                isEnlarged: isEnlarged,
+                isBilateralWingsLyricActive: isBilateralWingsLyricActive,
+                wingWidth: wingWidth
+            )
+            .transition(.opacity.combined(with: .scale(scale: 0.9)))
         } else {
             // AGENT / STANDBY MODE:
             if shouldExpandRightWing {
@@ -1691,12 +1933,16 @@ private struct CompactRightWing: View {
                         .font(.system(size: 7.5, weight: .bold))
                         .foregroundStyle(Color(red: 0.20, green: 0.88, blue: 0.65))
 
-                    Text(branch)
-                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.92))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                    if isPixel {
+                        PixelText(text: branch.uppercased(), color: Color(red: 0.20, green: 0.88, blue: 0.65), pixelSize: 1.0, maxChars: 8)
+                    } else {
+                        Text(branch)
+                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.92))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                    }
                 }
             } else if let proj = projectName, !proj.isEmpty {
                 HStack(spacing: 3) {
@@ -1704,12 +1950,16 @@ private struct CompactRightWing: View {
                         .font(.system(size: 7, weight: .bold))
                         .foregroundStyle(Color.white.opacity(0.60))
 
-                    Text(proj)
-                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.90))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                    if isPixel {
+                        PixelText(text: proj.uppercased(), color: Color.white.opacity(0.90), pixelSize: 1.0, maxChars: 8)
+                    } else {
+                        Text(proj)
+                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.90))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                    }
                 }
             } else {
                 HStack(spacing: 3) {
@@ -1717,11 +1967,15 @@ private struct CompactRightWing: View {
                         .font(.system(size: 7, weight: .bold))
                         .foregroundStyle(Color.white.opacity(0.60))
 
-                    Text(agentDisplayLabel.lowercased())
-                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.90))
-                        .lineLimit(1)
-                        .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                    if isPixel {
+                        PixelText(text: agentDisplayLabel.uppercased(), color: Color.white.opacity(0.90), pixelSize: 1.0, maxChars: 8)
+                    } else {
+                        Text(agentDisplayLabel.lowercased())
+                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.90))
+                            .lineLimit(1)
+                            .frame(maxWidth: maxBranchWidth, alignment: .leading)
+                    }
                 }
             }
 
@@ -1743,17 +1997,28 @@ private struct CompactRightWing: View {
                         .foregroundStyle(Color.white.opacity(0.40))
                 }
 
-                Text("\(active)/\(total)")
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    .foregroundStyle(active > 0 ? Color.white : Color.white.opacity(0.65))
+                if isPixel {
+                    PixelText(text: "\(active)/\(total)", color: active > 0 ? Color.white : Color.white.opacity(0.65), pixelSize: 1.0)
+                } else {
+                    Text("\(active)/\(total)")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundStyle(active > 0 ? Color.white : Color.white.opacity(0.65))
+                }
             }
         }
         .padding(.horizontal, 6.5)
         .padding(.vertical, 3)
         .background(
-            Capsule()
-                .fill(Color.white.opacity(0.08))
-                .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+            Group {
+                if isPixel {
+                    RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                } else {
+                    Capsule()
+                        .fill(Color.white.opacity(0.08))
+                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+                }
+            }
         )
         .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
         .transition(.opacity.combined(with: .scale(scale: 0.95)))
@@ -1767,31 +2032,43 @@ private struct CompactRightWing: View {
                 Image(systemName: "arrow.triangle.branch")
                     .font(.system(size: 7.5, weight: .bold))
                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                Text(branch)
-                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.92))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .frame(maxWidth: 48)
+                if isPixel {
+                    PixelText(text: branch.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: 6)
+                } else {
+                    Text(branch)
+                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.92))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: 48)
+                }
             } else if let proj = projectName, !proj.isEmpty {
                 Image(systemName: "folder.fill")
                     .font(.system(size: 7, weight: .bold))
                     .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                Text(proj)
-                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.92))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .frame(maxWidth: 48)
+                if isPixel {
+                    PixelText(text: proj.uppercased(), color: Color.white.opacity(0.92), pixelSize: 1.0, maxChars: 6)
+                } else {
+                    Text(proj)
+                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.92))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: 48)
+                }
             } else {
                 Circle()
                     .fill(Color(red: 0.0, green: 0.96, blue: 0.83))
                     .frame(width: 4, height: 4)
                     .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.8), radius: 2)
                 TimelineView(.periodic(from: .now, by: 10.0)) { _ in
-                    Text(currentTimeString)
-                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.92))
+                    if isPixel {
+                        PixelText(text: currentTimeString, color: Color.white.opacity(0.92), pixelSize: 1.0)
+                    } else {
+                        Text(currentTimeString)
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.white.opacity(0.92))
+                    }
                 }
             }
 
@@ -1802,9 +2079,16 @@ private struct CompactRightWing: View {
         .padding(.horizontal, 6.5)
         .padding(.vertical, 3)
         .background(
-            Capsule()
-                .fill(Color.white.opacity(0.08))
-                .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+            Group {
+                if isPixel {
+                    RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                } else {
+                    Capsule()
+                        .fill(Color.white.opacity(0.08))
+                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.6))
+                }
+            }
         )
         .shadow(color: Color.black.opacity(0.4), radius: 3, y: 1)
         .contentShape(Rectangle())
@@ -1851,10 +2135,11 @@ private struct CompactRightWing: View {
                 .symbolEffect(.bounce, value: appState.followUps.hintPulse)
                 .help(l10n["follow_up_hint"])
         } else if appState.status == .waitingApproval || appState.status == .waitingQuestion {
-            Image(systemName: "bell.fill")
-                .font(.system(size: 8.5, weight: .bold))
-                .foregroundStyle(Color(red: 1.0, green: 0.7, blue: 0.28))
-                .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+            // A repeating `.symbolEffect` costs a layout pass per
+            // display frame; the bell pulses on the render server
+            // instead and keeps pulsing after the island goes quiet.
+            PulsingBellView(animating: !reduceMotion)
+                .frame(width: 10, height: 10)
         }
     }
 }
@@ -1935,9 +2220,7 @@ private struct CompactToolStatus: View {
     var appState: AppState
 
     /// Single source of truth: all fields derive from the same session.
-    private var displaySessionId: String? {
-        appState.rotatingSessionId ?? appState.activeSessionId ?? appState.sessions.keys.sorted().first
-    }
+    private var displaySessionId: String? { appState.displaySessionId }
     private var displaySession: SessionSnapshot? {
         guard let sid = displaySessionId else { return nil }
         return appState.sessions[sid]
@@ -1971,6 +2254,31 @@ private struct CompactToolStatus: View {
 
     /// Whether the current session is doing any work (not idle)
     private var isWorking: Bool { displayStatus != .idle }
+    private let nowPlaying = NowPlayingManager.shared
+    private let signals = IslandSignals.shared
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+
+    private func effectiveToolColor(_ tool: String) -> Color {
+        if signals.isPlaying {
+            if (syncThemeWithAlbumArt || musicHUDProgressColor == "album"),
+               nowPlaying.artworkImage != nil {
+                return nowPlaying.albumPalette.primary
+            }
+            let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
+            switch pc {
+            case .album:
+                return nowPlaying.artworkImage != nil ? nowPlaying.albumPalette.primary : Color(red: 0.0, green: 0.96, blue: 0.83)
+            case .theme: return Color(red: 0.0, green: 0.96, blue: 0.83)
+            case .white: return .white
+            case .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
+            case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
+            case .green: return Color(red: 0.12, green: 0.84, blue: 0.38)
+            case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
+            }
+        }
+        return toolStatusColor(tool)
+    }
 
     var body: some View {
         HStack(spacing: 5) {
@@ -1983,7 +2291,7 @@ private struct CompactToolStatus: View {
 
             // Tool status or thinking indicator
             if let tool = shownTool {
-                TypingIndicator(fontSize: 11, label: ToolNameDisplay.compact(tool, maxCharacters: 32), bright: true, color: toolStatusColor(tool))
+                TypingIndicator(fontSize: 11, label: ToolNameDisplay.compact(tool, maxCharacters: 32), bright: true, color: effectiveToolColor(tool))
                     .id("tool-\(tool)-\(appState.rotatingSessionId ?? "")")
                     .help(tool)
                 if let desc = shownDesc {
@@ -2732,10 +3040,10 @@ private struct IdleIndicatorBar: View {
     var onExpand: (() -> Void)? = nil
     @AppStorage(SettingsKey.defaultSource) private var defaultSource = SettingsDefaults.defaultSource
 
-    static let idlePrayerWingMinWidth: CGFloat = 80
+    static let idlePrayerWingMinWidth: CGFloat = 124
 
     private var effectiveWingWidth: CGFloat {
-        let base = hovered ? (compactWingWidth + 6) : compactWingWidth
+        let base = hovered ? (compactWingWidth + 8) : compactWingWidth
         return PrayerTimeManager.shared.isEnabled ? max(base, Self.idlePrayerWingMinWidth) : base
     }
 
@@ -2759,22 +3067,24 @@ private struct IdleIndicatorBar: View {
                 .contentShape(Rectangle())
                 .onTapGesture { onExpand?() }
 
-            // Right Wing: sleek, ultra-compact expand indicator & living clock
+            // Right Wing: sleek, lineless prayer pill or expand indicator
             let prayerManager = PrayerTimeManager.shared
             HStack(spacing: 4) {
                 Spacer(minLength: 0)
                 if prayerManager.isEnabled {
                     PrayerCompactWingView(isHovered: hovered, onExpand: onExpand)
+                        .padding(.trailing, 8)
+                } else {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: hovered ? 8 : 7.5, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(hovered ? 0.9 : 0.45))
+                        .frame(width: 18, height: 18)
+                        .background(
+                            Circle()
+                                .fill(Color.white.opacity(hovered ? 0.12 : 0))
+                        )
+                        .padding(.trailing, 8)
                 }
-                Image(systemName: "chevron.down")
-                    .font(.system(size: hovered ? 8 : 7.5, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(hovered ? 0.9 : 0.45))
-                    .frame(width: 18, height: 18)
-                    .background(
-                        Circle()
-                            .fill(Color.white.opacity(hovered ? 0.12 : 0))
-                    )
-                    .padding(.trailing, 8)
             }
             .frame(width: effectiveWingWidth, alignment: .trailing)
             .contentShape(Rectangle())
@@ -4782,6 +5092,14 @@ enum CompactRightWingLayout {
     static func missing(contentWidth: CGFloat, wing: CGFloat, statusExtra: CGFloat, hasNotch: Bool) -> CGFloat {
         guard hasNotch, contentWidth > 0 else { return 0 }
         return Swift.max(0, contentWidth + QuotaChipLayout.notchGap - (wing + statusExtra / 2))
+    }
+}
+
+/// Reports the collapsed left wing's laid-out width up to the bar.
+struct CompactLeftWingWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = Swift.max(value, nextValue())
     }
 }
 
@@ -7071,19 +7389,27 @@ private struct TypingIndicator: View {
     @State private var phase: CGFloat = -80
     @State private var dotPulse: Double = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.animationGates) private var animationGates
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+
+    private var isPixel: Bool {
+        islandUITheme == IslandUITheme.pixel.rawValue
+    }
 
     var body: some View {
         HStack(spacing: 5) {
             if showDots {
-                // Cyberpunk / Dynamic Island 3 bouncing neon dots
+                // Cyberpunk / Dynamic Island 3 bouncing neon dots / 16-bit pixel blocks
                 HStack(spacing: 3) {
                     ForEach(0..<3, id: \.self) { index in
                         let offsetFactor = Double(index) * 1.05
+                        let dotColor = color ?? (isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 0.25, green: 0.9, blue: 0.8))
+
                         Circle()
                             .fill(
                                 LinearGradient(
                                     colors: [
-                                        color ?? Color(red: 0.25, green: 0.9, blue: 0.8),
+                                        dotColor,
                                         Color(red: 0.4, green: 0.75, blue: 1.0)
                                     ],
                                     startPoint: .topLeading,
@@ -7091,53 +7417,63 @@ private struct TypingIndicator: View {
                                 )
                             )
                             .frame(width: max(3.5, fontSize * 0.32), height: max(3.5, fontSize * 0.32))
-                            .offset(y: reduceMotion ? 0 : -1.8 * sin(dotPulse + offsetFactor))
-                            .scaleEffect(reduceMotion ? 1.0 : (0.75 + 0.35 * sin(dotPulse + offsetFactor)))
-                            .opacity(reduceMotion ? 0.8 : (0.4 + 0.6 * (0.5 + 0.5 * sin(dotPulse + offsetFactor))))
-                            .shadow(
-                                color: (color ?? Color(red: 0.25, green: 0.9, blue: 0.8)).opacity(bright ? 0.75 : 0.45),
-                                radius: 2.5
-                            )
+                        .offset(y: reduceMotion ? 0 : -1.8 * sin(dotPulse + offsetFactor))
+                        .scaleEffect(reduceMotion ? 1.0 : (0.75 + 0.35 * sin(dotPulse + offsetFactor)))
+                        .opacity(reduceMotion ? 0.8 : (0.4 + 0.6 * (0.5 + 0.5 * sin(dotPulse + offsetFactor))))
+                        .shadow(
+                            color: dotColor.opacity(bright ? 0.75 : 0.45),
+                            radius: 2.5
+                        )
                     }
                 }
             }
 
             if let label {
-                let baseColor: Color = color ?? Color(red: 0.3, green: 0.9, blue: 0.85)
+                let baseColor: Color = color ?? (isPixel ? Color(red: 0.0, green: 0.96, blue: 0.83) : Color(red: 0.3, green: 0.9, blue: 0.85))
                 let baseOpacity: Double = bright ? 0.75 : 0.5
                 let peakOpacity: Double = bright ? 1.0 : 0.8
                 let midOpacity: Double = bright ? 0.8 : 0.6
                 let bandWidth: CGFloat = bright ? 90 : 70
 
-                Text(label)
-                    .font(.system(size: fontSize, weight: .bold, design: .monospaced))
-                    .foregroundStyle(baseColor.opacity(baseOpacity))
-                    .fixedSize(horizontal: true, vertical: false)
-                    .overlay(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .clear, location: 0),
-                                .init(color: .white.opacity(midOpacity), location: bright ? 0.35 : 0.4),
-                                .init(color: .white.opacity(peakOpacity), location: 0.5),
-                                .init(color: .white.opacity(midOpacity), location: bright ? 0.65 : 0.6),
-                                .init(color: .clear, location: 1),
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                        .frame(width: bandWidth)
-                        .offset(x: phase)
-                        .mask(
-                            Text(label)
-                                .font(.system(size: fontSize, weight: .medium, design: .monospaced))
-                        )
+                if isPixel {
+                    PixelText(
+                        text: label.uppercased(),
+                        color: baseColor,
+                        pixelSize: 1.05
                     )
+                } else {
+                    Text(label)
+                        .font(.system(size: fontSize, weight: .bold, design: .monospaced))
+                        .foregroundStyle(baseColor.opacity(baseOpacity))
+                        .fixedSize(horizontal: true, vertical: false)
+                        .overlay(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .clear, location: 0),
+                                    .init(color: .white.opacity(midOpacity), location: bright ? 0.35 : 0.4),
+                                    .init(color: .white.opacity(peakOpacity), location: 0.5),
+                                    .init(color: .white.opacity(midOpacity), location: bright ? 0.65 : 0.6),
+                                    .init(color: .clear, location: 1),
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                            .frame(width: bandWidth)
+                            .offset(x: phase)
+                            .mask(
+                                Text(label)
+                                    .font(.system(size: fontSize, weight: .medium, design: .monospaced))
+                            )
+                        )
+                }
             }
         }
         .fixedSize(horizontal: true, vertical: false)
         .onAppear {
             phase = bright ? -90 : -70
-            guard !reduceMotion else { return }
+            // A `repeatForever` SwiftUI animation keeps the panel's layout on
+            // the display link; the Attention class is what lets it run.
+            guard !reduceMotion, animationGates.allows(.attention) else { return }
             withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: false)) {
                 phase = bright ? 110 : 90
             }

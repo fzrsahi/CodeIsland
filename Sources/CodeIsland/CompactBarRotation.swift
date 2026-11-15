@@ -57,11 +57,14 @@ final class CompactBarRotation {
         }
         if timer == nil {
             let interval = TimeInterval(max(1, SettingsManager.shared.rotationInterval))
-            timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            let newTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
                 Task { @MainActor in
                     self?.rotateToNextSession()
                 }
             }
+            // Rotation is cosmetic; a late tick is invisible to the user.
+            newTimer.tolerance = interval * 0.1
+            timer = newTimer
         }
         return nil
     }

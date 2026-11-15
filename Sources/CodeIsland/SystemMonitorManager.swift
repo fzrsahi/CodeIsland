@@ -3,7 +3,7 @@ import AppKit
 import IOKit.ps
 import Darwin
 
-public struct SystemMetrics: Sendable {
+public struct SystemMetrics: Sendable, Equatable {
     public var cpuUsagePercent: Double = 0.0
     public var memoryUsedGB: Double = 0.0
     public var memoryTotalGB: Double = 0.0
@@ -21,19 +21,54 @@ public final class SystemMonitorManager: ObservableObject {
 
     @Published public private(set) var metrics = SystemMetrics()
     @Published public var showChargingBanner: Bool = false
-    @Published public var chargingBannerDismissTimer: Timer?
+    private var chargingDismissWorkItem: DispatchWorkItem?
+
+    public func dismissChargingBanner() {
+        chargingDismissWorkItem?.cancel()
+        chargingDismissWorkItem = nil
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            self.showChargingBanner = false
+        }
+    }
+
+    public func triggerChargingBanner() {
+        showChargingBanner = true
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+        chargingDismissWorkItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                self?.showChargingBanner = false
+            }
+        }
+        chargingDismissWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: item)
+    }
 
     private var monitorTimer: Timer?
+    /// How many gauge views are on screen. Sampling runs only while one is.
+    private var samplingViews = 0
     private var previousCpuLoad: host_cpu_load_info?
     private var previousNetworkBytes: (inBytes: UInt64, outBytes: UInt64, time: Date)?
     private var lastChargingState: Bool?
+    /// IOKit's power-source change source: the charger is an event, not a poll.
+    private var powerSourceRunLoopSource: CFRunLoopSource?
+    private var isDisplayAsleep = false
 
     private init() {
-        startMonitoring()
+        setupPowerSourceNotifications()
         setupSleepObservers()
+        // One reading at launch gives the charging banner and the first gauge a
+        // fresh value without leaving a timer running.
+        refreshMetrics()
     }
 
-    // Suspend monitoring when display is asleep to save battery
+    deinit {
+        if let source = powerSourceRunLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .defaultMode)
+        }
+    }
+
+    // Suspend sampling when display is asleep to save battery
     private func setupSleepObservers() {
         let wsCenter = NSWorkspace.shared.notificationCenter
         wsCenter.addObserver(
@@ -42,6 +77,7 @@ public final class SystemMonitorManager: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
+                self?.isDisplayAsleep = true
                 self?.stopMonitoring()
             }
         }
@@ -51,25 +87,77 @@ public final class SystemMonitorManager: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
+                self?.isDisplayAsleep = false
                 self?.startMonitoring()
             }
         }
     }
 
+    /// The charger coming and going is delivered by IOKit; polling for it would
+    /// mean waking the app every couple of seconds for the whole day.
+    private func setupPowerSourceNotifications() {
+        let context = Unmanaged.passUnretained(self).toOpaque()
+        guard let source = IOPSNotificationCreateRunLoopSource({ context in
+            guard let context else { return }
+            let manager = Unmanaged<SystemMonitorManager>.fromOpaque(context).takeUnretainedValue()
+            // The source is on the main run loop, so this already is the main thread.
+            MainActor.assumeIsolated { manager.powerSourceChanged() }
+        }, context)?.takeRetainedValue() else { return }
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .defaultMode)
+        powerSourceRunLoopSource = source
+    }
+
+    /// A power-source event: the charger was plugged in or pulled. Only the
+    /// power fields are re-read; the gauges are not running a timer here.
+    private func powerSourceChanged() {
+        let (battery, isCharging, isAC) = readPowerStatus()
+        if lastChargingState == false, isCharging {
+            triggerChargingBanner()
+        }
+        lastChargingState = isCharging
+        if metrics.batteryLevel != battery || metrics.isCharging != isCharging || metrics.isACPowered != isAC {
+            metrics.batteryLevel = battery
+            metrics.isCharging = isCharging
+            metrics.isACPowered = isAC
+        }
+    }
+
+    /// A gauge appeared: start sampling, and show a fresh reading at once.
+    public func beginSampling() {
+        samplingViews += 1
+        guard samplingViews == 1 else { return }
+        startMonitoring()
+    }
+
+    /// A gauge went away: stop sampling when the last one is gone.
+    public func endSampling() {
+        samplingViews = max(0, samplingViews - 1)
+        guard samplingViews == 0 else { return }
+        stopMonitoring()
+    }
+
     public func startMonitoring() {
-        guard monitorTimer == nil else { return }
+        guard monitorTimer == nil, !isDisplayAsleep, samplingViews > 0 else { return }
+        // The first sample is immediate: a gauge that just appeared must not
+        // show a stale number for two seconds.
         refreshMetrics()
-        monitorTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+        let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.refreshMetrics()
             }
         }
+        // A sample may land a little late; nothing depends on the exact instant.
+        timer.tolerance = 0.2
+        monitorTimer = timer
     }
 
     public func stopMonitoring() {
         monitorTimer?.invalidate()
         monitorTimer = nil
     }
+
+    /// Whether a sampling timer is running (tests and diagnostics).
+    var isSampling: Bool { monitorTimer != nil }
 
     public func refreshMetrics() {
         let cpu = readCpuUsage()
@@ -85,7 +173,7 @@ public final class SystemMonitorManager: ObservableObject {
         }
         lastChargingState = isCharging
 
-        metrics = SystemMetrics(
+        let newMetrics = SystemMetrics(
             cpuUsagePercent: cpu,
             memoryUsedGB: memUsed,
             memoryTotalGB: memTotal,
@@ -96,19 +184,7 @@ public final class SystemMonitorManager: ObservableObject {
             isCharging: isCharging,
             isACPowered: isAC
         )
-    }
-
-    public func triggerChargingBanner() {
-        showChargingBanner = true
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-        chargingBannerDismissTimer?.invalidate()
-        chargingBannerDismissTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: false) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    self?.showChargingBanner = false
-                }
-            }
-        }
+        if metrics != newMetrics { metrics = newMetrics }
     }
 
     // MARK: - CPU Load via host_statistics

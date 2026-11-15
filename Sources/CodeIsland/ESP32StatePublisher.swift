@@ -25,6 +25,12 @@ final class ESP32StatePublisher {
     private var keepAliveActivity: NSObjectProtocol?
     private var interactiveRetryTask: Task<Void, Never>?
     private var lastSentDisplay: SentDisplayState?
+    // Publish-on-change caches (#12): the main frame always ships, aux
+    // packets only when their bytes differ. Cleared on reconnect so the
+    // next flush resyncs fully.
+    private var lastFrameKey: String?
+    private var lastAuxKeys: [String: String] = [:]
+    private var lastFullSync: Date?
 
     private struct SentDisplayState {
         let identity: String
@@ -66,11 +72,14 @@ final class ESP32StatePublisher {
                 bridge.start()
             }
             syncConfig()
-            heartbeatTimer = Timer.scheduledTimer(withTimeInterval: heartbeatInterval, repeats: true) { [weak self] _ in
+            let timer = Timer.scheduledTimer(withTimeInterval: heartbeatInterval, repeats: true) { [weak self] _ in
                 Task { @MainActor in
                     self?.flush(reason: "heartbeat")
                 }
             }
+            // A heartbeat a beat late is still well inside the firmware's timeout.
+            timer.tolerance = heartbeatInterval * 0.1
+            heartbeatTimer = timer
         } else {
             endKeepAliveActivity()
             resetEventState()
@@ -85,12 +94,19 @@ final class ESP32StatePublisher {
     }
 
     private func flush(reason: String) {
+        PerfCounters.shared?.bump(.publishESP32)
         guard let appState else { return }
         guard bridge.status == .connected else { return }
         guard bridge.selectedBuddyIdentifier != nil else { return }
         let session = appState.esp32DisplaySession()
         let displayIdentity = appState.esp32DisplayIdentity()
         let frame = appState.esp32DisplayFrame(session: session)
+        let isHeartbeat = reason == "heartbeat"
+        let isInteractive = reason == "interactive-retry"
+        let secondsSinceFullSync = lastFullSync.map { Date().timeIntervalSince($0) } ?? .infinity
+        // The main frame ships on every flush: the firmware uses inter-frame
+        // spacing for animation tempo, and steady frames keep its 60 s
+        // AGENT-mode timeout alive.
         bridge.send(frame)
 
         if bridge.usesLegacyPairingFallback {
@@ -99,18 +115,55 @@ final class ESP32StatePublisher {
             return
         }
 
-        bridge.sendWorkspace(appState.esp32WorkspacePayload(session: session))
-        appState.esp32MessagePreviewPayloads(session: session).forEach { bridge.sendMessagePreview($0) }
-        bridge.sendModel(appState.esp32ModelPayload(session: session))
-        bridge.sendTimeHint(BuddyTimeHintPayload(hour: Calendar.current.component(.hour, from: Date())))
-        bridge.sendStats(appState.esp32StatsPayload(session: session))
-        bridge.sendSubagent(appState.esp32SubagentPayload(session: session))
-        let toolHistory = appState.esp32ToolHistoryPayloads(session: session)
-        if toolHistory.isEmpty {
-            bridge.sendToolHistoryClear()
-        } else {
-            toolHistory.forEach { bridge.sendToolHistory($0) }
+        if isHeartbeat {
+            // Heartbeat only carries the frame (keeps firmware animation
+            // tempo + 60 s AGENT-mode timeout alive at minimum BLE cost).
+            lastSentDisplay = SentDisplayState(identity: displayIdentity, status: frame.status)
+            Self.log.debug("push(\(reason), heartbeat): mascot=\(frame.mascot.sourceName) status=\(frame.status.rawValue)")
+            return
         }
+
+        let fullSync = isInteractive || secondsSinceFullSync >= PublishDedupe.fullResyncInterval
+
+        let workspace = appState.esp32WorkspacePayload(session: session)
+        sendAuxIfChanged(key: "workspace", data: workspace.encode(), fullSync: fullSync) {
+            bridge.sendWorkspace(workspace)
+        }
+        let previews = appState.esp32MessagePreviewPayloads(session: session)
+        let previewsKey = previews.map { $0.encode().base64EncodedString() }.joined(separator: ",")
+        if fullSync || previewsKey != lastAuxKeys["previews"] {
+            previews.forEach { bridge.sendMessagePreview($0) }
+            lastAuxKeys["previews"] = previewsKey
+        }
+        let model = appState.esp32ModelPayload(session: session)
+        sendAuxIfChanged(key: "model", data: model.encode(), fullSync: fullSync) {
+            bridge.sendModel(model)
+        }
+        let timeHint = BuddyTimeHintPayload(hour: Calendar.current.component(.hour, from: Date()))
+        sendAuxIfChanged(key: "timeHint", data: timeHint.encode(), fullSync: fullSync) {
+            bridge.sendTimeHint(timeHint)
+        }
+        let stats = appState.esp32StatsPayload(session: session)
+        sendAuxIfChanged(key: "stats", data: stats.encode(), fullSync: fullSync) {
+            bridge.sendStats(stats)
+        }
+        let subagent = appState.esp32SubagentPayload(session: session)
+        sendAuxIfChanged(key: "subagent", data: subagent.encode(), fullSync: fullSync) {
+            bridge.sendSubagent(subagent)
+        }
+        let toolHistory = appState.esp32ToolHistoryPayloads(session: session)
+        let toolHistoryKey = toolHistory.isEmpty
+            ? "clear"
+            : toolHistory.map { $0.encode().base64EncodedString() }.joined(separator: ",")
+        if fullSync || toolHistoryKey != lastAuxKeys["toolHistory"] {
+            if toolHistory.isEmpty {
+                bridge.sendToolHistoryClear()
+            } else {
+                toolHistory.forEach { bridge.sendToolHistory($0) }
+            }
+            lastAuxKeys["toolHistory"] = toolHistoryKey
+        }
+        if fullSync { lastFullSync = Date() }
 
         // Detect status transitions for event animations
         let currentStatus = frame.status
@@ -135,8 +188,19 @@ final class ESP32StatePublisher {
         Self.log.debug("push(\(reason)): mascot=\(frame.mascot.sourceName) status=\(frame.status.rawValue) tool=\(frame.toolName ?? "")")
     }
 
+    /// Sends an aux packet only when its bytes changed (or on full sync).
+    private func sendAuxIfChanged(key: String, data: Data, fullSync: Bool, send: () -> Void) {
+        let encoded = data.base64EncodedString()
+        guard fullSync || encoded != lastAuxKeys[key] else { return }
+        send()
+        lastAuxKeys[key] = encoded
+    }
+
     private func resetEventState() {
         lastSentDisplay = nil
+        lastFrameKey = nil
+        lastAuxKeys = [:]
+        lastFullSync = nil
     }
 
     private func syncConfig() {
