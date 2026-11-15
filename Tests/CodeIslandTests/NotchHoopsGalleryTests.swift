@@ -4,12 +4,12 @@ import AppKit
 @testable import CodeIsland
 import CodeIslandCore
 
-/// Opt-in offscreen renderer for Notch Hoops prototype variants (screenshots + animation frames).
+/// Opt-in offscreen renderer for Notch Hoops Arena screenshots & animation frames.
 /// Skipped unless `NOTCH_HOOPS_GALLERY_DIR` is set in the environment.
 @MainActor
 final class NotchHoopsGalleryTests: XCTestCase {
 
-    func testRenderVariantScreenshotsAndFrames() async throws {
+    func testRenderArenaScreenshotsAndFrames() async throws {
         let env = ProcessInfo.processInfo.environment
         guard let outDir = env["NOTCH_HOOPS_GALLERY_DIR"] else {
             throw XCTSkip("NOTCH_HOOPS_GALLERY_DIR not set — gallery render is opt-in")
@@ -26,47 +26,43 @@ final class NotchHoopsGalleryTests: XCTestCase {
         state.activeTabLabel = .game
         state.isTabTransitioning = false
 
-        let variants: [(key: String, variant: NotchHoopsVariant)] = [
-            ("variant-A-crt", .crtArcade),
-            ("variant-B-arena", .arenaBroadcast),
-            ("variant-C-telemetry", .tacticalTelemetry),
+        let size = CGSize(width: 720, height: 230)
+
+        // 1. Render static screenshot of the Arena design
+        let initialEngine = NotchHoopsEngine(highScore: 12, positionMode: .random, initialLaunchX: 85)
+        let staticView = arenaContainer(state: state, engine: initialEngine, drag: nil)
+            .frame(width: size.width, height: size.height)
+        let staticCG = try OffscreenRender.hosted(staticView, size: size, appearance: .darkAqua)
+        try OffscreenRender.writePNG(staticCG, to: "\(outDir)/arena-ready.png")
+
+        // 2. Render 30fps video frames across 3PT -> 2PT -> 1PT random turns!
+        let turns: [(mode: NotchHoopsEngine.PositionMode, launchX: Double)] = [
+            (.threePoint, 85),
+            (.twoPoint, 160),
+            (.onePoint, 225),
         ]
 
-        let size = CGSize(width: 720, height: 245)
-
-        // 1. Render static screenshot for each variant
-        for item in variants {
-            let view = variantContainer(state: state, variant: item.variant, engine: NotchHoopsEngine(highScore: 12), drag: nil)
-                .frame(width: size.width, height: size.height)
-            let cg = try OffscreenRender.hosted(view, size: size, appearance: .darkAqua)
-            try OffscreenRender.writePNG(cg, to: "\(outDir)/\(item.key).png")
-        }
-
-        // 2. Find a clean scoring swipe vector
-        let scoringSwipe = findScoringSwipe()
-
-        // 3. Render 30fps video frames across all 3 variants (aim -> launch -> swish)
         var frameIndex = 0
-        for item in variants {
-            var engine = NotchHoopsEngine(highScore: 12)
+        for turn in turns {
+            var engine = NotchHoopsEngine(highScore: 12, positionMode: turn.mode, initialLaunchX: turn.launchX)
+            let swipe = findScoringSwipe(launchX: turn.launchX)
 
             // 8 frames of aiming trajectory
             for step in 1...8 {
                 let frac = Double(step) / 8.0
-                let drag = CGSize(width: scoringSwipe.dx * frac, height: scoringSwipe.dy * frac)
-                let view = variantContainer(state: state, variant: item.variant, engine: engine, drag: drag)
+                let drag = CGSize(width: swipe.dx * frac, height: swipe.dy * frac)
+                let view = arenaContainer(state: state, engine: engine, drag: drag)
                     .frame(width: size.width, height: size.height)
                 let cg = try OffscreenRender.hosted(view, size: size, appearance: .darkAqua)
                 try OffscreenRender.writePNG(cg, to: String(format: "%@/frame-%04d.png", framesDir, frameIndex))
                 frameIndex += 1
             }
 
-            // Launch and step at 30fps (two 1/60s physics steps per video frame)
-            _ = engine.launch(dragDeltaX: scoringSwipe.dx, dragDeltaY: scoringSwipe.dy)
+            _ = engine.launch(dragDeltaX: swipe.dx, dragDeltaY: swipe.dy)
             for _ in 0..<48 {
                 engine.step(dt: 1.0 / 60.0)
                 engine.step(dt: 1.0 / 60.0)
-                let view = variantContainer(state: state, variant: item.variant, engine: engine, drag: nil)
+                let view = arenaContainer(state: state, engine: engine, drag: nil)
                     .frame(width: size.width, height: size.height)
                 let cg = try OffscreenRender.hosted(view, size: size, appearance: .darkAqua)
                 try OffscreenRender.writePNG(cg, to: String(format: "%@/frame-%04d.png", framesDir, frameIndex))
@@ -74,9 +70,8 @@ final class NotchHoopsGalleryTests: XCTestCase {
                 if !engine.needsTick { break }
             }
 
-            // Hold 6 frames on result
-            for _ in 0..<6 {
-                let view = variantContainer(state: state, variant: item.variant, engine: engine, drag: nil)
+            for _ in 0..<5 {
+                let view = arenaContainer(state: state, engine: engine, drag: nil)
                     .frame(width: size.width, height: size.height)
                 let cg = try OffscreenRender.hosted(view, size: size, appearance: .darkAqua)
                 try OffscreenRender.writePNG(cg, to: String(format: "%@/frame-%04d.png", framesDir, frameIndex))
@@ -85,26 +80,24 @@ final class NotchHoopsGalleryTests: XCTestCase {
         }
     }
 
-    private func variantContainer(
+    private func arenaContainer(
         state: AppState,
-        variant: NotchHoopsVariant,
         engine: NotchHoopsEngine,
         drag: CGSize?
     ) -> some View {
         VStack(spacing: 0) {
-            // Simulated top notch header bar matching CodeIsland's dark notch chrome
             HStack {
                 HStack(spacing: 6) {
                     PixelIcon(glyph: .agents, color: .white.opacity(0.5), pixelSize: 1.3)
                     PixelIcon(glyph: .workspace, color: .white.opacity(0.5), pixelSize: 1.3)
                     PixelIcon(glyph: .music, color: .white.opacity(0.5), pixelSize: 1.3)
                     HStack(spacing: 4) {
-                        PixelIcon(glyph: .game, color: Color(red: 0.22, green: 0.94, blue: 0.88), pixelSize: 1.35)
-                        PixelText(text: "GAME", color: Color(red: 0.22, green: 0.94, blue: 0.88), pixelSize: 1.15)
+                        PixelIcon(glyph: .game, color: Color(red: 0.30, green: 0.94, blue: 0.90), pixelSize: 1.35)
+                        PixelText(text: "GAME", color: Color(red: 0.30, green: 0.94, blue: 0.90), pixelSize: 1.15)
                     }
                     .padding(.horizontal, 7)
                     .frame(height: 18)
-                    .background(RoundedRectangle(cornerRadius: 3).fill(Color(red: 0.22, green: 0.94, blue: 0.88).opacity(0.18)))
+                    .background(RoundedRectangle(cornerRadius: 3).fill(Color(red: 0.30, green: 0.94, blue: 0.90).opacity(0.18)))
                 }
                 Spacer()
                 HStack(spacing: 8) {
@@ -119,7 +112,6 @@ final class NotchHoopsGalleryTests: XCTestCase {
 
             NotchHoopsView(
                 appState: state,
-                initialVariant: variant,
                 initialEngine: engine,
                 initialDrag: drag
             )
@@ -132,10 +124,10 @@ final class NotchHoopsGalleryTests: XCTestCase {
         )
     }
 
-    private func findScoringSwipe() -> (dx: Double, dy: Double) {
-        for dragX in stride(from: 20.0, through: 120.0, by: 5.0) {
-            for dragY in stride(from: -60.0, through: -150.0, by: -5.0) {
-                var candidate = NotchHoopsEngine(highScore: 0)
+    private func findScoringSwipe(launchX: Double) -> (dx: Double, dy: Double) {
+        for dragX in stride(from: 20.0, through: 200.0, by: 5.0) {
+            for dragY in stride(from: -50.0, through: -170.0, by: -5.0) {
+                var candidate = NotchHoopsEngine(highScore: 0, positionMode: .random, initialLaunchX: launchX)
                 if candidate.launch(dragDeltaX: dragX, dragDeltaY: dragY) {
                     for _ in 0..<300 {
                         candidate.step(dt: 1.0 / 60.0)
@@ -145,6 +137,6 @@ final class NotchHoopsGalleryTests: XCTestCase {
                 }
             }
         }
-        return (65, -105)
+        return (90, -110)
     }
 }

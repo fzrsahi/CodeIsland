@@ -3,38 +3,47 @@ import XCTest
 
 final class NotchHoopsEngineTests: XCTestCase {
     func testInitialStateDoesNotNeedTick() {
-        let engine = NotchHoopsEngine(highScore: 10)
+        let engine = NotchHoopsEngine(highScore: 10, positionMode: .twoPoint, initialLaunchX: 160)
         XCTAssertEqual(engine.phase, .ready)
         XCTAssertEqual(engine.score, 0)
         XCTAssertEqual(engine.highScore, 10)
         XCTAssertEqual(engine.streak, 0)
         XCTAssertEqual(engine.ballsRemaining, NotchHoopsEngine.maxBalls)
+        XCTAssertEqual(engine.currentShotZone, .twoPoint)
         XCTAssertFalse(engine.needsTick)
     }
 
+    func testShotZoneMatchesDistanceFromHoop() {
+        XCTAssertEqual(NotchHoopsEngine.shotZone(forX: 80), .threePoint)
+        XCTAssertEqual(NotchHoopsEngine.shotZone(forX: 160), .twoPoint)
+        XCTAssertEqual(NotchHoopsEngine.shotZone(forX: 225), .onePoint)
+        XCTAssertEqual(NotchHoopsEngine.ShotZone.threePoint.points, 3)
+        XCTAssertEqual(NotchHoopsEngine.ShotZone.twoPoint.points, 2)
+        XCTAssertEqual(NotchHoopsEngine.ShotZone.onePoint.points, 1)
+    }
+
     func testTinyOrDownwardSwipeDoesNotLaunch() {
-        var engine = NotchHoopsEngine()
+        var engine = NotchHoopsEngine(initialLaunchX: 160)
         XCTAssertFalse(engine.launch(dragDeltaX: 30, dragDeltaY: -5))
         XCTAssertFalse(engine.launch(dragDeltaX: 30, dragDeltaY: 20))
         XCTAssertEqual(engine.phase, .ready)
         XCTAssertFalse(engine.needsTick)
     }
 
-    func testPredictedTrajectoryReturnsArcForValidSwipe() {
-        let points = NotchHoopsEngine.predictedTrajectory(dragDeltaX: 60, dragDeltaY: -90)
-        XCTAssertFalse(points.isEmpty)
-        XCTAssertGreaterThan(points.last?.x ?? 0, NotchHoopsEngine.launchX)
+    func testPredictedTrajectoryReturnsShortArcForValidSwipe() {
+        let points = NotchHoopsEngine.predictedTrajectory(fromX: 80, dragDeltaX: 60, dragDeltaY: -90)
+        XCTAssertEqual(points.count, 5)
+        XCTAssertGreaterThan(points.last?.x ?? 0, 80)
     }
 
     func testThreeMissesTriggerGameOverAndResetRestoresState() {
-        var engine = NotchHoopsEngine()
+        var engine = NotchHoopsEngine(positionMode: .twoPoint, initialLaunchX: 160)
 
         for expectedRemaining in [2, 1, 0] {
             XCTAssertTrue(engine.launch(dragDeltaX: -40, dragDeltaY: -20))
             XCTAssertEqual(engine.phase, .flying)
             XCTAssertTrue(engine.needsTick)
 
-            // Step until the ball falls out of bounds
             for _ in 0..<240 {
                 engine.step(dt: 1.0 / 60.0)
                 if engine.phase != .flying { break }
@@ -45,7 +54,6 @@ final class NotchHoopsEngineTests: XCTestCase {
             XCTAssertEqual(engine.phase, expectedRemaining > 0 ? .ready : .gameOver)
         }
 
-        // Let feedback timer settle
         for _ in 0..<90 {
             engine.step(dt: 1.0 / 60.0)
         }
@@ -58,33 +66,37 @@ final class NotchHoopsEngineTests: XCTestCase {
         XCTAssertFalse(engine.needsTick)
     }
 
-    func testScoringShotUpdatesScoreStreakAndHighScore() {
-        var engine = NotchHoopsEngine(highScore: 0)
+    func testDistanceBasedScoringProducesExactZonePointsAndMinimalLabel() {
+        let cases: [(launchX: Double, expectedPoints: Int)] = [
+            (225, 1), // 1PT zone
+            (160, 2), // 2PT zone
+            (85, 3),  // 3PT zone
+        ]
 
-        // Find a drag vector that lands in the hoop and simulate it
-        var scored = false
-        for dragX in stride(from: 20.0, through: 120.0, by: 5.0) {
-            for dragY in stride(from: -60.0, through: -150.0, by: -5.0) {
-                var candidate = NotchHoopsEngine(highScore: 0)
-                XCTAssertTrue(candidate.launch(dragDeltaX: dragX, dragDeltaY: dragY))
-                for _ in 0..<300 {
-                    candidate.step(dt: 1.0 / 60.0)
-                    if candidate.score > 0 {
-                        engine = candidate
-                        scored = true
-                        break
+        for testCase in cases {
+            var scoredEngine: NotchHoopsEngine?
+            for dragX in stride(from: 20.0, through: 200.0, by: 5.0) {
+                for dragY in stride(from: -50.0, through: -170.0, by: -5.0) {
+                    var candidate = NotchHoopsEngine(highScore: 0, positionMode: .random, initialLaunchX: testCase.launchX)
+                    XCTAssertTrue(candidate.launch(dragDeltaX: dragX, dragDeltaY: dragY))
+                    for _ in 0..<300 {
+                        candidate.step(dt: 1.0 / 60.0)
+                        if candidate.score > 0 {
+                            scoredEngine = candidate
+                            break
+                        }
+                        if candidate.phase != .flying { break }
                     }
-                    if candidate.phase != .flying { break }
+                    if scoredEngine != nil { break }
                 }
-                if scored { break }
+                if scoredEngine != nil { break }
             }
-            if scored { break }
-        }
 
-        XCTAssertTrue(scored, "Expected at least one swipe vector to score in the hoop")
-        XCTAssertGreaterThan(engine.score, 0)
-        XCTAssertEqual(engine.streak, 1)
-        XCTAssertEqual(engine.highScore, engine.score)
-        XCTAssertEqual(engine.ballsRemaining, NotchHoopsEngine.maxBalls)
+            let result = try! XCTUnwrap(scoredEngine, "Expected a valid swipe for launchX=\(testCase.launchX)")
+            XCTAssertEqual(result.score, testCase.expectedPoints)
+            XCTAssertEqual(result.feedbackText, "+\(testCase.expectedPoints)")
+            XCTAssertEqual(result.streak, 1)
+            XCTAssertEqual(result.highScore, testCase.expectedPoints)
+        }
     }
 }

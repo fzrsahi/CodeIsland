@@ -1,15 +1,7 @@
 import SwiftUI
 import CodeIslandCore
 
-/// Prototype variants for Notch Hoops (per /prototype Sub-shape A) so collaborators
-/// can compare structurally different layouts & visual hierarchies live in the notch.
-enum NotchHoopsVariant: String, CaseIterable {
-    case crtArcade = "A · CRT"
-    case arenaBroadcast = "B · ARENA"
-    case tacticalTelemetry = "C · TELEMETRY"
-}
-
-/// Retro basketball mini-game ("Notch Hoops") for the expanded notch `.game` tab.
+/// Retro pixel-art basketball mini-game ("Notch Hoops // Arena") for the expanded notch `.game` tab.
 /// Zero idle cost: mounted only when `.game` is active, and only runs `TimelineView`
 /// while `engine.needsTick && animationGate.animationsActive` is true.
 struct NotchHoopsView: View {
@@ -20,49 +12,50 @@ struct NotchHoopsView: View {
     @ObservedObject private var animationGate = MascotAnimationGate.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @State private var variant: NotchHoopsVariant
     @State private var engine: NotchHoopsEngine
     @State private var dragTranslation: CGSize?
     @State private var lastTickDate: Date?
 
     init(
         appState: AppState,
-        initialVariant: NotchHoopsVariant = .crtArcade,
         initialEngine: NotchHoopsEngine = NotchHoopsEngine(),
         initialDrag: CGSize? = nil
     ) {
         self.appState = appState
-        _variant = State(initialValue: initialVariant)
         _engine = State(initialValue: initialEngine)
         _dragTranslation = State(initialValue: initialDrag)
     }
 
-    private static let cyan = Color(red: 0.22, green: 0.94, blue: 0.88)
-    private static let green = Color(red: 0.34, green: 0.95, blue: 0.48)
-    private static let orange = Color(red: 0.98, green: 0.46, blue: 0.14)
-    private static let deepOrange = Color(red: 0.72, green: 0.24, blue: 0.06)
-    private static let crtBg = Color(red: 0.035, green: 0.06, blue: 0.08)
+    private static let cyan = Color(red: 0.30, green: 0.94, blue: 0.90)
+    private static let green = Color(red: 0.42, green: 0.96, blue: 0.48)
+    private static let orange = Color(red: 0.96, green: 0.45, blue: 0.16)
+    private static let deepOrange = Color(red: 0.68, green: 0.22, blue: 0.06)
+    private static let crtBg = Color(red: 0.03, green: 0.055, blue: 0.07)
 
     private var isAnimating: Bool {
         engine.needsTick && animationGate.animationsActive
     }
 
     var body: some View {
-        VStack(spacing: 6) {
-            switch variant {
-            case .crtArcade:
-                variantACrtArcade
-            case .arenaBroadcast:
-                variantBArenaBroadcast
-            case .tacticalTelemetry:
-                variantCTacticalTelemetry
-            }
+        ZStack(alignment: .top) {
+            interactiveCourt
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                )
 
-            prototypeSwitcherBar
+            // Top HUD overlay: Scorebug (left) + Position Filter & Reset (right)
+            HStack(alignment: .center) {
+                broadcastScorebug
+                Spacer()
+                positionFilterBar
+            }
+            .padding(8)
         }
         .padding(.horizontal, 14)
         .padding(.top, 8)
-        .padding(.bottom, 8)
+        .padding(.bottom, 10)
         .onAppear {
             engine.highScore = max(engine.highScore, storedHighScore)
             lastTickDate = nil
@@ -81,232 +74,106 @@ struct NotchHoopsView: View {
         }
     }
 
-    // MARK: - Variant A: CRT Arcade (2-Column Pixel Cabinet)
+    // MARK: - Top-Left Broadcast Scorebug
 
-    private var variantACrtArcade: some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 8) {
-                VStack(alignment: .leading, spacing: 4) {
-                    PixelText(text: "NOTCH HOOPS", color: Self.cyan, pixelSize: 2.0)
-                    HStack(spacing: 6) {
-                        PixelText(text: "ARCADE", color: .white.opacity(0.75), pixelSize: 1.4)
-                        Circle()
-                            .fill(Self.orange)
-                            .frame(width: 8, height: 8)
-                    }
-                }
+    private var broadcastScorebug: some View {
+        HStack(spacing: 8) {
+            Text("HOOPS")
+                .font(.system(size: 10, weight: .black, design: .monospaced))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(Self.orange)
+                .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
 
-                VStack(alignment: .leading, spacing: 5) {
-                    hudStatRow(label: "SCORE", value: String(format: "%02d", engine.score), color: Self.cyan)
-                    hudStatRow(label: "HIGH", value: String(format: "%02d", engine.highScore), color: .white.opacity(0.9))
-
-                    HStack(spacing: 6) {
-                        Text("STREAK")
-                            .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .frame(width: 52, alignment: .leading)
-                        Text("\(engine.streak)")
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .monospacedDigit()
-                            .foregroundStyle(engine.streak >= 2 ? Self.orange : Self.cyan)
-                        if engine.streak >= 2 {
-                            Image(systemName: "flame.fill")
-                                .font(.system(size: 10.5))
-                                .foregroundStyle(Self.orange)
-                        }
-                    }
-
-                    HStack(spacing: 6) {
-                        Text("BALLS")
-                            .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .frame(width: 52, alignment: .leading)
-                        ballsIndicator
-                    }
-                }
-                .padding(.top, 2)
-
-                Spacer(minLength: 2)
-
-                Button {
-                    resetRound()
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: engine.phase == .gameOver ? "play.fill" : "arrow.counterclockwise")
-                            .font(.system(size: 9.5, weight: .bold))
-                        Text(engine.phase == .gameOver ? "NEW GAME" : "RESET")
-                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
-                    }
-                    .foregroundStyle(engine.phase == .gameOver ? .black : .white.opacity(0.9))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(engine.phase == .gameOver ? Self.cyan : Color.white.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .stroke(engine.phase == .gameOver ? Self.cyan : Color.white.opacity(0.22), lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                }
-                .buttonStyle(.plain)
+            HStack(spacing: 4) {
+                Text(String(format: "%02d", engine.score))
+                    .font(.system(size: 13, weight: .heavy, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                Text("/ BEST \(String(format: "%02d", engine.highScore))")
+                    .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(.white.opacity(0.6))
             }
-            .frame(width: 196, height: 168, alignment: .leading)
 
-            interactiveCourt(height: 168, showScanlines: true, showFloor: true)
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .stroke(Self.cyan.opacity(0.25), lineWidth: 1)
-                )
+            // Current shot zone value badge (1P / 2P / 3P)
+            Text("\(engine.currentShotZone.points)PT")
+                .font(.system(size: 9.5, weight: .heavy, design: .monospaced))
+                .foregroundStyle(zoneColor(engine.currentShotZone))
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(zoneColor(engine.currentShotZone).opacity(0.16))
+                .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+
+            if engine.streak >= 2 {
+                HStack(spacing: 2) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 9.5))
+                    Text("\(engine.streak)")
+                        .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                }
+                .foregroundStyle(Self.orange)
+            }
+
+            ballsIndicator
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Color.black.opacity(0.75))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 
-    // MARK: - Variant B: Arena Broadcast (Full-Width Court + Floating Scorebug)
+    // MARK: - Top-Right Position Filter & Reset
 
-    private var variantBArenaBroadcast: some View {
-        ZStack(alignment: .topLeading) {
-            interactiveCourt(height: 172, showScanlines: false, showFloor: true)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
-                )
-
-            // Compact Broadcast Scorebug overlaid in top-left
-            HStack(spacing: 8) {
-                Text("HOOPS")
-                    .font(.system(size: 10, weight: .black, design: .monospaced))
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Self.orange)
-                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-
-                HStack(spacing: 4) {
-                    Text(String(format: "%02d", engine.score))
-                        .font(.system(size: 13, weight: .heavy, design: .monospaced))
-                        .monospacedDigit()
-                        .foregroundStyle(.white)
-                    Text("/ BEST \(String(format: "%02d", engine.highScore))")
-                        .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-                        .monospacedDigit()
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-
-                if engine.streak >= 2 {
-                    HStack(spacing: 2) {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 9.5))
-                        Text("\(engine.streak)")
-                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+    private var positionFilterBar: some View {
+        HStack(spacing: 4) {
+            HStack(spacing: 2) {
+                ForEach(NotchHoopsEngine.PositionMode.allCases, id: \.self) { mode in
+                    let selected = engine.positionMode == mode
+                    Button {
+                        engine.positionMode = mode
+                    } label: {
+                        Text(mode.rawValue)
+                            .font(.system(size: 9, weight: selected ? .bold : .medium, design: .monospaced))
+                            .foregroundStyle(selected ? .black : .white.opacity(0.7))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(selected ? Self.cyan : Color.clear)
+                            .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
                     }
-                    .foregroundStyle(Self.orange)
+                    .buttonStyle(.plain)
+                    .help(mode == .random ? "Randomize shooting spot each turn" : "Shoot from \(mode.rawValue) zone")
                 }
-
-                ballsIndicator
-
-                Button {
-                    resetRound()
-                } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.75))
-                        .frame(width: 20, height: 20)
-                        .background(Color.white.opacity(0.08))
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .help("Reset Game")
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(Color.black.opacity(0.72))
+            .padding(2)
+            .background(Color.black.opacity(0.75))
             .overlay(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
                     .stroke(Color.white.opacity(0.16), lineWidth: 1)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .padding(8)
-        }
-    }
-
-    // MARK: - Variant C: Tactical Telemetry (Top Strip + Wide Court + Live Aim Readout)
-
-    private var variantCTacticalTelemetry: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 12) {
-                HStack(spacing: 5) {
-                    Circle().fill(engine.phase == .gameOver ? Self.orange : Self.green).frame(width: 6, height: 6)
-                    Text("NOTCH HOOPS")
-                        .font(.system(size: 10.5, weight: .heavy, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.92))
-                }
-
-                telemetryPill(label: "PTS", value: String(format: "%02d", engine.score), accent: Self.cyan)
-                telemetryPill(label: "BEST", value: String(format: "%02d", engine.highScore), accent: .white.opacity(0.85))
-                telemetryPill(label: "STRK", value: "\(engine.streak)", accent: engine.streak >= 2 ? Self.orange : Self.cyan)
-
-                if let drag = dragTranslation,
-                   let v = NotchHoopsEngine.launchVelocity(dragDeltaX: Double(drag.width), dragDeltaY: Double(drag.height)) {
-                    let speed = Int(hypot(v.vx, v.vy))
-                    telemetryPill(label: "PWR", value: "\(speed)", accent: Self.green)
-                }
-
-                Spacer()
-
-                ballsIndicator
-
-                Button {
-                    resetRound()
-                } label: {
-                    Text("RETRY")
-                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color.white.opacity(0.08))
-                        .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.white.opacity(0.2), lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(Color.white.opacity(0.04))
-            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.12), lineWidth: 1))
             .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
 
-            interactiveCourt(height: 140, showScanlines: true, showFloor: true)
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                )
-        }
-    }
-
-    // MARK: - Shared HUD & Prototype Switcher
-
-    private func hudStatRow(label: String, value: String, color: Color) -> some View {
-        HStack(spacing: 6) {
-            Text(label)
-                .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.6))
-                .frame(width: 52, alignment: .leading)
-            Text(value)
-                .font(.system(size: 12.5, weight: .bold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundStyle(color)
-        }
-    }
-
-    private func telemetryPill(label: String, value: String, accent: Color) -> some View {
-        HStack(spacing: 4) {
-            Text(label)
-                .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.5))
-            Text(value)
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundStyle(accent)
+            Button {
+                resetRound()
+            } label: {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .frame(width: 24, height: 24)
+                    .background(Color.black.opacity(0.75))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .help("Reset Game")
         }
     }
 
@@ -320,7 +187,7 @@ struct NotchHoopsView: View {
                         .frame(width: 11, height: 11)
                     if active {
                         Circle()
-                            .stroke(Color.black.opacity(0.55), lineWidth: 0.9)
+                            .stroke(Color.black.opacity(0.6), lineWidth: 0.9)
                             .frame(width: 11, height: 11)
                         Rectangle()
                             .fill(Color.black.opacity(0.45))
@@ -335,40 +202,21 @@ struct NotchHoopsView: View {
         }
     }
 
-    private var prototypeSwitcherBar: some View {
-        HStack(spacing: 4) {
-            Text("LAYOUT:")
-                .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.4))
-            ForEach(NotchHoopsVariant.allCases, id: \.self) { item in
-                let selected = variant == item
-                Button {
-                    variant = item
-                } label: {
-                    Text(item.rawValue)
-                        .font(.system(size: 9, weight: selected ? .bold : .medium, design: .monospaced))
-                        .foregroundStyle(selected ? .black : .white.opacity(0.65))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2.5)
-                        .background(selected ? Self.cyan : Color.white.opacity(0.06))
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-            Spacer()
-            Text("SWIPE TO SHOOT")
-                .font(.system(size: 9, weight: .medium, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.35))
+    private func zoneColor(_ zone: NotchHoopsEngine.ShotZone) -> Color {
+        switch zone {
+        case .onePoint: return .white.opacity(0.9)
+        case .twoPoint: return Self.cyan
+        case .threePoint: return Self.green
         }
     }
 
-    // MARK: - Interactive Court & Upgraded Canvas Artwork
+    // MARK: - Interactive Court
 
-    private func interactiveCourt(height: CGFloat, showScanlines: Bool, showFloor: Bool) -> some View {
+    private var interactiveCourt: some View {
         ZStack {
             if isAnimating {
                 TimelineView(.animation(minimumInterval: reduceMotion ? 1.0 / 30.0 : 1.0 / 60.0)) { timeline in
-                    courtCanvas(showScanlines: showScanlines, showFloor: showFloor)
+                    courtCanvas
                         .onChange(of: timeline.date) { oldDate, newDate in
                             let previous = lastTickDate ?? oldDate
                             let dt = newDate.timeIntervalSince(previous)
@@ -381,7 +229,7 @@ struct NotchHoopsView: View {
                         }
                 }
             } else {
-                courtCanvas(showScanlines: showScanlines, showFloor: showFloor)
+                courtCanvas
             }
 
             if engine.phase == .gameOver {
@@ -407,12 +255,12 @@ struct NotchHoopsView: View {
                     .buttonStyle(.plain)
                 }
                 .padding(12)
-                .background(Color.black.opacity(0.82))
+                .background(Color.black.opacity(0.84))
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(Self.orange.opacity(0.6), lineWidth: 1))
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             }
         }
-        .frame(height: height)
+        .frame(height: 174)
         .background(Self.crtBg)
         .contentShape(Rectangle())
         .gesture(
@@ -442,7 +290,9 @@ struct NotchHoopsView: View {
         )
     }
 
-    private func courtCanvas(showScanlines: Bool, showFloor: Bool) -> some View {
+    // MARK: - Pixel-Art Court Canvas
+
+    private var courtCanvas: some View {
         Canvas { context, size in
             let scaleX = size.width / NotchHoopsEngine.courtWidth
             let scaleY = size.height / NotchHoopsEngine.courtHeight
@@ -454,110 +304,137 @@ struct NotchHoopsView: View {
                 CGPoint(x: offsetX + x * scale, y: offsetY + y * scale)
             }
 
-            // 1. Subtle court floor & perspective lines
-            if showFloor {
-                let floorY = pt(0, NotchHoopsEngine.launchY + NotchHoopsEngine.ballRadius + 4).y
-                let floorRect = CGRect(x: 0, y: floorY, width: size.width, height: max(0, size.height - floorY))
-                context.fill(Path(floorRect), with: .color(Color.white.opacity(0.03)))
+            // Snap helper for crisp pixel-art steps
+            let px = max(1.5, (2.0 * scale).rounded())
+            func snap(_ v: CGFloat) -> CGFloat { (v / px).rounded() * px }
 
-                var floorLine = Path()
-                floorLine.move(to: CGPoint(x: 0, y: floorY))
-                floorLine.addLine(to: CGPoint(x: size.width, y: floorY))
-                context.stroke(floorLine, with: .color(Self.cyan.opacity(0.18)), lineWidth: 1)
-
-                // Key/paint arc on the right
-                let keyStart = pt(NotchHoopsEngine.rimCenterX - 75, NotchHoopsEngine.launchY + NotchHoopsEngine.ballRadius + 4)
-                var arcPath = Path()
-                arcPath.move(to: keyStart)
-                arcPath.addLine(to: CGPoint(x: size.width, y: keyStart.y + 10))
-                context.stroke(arcPath, with: .color(Self.cyan.opacity(0.10)), lineWidth: 1)
-            }
-
-            // 2. Subtle CRT scanlines
-            if showScanlines {
-                var scanPath = Path()
-                var sy: CGFloat = 2
-                while sy < size.height {
-                    scanPath.move(to: CGPoint(x: 0, y: sy))
-                    scanPath.addLine(to: CGPoint(x: size.width, y: sy))
-                    sy += 5
-                }
-                context.stroke(scanPath, with: .color(.white.opacity(0.03)), lineWidth: 1)
-            }
-
-            // 3. Hoop radial ambient glow
-            let hoopCenter = pt(NotchHoopsEngine.rimCenterX, NotchHoopsEngine.rimY)
-            let glowRect = CGRect(x: hoopCenter.x - 95, y: hoopCenter.y - 75, width: 190, height: 150)
+            // 1. Subtle CRT radial teal glow (matching reference image)
+            let glowCenter = pt(NotchHoopsEngine.rimCenterX - 60, NotchHoopsEngine.rimY + 10)
             context.fill(
-                Path(ellipseIn: glowRect),
+                Path(CGRect(origin: .zero, size: size)),
                 with: .radialGradient(
-                    Gradient(colors: [Self.cyan.opacity(0.13), .clear]),
-                    center: hoopCenter,
-                    startRadius: 4,
-                    endRadius: 95
+                    Gradient(colors: [Self.cyan.opacity(0.11), Color.clear]),
+                    center: glowCenter,
+                    startRadius: 10,
+                    endRadius: size.width * 0.55
                 )
             )
 
-            // 4. 3D-Perspective Backboard + Mounting Bracket + Shooter's Square
+            // 2. Subtle CRT scanlines
+            var scanPath = Path()
+            var sy: CGFloat = 2
+            while sy < size.height {
+                scanPath.move(to: CGPoint(x: 0, y: sy))
+                scanPath.addLine(to: CGPoint(x: size.width, y: sy))
+                sy += 5
+            }
+            context.stroke(scanPath, with: .color(.white.opacity(0.028)), lineWidth: 1)
+
+            // 3. Court floor + 3PT / 2PT / 1PT distance zone ticks
+            let floorY = pt(0, NotchHoopsEngine.launchY + NotchHoopsEngine.ballRadius + 4).y
+            context.fill(
+                Path(CGRect(x: 0, y: floorY, width: size.width, height: max(0, size.height - floorY))),
+                with: .color(Color.white.opacity(0.025))
+            )
+            var floorLine = Path()
+            floorLine.move(to: CGPoint(x: 0, y: floorY))
+            floorLine.addLine(to: CGPoint(x: size.width, y: floorY))
+            context.stroke(floorLine, with: .color(Self.cyan.opacity(0.20)), lineWidth: 1)
+
+            let threePtX = pt(NotchHoopsEngine.threePointLineX, 0).x
+            let onePtX = pt(NotchHoopsEngine.onePointLineX, 0).x
+            var zoneTicks = Path()
+            zoneTicks.move(to: CGPoint(x: threePtX, y: floorY - 3))
+            zoneTicks.addLine(to: CGPoint(x: threePtX, y: floorY + 6))
+            zoneTicks.move(to: CGPoint(x: onePtX, y: floorY - 3))
+            zoneTicks.addLine(to: CGPoint(x: onePtX, y: floorY + 6))
+            context.stroke(zoneTicks, with: .color(Self.cyan.opacity(0.45)), lineWidth: 1.5)
+
+            context.draw(
+                Text("3PT").font(.system(size: 7.5, weight: .bold, design: .monospaced)).foregroundColor(Self.green.opacity(0.55)),
+                at: CGPoint(x: threePtX - 18, y: floorY + 8)
+            )
+            context.draw(
+                Text("2PT").font(.system(size: 7.5, weight: .bold, design: .monospaced)).foregroundColor(Self.cyan.opacity(0.55)),
+                at: CGPoint(x: (threePtX + onePtX) / 2, y: floorY + 8)
+            )
+            context.draw(
+                Text("1PT").font(.system(size: 7.5, weight: .bold, design: .monospaced)).foregroundColor(.white.opacity(0.5)),
+                at: CGPoint(x: onePtX + 18, y: floorY + 8)
+            )
+
+            // 4. Pixel-art Backboard + Bracket + Rim Glow
+            let hoopCenter = pt(NotchHoopsEngine.rimCenterX, NotchHoopsEngine.rimY)
+            context.fill(
+                Path(ellipseIn: CGRect(x: hoopCenter.x - 65, y: hoopCenter.y - 50, width: 130, height: 100)),
+                with: .radialGradient(
+                    Gradient(colors: [Self.cyan.opacity(0.16), .clear]),
+                    center: hoopCenter,
+                    startRadius: 2,
+                    endRadius: 65
+                )
+            )
+
             let bbTop = pt(NotchHoopsEngine.backboardX, NotchHoopsEngine.backboardTopY)
             let bbBottom = pt(NotchHoopsEngine.backboardX, NotchHoopsEngine.backboardBottomY)
-            let bbThickness = max(5, 7 * scale)
             let bbHeight = bbBottom.y - bbTop.y
-            let depthDx = 10 * scale
-            let depthDy = -7 * scale
+            let depthDx = 14 * scale
+            let depthDy = -10 * scale
 
-            // Wall bracket strut
-            var bracket = Path()
-            let midY = bbTop.y + bbHeight * 0.5
-            bracket.move(to: CGPoint(x: bbTop.x + bbThickness, y: midY))
-            bracket.addLine(to: CGPoint(x: size.width, y: midY))
-            context.stroke(bracket, with: .color(Self.cyan.opacity(0.45)), lineWidth: max(2.5, 3.5 * scale))
-
-            // Angled backboard face (subtle 3D perspective)
+            // Angled backboard face
             var bbFace = Path()
             bbFace.move(to: bbTop)
             bbFace.addLine(to: CGPoint(x: bbTop.x + depthDx, y: bbTop.y + depthDy))
             bbFace.addLine(to: CGPoint(x: bbBottom.x + depthDx, y: bbBottom.y + depthDy))
             bbFace.addLine(to: bbBottom)
             bbFace.closeSubpath()
-            context.fill(bbFace, with: .color(Self.cyan.opacity(0.14)))
-            context.stroke(bbFace, with: .color(Self.cyan.opacity(0.88)), lineWidth: 1.4)
+            context.fill(bbFace, with: .color(Color(red: 0.72, green: 0.96, blue: 0.96).opacity(0.85)))
+            context.stroke(bbFace, with: .color(Self.cyan), lineWidth: px)
 
-            // Front edge thickness
-            let bbEdge = CGRect(x: bbTop.x - 1.5, y: bbTop.y, width: 3, height: bbHeight)
-            context.fill(Path(bbEdge), with: .color(Self.cyan.opacity(0.85)))
+            // Dark cyan side thickness on backboard front edge
+            context.fill(
+                Path(CGRect(x: snap(bbTop.x - px), y: snap(bbTop.y), width: px * 1.4, height: bbHeight)),
+                with: .color(Color(red: 0.14, green: 0.55, blue: 0.58))
+            )
 
-            // Inner shooter's square
-            var square = Path()
+            // Inner orange shooter's square
+            var sq = Path()
             let sqTopY = bbTop.y + bbHeight * 0.36
             let sqBotY = bbTop.y + bbHeight * 0.72
-            square.move(to: CGPoint(x: bbTop.x + 2 * scale, y: sqTopY))
-            square.addLine(to: CGPoint(x: bbTop.x + depthDx * 0.72, y: sqTopY + depthDy * 0.72))
-            square.addLine(to: CGPoint(x: bbTop.x + depthDx * 0.72, y: sqBotY + depthDy * 0.72))
-            square.addLine(to: CGPoint(x: bbTop.x + 2 * scale, y: sqBotY))
-            square.closeSubpath()
-            context.stroke(square, with: .color(Self.orange.opacity(0.85)), lineWidth: 1.2)
+            sq.move(to: CGPoint(x: bbTop.x + 2 * scale, y: sqTopY))
+            sq.addLine(to: CGPoint(x: bbTop.x + depthDx * 0.72, y: sqTopY + depthDy * 0.72))
+            sq.addLine(to: CGPoint(x: bbTop.x + depthDx * 0.72, y: sqBotY + depthDy * 0.72))
+            sq.addLine(to: CGPoint(x: bbTop.x + 2 * scale, y: sqBotY))
+            sq.closeSubpath()
+            context.stroke(sq, with: .color(Self.orange), lineWidth: px * 0.8)
 
-            // 5. Aim trajectory dots while dragging
+            // Rim mounting bracket
+            let rimRight = pt(NotchHoopsEngine.rimCenterX + NotchHoopsEngine.rimHalfWidth, NotchHoopsEngine.rimY)
+            context.fill(
+                Path(CGRect(x: rimRight.x - 1, y: rimRight.y - px * 0.5, width: max(4, bbTop.x - rimRight.x + 1), height: px * 2.2)),
+                with: .color(Self.orange)
+            )
+
+            // 5. Dashed Cyan Aim Trajectory Arc
             if let drag = dragTranslation, engine.phase == .ready {
                 let points = NotchHoopsEngine.predictedTrajectory(
+                    fromX: engine.currentLaunchX,
                     dragDeltaX: Double(drag.width),
                     dragDeltaY: Double(drag.height)
                 )
-                for (idx, p) in points.enumerated() {
-                    let c = pt(p.x, p.y)
-                    let r = max(1.8, 3.0 * scale)
-                    let alpha = max(0.22, 0.92 - Double(idx) * 0.06)
-                    context.fill(
-                        Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2)),
-                        with: .color(Self.cyan.opacity(alpha))
-                    )
+                for i in 0..<points.count {
+                    let p = pt(points[i].x, points[i].y)
+                    let prev = i == 0 ? pt(engine.currentLaunchX, NotchHoopsEngine.launchY) : pt(points[i - 1].x, points[i - 1].y)
+                    var seg = Path()
+                    seg.move(to: CGPoint(x: (prev.x + p.x) * 0.5, y: (prev.y + p.y) * 0.5))
+                    seg.addLine(to: p)
+                    let alpha = max(0.35, 0.95 - Double(i) * 0.12)
+                    context.stroke(seg, with: .color(Self.cyan.opacity(alpha)), style: StrokeStyle(lineWidth: px, lineCap: .round))
                 }
             }
 
-            // 6. Back half of the 3D oval rim (drawn behind the ball)
+            // 6. Back half of pixel-stepped 3D oval rim (behind ball)
             let rimLeft = pt(NotchHoopsEngine.rimCenterX - NotchHoopsEngine.rimHalfWidth, NotchHoopsEngine.rimY)
-            let rimRight = pt(NotchHoopsEngine.rimCenterX + NotchHoopsEngine.rimHalfWidth, NotchHoopsEngine.rimY)
             let rimOvalRect = CGRect(
                 x: rimLeft.x,
                 y: rimLeft.y - 4.5 * scale,
@@ -570,52 +447,33 @@ struct NotchHoopsView: View {
                 to: CGPoint(x: rimOvalRect.maxX, y: rimOvalRect.midY),
                 control: CGPoint(x: rimOvalRect.midX, y: rimOvalRect.minY - 3 * scale)
             )
-            context.stroke(backRim, with: .color(Self.deepOrange), lineWidth: max(2, 2.4 * scale))
+            context.stroke(backRim, with: .color(Self.deepOrange), lineWidth: px * 1.1)
 
-            // 7. Ground shadow under the basketball (scales & fades with altitude)
-            let floorBaselineY = pt(0, NotchHoopsEngine.launchY + NotchHoopsEngine.ballRadius + 4).y
+            // 7. Ground shadow under basketball
             let ballPos = pt(engine.ballX, engine.ballY)
             let ballR = NotchHoopsEngine.ballRadius * scale
-            let heightAboveFloor = max(0, floorBaselineY - (ballPos.y + ballR))
+            let heightAboveFloor = max(0, floorY - (ballPos.y + ballR))
             let shadowFactor = max(0.25, 1.0 - heightAboveFloor / (140 * scale))
-            let shadowW = ballR * 1.9 * shadowFactor
-            let shadowH = max(2.5, 4.5 * scale * shadowFactor)
-            let shadowRect = CGRect(x: ballPos.x - shadowW / 2, y: floorBaselineY - shadowH / 2, width: shadowW, height: shadowH)
-            context.fill(Path(ellipseIn: shadowRect), with: .color(.black.opacity(0.45 * shadowFactor)))
-
-            // 8. Shaded Basketball with Curved Ribs
-            let ballRect = CGRect(x: ballPos.x - ballR, y: ballPos.y - ballR, width: ballR * 2, height: ballR * 2)
+            let shadowW = ballR * 1.8 * shadowFactor
+            let shadowH = max(2.5, 4 * scale * shadowFactor)
             context.fill(
-                Path(ellipseIn: ballRect),
-                with: .radialGradient(
-                    Gradient(colors: [Color(red: 1.0, green: 0.62, blue: 0.26), Self.orange, Self.deepOrange]),
-                    center: CGPoint(x: ballPos.x - ballR * 0.3, y: ballPos.y - ballR * 0.3),
-                    startRadius: 1,
-                    endRadius: ballR * 1.35
-                )
+                Path(ellipseIn: CGRect(x: ballPos.x - shadowW / 2, y: floorY - shadowH / 2, width: shadowW, height: shadowH)),
+                with: .color(.black.opacity(0.45 * shadowFactor))
             )
 
-            // Curved seam ribs clipped to ball circle
-            context.drawLayer { ballCtx in
-                ballCtx.clip(to: Path(ellipseIn: ballRect))
-                ballCtx.translateBy(x: ballPos.x, y: ballPos.y)
-                ballCtx.rotate(by: .radians(engine.ballRotation))
+            // 8. Pixel-art Basketball with warm orange glow
+            context.fill(
+                Path(ellipseIn: CGRect(x: ballPos.x - ballR * 1.6, y: ballPos.y - ballR * 1.6, width: ballR * 3.2, height: ballR * 3.2)),
+                with: .radialGradient(
+                    Gradient(colors: [Self.orange.opacity(0.28), .clear]),
+                    center: ballPos,
+                    startRadius: ballR * 0.4,
+                    endRadius: ballR * 1.6
+                )
+            )
+            drawPixelBasketball(context: context, center: ballPos, radius: ballR, rotation: engine.ballRotation, px: px)
 
-                var ribs = Path()
-                // Equator & meridian
-                ribs.move(to: CGPoint(x: -ballR, y: 0))
-                ribs.addLine(to: CGPoint(x: ballR, y: 0))
-                ribs.move(to: CGPoint(x: 0, y: -ballR))
-                ribs.addLine(to: CGPoint(x: 0, y: ballR))
-                // Left & right curved side panels
-                ribs.addArc(center: CGPoint(x: -ballR * 1.15, y: 0), radius: ballR * 0.95, startAngle: .degrees(-55), endAngle: .degrees(55), clockwise: false)
-                ribs.move(to: CGPoint(x: ballR * 1.15, y: 0))
-                ribs.addArc(center: CGPoint(x: ballR * 1.15, y: 0), radius: ballR * 0.95, startAngle: .degrees(125), endAngle: .degrees(235), clockwise: false)
-                ballCtx.stroke(ribs, with: .color(.black.opacity(0.6)), lineWidth: 1.1)
-            }
-            context.stroke(Path(ellipseIn: ballRect), with: .color(.black.opacity(0.85)), lineWidth: 1.3)
-
-            // 9. Diamond-Mesh Net (in front of ball)
+            // 9. Pixel-art Diamond-Mesh Net (in front of ball)
             let netBottomY = rimLeft.y + 30 * scale
             let swayOffset = CGFloat(engine.netSway) * 8.0 * scale
             let netLeftBot = rimLeft.x + 7 * scale + swayOffset
@@ -623,54 +481,109 @@ struct NotchHoopsView: View {
 
             var netPath = Path()
             let strands = 5
-            for i in 0..<strands {
+            for i in 0..<(strands - 1) {
                 let t0 = CGFloat(i) / CGFloat(strands - 1)
                 let t1 = CGFloat(i + 1) / CGFloat(strands - 1)
                 let topX0 = rimLeft.x + (rimRight.x - rimLeft.x) * t0
+                let topX1 = rimLeft.x + (rimRight.x - rimLeft.x) * t1
                 let botX0 = netLeftBot + (netRightBot - netLeftBot) * t0
-                if i < strands - 1 {
-                    let topX1 = rimLeft.x + (rimRight.x - rimLeft.x) * t1
-                    let botX1 = netLeftBot + (netRightBot - netLeftBot) * t1
-                    // Diagonal criss-cross diamond mesh
-                    netPath.move(to: CGPoint(x: topX0, y: rimLeft.y))
-                    netPath.addLine(to: CGPoint(x: botX1, y: netBottomY))
-                    netPath.move(to: CGPoint(x: topX1, y: rimLeft.y))
-                    netPath.addLine(to: CGPoint(x: botX0, y: netBottomY))
-                }
+                let botX1 = netLeftBot + (netRightBot - netLeftBot) * t1
+                netPath.move(to: CGPoint(x: topX0, y: rimLeft.y + 2))
+                netPath.addLine(to: CGPoint(x: botX1, y: netBottomY))
+                netPath.move(to: CGPoint(x: topX1, y: rimLeft.y + 2))
+                netPath.addLine(to: CGPoint(x: botX0, y: netBottomY))
             }
-            context.stroke(netPath, with: .color(.white.opacity(0.72)), lineWidth: 1.0)
+            context.stroke(netPath, with: .color(.white.opacity(0.82)), lineWidth: max(1.1, px * 0.65))
 
-            // 10. Front half of the 3D oval rim
-            context.stroke(
-                Path(ellipseIn: rimOvalRect),
-                with: .color(Self.orange),
-                lineWidth: max(2.2, 2.8 * scale)
-            )
+            // 10. Front half of pixel-stepped 3D oval rim
+            context.stroke(Path(ellipseIn: rimOvalRect), with: .color(Self.orange), lineWidth: px * 1.25)
 
-            // 11. "SWIPE UP ↗" cue before first shot
+            // 11. "SWIPE UP ↗" + Pixel Hand Cue before first shot
             if !engine.hasTakenShot && dragTranslation == nil && engine.phase == .ready {
-                let hintPos = pt(NotchHoopsEngine.launchX + 6, NotchHoopsEngine.launchY - 28)
+                let hintPos = pt(engine.currentLaunchX - 36, NotchHoopsEngine.launchY - 22)
                 context.draw(
                     Text("SWIPE UP ↗")
-                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.82)),
+                        .font(.system(size: 9.5, weight: .heavy, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.9)),
                     at: hintPos
                 )
+                drawPixelHand(context: context, origin: CGPoint(x: hintPos.x - 4, y: hintPos.y + 10), px: max(1.3, px * 0.75))
             }
 
-            // 12. Floating score / miss feedback
+            // 12. Minimalist Score / Miss Feedback (+1, +2, +3 or MISS)
             if let feedback = engine.feedbackText, engine.feedbackTimer > 0 {
-                let alpha = min(1.0, engine.feedbackTimer * 1.4)
-                let fbPos = pt(NotchHoopsEngine.rimCenterX - 18, NotchHoopsEngine.rimY - 34)
-                let label = engine.feedbackPoints > 0
-                    ? "\(feedback) +\(engine.feedbackPoints) PT\(engine.feedbackPoints > 1 ? "S" : "")"
-                    : feedback
+                let alpha = min(1.0, engine.feedbackTimer * 1.5)
+                let fbPos = pt(NotchHoopsEngine.rimCenterX - 6, NotchHoopsEngine.rimY - 30)
                 context.draw(
-                    Text(label)
-                        .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                    Text(feedback)
+                        .font(.system(size: 13, weight: .heavy, design: .monospaced))
                         .foregroundColor((engine.feedbackPoints > 0 ? Self.green : Self.orange).opacity(alpha)),
                     at: fbPos
                 )
+            }
+        }
+    }
+
+    /// Draws a crisp pixel-stepped basketball with black outline, orange shading, and rotating seams.
+    private func drawPixelBasketball(
+        context: GraphicsContext,
+        center: CGPoint,
+        radius: CGFloat,
+        rotation: Double,
+        px: CGFloat
+    ) {
+        let ballRect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
+        context.fill(
+            Path(ellipseIn: ballRect),
+            with: .radialGradient(
+                Gradient(colors: [Color(red: 1.0, green: 0.60, blue: 0.22), Self.orange, Self.deepOrange]),
+                center: CGPoint(x: center.x - radius * 0.28, y: center.y - radius * 0.28),
+                startRadius: 1,
+                endRadius: radius * 1.3
+            )
+        )
+
+        context.drawLayer { ballCtx in
+            ballCtx.clip(to: Path(ellipseIn: ballRect))
+            ballCtx.translateBy(x: center.x, y: center.y)
+            ballCtx.rotate(by: .radians(rotation))
+
+            var ribs = Path()
+            ribs.move(to: CGPoint(x: -radius, y: 0))
+            ribs.addLine(to: CGPoint(x: radius, y: 0))
+            ribs.move(to: CGPoint(x: 0, y: -radius))
+            ribs.addLine(to: CGPoint(x: 0, y: radius))
+            ribs.addArc(center: CGPoint(x: -radius * 1.15, y: 0), radius: radius * 0.95, startAngle: .degrees(-55), endAngle: .degrees(55), clockwise: false)
+            ribs.move(to: CGPoint(x: radius * 1.15, y: 0))
+            ribs.addArc(center: CGPoint(x: radius * 1.15, y: 0), radius: radius * 0.95, startAngle: .degrees(125), endAngle: .degrees(235), clockwise: false)
+            ballCtx.stroke(ribs, with: .color(.black.opacity(0.75)), lineWidth: max(1.1, px * 0.65))
+        }
+        context.stroke(Path(ellipseIn: ballRect), with: .color(.black.opacity(0.92)), lineWidth: max(1.3, px * 0.75))
+    }
+
+    /// Draws a tiny 8×9 pixel-art pointing hand cursor matching the reference graphic.
+    private func drawPixelHand(context: GraphicsContext, origin: CGPoint, px: CGFloat) {
+        let grid: [String] = [
+            "...11...",
+            "..1221..",
+            "..1221..",
+            "..12211.",
+            ".1122121",
+            "12222221",
+            "12222221",
+            ".122221.",
+            "..1111.."
+        ]
+        let skin = Color(red: 0.95, green: 0.74, blue: 0.58)
+        for (rowIdx, row) in grid.enumerated() {
+            for (colIdx, ch) in row.enumerated() where ch != "." {
+                let rect = CGRect(
+                    x: origin.x + CGFloat(colIdx) * px,
+                    y: origin.y + CGFloat(rowIdx) * px,
+                    width: px + 0.3,
+                    height: px + 0.3
+                )
+                context.fill(Path(rect), with: .color(ch == "1" ? .black : skin))
             }
         }
     }

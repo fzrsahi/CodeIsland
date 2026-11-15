@@ -10,20 +10,54 @@ public struct NotchHoopsEngine: Sendable {
         case gameOver
     }
 
-    public static let courtWidth: Double = 390
+    /// Distance-based scoring zones measured from the hoop on the right.
+    public enum ShotZone: String, CaseIterable, Sendable {
+        case onePoint = "1P"
+        case twoPoint = "2P"
+        case threePoint = "3P"
+
+        public var points: Int {
+            switch self {
+            case .onePoint: return 1
+            case .twoPoint: return 2
+            case .threePoint: return 3
+            }
+        }
+
+        public var xRange: ClosedRange<Double> {
+            switch self {
+            case .onePoint: return 204...248
+            case .twoPoint: return 122...194
+            case .threePoint: return 46...112
+            }
+        }
+    }
+
+    /// Player-selectable starting position mode: random per turn or locked to a zone.
+    public enum PositionMode: String, CaseIterable, Sendable {
+        case random = "RND"
+        case onePoint = "1P"
+        case twoPoint = "2P"
+        case threePoint = "3P"
+    }
+
+    public static let courtWidth: Double = 460
     public static let courtHeight: Double = 176
     public static let ballRadius: Double = 12
-    public static let launchX: Double = 78
     public static let launchY: Double = 138
-    public static let rimCenterX: Double = 326
-    public static let rimY: Double = 90
+    public static let rimCenterX: Double = 396
+    public static let rimY: Double = 94
     public static let rimHalfWidth: Double = 22
     public static let rimPostRadius: Double = 3.5
-    public static let backboardX: Double = 352
-    public static let backboardTopY: Double = 38
-    public static let backboardBottomY: Double = 102
+    public static let backboardX: Double = 424
+    public static let backboardTopY: Double = 44
+    public static let backboardBottomY: Double = 104
     public static let gravity: Double = 580
     public static let maxBalls: Int = 3
+
+    /// X thresholds separating 3PT, 2PT, and 1PT zones on the court floor.
+    public static let threePointLineX: Double = 118
+    public static let onePointLineX: Double = 200
 
     public private(set) var phase: Phase = .ready
     public private(set) var score: Int = 0
@@ -32,7 +66,19 @@ public struct NotchHoopsEngine: Sendable {
     public private(set) var ballsRemaining: Int = maxBalls
     public private(set) var hasTakenShot: Bool = false
 
-    public private(set) var ballX: Double = launchX
+    public var positionMode: PositionMode = .random {
+        didSet {
+            if phase == .ready {
+                pickNextLaunchPosition()
+            }
+        }
+    }
+    public private(set) var currentLaunchX: Double = 82
+    public var currentShotZone: ShotZone {
+        Self.shotZone(forX: currentLaunchX)
+    }
+
+    public private(set) var ballX: Double = 82
     public private(set) var ballY: Double = launchY
     public private(set) var ballVX: Double = 0
     public private(set) var ballVY: Double = 0
@@ -47,13 +93,30 @@ public struct NotchHoopsEngine: Sendable {
     private var touchedRimOrBackboard: Bool = false
     private var scoredCurrentShot: Bool = false
 
-    public init(highScore: Int = 0) {
+    public init(highScore: Int = 0, positionMode: PositionMode = .random, initialLaunchX: Double? = nil) {
         self.highScore = max(0, highScore)
+        self.positionMode = positionMode
+        if let initialLaunchX {
+            self.currentLaunchX = initialLaunchX
+            self.ballX = initialLaunchX
+        } else {
+            pickNextLaunchPosition()
+        }
     }
 
     /// True only while physics or short feedback/net-sway animation requires frame ticks.
     public var needsTick: Bool {
         phase == .flying || feedbackTimer > 0 || abs(netSway) > 0.01
+    }
+
+    public static func shotZone(forX x: Double) -> ShotZone {
+        if x >= onePointLineX {
+            return .onePoint
+        } else if x >= threePointLineX {
+            return .twoPoint
+        } else {
+            return .threePoint
+        }
     }
 
     public mutating func resetGame() {
@@ -62,11 +125,36 @@ public struct NotchHoopsEngine: Sendable {
         streak = 0
         ballsRemaining = Self.maxBalls
         hasTakenShot = false
-        resetBall()
+        pickNextLaunchPosition()
         netSway = 0
         feedbackText = nil
         feedbackPoints = 0
         feedbackTimer = 0
+    }
+
+    /// Picks a new starting X position based on `positionMode` (random across all zones or within the chosen zone).
+    public mutating func pickNextLaunchPosition() {
+        let zone: ShotZone
+        switch positionMode {
+        case .random:
+            zone = ShotZone.allCases.randomElement() ?? .twoPoint
+        case .onePoint:
+            zone = .onePoint
+        case .twoPoint:
+            zone = .twoPoint
+        case .threePoint:
+            zone = .threePoint
+        }
+        currentLaunchX = Double.random(in: zone.xRange)
+        resetBall()
+    }
+
+    /// Sets an explicit starting X position (e.g., when clicking/tapping a spot on the floor or in tests).
+    public mutating func setLaunchPosition(x: Double) {
+        guard phase == .ready else { return }
+        let clamped = min(max(x, ShotZone.threePoint.xRange.lowerBound), ShotZone.onePoint.xRange.upperBound)
+        currentLaunchX = clamped
+        resetBall()
     }
 
     /// Converts a user drag delta (in court points) into a shot velocity.
@@ -92,23 +180,24 @@ public struct NotchHoopsEngine: Sendable {
     }
 
     /// Computes initial launch velocity from a drag gesture delta, or nil if below minimum swipe threshold.
+    /// Intentionally unassisted horizontally so players must judge distance & angle for 1P/2P/3P shots.
     public static func launchVelocity(dragDeltaX: Double, dragDeltaY: Double) -> (vx: Double, vy: Double)? {
-        // Require an upward swipe (negative Y in SwiftUI coordinates)
         guard dragDeltaY < -14 else { return nil }
-        let pullUp = min(170.0, max(20.0, -dragDeltaY))
-        let pullRight = min(160.0, max(-40.0, dragDeltaX))
+        let pullUp = min(190.0, max(14.0, -dragDeltaY))
+        let pullRight = min(210.0, max(-60.0, dragDeltaX))
 
-        let vy = -(260.0 + pullUp * 2.15)
-        let vx = max(120.0, min(430.0, 175.0 + pullRight * 1.45))
+        let vy = -(180.0 + pullUp * 2.65)
+        let vx = max(40.0, min(520.0, 65.0 + pullRight * 2.15))
         return (vx, vy)
     }
 
-    /// Predicts a short dashed trajectory arc for the aiming preview.
+    /// Predicts a short dashed trajectory arc near the ball (kept short so aiming remains a skill challenge).
     public static func predictedTrajectory(
+        fromX launchX: Double,
         dragDeltaX: Double,
         dragDeltaY: Double,
-        steps: Int = 10,
-        stepDt: Double = 0.045
+        steps: Int = 5,
+        stepDt: Double = 0.042
     ) -> [(x: Double, y: Double)] {
         guard let v = launchVelocity(dragDeltaX: dragDeltaX, dragDeltaY: dragDeltaY) else {
             return []
@@ -146,7 +235,6 @@ public struct NotchHoopsEngine: Sendable {
 
         guard phase == .flying else { return }
 
-        // Two sub-steps per frame prevent tunneling past the thin rim posts
         let subSteps = 2
         let subDt = dt / Double(subSteps)
         for _ in 0..<subSteps {
@@ -184,9 +272,7 @@ public struct NotchHoopsEngine: Sendable {
             abs(ballX - Self.rimCenterX) <= (Self.rimHalfWidth - Self.ballRadius * 0.25) {
             scoredCurrentShot = true
             let isSwish = !touchedRimOrBackboard
-            let basePoints = isSwish ? 2 : 1
-            let bonus = streak >= 2 ? 1 : 0
-            let points = basePoints + bonus
+            let points = currentShotZone.points
 
             score += points
             streak += 1
@@ -194,9 +280,9 @@ public struct NotchHoopsEngine: Sendable {
                 highScore = score
             }
             netSway = isSwish ? 1.0 : 0.65
-            feedbackText = isSwish ? "SWISH!" : "BUCKET!"
+            feedbackText = "+\(points)"
             feedbackPoints = points
-            feedbackTimer = 1.15
+            feedbackTimer = 1.1
         }
 
         // Out-of-bounds / floor resolution
@@ -206,13 +292,18 @@ public struct NotchHoopsEngine: Sendable {
             if !scoredCurrentShot {
                 streak = 0
                 ballsRemaining = max(0, ballsRemaining - 1)
-                feedbackText = "MISS!"
+                feedbackText = "MISS"
                 feedbackPoints = 0
-                feedbackTimer = 0.9
+                feedbackTimer = 0.85
             }
 
-            resetBall()
-            phase = ballsRemaining > 0 ? .ready : .gameOver
+            if ballsRemaining > 0 {
+                pickNextLaunchPosition()
+                phase = .ready
+            } else {
+                resetBall()
+                phase = .gameOver
+            }
         }
     }
 
@@ -227,11 +318,9 @@ public struct NotchHoopsEngine: Sendable {
         let nx = dx / dist
         let ny = dy / dist
 
-        // Separate ball from post
         ballX = postX + nx * minDist
         ballY = postY + ny * minDist
 
-        // Reflect velocity along collision normal
         let vn = ballVX * nx + ballVY * ny
         if vn < 0 {
             let restitution = 0.68
@@ -242,7 +331,7 @@ public struct NotchHoopsEngine: Sendable {
     }
 
     private mutating func resetBall() {
-        ballX = Self.launchX
+        ballX = currentLaunchX
         ballY = Self.launchY
         ballVX = 0
         ballVY = 0
