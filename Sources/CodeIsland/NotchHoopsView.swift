@@ -3,7 +3,7 @@ import CodeIslandCore
 
 /// Prototype variants for Notch Hoops (per /prototype Sub-shape A) so collaborators
 /// can compare structurally different layouts & visual hierarchies live in the notch.
-private enum NotchHoopsVariant: String, CaseIterable {
+enum NotchHoopsVariant: String, CaseIterable {
     case crtArcade = "A · CRT"
     case arenaBroadcast = "B · ARENA"
     case tacticalTelemetry = "C · TELEMETRY"
@@ -20,10 +20,22 @@ struct NotchHoopsView: View {
     @ObservedObject private var animationGate = MascotAnimationGate.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @State private var variant: NotchHoopsVariant = .crtArcade
-    @State private var engine = NotchHoopsEngine()
+    @State private var variant: NotchHoopsVariant
+    @State private var engine: NotchHoopsEngine
     @State private var dragTranslation: CGSize?
     @State private var lastTickDate: Date?
+
+    init(
+        appState: AppState,
+        initialVariant: NotchHoopsVariant = .crtArcade,
+        initialEngine: NotchHoopsEngine = NotchHoopsEngine(),
+        initialDrag: CGSize? = nil
+    ) {
+        self.appState = appState
+        _variant = State(initialValue: initialVariant)
+        _engine = State(initialValue: initialEngine)
+        _dragTranslation = State(initialValue: initialDrag)
+    }
 
     private static let cyan = Color(red: 0.22, green: 0.94, blue: 0.88)
     private static let green = Color(red: 0.34, green: 0.95, blue: 0.48)
@@ -553,20 +565,12 @@ struct NotchHoopsView: View {
                 height: 9 * scale
             )
             var backRim = Path()
-            backRim.addArc(
-                center: CGPoint(x: rimOvalRect.midX, y: rimOvalRect.midY),
-                radius: rimOvalRect.width / 2,
-                startAngle: .degrees(180),
-                endAngle: .degrees(360),
-                clockwise: false
+            backRim.move(to: CGPoint(x: rimOvalRect.minX, y: rimOvalRect.midY))
+            backRim.addQuadCurve(
+                to: CGPoint(x: rimOvalRect.maxX, y: rimOvalRect.midY),
+                control: CGPoint(x: rimOvalRect.midX, y: rimOvalRect.minY - 3 * scale)
             )
-            context.stroke(
-                backRim.applying(CGAffineTransform(translationX: 0, y: -rimOvalRect.midY)
-                    .scaledBy(x: 1, y: 0.22)
-                    .translatedBy(x: 0, y: rimOvalRect.midY / 0.22)),
-                with: .color(Self.deepOrange),
-                lineWidth: max(2, 2.5 * scale)
-            )
+            context.stroke(backRim, with: .color(Self.deepOrange), lineWidth: max(2, 2.4 * scale))
 
             // 7. Ground shadow under the basketball (scales & fades with altitude)
             let floorBaselineY = pt(0, NotchHoopsEngine.launchY + NotchHoopsEngine.ballRadius + 4).y
