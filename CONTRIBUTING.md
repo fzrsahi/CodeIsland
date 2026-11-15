@@ -127,6 +127,38 @@ The counters are only on when the app is launched with `CODEISLAND_PERF_COUNTERS
 
 ---
 
+## 🧪 Quality Assurance & CI/CD Testing Flow
+
+CodeIsland uses a **Four-Tier Verification Architecture** to keep the `main` branch green and eliminate CI runner queue congestion without adding external dependencies (zero Node.js/Husky bloat):
+
+1. **Tier 1 (Local Pre-Commit Staged Guard)**:
+   Whenever you run `git commit`, `.githooks/pre-commit` inspects staged files in under 0.5 seconds:
+   - Validates Swift syntax on staged `.swift` files (`swiftc -parse`).
+   - Detects and rejects accidental merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
+   - Blocks accidental commits of oversized binary assets (> 5MB).
+
+2. **Tier 2 (Local Pre-Push Build & Test Guard)**:
+   Activate the repository's native git hooks once:
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+   Whenever you run `git push`, `.githooks/pre-push` automatically runs `swift build --build-tests -q`. If your changes introduce a compiler timeout or test regression, the push is rejected immediately on your local machine in under 10 seconds before code leaves your machine.
+
+3. **Tier 3 (Clean-Room Pre-Build CI Gate)**:
+   Every Pull Request targeting `main` or `dev` runs our standalone XCTest harness on macOS Sonoma runner (`python3 ./scripts/run-xctest-runner.py --target core`).
+   - If a test fails, our automated CI bot posts the exact error line directly as a sticky status comment on your PR thread so you don't have to inspect raw runner logs.
+
+4. **Tier 4 (Post-Build Artifact Smoke Test)**:
+   Release packaging steps verify DMG size (> 1MB), application bundle layout, and Sparkle Ed25519 cryptographic signatures before triggering automated deployment.
+
+### 🔒 GitHub Branch Protection Settings
+The CI pipeline publishes granular commit status checks to the GitHub REST API, allowing maintainers to require specific checks under **Settings > Branches > Require status checks to pass**:
+* `CodeIsland / Syntax & Git Hygiene Guard`: Verifies syntax and git hygiene.
+* `CodeIsland / XCTest Core Harness`: Enforces that all 1,098 unit tests pass before merge.
+* `CodeIsland / Artifact Integrity Smoke Test`: Asserts that production DMG artifacts are valid (> 1MB).
+
+---
+
 ## 📄 License
 CodeIsland is licensed under the [MIT License](LICENSE).
 Original upstream project by [wxtsky](https://github.com/wxtsky/CodeIsland).
