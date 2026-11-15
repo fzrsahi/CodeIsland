@@ -18,6 +18,41 @@ enum NotchWidthMetrics {
         if hasNotch { return Swift.max(notchW, scaled) }
         return scaled
     }
+
+    static func wingOuterPadding(forWingWidth wingWidth: CGFloat, expanded: Bool, bilateral: Bool) -> CGFloat {
+        if expanded || bilateral { return 12 }
+        if wingWidth < 48 { return 6 }
+        if wingWidth < 70 { return 8 }
+        return 10
+    }
+
+    static func collapsedInnerBudget(wingWidth: CGFloat, outerPadding: CGFloat, hasNotch: Bool) -> CGFloat {
+        max(0, wingWidth - outerPadding - (hasNotch ? 4 : 2))
+    }
+
+    /// Estimates single-line label width accounting for wider CJK/Hangul glyphs alongside monospace Latin text.
+    static func estimatedLabelWidth(_ text: String, isPixel: Bool) -> CGFloat {
+        text.unicodeScalars.reduce(CGFloat(0)) { sum, scalar in
+            let isWideCJK = (0x1100...0x11FF).contains(scalar.value)
+                || (0x2E80...0x9FFF).contains(scalar.value)
+                || (0xAC00...0xD7AF).contains(scalar.value)
+                || (0xF900...0xFAFF).contains(scalar.value)
+            let charWidth: CGFloat = isWideCJK ? 10.0 : (isPixel ? 6.5 : 5.8)
+            return sum + charWidth
+        }
+    }
+
+    static func statusBadgesWidth(
+        inQuietHours: Bool,
+        hasCompletionGlance: Bool,
+        hasPendingQuestionOrApproval: Bool
+    ) -> CGFloat {
+        var width: CGFloat = 0
+        if inQuietHours { width += 13 }
+        if hasCompletionGlance { width += 13 }
+        if hasPendingQuestionOrApproval { width += 15 }
+        return width
+    }
 }
 
 // MARK: - Hover interaction state machine
@@ -437,24 +472,41 @@ struct NotchPanelView: View {
             return min(scaledLyricWing, maxAllowedWing)
         }
 
-        // 1. Natural width required for Left Wing in each phase (Agent Mascot + Tool / Thinking / Quota)
+        let hasPendingBadge = appState.hiddenPendingQuestionSessionId != nil
+            || appState.followUps.hintActive
+            || appState.status == .waitingApproval
+            || appState.status == .waitingQuestion
+        let badgeWidth = NotchWidthMetrics.statusBadgesWidth(
+            inQuietHours: signals.inQuietHours,
+            hasCompletionGlance: appState.glanceCompletionActive,
+            hasPendingQuestionOrApproval: hasPendingBadge
+        )
+        let badgeReserve: CGFloat = badgeWidth > 0 ? (badgeWidth + 5) : 0
+
+        // 1. Natural width required for Left Wing in each phase (matches CompactLeftWing priority order)
         let effectiveNaturalLeft: CGFloat = {
+            let isToolActive = showToolStatus && showAgentDetails && appState.currentTool != nil
+            if isToolActive {
+                let minTool: CGFloat = isPixel ? 96 : 88
+                if leftWingWidth > 0 {
+                    return max(minTool, min(leftWingWidth + 14, isPixel ? 136 : 128))
+                }
+                return minTool
+            }
             if isThinking {
-                return isPixel ? 96 : 88
+                let estTextWidth = NotchWidthMetrics.estimatedLabelWidth(L10n.shared["typing_thinking"], isPixel: isPixel)
+                let minThinking = max(isPixel ? 128 : 118, mascotSize + 48 + estTextWidth)
+                if leftWingWidth > 0 {
+                    return max(minThinking, min(leftWingWidth + 14, isPixel ? 168 : 160))
+                }
+                return minThinking
             }
             if hasQuotaChip {
                 return quotaWingWidth
             }
-            let isToolActive = showToolStatus && showAgentDetails && (appState.currentTool != nil || appState.status == .running || appState.status == .processing)
-            if isToolActive {
-                if leftWingWidth > 0 {
-                    return max(compactWingWidth, min(leftWingWidth + 8, isPixel ? 92 : 84))
-                }
-                return isPixel ? 76 : 70
-            }
             // Idle / Standby: strictly hug measured mascot content + breathing room
             if leftWingWidth > 0 {
-                return max(compactWingWidth, min(leftWingWidth + 8, 48))
+                return max(compactWingWidth, min(leftWingWidth + 12, 54))
             }
             return compactWingWidth
         }()
@@ -462,44 +514,38 @@ struct NotchPanelView: View {
         // 2. Natural width required for Right Wing in each phase (Music / Prayer / Actions / Standby)
         let effectiveNaturalRight: CGFloat = {
             if isHoveringRightWing {
-                return 115
+                let hoverBaseline = 136 + badgeReserve
+                if rightWingWidth > 0 {
+                    return max(hoverBaseline, min(rightWingWidth + 14, 196))
+                }
+                return min(hoverBaseline, 196)
             }
             if prayerManager.isPrayerPrioritized {
-                return 80
+                if rightWingWidth > 0 {
+                    return max(92, min(rightWingWidth + 14, 140))
+                }
+                return 96
             }
             if signals.isPlaying || nowPlaying.isPlaying {
-                if isConnectedChinLyricActive {
-                    return 52
-                }
+                let baseMusic: CGFloat = isThinking
+                    ? (isConnectedChinLyricActive ? 148 : (isPixel ? 136 : 132))
+                    : (isConnectedChinLyricActive ? 68 : 62)
+                let musicBaseline = baseMusic + badgeReserve
+                let cap: CGFloat = (isThinking ? 176 : 112) + badgeReserve
                 if rightWingWidth > 0 {
-                    return max(compactWingWidth, min(rightWingWidth + 8, 76))
+                    return max(musicBaseline, min(rightWingWidth + 14, cap))
                 }
-                return 44
+                return min(musicBaseline, cap)
             }
             // Standby / Agent mode:
             let hasBranchOrProject = appState.sessions.values.contains {
                 !($0.gitBranch ?? "").isEmpty || !($0.cwd ?? "").isEmpty
             }
-            var extraBadges: CGFloat = 0
-            if signals.inQuietHours { extraBadges += 10 }
-            if appState.glanceCompletionActive { extraBadges += 12 }
-            if appState.hiddenPendingQuestionSessionId != nil || appState.status == .waitingApproval || appState.status == .waitingQuestion {
-                extraBadges += 12
+            let standbyBaseline = min((hasBranchOrProject ? 84 : 58) + badgeReserve, 176)
+            if rightWingWidth > 0 {
+                return max(compactWingWidth, min(rightWingWidth + 14, 176))
             }
-
-            if hasBranchOrProject {
-                if rightWingWidth > 0 {
-                    return max(compactWingWidth, min(rightWingWidth + 6, isPixel ? 98 : 92))
-                }
-                let targetWidth = 58 + extraBadges
-                return min(targetWidth, isPixel ? 92 : 86)
-            } else {
-                // Clock / Idle mode: strictly compact
-                if rightWingWidth > 0 {
-                    return max(compactWingWidth, min(rightWingWidth + 6, 52))
-                }
-                return compactWingWidth
-            }
+            return standbyBaseline
         }()
 
         // 3. Balanced Dynamic Island natural width for current phase
@@ -532,11 +578,17 @@ struct NotchPanelView: View {
         }()
 
         // 6. Absolute safe ceiling to guarantee it NEVER collides with the macOS menu bar:
-        // Normal collapsed island never exceeds 400pt wide (or 38% screen width), leaving plenty of clearance for menu items.
-        // In wide contiguous lyric island mode, allows up to 480pt.
-        let maxSafeCollapsedBarWidth = min(screenWidth * 0.44, isConnectedChinLyricActive ? 480 : 400)
         let maxSingleWingWidth = max(absoluteMinimumWing, (maxSafeCollapsedBarWidth - effectiveNotchW) / 2)
         return min(scaledWingWidth, maxSingleWingWidth)
+    }
+
+    private var maxSafeCollapsedBarWidth: CGFloat {
+        if isBilateralWingsLyricActive {
+            return min(screenWidth * 0.56, 740)
+        }
+        let ceiling: CGFloat = (hasQuotaChip || isThinking || isHoveringRightWing || isConnectedChinLyricActive) ? 540 : 460
+        // When user widens collapsedWidthScale > 100% (growing effectiveNotchW), preserve wing budget up to half the screen
+        return min(screenWidth * 0.52, max(ceiling, effectiveNotchW + 300))
     }
 
     /// Notch cutout reserved in the center of the expanded header.
@@ -584,9 +636,7 @@ struct NotchPanelView: View {
         if signals.showMiniPeekBanner && !appState.surface.isExpanded {
             return min(max(280, requiredActiveBarWidth), maxPanelWidth)
         }
-        let maxSafeCollapsed = isBilateralWingsLyricActive
-            ? min(screenWidth * 0.56, 740)
-            : min(screenWidth * 0.44, isConnectedChinLyricActive ? 480 : 400)
+        let maxSafeCollapsed = maxSafeCollapsedBarWidth
         return min(requiredActiveBarWidth, maxSafeCollapsed)
     }
 
@@ -720,7 +770,11 @@ struct NotchPanelView: View {
 
     @ViewBuilder
     private var activeCompactBar: some View {
-        let wingOuterPadding: CGFloat = shouldShowExpanded ? 12 : (isBilateralWingsLyricActive ? 12 : (symmetricWingWidth < 48 ? 6 : (symmetricWingWidth < 70 ? 8 : 10)))
+        let wingOuterPadding = NotchWidthMetrics.wingOuterPadding(
+            forWingWidth: symmetricWingWidth,
+            expanded: shouldShowExpanded,
+            bilateral: isBilateralWingsLyricActive
+        )
 
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -1302,6 +1356,7 @@ private struct CompactLeftWing: View {
     var workspaceManager: WorkspaceMonitorManager? = nil
     var wingWidth: CGFloat = 0
     var isBilateralWingsLyricActive: Bool = false
+    @ObservedObject private var l10n = L10n.shared
     private let nowPlaying = NowPlayingManager.shared
     private let signals = IslandSignals.shared
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
@@ -1499,7 +1554,9 @@ private struct CompactLeftWing: View {
                 .fixedSize()
 
                 // Tool name or thinking indicator
-                let availableForTool: CGFloat = wingWidth > 0 ? max(0, wingWidth - mascotSize - 20) : 110
+                let availableForTool: CGFloat = (!expanded && !isBilateralWingsLyricActive && wingWidth > 0)
+                    ? max(0, leftInnerBudget - mascotSize - 12)
+                    : 110
 
                 if let tool = shownTool, showToolStatus && showAgentDetails {
                     if availableForTool >= 14 {
@@ -1537,10 +1594,12 @@ private struct CompactLeftWing: View {
                         .help(tool)
                     }
                 } else if isThinking {
-                    if availableForTool >= 40 {
+                    let thinkingLabel = l10n["typing_thinking"]
+                    let neededForLabel = 22 + NotchWidthMetrics.estimatedLabelWidth(thinkingLabel, isPixel: isPixel)
+                    if availableForTool >= neededForLabel {
                         TypingIndicator(
                             fontSize: 9,
-                            label: L10n.shared["typing_thinking"],
+                            label: thinkingLabel,
                             bright: true,
                             color: effectiveThinkingColor,
                             showDots: true
@@ -1550,7 +1609,7 @@ private struct CompactLeftWing: View {
                             insertion: .opacity.combined(with: .scale(scale: 0.9)),
                             removal: .opacity
                         ))
-                    } else if availableForTool >= 14 {
+                    } else if availableForTool >= 18 {
                         TypingIndicator(
                             fontSize: 9,
                             label: "",
@@ -1586,6 +1645,13 @@ private struct CompactLeftWing: View {
         .background(GeometryReader { geo in
             Color.clear.preference(key: CompactLeftWingWidthKey.self, value: expanded ? 0 : geo.size.width)
         })
+        .frame(
+            maxWidth: (!expanded && !isBilateralWingsLyricActive && wingWidth > 0)
+                ? leftInnerBudget
+                : nil,
+            alignment: .leading
+        )
+        .clipped()
         .onChange(of: liveTool) { _, newTool in
             lingerTimer?.invalidate()
             if let newTool {
@@ -1604,6 +1670,15 @@ private struct CompactLeftWing: View {
             let newTool = liveTool
             withAnimation(.easeInOut(duration: 0.2)) { shownTool = newTool }
         }
+    }
+
+    private var leftInnerBudget: CGFloat {
+        let outerPad = NotchWidthMetrics.wingOuterPadding(
+            forWingWidth: wingWidth,
+            expanded: expanded,
+            bilateral: isBilateralWingsLyricActive
+        )
+        return NotchWidthMetrics.collapsedInnerBudget(wingWidth: wingWidth, outerPadding: outerPad, hasNotch: hasNotch)
     }
 }
 
@@ -1788,6 +1863,31 @@ private struct CompactRightWing: View {
         return count
     }
 
+    private var statusBadgesWidth: CGFloat {
+        let hasPendingBadge = appState.hiddenPendingQuestionSessionId != nil
+            || appState.followUps.hintActive
+            || appState.status == .waitingApproval
+            || appState.status == .waitingQuestion
+        return NotchWidthMetrics.statusBadgesWidth(
+            inQuietHours: inQuietHours,
+            hasCompletionGlance: appState.glanceCompletionActive,
+            hasPendingQuestionOrApproval: hasPendingBadge
+        )
+    }
+
+    private var badgeReserve: CGFloat {
+        statusBadgesWidth > 0 ? (statusBadgesWidth + 5) : 0
+    }
+
+    private var collapsedMaxInnerWidth: CGFloat {
+        let outerPad = NotchWidthMetrics.wingOuterPadding(
+            forWingWidth: wingWidth,
+            expanded: expanded,
+            bilateral: isBilateralWingsLyricActive
+        )
+        return NotchWidthMetrics.collapsedInnerBudget(wingWidth: wingWidth, outerPadding: outerPad, hasNotch: hasNotch)
+    }
+
     private var maxBranchWidth: CGFloat {
         extraBadgeCount > 0 ? 54 : 76
     }
@@ -1808,6 +1908,11 @@ private struct CompactRightWing: View {
         .background(GeometryReader { geo in
             Color.clear.preference(key: CompactRightWingWidthKey.self, value: expanded ? 0 : geo.size.width)
         })
+        .frame(
+            maxWidth: (!expanded && !isBilateralWingsLyricActive && wingWidth > 0) ? collapsedMaxInnerWidth : nil,
+            alignment: .trailing
+        )
+        .clipped()
     }
 
     @ViewBuilder
@@ -1839,12 +1944,17 @@ private struct CompactRightWing: View {
             }
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
         } else if signals.isPlaying || nowPlaying.isPlaying {
+            let musicMaxContentWidth: CGFloat? = (!expanded && !isBilateralWingsLyricActive && wingWidth > 0)
+                ? max(0, collapsedMaxInnerWidth - 14 - badgeReserve)
+                : nil
             CyberMusicWingView(
                 nowPlaying: nowPlaying,
                 isHovered: shouldExpandRightWing,
+                isThinking: isThinking,
                 isEnlarged: isEnlarged,
                 isBilateralWingsLyricActive: isBilateralWingsLyricActive,
-                wingWidth: wingWidth
+                wingWidth: wingWidth,
+                maxContentWidth: musicMaxContentWidth
             )
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
         } else {
@@ -2088,15 +2198,8 @@ private struct CompactRightWing: View {
     @ViewBuilder
     private var standbyPill: some View {
         // "STANDBY DYNAMIC ISLAND PILL" - Interactive & Alive
-        let badgesWidth: CGFloat = {
-            var w: CGFloat = 0
-            if inQuietHours { w += 13 }
-            if appState.glanceCompletionActive { w += 13 }
-            if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion { w += 15 }
-            return w
-        }()
-        let availableForPill = wingWidth > 0 ? max(16, wingWidth - badgesWidth - 14) : 58
-        let showChevron = availableForPill >= 50
+        let availableForPill = wingWidth > 0 ? max(16, collapsedMaxInnerWidth - 14 - badgeReserve) : 58
+        let showChevron = availableForPill >= 52
         let branchText: String = {
             guard let branch = gitBranch, !branch.isEmpty else { return "" }
             if let dashIdx = branch.firstIndex(of: "-") {
@@ -2105,8 +2208,9 @@ private struct CompactRightWing: View {
             }
             return branch
         }()
-        let branchSpace = max(16, availableForPill - (showChevron ? 18 : 10) - 12)
-        let maxCharsForBranch: Int = max(4, Int(branchSpace / (isPixel ? 6.0 : 5.5)))
+        let pillHorizontalPad: CGFloat = availableForPill < 36 ? 8 : 12
+        let branchSpace = max(10, availableForPill - pillHorizontalPad - (showChevron ? 22 : 12))
+        let maxCharsForBranch: Int = max(3, Int(branchSpace / (isPixel ? 6.0 : 5.5)))
 
         HStack(spacing: 3) {
             if !branchText.isEmpty {
@@ -2123,7 +2227,7 @@ private struct CompactRightWing: View {
                             .foregroundStyle(Color.white.opacity(0.92))
                             .lineLimit(1)
                             .truncationMode(.middle)
-                            .frame(maxWidth: max(16, availableForPill - (showChevron ? 18 : 10)))
+                            .frame(maxWidth: branchSpace)
                     }
                 }
             } else if let proj = projectName, !proj.isEmpty {
@@ -2140,7 +2244,7 @@ private struct CompactRightWing: View {
                             .foregroundStyle(Color.white.opacity(0.90))
                             .lineLimit(1)
                             .truncationMode(.middle)
-                            .frame(maxWidth: max(16, availableForPill - (showChevron ? 18 : 10)))
+                            .frame(maxWidth: branchSpace)
                     }
                 }
             } else {
