@@ -3,32 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CodeIsland · Dynamic Island Architecture Prototypes (Round 1)</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>CodeIsland Issue #36 — Round 2: Icon Count &amp; Placement Study</title>
   <style>
     :root {
-      --bg-canvas: #0b0d12;
-      --bg-surface: #12151d;
-      --bg-elevated: #171b26;
-      --border-subtle: rgba(255, 255, 255, 0.10);
-      --border-strong: rgba(255, 255, 255, 0.20);
-      --text-primary: #f4f6fb;
-      --text-secondary: #b4bfd4;
-      --text-muted: #95a2bd;
-      --accent-cyan: #00e5c7;
-      --accent-claude: #e07a55;
-      --accent-emerald: #30d158;
-      --accent-amber: #f5b942;
-      --accent-rose: #ff3b6b;
-      --accent-indigo: #7c93ff;
-      --motion-spring: cubic-bezier(0.22, 1, 0.36, 1);
-      --font-native: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Work Sans", sans-serif;
-      --font-manrope: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-condensed: "Barlow Semi Condensed", "Work Sans", sans-serif;
-      --font-work: "Work Sans", -apple-system, sans-serif;
-      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+      --bg-canvas: #07090d;
+      --bg-surface: #0e1219;
+      --bg-surface-2: #141923;
+      --bg-stage: radial-gradient(ellipse at 50% 0%, #152236 0%, #0b1018 58%, #07090d 100%);
+      --border-subtle: rgba(255, 255, 255, 0.11);
+      --border-strong: rgba(255, 255, 255, 0.22);
+      --text-primary: #f1f5f9;
+      --text-secondary: #a8b4c4;
+      --text-muted: #8b96a7;
+
+      /* Signature CodeIsland Native Tokens */
+      --island-bg: #000000;
+      --island-rim: rgba(255, 255, 255, 0.22);
+      --island-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.45);
+      --ci-orange: #e07a55;
+      --ci-cyan: #2dd4bf;
+      --ci-emerald: #30d158;
+      --ci-amber: #f59e0b;
+      --ci-cobalt: #2563eb;
+      --ci-red-warn: #f87171;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "IBM Plex Sans", system-ui, sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
     }
 
     * {
@@ -37,112 +37,96 @@
       padding: 0;
     }
 
-    ::selection {
-      background: rgba(0, 229, 199, 0.28);
-      color: #ffffff;
-    }
-
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.16);
-      border-radius: 999px;
-    }
-
     body {
       background: var(--bg-canvas);
       color: var(--text-primary);
-      font-family: var(--font-work);
-      min-height: 100vh;
-      padding: 18px 24px 118px;
-      -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
-    }
-
-    button:focus-visible,
-    [tabindex]:focus-visible {
-      outline: 2px solid var(--accent-cyan);
-      outline-offset: 2px;
-    }
-
-    /* Prototype Header Banner (Clearly marked throwaway exploration UI) */
-    .proto-header {
-      max-width: 1360px;
-      margin: 0 auto 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .proto-title-group {
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .proto-badge {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      padding: 3px 8px;
-      border-radius: 5px;
-      background: rgba(245, 185, 66, 0.14);
-      color: #ffd37a;
-      border: 1px solid rgba(245, 185, 66, 0.3);
-    }
-
-    .proto-title {
-      font-size: 18px;
-      font-weight: 650;
-      letter-spacing: -0.02em;
-      color: var(--text-primary);
-    }
-
-    .proto-sub {
+      font-family: var(--font-sans);
       font-size: 13px;
-      color: var(--text-secondary);
+      line-height: 1.45;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
 
-    .toolbar-controls {
+    .app-shell {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 18px 24px 32px;
       display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
+      flex-direction: column;
+      gap: 14px;
     }
 
-    .seg-group {
-      display: inline-flex;
+    /* Top Control Toolbar */
+    .toolbar {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      width: 32px;
+      height: 32px;
       border-radius: 9px;
+      background: #000000;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .segmented {
+      background: #080a0f;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
       padding: 3px;
+      display: inline-flex;
       gap: 2px;
     }
 
     .seg-btn {
-      appearance: none;
-      border: none;
       background: transparent;
+      border: none;
       color: var(--text-secondary);
-      font-family: var(--font-work);
+      font-family: var(--font-sans);
       font-size: 12px;
       font-weight: 500;
-      padding: 6px 11px;
-      border-radius: 6px;
+      padding: 6px 10px;
+      border-radius: 7px;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: background 180ms var(--motion-spring), color 180ms var(--motion-spring);
+      transition: background 140ms ease, color 140ms ease;
       white-space: nowrap;
     }
 
@@ -152,1854 +136,1606 @@
     }
 
     .seg-btn.active {
-      background: #232837;
+      background: #1f2735;
       color: #ffffff;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
     }
 
-    .state-strip {
-      max-width: 1360px;
-      margin: 0 auto 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .state-btn-num {
+    .guide-toggle {
+      background: #080a0f;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
       font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-muted);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .seg-btn.active .state-btn-num {
-      color: var(--accent-cyan);
-    }
-
-    /* Main Workspace Layout */
-    .stage-wrapper {
-      max-width: 1360px;
-      margin: 0 auto;
-    }
-
-    .focus-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 390px;
-      gap: 16px;
-      align-items: start;
-    }
-
-    .focus-grid.notes-hidden {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    /* Realistic Desktop Monitor Frame */
-    .monitor-frame {
-      position: relative;
-      width: 100%;
-      min-height: 556px;
-      border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background:
-        radial-gradient(ellipse 85% 60% at 22% 18%, rgba(42, 77, 138, 0.42), transparent 62%),
-        radial-gradient(ellipse 70% 55% at 84% 25%, rgba(16, 118, 120, 0.30), transparent 60%),
-        radial-gradient(ellipse 90% 70% at 50% 95%, rgba(28, 35, 62, 0.85), #090c14 78%),
-        linear-gradient(155deg, #0d1524 0%, #101829 45%, #090d16 100%);
-      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
-    }
-
-    /* Simulated macOS / Desktop Top Menu Bar */
-    .desktop-menubar {
-      position: relative;
-      min-height: 34px;
-      padding: 8px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-family: var(--font-native);
       font-size: 12px;
       font-weight: 500;
-      color: rgba(255, 255, 255, 0.88);
-      background: rgba(12, 16, 26, 0.58);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
+      padding: 7px 11px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .guide-toggle.active {
+      background: rgba(45, 212, 191, 0.14);
+      border-color: rgba(45, 212, 191, 0.45);
+      color: #6ee7d8;
+    }
+
+    /* State Switcher Bar */
+    .state-bar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 8px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .state-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .state-btn {
+      background: #080a0f;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 11px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .state-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+    }
+
+    .state-btn.active {
+      background: #000000;
+      color: #ffffff;
+      border-color: var(--ci-cyan);
+      box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.25);
+    }
+
+    .state-num {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--ci-cyan);
+    }
+
+    .feedback-chip {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Before (Current PR #42) Diagnostic Strip */
+    .baseline-card {
+      background: linear-gradient(180deg, rgba(248, 113, 113, 0.06) 0%, rgba(14, 18, 25, 0.95) 100%);
+      border: 1px solid rgba(248, 113, 113, 0.28);
+      border-radius: 12px;
+      padding: 10px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .baseline-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 240px;
+      max-width: 420px;
+    }
+
+    .baseline-tag {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: #fca5a5;
+      letter-spacing: 0.02em;
+    }
+
+    .baseline-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .baseline-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+    }
+
+    .diagnosis-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .diag-tag {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #fca5a5;
+      background: rgba(248, 113, 113, 0.12);
+      padding: 4px 9px;
+      border-radius: 6px;
+    }
+
+    /* Comparison Grid */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    @media (max-width: 960px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .variant-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .variant-card.is-focus-pick {
+      border-color: rgba(45, 212, 191, 0.45);
+    }
+
+    .card-header {
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .card-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .card-kicker {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ci-cyan);
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .card-summary {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .icon-count-badge {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: #d6e2f0;
+      background: #17202e;
+      padding: 5px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Realistic Wallpaper Stage Inside Card */
+    .stage-box {
+      background: var(--bg-stage);
+      padding: 0 18px 20px;
+      min-height: 148px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      flex: 1;
+    }
+
+    .stage-box.is-expanded-stage {
+      min-height: 224px;
+      padding-bottom: 22px;
+    }
+
+    .focus-shell .stage-box {
+      min-height: 205px;
+      padding: 0 28px 26px;
+    }
+
+    .focus-shell .stage-box.is-expanded-stage {
+      min-height: 280px;
+    }
+
+    /* Fake Subtle macOS Menu Bar Strip for Real Spatial Judgement */
+    .menubar-strip {
+      width: calc(100% + 36px);
+      margin: 0 -18px 18px;
+      height: 26px;
+      padding: 0 16px;
+      background: rgba(0, 0, 0, 0.28);
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.78);
+      position: relative;
       user-select: none;
+    }
+
+    .focus-shell .menubar-strip {
+      width: calc(100% + 56px);
+      margin: 0 -28px 22px;
     }
 
     .menubar-left,
     .menubar-right {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 10px;
     }
 
-    .menubar-app {
-      font-weight: 700;
-      color: #ffffff;
-    }
-
-    .menubar-item {
-      color: rgba(255, 255, 255, 0.76);
-      font-size: 11.5px;
-    }
-
-    .menubar-clock {
-      font-variant-numeric: tabular-nums;
-      color: rgba(255, 255, 255, 0.88);
-    }
-
-    /* Optional Physical MacBook Hardware Notch (when Notch Screen mode selected) */
-    .hardware-notch {
+    /* Physical MacBook Notch Cutout (when MacBook Notched mode active) */
+    .mac-notch-bezel {
       position: absolute;
       top: 0;
       left: 50%;
       transform: translateX(-50%);
-      width: 184px;
-      height: 31px;
+      width: 142px;
+      height: 24px;
       background: #000000;
-      border-bottom-left-radius: 11px;
-      border-bottom-right-radius: 11px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-top: none;
-      display: none;
+      border-bottom-left-radius: 10px;
+      border-bottom-right-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+      display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 5;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
     }
 
-    .hardware-notch.visible {
-      display: flex;
-    }
-
-    .hardware-camera-lens {
-      width: 9px;
-      height: 9px;
+    .notch-camera {
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, #233b5c 0%, #09111d 60%, #000 100%);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: radial-gradient(circle at 35% 35%, #2b354b 0%, #090c12 70%);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
     }
 
-    /* Simulated IDE Window Underneath to verify non-obstruction */
-    .desktop-ide-bg {
-      margin: 48px 36px 26px;
-      height: 448px;
-      border-radius: 12px;
-      background: rgba(15, 19, 28, 0.72);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(10px);
-      overflow: hidden;
+    .island-drop-anchor {
       display: flex;
       flex-direction: column;
-      opacity: 0.76;
-    }
-
-    .ide-titlebar {
-      min-height: 38px;
-      padding: 9px 14px;
-      display: flex;
       align-items: center;
+      justify-content: center;
       gap: 10px;
-      background: rgba(255, 255, 255, 0.03);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-muted);
+      width: 100%;
     }
 
-    .traffic-dots {
-      display: flex;
-      gap: 6px;
-    }
-
-    .traffic-dots span {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      display: block;
-      background: rgba(255, 255, 255, 0.14);
-    }
-
-    .ide-code {
-      padding: 18px 22px;
+    .notch-drop-hint {
       font-family: var(--font-mono);
       font-size: 12px;
-      line-height: 1.72;
-      color: rgba(196, 206, 224, 0.52);
-      white-space: pre;
-      overflow: hidden;
-    }
-
-    /* Island Anchor Overlay at Top Center of Monitor */
-    .island-anchor {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      z-index: 20;
-      pointer-events: none;
-      transition: top 220ms var(--motion-spring);
-    }
-
-    .monitor-frame.screen-notched .island-anchor.mode-below-notch {
-      top: 38px;
-    }
-
-    .monitor-frame.screen-notched .island-anchor.mode-straddle-notch {
-      top: 6px;
-    }
-
-    .island-interactive {
-      pointer-events: auto;
-    }
-
-    /* Spec Card beside Desktop Preview */
-    .spec-panel {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 12px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .spec-world-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      align-self: flex-start;
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--accent-cyan);
-      background: rgba(0, 229, 199, 0.10);
-      border: 1px solid rgba(0, 229, 199, 0.24);
-    }
-
-    .spec-heading {
-      font-size: 15.5px;
-      font-weight: 650;
-      letter-spacing: -0.02em;
-      color: #ffffff;
-    }
-
-    .spec-thesis {
-      font-size: 12px;
-      line-height: 1.38;
-      color: var(--text-secondary);
-    }
-
-    .spec-block {
-      border-top: 1px solid var(--border-subtle);
-      padding-top: 7px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-
-    .spec-label {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
       color: var(--text-muted);
-    }
-
-    .spec-copy {
-      font-size: 11.5px;
-      line-height: 1.36;
-      color: #dce2ef;
-    }
-
-    .palette-row {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .swatch-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 9px 4px 6px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-secondary);
-    }
-
-    .swatch-dot {
-      width: 11px;
-      height: 11px;
-      border-radius: 50%;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-    }
-
-    /* Compare All 4 View */
-    .compare-grid {
-      display: none;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .compare-grid.visible {
-      display: flex;
-    }
-
-    .focus-grid.hidden {
-      display: none;
-    }
-
-    .compare-row {
-      background: linear-gradient(155deg, #0d1524 0%, #101829 45%, #090d16 100%);
-      border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 14px 20px 20px;
-      display: grid;
-      grid-template-columns: 270px minmax(0, 1fr);
-      gap: 18px;
-      align-items: center;
-      cursor: pointer;
-      transition: border-color 180ms var(--motion-spring), background 180ms var(--motion-spring);
-    }
-
-    .compare-row:hover {
-      border-color: rgba(255, 255, 255, 0.26);
-    }
-
-    .compare-row.selected {
-      border-color: rgba(0, 229, 199, 0.45);
-      box-shadow: 0 0 0 1px rgba(0, 229, 199, 0.16);
-    }
-
-    .compare-meta-title {
-      font-size: 14px;
-      font-weight: 650;
-      color: #ffffff;
+      margin-top: -10px;
       margin-bottom: 4px;
     }
 
-    .compare-meta-sub {
+    /* Card Footer Metrics */
+    .card-footer {
+      padding: 9px 16px;
+      border-top: 1px solid var(--border-subtle);
+      background: #0b0e14;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-family: var(--font-mono);
       font-size: 12px;
-      line-height: 1.4;
       color: var(--text-secondary);
     }
 
-    .compare-stage {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 76px;
+    .footer-action {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 4px 9px;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+
+    .footer-action:hover {
+      border-color: var(--ci-cyan);
+      color: var(--ci-cyan);
+    }
+
+    /* =========================================================================
+       NATIVE CODEISLAND PITCH-BLACK PILL PRIMITIVES
+       Faithful to #000000 + subtle hairline stroke + Pixel Mascot + Cyan/Artwork
+       Zero heavy borders inside pill; clean concentric geometry (38px H, 19px R)
+       ========================================================================= */
+
+    .ci-pill {
       position: relative;
-    }
-
-    /* Floating Bottom Prototype Switcher (Required by /prototype UI.md) */
-    .floating-switcher {
-      position: fixed;
-      left: 50%;
-      bottom: 18px;
-      transform: translateX(-50%);
-      z-index: 100;
-      display: flex;
+      height: 38px;
+      min-height: 38px;
+      background: var(--island-bg);
+      border-radius: 19px;
+      box-shadow: inset 0 0 0 1px var(--island-rim), var(--island-shadow);
+      display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 8px;
-      border-radius: 999px;
-      background: rgba(15, 18, 26, 0.88);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+      color: #ffffff;
+      white-space: nowrap;
+      transition: all 180ms ease;
     }
 
-    .nav-arrow {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      border: 1px solid rgba(255, 255, 255, 0.10);
-      background: rgba(255, 255, 255, 0.05);
-      color: #ffffff;
+    /* Spacing Guide Overlay when Guides Active */
+    .show-guides .ci-pill {
+      outline: 1px dashed rgba(45, 212, 191, 0.55);
+      outline-offset: 4px;
+    }
+
+    .guide-ruler {
+      display: none;
+      margin-top: 10px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #6ee7d8;
+      background: rgba(10, 15, 22, 0.85);
+      padding: 4px 10px;
+      border-radius: 6px;
+      box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.35);
+    }
+
+    .show-guides .guide-ruler {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .show-guides .ci-icon-slot {
+      box-shadow: 0 0 0 1px dashed rgba(245, 158, 11, 0.85);
+      border-radius: 6px;
+    }
+
+    /* BEFORE Pill (Exact Repro of fzr-reference-6897177211.png problems) */
+    .ci-before-idle-music {
+      padding: 8px 10px;
+      width: 266px;
+      justify-content: space-between;
+    }
+
+    .ci-before-right-cramp {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ci-before-thinking {
+      padding: 8px 6px 8px 12px;
+      gap: 10px;
+    }
+
+    .ci-before-branch-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 14px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #e2e8f0;
+      margin-left: 6px;
+    }
+
+    .ci-before-lyric {
+      padding: 8px 14px;
+      gap: 10px;
+      background: rgba(16, 18, 22, 0.94);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 8px 24px rgba(0, 0, 0, 0.55);
+      font-size: 12px;
+      color: #d8dee9;
+    }
+
+    /* Shared Icon Containers */
+    .ci-icon-slot {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      transition: background 150ms ease, transform 150ms ease;
+      flex-shrink: 0;
     }
 
-    .nav-arrow:hover {
-      background: rgba(255, 255, 255, 0.14);
+    .ci-album-22 {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 52%, #0ea5e9 100%);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     }
 
-    .variant-pill {
-      appearance: none;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      font-family: var(--font-work);
+    .ci-album-22.round {
+      border-radius: 50%;
+    }
+
+    .ci-hero-circle-24 {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .ci-hero-orange {
+      background: rgba(224, 122, 85, 0.16);
+      box-shadow: inset 0 0 0 1px rgba(224, 122, 85, 0.35);
+    }
+
+    .ci-hero-cobalt {
+      background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #0284c7 100%);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    }
+
+    /* Status Typography */
+    .ci-status-cyan {
       font-size: 12px;
-      font-weight: 550;
-      padding: 6px 12px;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: all 180ms var(--motion-spring);
-      white-space: nowrap;
+      font-weight: 500;
+      color: var(--ci-cyan);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
     }
 
-    .variant-pill:hover {
-      color: #ffffff;
+    .ci-label-muted {
+      font-size: 12px;
+      font-weight: 500;
+      color: #c8d2e0;
     }
 
-    .variant-pill.active {
-      background: #ffffff;
-      color: #0b0d12;
-      font-weight: 650;
-    }
-
-    .switcher-divider {
-      width: 1px;
-      height: 18px;
-      background: rgba(255, 255, 255, 0.12);
-      margin: 0 4px;
-    }
-
-    .key-hint {
+    .ci-branch-inline {
       font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-muted);
-      padding: 0 8px 0 4px;
-      white-space: nowrap;
+      font-size: 12px;
+      color: #a8b5c6;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
 
-    /* ============================================================
-       SHARED MICRO-WIDGET STYLES INSIDE DYNAMIC ISLAND PROTOTYPES
-       ============================================================ */
-
-    .tabular {
-      font-variant-numeric: tabular-nums;
+    .ci-hairline-v {
+      width: 1px;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.16);
+      flex-shrink: 0;
     }
 
-    .spectrum-bars {
+    /* Thinking Pulse Dots */
+    .dots-pulse {
+      display: inline-flex;
+      align-items: center;
+      gap: 2.5px;
+    }
+
+    .dots-pulse span {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--ci-cyan);
+    }
+
+    .dots-pulse span:nth-child(2) { opacity: 0.72; }
+    .dots-pulse span:nth-child(3) { opacity: 0.45; }
+
+    /* Audio Spectrum Bars (Crisp) */
+    .eq-bars {
       display: inline-flex;
       align-items: flex-end;
       gap: 2px;
-      height: 13px;
+      height: 11px;
+      flex-shrink: 0;
     }
 
-    .spectrum-bars span {
-      width: 2.2px;
+    .eq-bars span {
+      width: 2.5px;
       border-radius: 1.5px;
-      animation: eqPulse 0.9s ease-in-out infinite alternate;
+      background: var(--ci-amber);
     }
 
-    .spectrum-bars span:nth-child(1) { height: 6px; animation-delay: 0.0s; }
-    .spectrum-bars span:nth-child(2) { height: 12px; animation-delay: 0.18s; }
-    .spectrum-bars span:nth-child(3) { height: 8px; animation-delay: 0.34s; }
-    .spectrum-bars span:nth-child(4) { height: 11px; animation-delay: 0.11s; }
+    .eq-bars.cyan span { background: var(--ci-cyan); }
+    .eq-bars.green span { background: var(--ci-emerald); }
+    .eq-bars span:nth-child(1) { height: 6px; }
+    .eq-bars span:nth-child(2) { height: 11px; }
+    .eq-bars span:nth-child(3) { height: 8px; }
 
-    @keyframes eqPulse {
-      0% { transform: scaleY(0.45); opacity: 0.72; }
-      100% { transform: scaleY(1); opacity: 1; }
-    }
+    /* =========================================================================
+       VARIANT LAYOUT SPECS
+       ========================================================================= */
 
-    @keyframes dotPulse {
-      0%, 100% { opacity: 0.45; transform: scale(0.9); }
-      50% { opacity: 1; transform: scale(1.1); }
-    }
+    /* R2-1: Single Anchor (1 Icon Only) */
+    .r2-single-resting { padding: 8px 14px; gap: 0; }
+    .r2-single-compact { padding: 8px 15px 8px 13px; gap: 9px; }
 
-    @keyframes progressSweep {
-      0% { background-position: 0% 50%; }
-      100% { background-position: 100% 50%; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .spectrum-bars span,
-      .anim-pulse {
-        animation: none !important;
-      }
-      * {
-        transition-duration: 0.01ms !important;
-      }
-    }
-
-    /* ============================================================
-       VARIANT A: ADAPTIVE ASYMMETRIC STAGE
-       Inspired by: pop-culture-shelf-vertical-video-feed-surface + variable-font-specimen
-       Structure: Single living asymmetrical capsule with optical bleed & hairline floor scrubber
-       ============================================================ */
-    .var-a-shell {
-      font-family: var(--font-native);
-      background: rgba(10, 11, 15, 0.96);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-      color: #f6f7fb;
-      border-radius: 20px;
-      position: relative;
-      overflow: hidden;
-      transition: all 220ms var(--motion-spring);
-    }
-
-    .var-a-shell.scrim-music::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 82% 50%, rgba(217, 119, 87, 0.24), transparent 58%);
-      pointer-events: none;
-    }
-
-    .var-a-shell.scrim-magsafe::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, rgba(48, 209, 88, 0.22) 0%, rgba(48, 209, 88, 0.05) 94%, transparent 94%);
-      pointer-events: none;
-    }
-
-    .var-a-shell.scrim-prayer::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, rgba(124, 147, 255, 0.22), rgba(0, 229, 199, 0.08));
-      pointer-events: none;
-    }
-
-    .var-a-bar {
-      height: 36px;
-      padding: 0 12px;
-      display: flex;
+    /* R2-2: Balanced Twin (2 Symmetrical Icons, Zero Dead Gap) */
+    .r2-twin { padding: 8px 13px; gap: 11px; }
+    .r2-twin-pair {
+      display: inline-flex;
       align-items: center;
+      gap: 8px;
+    }
+
+    /* R2-3: Asymmetric Lead + Micro (24px Concentric Hero Left + Micro Right) */
+    .r2-asym {
+      padding: 7px 14px 7px 7px;
       gap: 10px;
-      position: relative;
-      z-index: 1;
+    }
+    .r2-asym-center {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding-right: 4px;
     }
 
-    .var-a-resting {
-      width: 146px;
-      justify-content: space-between;
+    /* R2-4: Split Black Mini-Pills (Detached 1 + 1 across Desktop Gap) */
+    .r2-split-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
     }
 
-    .var-a-idle-music {
-      width: 312px;
-      justify-content: space-between;
-    }
-
-    .var-a-thinking {
-      width: 374px;
-      justify-content: space-between;
-    }
-
-    .var-a-lyrics-pill {
-      width: 446px;
-      border-radius: 22px;
-    }
-
-    .var-a-lyric-stage {
-      padding: 2px 14px 10px;
-      position: relative;
-      z-index: 1;
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.07);
-    }
-
-    .var-a-lyric-main {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: -0.015em;
+    .ci-pill-sat {
+      height: 38px;
+      min-height: 38px;
+      min-width: 38px;
+      background: var(--island-bg);
+      border-radius: 19px;
+      box-shadow: inset 0 0 0 1px var(--island-rim), var(--island-shadow);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 11px;
+      gap: 7px;
       color: #ffffff;
     }
 
-    .var-a-lyric-next {
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.68);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 155px;
+    .ci-pill-sat.square-icon-only {
+      width: 38px;
+      padding: 8px;
     }
 
-    .var-a-scrubber {
-      position: absolute;
-      left: 14px;
-      right: 14px;
-      bottom: 0;
-      height: 2px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .var-a-scrubber > i {
-      display: block;
-      width: 58%;
-      height: 100%;
-      background: linear-gradient(90deg, #e07a55, #ffd089);
-    }
-
-    .var-a-toast {
-      width: 318px;
-      height: 40px;
-      padding: 0 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .var-a-expanded {
-      width: 592px;
-      border-radius: 24px;
-    }
-
-    /* ============================================================
-       VARIANT B: BILATERAL CONSTELLATION (DUAL-PILL SPLIT SYSTEM)
-       Inspired by: rw-lexicon-shoulder-and-plate + variable-font-specimen
-       Structure: Primary Agent Capsule (left) + Media/Lyric Satellite Capsule (right),
-                  quarantining artwork chroma to the plate capsule & fusing on Expand
-       ============================================================ */
-    .var-b-cluster {
-      font-family: var(--font-manrope);
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      transition: gap 200ms var(--motion-spring);
-    }
-
-    .monitor-frame.screen-notched .island-anchor.mode-straddle-notch .var-b-cluster {
-      gap: 204px;
-    }
-
-    .var-b-pill {
-      background: #101218;
-      border: 1px solid rgba(255, 255, 255, 0.13);
-      border-radius: 999px;
-      height: 34px;
-      padding: 0 11px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #f2f4f8;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
-      transition: all 220ms var(--motion-spring);
-    }
-
-    .var-b-media-pill {
-      background: linear-gradient(135deg, #1b1719 0%, #101218 100%);
-      border-color: rgba(224, 122, 85, 0.34);
-    }
-
-    .var-b-lyric-satellite {
-      background: #111319;
-      border: 1px solid rgba(224, 122, 85, 0.36);
-      border-radius: 18px;
-      padding: 6px 12px;
-      height: 36px;
-      display: flex;
-      align-items: center;
+    /* Native Lyrics Bar per Variant (Integrated Pitch-Black Style) */
+    .ci-lyric-pill {
+      padding: 8px 15px;
       gap: 10px;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.48);
+      max-width: 100%;
     }
 
-    .var-b-expanded {
-      font-family: var(--font-manrope);
-      width: 610px;
-      background: #0f1117;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 22px;
-      box-shadow: 0 20px 54px rgba(0, 0, 0, 0.65);
-      display: grid;
-      grid-template-columns: 146px minmax(0, 1fr);
-      overflow: hidden;
+    .ci-lyric-pill.is-asym {
+      padding: 7px 14px 7px 7px;
     }
 
-    .var-b-rail {
-      background: rgba(255, 255, 255, 0.025);
-      border-right: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 12px 10px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .rail-tab {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      padding: 7px 9px;
-      border-radius: 8px;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      font-family: var(--font-manrope);
+    .lyric-text {
       font-size: 12px;
       font-weight: 500;
-      cursor: pointer;
-      text-align: left;
-      transition: background 150ms ease, color 150ms ease;
+      color: #f1f5f9;
+      letter-spacing: -0.005em;
     }
 
-    .rail-tab:hover {
-      background: rgba(255, 255, 255, 0.05);
-      color: #ffffff;
+    .lyric-sub {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #93a1b5;
     }
 
-    .rail-tab.active {
-      background: rgba(255, 255, 255, 0.11);
-      color: #ffffff;
-      font-weight: 600;
-    }
-
-    /* ============================================================
-       VARIANT C: SAVILLE CATALOG MATRIX (INDUSTRIAL CODED STRIP)
-       Inspired by: brand-identity-canon-saville-catalog-sleeve + japanese-high-density-web
-       Structure: Matte architectural flat-radius bar with 4-block semantic code strip,
-                  engraved micro-caps & Japanese dense hairline mosaic when expanded
-       ============================================================ */
-    .var-c-shell {
-      font-family: var(--font-condensed);
-      background: #07080a;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      border-radius: 8px;
-      color: #f4f4f5;
-      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65);
+    .lyric-progress-track {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 2px;
+      height: 2px;
+      border-radius: 1px;
+      background: rgba(255, 255, 255, 0.12);
       overflow: hidden;
-      transition: all 200ms var(--motion-spring);
     }
 
-    .var-c-blocks {
-      display: inline-flex;
-      gap: 2px;
-      align-items: center;
-    }
-
-    .var-c-blocks i {
-      display: block;
-      width: 8px;
-      height: 12px;
+    .lyric-progress-fill {
+      width: 58%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--ci-cyan), #60a5fa);
       border-radius: 1px;
     }
 
-    .var-c-strip {
-      height: 32px;
-      display: flex;
-      align-items: stretch;
+    /* @agungdunggio's Praised Flush MagSafe Toast */
+    .ci-toast-magsafe {
+      background: linear-gradient(90deg, #000000 0%, #05160c 52%, #0a2515 100%);
+      box-shadow: inset 0 0 0 1px rgba(48, 209, 88, 0.36), 0 10px 30px rgba(0, 0, 0, 0.65);
+      min-width: 244px;
+      justify-content: space-between;
+      padding: 7px 15px 7px 8px;
+      gap: 14px;
     }
 
-    .var-c-cell {
-      padding: 0 10px;
-      display: flex;
+    .magsafe-left {
+      display: inline-flex;
       align-items: center;
-      gap: 7px;
-      border-right: 1px solid rgba(255, 255, 255, 0.12);
+      gap: 9px;
     }
 
-    .var-c-cell:last-child {
-      border-right: none;
+    .magsafe-bolt-ring {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(48, 209, 88, 0.2);
+      box-shadow: inset 0 0 0 1px rgba(48, 209, 88, 0.45);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     }
 
-    .var-c-tag {
+    .magsafe-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+
+    .magsafe-pct {
       font-family: var(--font-mono);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
-      letter-spacing: 0.04em;
-      padding: 3px 7px;
-      border-radius: 2px;
-      background: #e60023;
-      color: #ffffff;
+      color: #4ade80;
     }
 
-    .var-c-lyric-drawer {
-      border-top: 1px solid rgba(255, 255, 255, 0.14);
-      padding: 8px 12px;
+    /* Expanded HUD (Unified Pitch-Black Card — Zero Dead Center Gap) */
+    .ci-expanded-hud {
+      width: 100%;
+      max-width: 392px;
+      background: #000000;
+      border-radius: 22px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 18px 44px rgba(0, 0, 0, 0.78);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .exp-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
-      background: #0b0c10;
+      gap: 10px;
     }
 
-    .var-c-expanded {
-      width: 632px;
-    }
-
-    .var-c-dense-grid {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      border-top: 1px solid rgba(255, 255, 255, 0.14);
-    }
-
-    .var-c-panel-cell {
-      padding: 10px 12px;
-      border-right: 1px solid rgba(255, 255, 255, 0.10);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.10);
-    }
-
-    /* ============================================================
-       VARIANT D: TACTILE FIELD CONSOLE (RECESSED OLED & DECK STRIP)
-       Inspired by: vernacular-ephemera-cassette-j-card + japanese-high-density-web
-       Structure: Anodized charcoal hardware bezel enclosing recessed OLED lyric/status bay
-                  & right-aligned Side-A / Side-B timing discipline
-       ============================================================ */
-    .var-d-shell {
-      font-family: var(--font-work);
-      background: linear-gradient(180deg, #1b1e25 0%, #13151b 100%);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 13px;
-      padding: 4px;
-      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-      color: #f3f4f6;
-      transition: all 200ms var(--motion-spring);
-    }
-
-    .var-d-oled {
-      background: #07090d;
-      border: 1px solid rgba(0, 0, 0, 0.85);
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.06);
-      border-radius: 8px;
-      padding: 6px 10px;
+    .exp-agent-group {
       display: flex;
       align-items: center;
       gap: 9px;
     }
 
-    .var-d-keycap {
-      appearance: none;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: linear-gradient(180deg, #272b36 0%, #1d2029 100%);
-      color: #e5e8f0;
-      border-radius: 6px;
-      height: 26px;
-      padding: 0 9px;
+    .exp-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+
+    .exp-sub {
       font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      display: inline-flex;
+      font-size: 12px;
+      color: var(--ci-cyan);
+    }
+
+    .exp-header-right {
+      display: flex;
       align-items: center;
-      gap: 5px;
-      cursor: pointer;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+      gap: 8px;
     }
 
-    .var-d-keycap:hover {
-      background: linear-gradient(180deg, #323846 0%, #242834 100%);
-      color: #ffffff;
-    }
-
-    .var-d-keycap.active-side {
-      border-color: rgba(245, 185, 66, 0.55);
-      color: #ffd37a;
-      background: rgba(245, 185, 66, 0.12);
-    }
-
-    /* Common Expanded Widget Bits */
-    .exp-top-pill-tabs {
-      display: inline-flex;
-      background: rgba(255, 255, 255, 0.05);
+    .exp-pill-tag {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #cbd5e1;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 4px 9px;
       border-radius: 8px;
-      padding: 2px;
-      gap: 2px;
     }
 
-    .exp-tab-btn {
-      appearance: none;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      font-size: 11.5px;
-      font-weight: 500;
-      padding: 4px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 140ms ease;
-    }
-
-    .exp-tab-btn:hover { color: #ffffff; }
-    .exp-tab-btn.active {
-      background: rgba(255, 255, 255, 0.14);
-      color: #ffffff;
-      font-weight: 600;
-    }
-
-    .session-row {
+    .exp-body-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      padding: 8px 10px;
-      border-radius: 9px;
-      background: rgba(255, 255, 255, 0.035);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 13px;
+      padding: 9px 11px;
     }
 
-    .session-row.thinking-row {
-      border-color: rgba(224, 122, 85, 0.28);
-      background: rgba(224, 122, 85, 0.06);
+    .exp-media-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
     }
 
-    .chip-mini {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      padding: 3px 7px;
-      border-radius: 4px;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
-
-    .art-thumb {
-      width: 22px;
-      height: 22px;
-      border-radius: 5px;
-      background: linear-gradient(135deg, #c95f44 0%, #682839 58%, #201a2e 100%);
-      display: inline-flex;
+    .exp-album-32 {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 52%, #0ea5e9 100%);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+      display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      border: 1px solid rgba(255, 255, 255, 0.18);
     }
 
-    .art-thumb-lg {
-      width: 44px;
-      height: 44px;
-      border-radius: 9px;
-      background: linear-gradient(135deg, #d96b43 0%, #70263b 55%, #191d30 100%);
-      display: inline-flex;
+    .exp-track-info {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+
+    .exp-track-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #f1f5f9;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .exp-track-lyric {
+      font-size: 12px;
+      color: #9bb0c9;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .exp-controls {
+      display: flex;
       align-items: center;
-      justify-content: center;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      gap: 6px;
       flex-shrink: 0;
     }
 
-    .pill-sep-dot {
-      width: 3px;
-      height: 3px;
+    .exp-ctrl-btn {
+      width: 26px;
+      height: 26px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.28);
-      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    @media (max-width: 1040px) {
-      .focus-grid {
-        grid-template-columns: 1fr;
-      }
-      .compare-row {
-        grid-template-columns: 1fr;
-      }
+    .exp-ctrl-btn.primary {
+      background: #ffffff;
+      color: #000000;
+    }
+
+    /* Split Mode Note on Expanded/Toast */
+    .split-pair-expanded {
+      width: 100%;
+      max-width: 404px;
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .split-panel-left {
+      flex: 1.1;
+      background: #000000;
+      border-radius: 20px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 16px 38px rgba(0, 0, 0, 0.72);
+      padding: 12px 13px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .split-panel-right {
+      flex: 1;
+      background: #000000;
+      border-radius: 20px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 16px 38px rgba(0, 0, 0, 0.72);
+      padding: 12px 13px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    /* Focus Mode Wrapper */
+    .focus-shell {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .focus-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .hidden {
+      display: none !important;
     }
   </style>
 </head>
 <body>
-
-  <header class="proto-header">
-    <div class="proto-title-group">
-      <span class="proto-badge">PROTOTYPE · ROUND 1</span>
-      <h1 class="proto-title">CodeIsland Dynamic Island Alternatives</h1>
-      <span class="proto-sub">PR #42 (#36) · Freed from camera-notch silhouette · Native lyrics replacing sub-notch floats</span>
-    </div>
-
-    <div class="toolbar-controls">
-      <div class="seg-group" role="group" aria-label="Target screen type">
-        <button class="seg-btn active" data-screen="nonnotch" onclick="setScreenMode('nonnotch')">Non-Notch / Windows</button>
-        <button class="seg-btn" data-screen="notched" onclick="setScreenMode('notched')">MacBook Notched</button>
-      </div>
-
-      <div class="seg-group" role="group" aria-label="View layout">
-        <button class="seg-btn active" id="btnViewFocus" onclick="setViewMode('focus')">Focus Canvas</button>
-        <button class="seg-btn" id="btnViewCompare" onclick="setViewMode('compare')">Compare All 4</button>
-      </div>
-
-      <div class="seg-group" role="group" aria-label="Specs panel">
-        <button class="seg-btn active" id="btnToggleNotes" onclick="toggleNotes()">Impeccable Notes</button>
-      </div>
-    </div>
-  </header>
-
-  <!-- State Trigger Bar -->
-  <div class="state-strip">
-    <div class="seg-group" role="group" aria-label="Dynamic Island State">
-      <button class="seg-btn" data-state="resting" onclick="setStateMode('resting')"><span class="state-btn-num">1</span>Resting</button>
-      <button class="seg-btn" data-state="idleMusic" onclick="setStateMode('idleMusic')"><span class="state-btn-num">2</span>Idle + Music</button>
-      <button class="seg-btn active" data-state="thinking" onclick="setStateMode('thinking')"><span class="state-btn-num">3</span>Thinking + Music</button>
-      <button class="seg-btn" data-state="lyrics" onclick="setStateMode('lyrics')"><span class="state-btn-num">4</span>Native Lyrics</button>
-      <button class="seg-btn" data-state="toastMagsafe" onclick="setStateMode('toastMagsafe')"><span class="state-btn-num">5a</span>Toast: MagSafe</button>
-      <button class="seg-btn" data-state="toastPrayer" onclick="setStateMode('toastPrayer')"><span class="state-btn-num">5b</span>Toast: Prayer</button>
-      <button class="seg-btn" data-state="expanded" onclick="setStateMode('expanded')"><span class="state-btn-num">6</span>Expanded HUD</button>
-    </div>
-
-    <div class="seg-group" id="expandedTabBar" style="display: none;" role="group" aria-label="Expanded Tab">
-      <button class="seg-btn active" data-exptab="agents" onclick="setExpandedTab('agents')">Agents</button>
-      <button class="seg-btn" data-exptab="workspace" onclick="setExpandedTab('workspace')">Workspace</button>
-      <button class="seg-btn" data-exptab="music" onclick="setExpandedTab('music')">Music</button>
-      <button class="seg-btn" data-exptab="prayer" onclick="setExpandedTab('prayer')">Prayer</button>
-    </div>
-  </div>
-
-  <main class="stage-wrapper">
-    <!-- Focus Single-Variant Interactive Canvas -->
-    <section class="focus-grid" id="focusGrid">
-      <div class="monitor-frame" id="monitorFrame">
-        <div class="desktop-menubar">
-          <div class="menubar-left">
-            <!-- Apple / OS mark SVG -->
-            <svg width="13" height="15" viewBox="0 0 14 17" fill="currentColor" aria-hidden="true">
-              <path d="M11.6 8.9c0-2 1.6-3 1.7-3.1-0.9-1.4-2.4-1.6-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7-1.4 0-2.6.8-3.3 2-.1 0-1.4 2.5-.3 6 .6 1.5 1.4 3.1 2.5 3.1 1 0 1.4-.6 2.6-.6 1.2 0 1.5.6 2.6.6 1.1 0 1.8-1.5 2.4-3 .7-1.5 1-3 1-3.1-.1 0-1.7-.7-1.7-2.7zM9.4 3.1c.5-.7.9-1.6.8-2.6-.8 0-1.8.5-2.3 1.2-.5.6-.9 1.5-.8 2.5.9.1 1.8-.4 2.3-1.1z"/>
-            </svg>
-            <span class="menubar-app">Ghostty</span>
-            <span class="menubar-item">Shell</span>
-            <span class="menubar-item">Edit</span>
-            <span class="menubar-item">View</span>
-          </div>
-          <div class="menubar-right">
-            <span class="menubar-item">Wi-Fi</span>
-            <span class="menubar-clock tabular">Sat 23:25</span>
-          </div>
+  <div class="app-shell" id="appRoot">
+    <!-- Top Controls -->
+    <header class="toolbar">
+      <div class="brand-block">
+        <div class="brand-badge" aria-hidden="true">
+          <!-- Crisp CodeIsland Pixel Mascot SVG -->
+          <svg width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+            <rect x="3" y="2" width="10" height="8" fill="#E07A55" />
+            <rect x="2" y="4" width="1" height="4" fill="#E07A55" />
+            <rect x="13" y="4" width="1" height="4" fill="#E07A55" />
+            <rect x="5" y="5" width="2" height="2" fill="#181210" />
+            <rect x="9" y="5" width="2" height="2" fill="#181210" />
+            <rect x="4" y="10" width="2" height="3" fill="#E07A55" />
+            <rect x="7" y="10" width="2" height="3" fill="#E07A55" />
+            <rect x="10" y="10" width="2" height="3" fill="#E07A55" />
+          </svg>
         </div>
-
-        <!-- Simulated Hardware Notch for MacBook Pro mode -->
-        <div class="hardware-notch" id="hardwareNotch">
-          <div class="hardware-camera-lens" title="Camera Housing (No Idle Green Dot)"></div>
-        </div>
-
-        <!-- Island Slot -->
-        <div class="island-anchor" id="islandAnchor">
-          <div class="island-interactive" id="focusIslandMount"></div>
-        </div>
-
-        <!-- Simulated Background Workspace Window -->
-        <div class="desktop-ide-bg">
-          <div class="ide-titlebar">
-            <div class="traffic-dots"><span></span><span></span><span></span></div>
-            <span>~/dev/CodeIsland — claude code · feat/#36-notch-dynamic-island-mode</span>
-          </div>
-          <pre class="ide-code">public enum IslandDisplayMode: String, CaseIterable, Sendable {
-    case notch
-    case dynamicIsland
-}
-
-// Active agent session continues unobstructed beneath top surface:
-$ swift test --filter IslandDisplayModeTests
-[46/46] All Dynamic Island layout & boundary tests passed in 0.84s</pre>
+        <div>
+          <div class="brand-title">CodeIsland Dynamic Island — Round 2: Icon Count &amp; Placement Study</div>
+          <div class="brand-sub">PR #42 · Native Pitch-Black Style · @fzrsahi &amp; @agungdunggio Review Iteration</div>
         </div>
       </div>
 
-      <!-- Impeccable Architecture & Lineage Panel -->
-      <aside class="spec-panel" id="specPanel">
-        <div class="spec-world-chip" id="specWorldId"></div>
-        <h2 class="spec-heading" id="specTitle"></h2>
-        <p class="spec-thesis" id="specThesis"></p>
-
-        <div class="spec-block">
-          <div class="spec-label">Collapsed & Screen Logic</div>
-          <p class="spec-copy" id="specCollapsed"></p>
+      <div class="controls-row">
+        <div class="segmented" role="group" aria-label="View Layout">
+          <button type="button" class="seg-btn active" data-view="compare">Compare All 4</button>
+          <button type="button" class="seg-btn" data-view="focus">Focus View</button>
         </div>
 
-        <div class="spec-block">
-          <div class="spec-label">Native Lyrics (Replaces Floating Sub-Pill)</div>
-          <p class="spec-copy" id="specLyrics"></p>
+        <div class="segmented" role="group" aria-label="Display Hardware Mode">
+          <button type="button" class="seg-btn active" data-mode="nonnotch">Non-Notch / External</button>
+          <button type="button" class="seg-btn" data-mode="notched">MacBook Notched</button>
         </div>
 
-        <div class="spec-block">
-          <div class="spec-label">Toast & Expanded Topology</div>
-          <p class="spec-copy" id="specExpanded"></p>
-        </div>
+        <button type="button" class="guide-toggle" id="guideToggleBtn" aria-pressed="false">
+          <span>Spacing Guides</span>
+        </button>
+      </div>
+    </header>
 
-        <div class="spec-block">
-          <div class="spec-label">Palette Roles</div>
-          <div class="palette-row" id="specPalette"></div>
-        </div>
+    <!-- State Switcher -->
+    <nav class="state-bar" aria-label="Dynamic Island States">
+      <div class="state-pills" id="stateButtons">
+        <button type="button" class="state-btn" data-state="1"><span class="state-num">1</span> Resting</button>
+        <button type="button" class="state-btn active" data-state="2"><span class="state-num">2</span> Idle + Music</button>
+        <button type="button" class="state-btn" data-state="3"><span class="state-num">3</span> Thinking</button>
+        <button type="button" class="state-btn" data-state="4"><span class="state-num">4</span> Thinking + Music</button>
+        <button type="button" class="state-btn" data-state="5"><span class="state-num">5</span> Native Lyrics</button>
+        <button type="button" class="state-btn" data-state="6"><span class="state-num">6</span> Toast: MagSafe</button>
+        <button type="button" class="state-btn" data-state="7"><span class="state-num">7</span> Expanded HUD</button>
+      </div>
+      <div class="feedback-chip" id="stateCaption">2 icons in original pill: hollow center gap + right edge cramp</div>
+    </nav>
 
-        <div class="spec-block">
-          <div class="spec-label">Honest Trade-off</div>
-          <p class="spec-copy" id="specRisk" style="color: #ffd37a;"></p>
-        </div>
-      </aside>
+    <!-- Baseline (Current PR #42 Issue Callout) -->
+    <section class="baseline-card" id="baselineSection" aria-label="Current PR 42 Baseline">
+      <div class="baseline-meta">
+        <div class="baseline-tag">BEFORE · Current PR #42 (@fzrsahi screenshot)</div>
+        <div class="baseline-desc" id="baselineDesc">Mascot sits far left, album square + dots crowd right, 130px empty center void between them.</div>
+      </div>
+      <div class="baseline-stage" id="baselineStage"></div>
+      <div class="diagnosis-pills" id="diagnosisTags"></div>
     </section>
 
-    <!-- 4-Up Compare Mode -->
-    <section class="compare-grid" id="compareGrid"></section>
-  </main>
+    <!-- Compare All 4 Grid -->
+    <main class="compare-grid" id="compareGrid"></main>
 
-  <!-- Floating Bottom Switcher Bar -->
-  <nav class="floating-switcher" aria-label="Prototype Variant Switcher">
-    <button class="nav-arrow" onclick="stepVariant(-1)" aria-label="Previous Variant" title="Previous (Left Arrow)">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5L5.5 8 10 12.5"/></svg>
-    </button>
-    <button class="variant-pill active" data-variant="A" onclick="setVariant('A')">A · Adaptive Stage</button>
-    <button class="variant-pill" data-variant="B" onclick="setVariant('B')">B · Dual Constellation</button>
-    <button class="variant-pill" data-variant="C" onclick="setVariant('C')">C · Saville Matrix</button>
-    <button class="variant-pill" data-variant="D" onclick="setVariant('D')">D · Tactile Console</button>
-    <button class="nav-arrow" onclick="stepVariant(1)" aria-label="Next Variant" title="Next (Right Arrow)">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"/></svg>
-    </button>
-    <div class="switcher-divider"></div>
-    <span class="key-hint">Keys: ← / → · 1–6</span>
-  </nav>
+    <!-- Focus View Shell -->
+    <section class="focus-shell hidden" id="focusShell">
+      <div class="focus-selector" id="focusVariantSelector">
+        <button type="button" class="seg-btn active" data-focus="1">1 · Single Anchor (1 Icon)</button>
+        <button type="button" class="seg-btn" data-focus="2">2 · Balanced Twin (2 Icons)</button>
+        <button type="button" class="seg-btn" data-focus="3">3 · Asymmetric Lead + Micro</button>
+        <button type="button" class="seg-btn" data-focus="4">4 · Split Black Mini-Pills</button>
+      </div>
+      <div id="focusCardHost"></div>
+    </section>
+  </div>
 
   <script>
-    const VARIANTS = ['A', 'B', 'C', 'D'];
-    const STATES = ['resting', 'idleMusic', 'thinking', 'lyrics', 'toastMagsafe', 'toastPrayer', 'expanded'];
+    (function () {
+      const SVG = {
+        mascotIdle: function (size) {
+          const s = size || 17;
+          return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">' +
+            '<rect x="3" y="3" width="10" height="7" fill="#E07A55"/>' +
+            '<rect x="2" y="5" width="1" height="3" fill="#E07A55"/>' +
+            '<rect x="13" y="5" width="1" height="3" fill="#E07A55"/>' +
+            '<rect x="5" y="6" width="2" height="1" fill="#181210"/>' +
+            '<rect x="9" y="6" width="2" height="1" fill="#181210"/>' +
+            '<rect x="4" y="10" width="2" height="3" fill="#E07A55"/>' +
+            '<rect x="7" y="10" width="2" height="3" fill="#E07A55"/>' +
+            '<rect x="10" y="10" width="2" height="3" fill="#E07A55"/>' +
+            '<rect x="12" y="1" width="3" height="1" fill="#E5C07B"/>' +
+            '<rect x="13" y="2" width="1" height="1" fill="#E5C07B"/>' +
+            '<rect x="12" y="3" width="3" height="1" fill="#E5C07B"/>' +
+            '</svg>';
+        },
+        mascotActive: function (size) {
+          const s = size || 17;
+          return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">' +
+            '<rect x="3" y="2" width="10" height="8" fill="#E07A55"/>' +
+            '<rect x="2" y="4" width="1" height="4" fill="#E07A55"/>' +
+            '<rect x="13" y="4" width="1" height="4" fill="#E07A55"/>' +
+            '<rect x="5" y="5" width="2" height="2" fill="#181210"/>' +
+            '<rect x="9" y="5" width="2" height="2" fill="#181210"/>' +
+            '<rect x="4" y="10" width="2" height="3" fill="#E07A55"/>' +
+            '<rect x="7" y="10" width="2" height="3" fill="#E07A55"/>' +
+            '<rect x="10" y="10" width="2" height="3" fill="#E07A55"/>' +
+            '<rect x="12" y="1" width="2" height="2" fill="#2DD4BF"/>' +
+            '</svg>';
+        },
+        musicNote: function (size, color) {
+          const s = size || 12;
+          const c = color || "#FFFFFF";
+          return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+            '<path d="M6 12.2a1.8 1.8 0 1 1-1.2-1.7V4.4l7-1.4v7.6a1.8 1.8 0 1 1-1.2-1.7V5.3L6 6.2v6z" fill="' + c + '"/>' +
+            '</svg>';
+        },
+        gitBranch: function (size) {
+          const s = size || 11;
+          return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<circle cx="4.5" cy="3.5" r="1.5"/>' +
+            '<circle cx="4.5" cy="12.5" r="1.5"/>' +
+            '<circle cx="11.5" cy="6" r="1.5"/>' +
+            '<path d="M4.5 5v6M11.5 7.5c0 2.2-2.2 2.8-7 2.8"/>' +
+            '</svg>';
+        },
+        chevronDown: function () {
+          return '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg>';
+        },
+        bolt: function () {
+          return '<svg width="13" height="13" viewBox="0 0 16 16" fill="#4ADE80" aria-hidden="true"><path d="M9.2 1.5L3.8 8.7h3.9l-1 5.8 5.5-7.4H8.3l.9-5.6z"/></svg>';
+        },
+        play: function () {
+          return '<svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M3 2.2l6.8 3.8L3 9.8V2.2z"/></svg>';
+        },
+        prev: function () {
+          return '<svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2.5 2.5h1.3v7H2.5v-7zm2 3.5l5-3.2v6.4L4.5 6z"/></svg>';
+        },
+        next: function () {
+          return '<svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M8.2 2.5h1.3v7H8.2v-7zm-5.7.3L7.5 6l-5 3.2V2.8z"/></svg>';
+        },
+        albumThumb: function (round) {
+          return '<span class="ci-icon-slot ci-album-22' + (round ? ' round' : '') + '">' + this.musicNote(12, "#E0F2FE") + '</span>';
+        },
+        eqBars: function (cls) {
+          return '<span class="eq-bars' + (cls ? ' ' + cls : '') + '" aria-hidden="true"><span></span><span></span><span></span></span>';
+        },
+        dotsPulse: function () {
+          return '<span class="dots-pulse" aria-hidden="true"><span></span><span></span><span></span></span>';
+        }
+      };
 
-    let currentVariant = new URLSearchParams(location.search).get('variant') || 'A';
-    if (!VARIANTS.includes(currentVariant)) currentVariant = 'A';
-    let currentState = new URLSearchParams(location.search).get('state') || 'thinking';
-    if (!STATES.includes(currentState)) currentState = 'thinking';
-    let currentScreen = new URLSearchParams(location.search).get('screen') || 'nonnotch';
-    let currentView = new URLSearchParams(location.search).get('view') === 'compare' ? 'compare' : 'focus';
-    let currentExpTab = new URLSearchParams(location.search).get('exptab') || 'agents';
-    let showNotes = new URLSearchParams(location.search).get('notes') !== '0';
+      const BASELINE_SPEC = {
+        1: {
+          desc: "Wide fixed container leaves awkward horizontal emptiness around one tiny idle mascot.",
+          tags: ["130px dead width", "Unneeded horizontal span"],
+          render: function () {
+            return '<div class="ci-pill ci-before-idle-music">' +
+              '<span class="ci-icon-slot">' + SVG.mascotIdle(17) + '</span>' +
+              '<span style="font-size:12px;color:#94a3b8;font-family:var(--font-mono)">&lt;— empty —&gt;</span>' +
+              '<span style="width:18px"></span>' +
+              '</div>';
+          }
+        },
+        2: {
+          desc: "Mascot far left, Cobalt album + yellow dots crammed far right — 130px hollow gap in center.",
+          tags: ["Hollow center gap", "Right pair too cramped", "Unequal optical weight"],
+          render: function () {
+            return '<div class="ci-pill ci-before-idle-music">' +
+              '<span class="ci-icon-slot">' + SVG.mascotIdle(17) + '</span>' +
+              '<span class="ci-before-right-cramp">' +
+                SVG.albumThumb(false) +
+                SVG.eqBars("") +
+              '</span>' +
+              '</div>';
+          }
+        },
+        3: {
+          desc: "Mascot + \"... thinking\" + bordered (main v) pill jammed against the right circular curve.",
+          tags: ["Right curve collision", "Pill-inside-pill double border", "Crowded rhythm"],
+          render: function () {
+            return '<div class="ci-pill ci-before-thinking">' +
+              '<span class="ci-icon-slot">' + SVG.mascotActive(17) + '</span>' +
+              '<span class="ci-status-cyan">' + SVG.dotsPulse() + ' thinking</span>' +
+              '<span class="ci-before-branch-box">' + SVG.gitBranch(10) + ' main ' + SVG.chevronDown() + '</span>' +
+              '</div>';
+          }
+        },
+        4: {
+          desc: "2 icons + text + branch pill in one unscaled bar forces icons to touch text and outer arcs.",
+          tags: ["Zero breathing room", "3 competing focal anchors"],
+          render: function () {
+            return '<div class="ci-pill ci-before-thinking" style="padding-right:8px;">' +
+              '<span class="ci-icon-slot">' + SVG.mascotActive(17) + '</span>' +
+              '<span class="ci-status-cyan">' + SVG.dotsPulse() + ' thinking</span>' +
+              '<span class="ci-before-right-cramp">' + SVG.albumThumb(false) + SVG.eqBars("") + '</span>' +
+              '</div>';
+          }
+        },
+        5: {
+          desc: "Detached sub-notch gray floating lyric pill instead of unified CodeIsland Dynamic Island.",
+          tags: ["Hanging sub-notch overlay", "Disjointed surface style"],
+          render: function () {
+            return '<div class="ci-pill ci-before-lyric">' +
+              SVG.musicNote(12, "#93c5fd") +
+              '<span>Midnight neon rain drifting over glass...</span>' +
+              '</div>';
+          }
+        },
+        6: {
+          desc: "Target reference from @agungdunggio (Round 1 Variant A): clean flush emerald MagSafe Charging 94%.",
+          tags: ["Liked by @agungdunggio", "Preserved across Round 2"],
+          render: function () {
+            return '<div class="ci-pill ci-toast-magsafe">' +
+              '<span class="magsafe-left">' +
+                '<span class="magsafe-bolt-ring">' + SVG.bolt() + '</span>' +
+                '<span class="magsafe-title">MagSafe Charging</span>' +
+              '</span>' +
+              '<span class="magsafe-pct">94%</span>' +
+              '</div>';
+          }
+        },
+        7: {
+          desc: "Expanded HUD header leaves empty camera-notch void in the middle of Dynamic Island mode.",
+          tags: ["Dead center header gap", "Header widgets pushed to corners"],
+          render: function () {
+            return '<div class="ci-pill" style="width:310px;justify-content:space-between;padding:8px 14px;">' +
+              '<span class="ci-icon-slot">' + SVG.mascotActive(17) + '</span>' +
+              '<span style="font-size:12px;color:#94a3b8;font-family:var(--font-mono)">[ dead notch void ]</span>' +
+              SVG.albumThumb(false) +
+              '</div>';
+          }
+        }
+      };
 
-    const META = {
-      A: {
-        worldId: 'impeccable · pop-culture-shelf + variable-font-specimen',
-        title: 'Variant A — Adaptive Asymmetric Stage',
-        thesis: 'One continuous fluid capsule that weights layout asymmetrically by live priority instead of leaving a dead center camera void.',
-        collapsed: 'Non-Notch floats 10pt below top edge; Notched MacBook docks cleanly at 38pt below camera housing. Eliminates symmetric dead wings: mascot + agent context flow seamlessly into album art & spectrum.',
-        lyrics: 'Integrated Inline Two-Tier Stage: smoothly grows +18pt inside the same pill with current bold lyric + dimmed next-line cue + hairline edge-to-edge scrubber along the pill bottom. Zero detached floating sub-pill.',
-        expanded: 'MagSafe & Prayer Alerts wash the capsule interior in subtle functional tint without outer box-in-box borders. Expanded view uses a unified horizontal Top Command Strip (Agents · Workspace · Music · Prayer) with zero empty center hole.',
-        palette: [
-          { hex: '#0A0B0F', name: 'Void' },
-          { hex: '#E07A55', name: 'Artwork/Claude' },
-          { hex: '#30D158', name: 'MagSafe' },
-          { hex: '#00E5C7', name: 'Live Signal' }
-        ],
-        risk: 'Feels closest to native Apple Dynamic Island — ultra-refined, though less structurally daring than Dual Constellation (B) or Saville Matrix (C).'
-      },
-      B: {
-        worldId: 'impeccable · rw-lexicon-shoulder-and-plate + variable-font-specimen',
-        title: 'Variant B — Bilateral Constellation',
-        thesis: 'Splits Coding Telemetry and Media/Lyrics into two dedicated micro-capsules separated by air, quarantining album color strictly inside the Media plate.',
-        collapsed: 'Left Pill = Agent & System Flow (Claude · main). Right Satellite = Media Disc + Spectrum. On Notched MacBooks, both pills naturally flank the camera housing without any fake center spacer!',
-        lyrics: 'Detached Right/Center Lyric Satellite (or coupled bottom bridge): the Media pill smoothly morphs into a focused Lyric Capsule while Agent Pill shrinks into a compact mascot dot-badge — zero overlap between dev status & song text.',
-        expanded: 'Clicking/hovering either pill magnetically fuses both capsules (200ms) into one unified container driven by a Left Vertical Rail (Agents / Workspace / Music / Prayer) instead of cramped top tabs.',
-        palette: [
-          { hex: '#101218', name: 'Telemetry Slate' },
-          { hex: '#1B1719', name: 'Plate Scrim' },
-          { hex: '#E07A55', name: 'Plate Accent' },
-          { hex: '#F2F4F8', name: 'High Ink' }
-        ],
-        risk: 'Dual pills require careful coordinate clamping on narrow 13" menu bars so macOS status icons on top-right never collide.'
-      },
-      C: {
-        worldId: 'impeccable · saville-catalog-sleeve + japanese-high-density-web',
-        title: 'Variant C — Saville Catalog Matrix',
-        thesis: 'Replaces puffy rounded dark bubbles with a crisp matte catalog strip, 1px architectural hairlines, and a 4-block color code indicator.',
-        collapsed: 'Uses minimal radius (8px), compact condensed micro-labels (FAC//AGENTS), hairline cells, and a 4-color semantic code strip (Claude · Dirty Git · Playing · Prayer). Extremely compact height (32px) leaves maximum editor space.',
-        lyrics: 'Attached Inline Libretto Drawer: unfolds flush inside the bottom cell with a beat-timing micro-ruler & high-contrast typography — zero floating pill shadow clutter.',
-        expanded: 'Command-first Japanese High-Density Mosaic: 12-column hairline grid puts Live Agents + Git Commit Spine + Quick Actions visible simultaneously without clicking through nested boxes, tagged in sharp utility-red accents.',
-        palette: [
-          { hex: '#07080A', name: 'Matte Black' },
-          { hex: '#E60023', name: 'Utility Red' },
-          { hex: '#00E5C7', name: 'Plot Ink' },
-          { hex: '#F5B942', name: 'Alert Block' }
-        ],
-        risk: 'Sharp rectilinear 8px geometry looks strikingly pro/editorial, though breaks away from round iOS-style Dynamic Island curves if you prefer soft Apple curvature.'
-      },
-      D: {
-        worldId: 'impeccable · vernacular-ephemera-cassette-j-card + japanese-high-density',
-        title: 'Variant D — Tactile Field Console',
-        thesis: 'Precision desktop hardware console framing a deep recessed OLED lyric/status bay with right-aligned cassette Side-A / Side-B deck controls.',
-        collapsed: 'Machined dark charcoal outer bezel (#181B22) houses a recessed #07090D OLED window + tactile PLAY/ACT hardware keycaps. Celebrates CodeIsland’s Pixel/Mascot soul cleanly without 8-bit toy clutter.',
-        lyrics: 'Recessed Hardware OLED Window: displays crisp illuminated two-line lyrics & right-aligned tabular track counter (01:42 / 03:30) directly inside the lower bay of the single unit — making hanging sub-notch pills obsolete.',
-        expanded: 'Physical SIDE A: FLOW (Agents + Git) vs SIDE B: AUDIO (Lyrics + Visualizer) deck flip inside the exposed OLED workspace, giving each domain full breathing room.',
-        palette: [
-          { hex: '#181B22', name: 'Anodized Bezel' },
-          { hex: '#07090D', name: 'Recessed OLED' },
-          { hex: '#F5B942', name: 'VFD Amber' },
-          { hex: '#30D158', name: 'LED Emerald' }
-        ],
-        risk: 'Hardware bezel framing is visually distinctive; needs restrained sizing (4px inset) so it stays sleek rather than bulky on small displays.'
-      }
-    };
+      const VARIANTS = [
+        {
+          id: 1,
+          kicker: "OPTION 1 · DISTILLATION",
+          title: "1 · Single Anchor (1 Icon Only)",
+          summary: "Strict 1-icon discipline per state. No left-vs-right visual tug-of-war; quiet inline text carries secondary metadata.",
+          badge: "1 Icon Max",
+          footerMetric: "14px L/R pad · 9px internal gap · zero double borders",
+          guideNote: "1 icon anchor · 14px L/R margin · 0 filler void",
+          renderState: function (state) {
+            switch (state) {
+              case 1:
+                return '<div class="ci-pill r2-single-resting">' +
+                  '<span class="ci-icon-slot">' + SVG.mascotIdle(18) + '</span>' +
+                  '</div>';
+              case 2:
+                return '<div class="ci-pill r2-single-compact">' +
+                  '<span class="ci-icon-slot ci-album-22">' + SVG.musicNote(12, "#E0F2FE") + '</span>' +
+                  '<span class="ci-label-muted">Late Night Flow</span>' +
+                  SVG.eqBars("") +
+                  '</div>';
+              case 3:
+                return '<div class="ci-pill r2-single-compact">' +
+                  '<span class="ci-icon-slot">' + SVG.mascotActive(18) + '</span>' +
+                  '<span class="ci-status-cyan">' + SVG.dotsPulse() + ' thinking</span>' +
+                  '<span class="ci-branch-inline">· main ' + SVG.chevronDown() + '</span>' +
+                  '</div>';
+              case 4:
+                return '<div class="ci-pill r2-single-compact">' +
+                  '<span class="ci-icon-slot">' + SVG.mascotActive(18) + '</span>' +
+                  '<span class="ci-status-cyan">' + SVG.dotsPulse() + ' thinking</span>' +
+                  '<span class="ci-hairline-v"></span>' +
+                  '<span class="ci-label-muted">Late Night</span>' +
+                  SVG.eqBars("") +
+                  '</div>';
+              case 5:
+                return '<div class="ci-pill ci-lyric-pill">' +
+                  '<span class="ci-icon-slot ci-album-22">' + SVG.musicNote(12, "#E0F2FE") + '</span>' +
+                  '<span class="lyric-text">Midnight neon rain on the glass</span>' +
+                  '<span class="lyric-progress-track"><span class="lyric-progress-fill"></span></span>' +
+                  '</div>';
+              case 6:
+                return '<div class="ci-pill ci-toast-magsafe">' +
+                  '<span class="magsafe-left">' +
+                    '<span class="magsafe-bolt-ring">' + SVG.bolt() + '</span>' +
+                    '<span class="magsafe-title">MagSafe Charging</span>' +
+                  '</span>' +
+                  '<span class="magsafe-pct">94%</span>' +
+                  '</div>';
+              case 7:
+                return '<div class="ci-expanded-hud">' +
+                  '<div class="exp-header">' +
+                    '<div class="exp-agent-group">' +
+                      '<span class="ci-icon-slot">' + SVG.mascotActive(18) + '</span>' +
+                      '<div><div class="exp-title">Claude Code</div><div class="exp-sub">thinking · 12s</div></div>' +
+                    '</div>' +
+                    '<span class="exp-pill-tag">' + SVG.gitBranch(10) + ' main</span>' +
+                  '</div>' +
+                  '<div class="exp-body-row">' +
+                    '<div class="exp-media-left">' +
+                      '<div class="exp-album-32">' + SVG.musicNote(15, "#E0F2FE") + '</div>' +
+                      '<div class="exp-track-info"><div class="exp-track-name">Late Night Flow</div><div class="exp-track-lyric">Midnight neon rain on the glass</div></div>' +
+                    '</div>' +
+                    '<div class="exp-controls">' +
+                      '<span class="exp-ctrl-btn">' + SVG.prev() + '</span>' +
+                      '<span class="exp-ctrl-btn primary">' + SVG.play() + '</span>' +
+                      '<span class="exp-ctrl-btn">' + SVG.next() + '</span>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>';
+            }
+          }
+        },
+        {
+          id: 2,
+          kicker: "OPTION 2 · RHYTHM & PROPORTION",
+          title: "2 · Balanced Twin (2 Icons, Tight Span)",
+          summary: "Keeps both Mascot & Album/Branch identity, removes the artificial 130px void, and gives every item equal 11px breathing gaps.",
+          badge: "2 Balanced Icons",
+          footerMetric: "13px L/R outer clearance · 1px divider · tight 176px width",
+          guideNote: "2 balanced icons · 13px L/R pad · 11px rhythmic spacing",
+          renderState: function (state) {
+            switch (state) {
+              case 1:
+                return '<div class="ci-pill r2-twin">' +
+                  '<span class="ci-icon-slot">' + SVG.mascotIdle(18) + '</span>' +
+                  '<span class="ci-label-muted">Idle</span>' +
+                  '</div>';
+              case 2:
+                return '<div class="ci-pill r2-twin">' +
+                  '<span class="ci-icon-slot">' + SVG.mascotIdle(18) + '</span>' +
+                  '<span class="ci-hairline-v"></span>' +
+                  '<span class="r2-twin-pair">' +
+                    '<span class="ci-icon-slot ci-album-22">' + SVG.musicNote(12, "#E0F2FE") + '</span>' +
+                    SVG.eqBars("") +
+                  '</span>' +
+                  '</div>';
+              case 3:
+                return '<div class="ci-pill r2-twin">' +
+                  '<span class="r2-twin-pair">' +
+                    '<span class="ci-icon-slot">' + SVG.mascotActive(18) + '</span>' +
+                    '<span class="ci-status-cyan">' + SVG.dotsPulse() + ' thinking</span>' +
+                  '</span>' +
+                  '<span class="ci-hairline-v"></span>' +
+                  '<span class="ci-branch-inline">' + SVG.gitBranch(11) + ' main</span>' +
+                  '</div>';
+              case 4:
+                return '<div class="ci-pill r2-twin">' +
+                  '<span class="r2-twin-pair">' +
+                    '<span class="ci-icon-slot">' + SVG.mascotActive(18) + '</span>' +
+                    '<span class="ci-status-cyan">' + SVG.dotsPulse() + ' thinking</span>' +
+                  '</span>' +
+                  '<span class="ci-hairline-v"></span>' +
+                  '<span class="r2-twin-pair">' +
+                    '<span class="ci-icon-slot ci-album-22">' + SVG.musicNote(12, "#E0F2FE") + '</span>' +
+                    SVG.eqBars("") +
+                  '</span>' +
+                  '</div>';
+              case 5:
+                return '<div class="ci-pill ci-lyric-pill" style="gap:11px;padding:8px 13px;">' +
+                  '<span class="ci-icon-slot">' + SVG.mascotIdle(17) + '</span>' +
+                  '<span class="ci-hairline-v"></span>' +
+                  '<span class="lyric-text">Midnight neon rain on the glass</span>' +
+                  '<span class="ci-icon-slot ci-album-22">' + SVG.musicNote(12, "#E0F2FE") + '</span>' +
+                  '<span class="lyric-progress-track"><span class="lyric-progress-fill"></span></span>' +
+                  '</div>';
+              case 6:
+                return '<div class="ci-pill ci-toast-magsafe">' +
+                  '<span class="magsafe-left">' +
+                    '<span class="magsafe-bolt-ring">' + SVG.bolt() + '</span>' +
+                    '<span class="magsafe-title">MagSafe Charging</span>' +
+                  '</span>' +
+                  '<span class="magsafe-pct">94% · Fast</span>' +
+                  '</div>';
+              case 7:
+                return '<div class="ci-expanded-hud">' +
+                  '<div class="exp-header">' +
+                    '<div class="exp-agent-group">' +
+                      '<span class="ci-icon-slot">' + SVG.mascotActive(18) + '</span>' +
+                      '<div><div class="exp-title">Agent Thinking</div><div class="exp-sub">' + SVG.gitBranch(10) + ' feat/#36</div></div>' +
+                    '</div>' +
+                    '<span class="exp-hairline-v ci-hairline-v"></span>' +
+                    '<div class="exp-header-right">' +
+                      '<span class="ci-label-muted">MagSafe 94%</span>' +
+                      '<span class="ci-icon-slot ci-album-22">' + SVG.musicNote(12, "#E0F2FE") + '</span>' +
+                    '</div>' +
+                  '</div>' +
+                  '<div class="exp-body-row">' +
+                    '<div class="exp-media-left">' +
+                      '<div class="exp-album-32">' + SVG.musicNote(15, "#E0F2FE") + '</div>' +
+                      '<div class="exp-track-info"><div class="exp-track-name">Late Night Flow</div><div class="exp-track-lyric">Midnight neon rain on the glass</div></div>' +
+                    '</div>' +
+                    '<div class="exp-controls">' +
+                      '<span class="exp-ctrl-btn">' + SVG.prev() + '</span>' +
+                      '<span class="exp-ctrl-btn primary">' + SVG.play() + '</span>' +
+                      '<span class="exp-ctrl-btn">' + SVG.next() + '</span>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>';
+            }
+          }
+        },
+        {
+          id: 3,
+          kicker: "OPTION 3 · HIERARCHY (SQUINT TEST)",
+          title: "3 · Asymmetric Lead + Micro-Signal",
+          summary: "1 concentric 24px circular hero nested 7px inside the left arc, balanced against a lightweight micro waveform on the right (no equal-weight clash).",
+          badge: "1 Hero + Micro",
+          footerMetric: "7px concentric L · 14px R · 24px/11px hierarchy",
+          guideNote: "24px concentric left hero (r=12 inside R=19) + right micro signal",
+          renderState: function (state) {
+            switch (state) {
+              case 1:
+                return '<div class="ci-pill r2-asym">' +
+                  '<span class="ci-icon-slot ci-hero-circle-24 ci-hero-orange">' + SVG.mascotIdle(15) + '</span>' +
+                  '<span class="ci-label-muted">Ready</span>' +
+                  '</div>';
+              case 2:
+                return '<div class="ci-pill r2-asym">' +
+                  '<span class="ci-icon-slot ci-hero-circle-24 ci-hero-cobalt">' + SVG.musicNote(13, "#E0F2FE") + '</span>' +
+                  '<span class="r2-asym-center">' +
+                    '<span class="ci-label-muted">Late Night Flow</span>' +
+                  '</span>' +
+                  SVG.eqBars("cyan") +
+                  '</div>';
+              case 3:
+                return '<div class="ci-pill r2-asym">' +
+                  '<span class="ci-icon-slot ci-hero-circle-24 ci-hero-orange">' + SVG.mascotActive(15) + '</span>' +
+                  '<span class="r2-asym-center">' +
+                    '<span class="ci-status-cyan">' + SVG.dotsPulse() + ' thinking</span>' +
+                    '<span class="ci-branch-inline">· main</span>' +
+                  '</span>' +
+                  SVG.eqBars("cyan") +
+                  '</div>';
+              case 4:
+                return '<div class="ci-pill r2-asym">' +
+                  '<span class="ci-icon-slot ci-hero-circle-24 ci-hero-orange">' + SVG.mascotActive(15) + '</span>' +
+                  '<span class="r2-asym-center">' +
+                    '<span class="ci-status-cyan">thinking</span>' +
+                    '<span class="ci-branch-inline">· Late Night</span>' +
+                  '</span>' +
+                  SVG.eqBars("") +
+                  '</div>';
+              case 5:
+                return '<div class="ci-pill ci-lyric-pill is-asym">' +
+                  '<span class="ci-icon-slot ci-hero-circle-24 ci-hero-cobalt">' + SVG.musicNote(13, "#E0F2FE") + '</span>' +
+                  '<span class="lyric-text">Midnight neon rain on the glass</span>' +
+                  '<span class="lyric-sub">1:42</span>' +
+                  '<span class="lyric-progress-track"><span class="lyric-progress-fill"></span></span>' +
+                  '</div>';
+              case 6:
+                return '<div class="ci-pill ci-toast-magsafe">' +
+                  '<span class="magsafe-left">' +
+                    '<span class="magsafe-bolt-ring">' + SVG.bolt() + '</span>' +
+                    '<span class="magsafe-title">MagSafe Charging</span>' +
+                  '</span>' +
+                  '<span class="magsafe-pct">94%</span>' +
+                  '</div>';
+              case 7:
+                return '<div class="ci-expanded-hud">' +
+                  '<div class="exp-header">' +
+                    '<div class="exp-agent-group">' +
+                      '<span class="ci-icon-slot ci-hero-circle-24 ci-hero-orange">' + SVG.mascotActive(15) + '</span>' +
+                      '<div><div class="exp-title">Claude Code · thinking</div><div class="exp-sub">main branch · active workspace</div></div>' +
+                    '</div>' +
+                    SVG.eqBars("cyan") +
+                  '</div>' +
+                  '<div class="exp-body-row">' +
+                    '<div class="exp-media-left">' +
+                      '<div class="exp-album-32" style="border-radius:50%;">' + SVG.musicNote(15, "#E0F2FE") + '</div>' +
+                      '<div class="exp-track-info"><div class="exp-track-name">Late Night Flow</div><div class="exp-track-lyric">Midnight neon rain on the glass</div></div>' +
+                    '</div>' +
+                    '<div class="exp-controls">' +
+                      '<span class="exp-ctrl-btn">' + SVG.prev() + '</span>' +
+                      '<span class="exp-ctrl-btn primary">' + SVG.play() + '</span>' +
+                      '<span class="exp-ctrl-btn">' + SVG.next() + '</span>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>';
+            }
+          }
+        },
+        {
+          id: 4,
+          kicker: "OPTION 4 · PHYSICAL SEPARATION",
+          title: "4 · Split Black Mini-Pills (1 + 1 Detached)",
+          summary: "Keeps CodeIsland's pure black capsule DNA, separated cleanly by a 9px gap so each icon owns its own capsule — zero crowding, zero hollow bridge.",
+          badge: "Split 1 + 1 Pills",
+          footerMetric: "9px split gap · 1 icon per pill · unified lyrics",
+          guideNote: "Primary black pill + 9px gap + satellite jewel (never collide)",
+          renderState: function (state) {
+            switch (state) {
+              case 1:
+                return '<div class="ci-pill-sat square-icon-only">' +
+                  '<span class="ci-icon-slot">' + SVG.mascotIdle(18) + '</span>' +
+                  '</div>';
+              case 2:
+                return '<div class="r2-split-group">' +
+                  '<div class="ci-pill-sat square-icon-only">' +
+                    '<span class="ci-icon-slot">' + SVG.mascotIdle(18) + '</span>' +
+                  '</div>' +
+                  '<div class="ci-pill-sat">' +
+                    '<span class="ci-icon-slot ci-album-22 round">' + SVG.musicNote(12, "#E0F2FE") + '</span>' +
+                    SVG.eqBars("") +
+                  '</div>' +
+                  '</div>';
+              case 3:
+                return '<div class="r2-split-group">' +
+                  '<div class="ci-pill r2-single-compact">' +
+                    '<span class="ci-icon-slot">' + SVG.mascotActive(18) + '</span>' +
+                    '<span class="ci-status-cyan">' + SVG.dotsPulse() + ' thinking</span>' +
+                  '</div>' +
+                  '<div class="ci-pill-sat">' +
+                    '<span class="ci-branch-inline">' + SVG.gitBranch(11) + ' main</span>' +
+                  '</div>' +
+                  '</div>';
+              case 4:
+                return '<div class="r2-split-group">' +
+                  '<div class="ci-pill r2-single-compact">' +
+                    '<span class="ci-icon-slot">' + SVG.mascotActive(18) + '</span>' +
+                    '<span class="ci-status-cyan">' + SVG.dotsPulse() + ' thinking</span>' +
+                  '</div>' +
+                  '<div class="ci-pill-sat">' +
+                    '<span class="ci-icon-slot ci-album-22 round">' + SVG.musicNote(12, "#E0F2FE") + '</span>' +
+                    SVG.eqBars("") +
+                  '</div>' +
+                  '</div>';
+              case 5:
+                return '<div class="ci-pill ci-lyric-pill" style="gap:10px;padding:8px 14px;">' +
+                  '<span class="ci-icon-slot ci-album-22 round">' + SVG.musicNote(12, "#E0F2FE") + '</span>' +
+                  '<span class="lyric-text">Midnight neon rain on the glass</span>' +
+                  SVG.eqBars("cyan") +
+                  '<span class="lyric-progress-track"><span class="lyric-progress-fill"></span></span>' +
+                  '</div>';
+              case 6:
+                return '<div class="ci-pill ci-toast-magsafe">' +
+                  '<span class="magsafe-left">' +
+                    '<span class="magsafe-bolt-ring">' + SVG.bolt() + '</span>' +
+                    '<span class="magsafe-title">MagSafe Charging</span>' +
+                  '</span>' +
+                  '<span class="magsafe-pct">94%</span>' +
+                  '</div>';
+              case 7:
+                return '<div class="split-pair-expanded">' +
+                  '<div class="split-panel-left">' +
+                    '<div style="display:flex;align-items:center;gap:9px;">' +
+                      '<span class="ci-icon-slot">' + SVG.mascotActive(18) + '</span>' +
+                      '<div><div class="exp-title">Claude Code</div><div class="exp-sub">thinking · 12s</div></div>' +
+                    '</div>' +
+                    '<div class="ci-branch-inline">' + SVG.gitBranch(11) + ' feat/#36 · clean</div>' +
+                  '</div>' +
+                  '<div class="split-panel-right">' +
+                    '<div style="display:flex;align-items:center;gap:9px;">' +
+                      '<div class="exp-album-32">' + SVG.musicNote(14, "#E0F2FE") + '</div>' +
+                      '<div class="exp-track-info"><div class="exp-track-name">Late Night</div><div class="exp-track-lyric">Neon rain...</div></div>' +
+                    '</div>' +
+                    '<div class="exp-controls">' +
+                      '<span class="exp-ctrl-btn">' + SVG.prev() + '</span>' +
+                      '<span class="exp-ctrl-btn primary">' + SVG.play() + '</span>' +
+                      '<span class="exp-ctrl-btn">' + SVG.next() + '</span>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>';
+            }
+          }
+        }
+      ];
 
-    /* SVG Authoring Helpers (Zero emojis for UI icons per Impeccable craft-floor) */
-    const SVG = {
-      mascot: (color = '#E07A55', size = 16) => `
-        <svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <rect x="3" y="3" width="10" height="8" rx="1.5" fill="${color}"/>
-          <rect x="2" y="6" width="2" height="3" fill="${color}"/>
-          <rect x="12" y="6" width="2" height="3" fill="${color}"/>
-          <rect x="5" y="5.5" width="1.8" height="2.2" fill="#0A0B0F"/>
-          <rect x="9.2" y="5.5" width="1.8" height="2.2" fill="#0A0B0F"/>
-          <rect x="4" y="11" width="2" height="2.5" fill="${color}"/>
-          <rect x="10" y="11" width="2" height="2.5" fill="${color}"/>
-        </svg>`,
-      branch: `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="4.5" cy="3.5" r="1.8"/><circle cx="11.5" cy="5.5" r="1.8"/><circle cx="4.5" cy="12.5" r="1.8"/><path d="M4.5 5.3v5.4M11.5 7.3c0 2.5-7 1.7-7 4"/></svg>`,
-      bolt: `<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M9.2 1.2L3.5 9h4.1l-.8 5.8L12.5 7H8.4l.8-5.8z"/></svg>`,
-      moon: `<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.8 11.4A5.6 5.6 0 016.2 2a5.8 5.8 0 107.6 8.3 5.5 5.5 0 01-3 1.1z"/></svg>`,
-      musicNote: `<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M6 12.3a2.2 2.2 0 11-1.3-2V4.1L13 2.5v7.6a2.2 2.2 0 11-1.3-2V4.9L6 6v6.3z"/></svg>`,
-      chevron: `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>`,
-      play: `<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.5 3l8 5-8 5V3z"/></svg>`,
-      pause: `<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="4" y="3" width="3" height="10" rx="1"/><rect x="9" y="3" width="3" height="10" rx="1"/></svg>`,
-      terminal: `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5L7 8 3 11.5M8.5 11.5h4.5"/></svg>`
-    };
+      const STATE_CAPTIONS = {
+        1: "Resting idle state — eliminate pointless dead capsule width",
+        2: "Idle + Music — directly answering @fzrsahi's top pill (Mascot + Album spacing)",
+        3: "Thinking + Branch — directly answering @fzrsahi's bottom pill (no right-arc cramp)",
+        4: "Thinking + Music — peak concurrency inside 38px compact pill",
+        5: "Native Lyrics — pitch-black Dynamic Island ribbon (replaces sub-notch float)",
+        6: "Toast: MagSafe Charging 94% — preserving @agungdunggio's liked flush emerald pill",
+        7: "Expanded HUD — unified header eliminating dead center notch gap"
+      };
 
-    const SPECTRUM = `<span class="spectrum-bars"><span style="background:#00E5C7"></span><span style="background:#00E5C7"></span><span style="background:#E07A55"></span><span style="background:#00E5C7"></span></span>`;
+      const urlParams = new URLSearchParams(window.location.search);
+      const state = {
+        view: urlParams.get("view") === "focus" ? "focus" : "compare",
+        mode: urlParams.get("mode") === "notched" ? "notched" : "nonnotch",
+        activeState: Math.min(7, Math.max(1, parseInt(urlParams.get("state") || "2", 10) || 2)),
+        focusVariant: Math.min(4, Math.max(1, parseInt(urlParams.get("variant") || "2", 10) || 2)),
+        showGuides: urlParams.get("guides") === "1"
+      };
 
-    function renderExpandedBody(tab, variant) {
-      if (tab === 'workspace') {
-        return `
-          <div style="display:flex; flex-direction:column; gap:8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size:12px; font-weight:600; color:#fff; display:inline-flex; align-items:center; gap:6px;">${SVG.branch} feat/#36-notch-dynamic-island-mode</span>
-              <span class="chip-mini" style="background:rgba(48,209,88,0.14); color:#6ce88b;">3 Modified · 1 Untracked</span>
-            </div>
-            <div class="session-row">
-              <div style="display:flex; align-items:center; gap:9px;">
-                <span style="width:7px;height:7px;border-radius:50%;background:#00E5C7"></span>
-                <span style="font-family:var(--font-mono);font-size:11px;color:#00E5C7;">6d1d90b</span>
-                <span style="font-size:12px;color:#e8ecf5;">feat(#36): add Notch vs Dynamic Island mode</span>
-              </div>
-              <span class="chip-mini" style="color:var(--text-muted)">2m ago</span>
-            </div>
-            <div class="session-row">
-              <div style="display:flex; align-items:center; gap:9px;">
-                <span style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.28)"></span>
-                <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">30145a7</span>
-                <span style="font-size:12px;color:var(--text-secondary);">fix(#40): prevent collapsed island height drift</span>
-              </div>
-              <span class="chip-mini" style="color:var(--text-muted)">18m ago</span>
-            </div>
-          </div>`;
-      }
-      if (tab === 'music') {
-        return `
-          <div style="display:flex; flex-direction:column; gap:10px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-              <div style="display:flex; align-items:center; gap:11px;">
-                <div class="art-thumb-lg">${SVG.musicNote}</div>
-                <div>
-                  <div style="font-size:13.5px; font-weight:650; color:#fff;">From The Start</div>
-                  <div style="font-size:11.5px; color:var(--text-secondary);">Laufey · Bewitched</div>
-                </div>
-              </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                ${SPECTRUM}
-                <span class="chip-mini tabular" style="background:rgba(255,255,255,0.08); color:#fff;">01:42 / 02:50</span>
-              </div>
-            </div>
-            <div style="padding:8px 10px; border-radius:9px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);">
-              <div style="font-size:12.5px; font-weight:600; color:#fff; margin-bottom:2px;">"Wait a minute, shouldn't it be clear?"</div>
-              <div style="font-size:11px; color:var(--text-muted);">"Isn't this dynamic island finally free from the camera hole?"</div>
-            </div>
-          </div>`;
-      }
-      if (tab === 'prayer') {
-        return `
-          <div style="display:flex; flex-direction:column; gap:8px;">
-            <div style="display:flex; align-items:center; justify-content:space-between;">
-              <span style="display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:650; color:#9db0ff;">${SVG.moon} Next: Maghrib in 08m</span>
-              <span class="chip-mini tabular" style="background:rgba(124,147,255,0.16); color:#bac6ff;">17:58 WIB · Jakarta</span>
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; font-family:var(--font-mono); font-size:11px;">
-              <div style="padding:6px; border-radius:6px; background:rgba(255,255,255,0.03); color:var(--text-muted); text-align:center;">Fajr<br>04:12</div>
-              <div style="padding:6px; border-radius:6px; background:rgba(255,255,255,0.03); color:var(--text-muted); text-align:center;">Dhuhr<br>11:44</div>
-              <div style="padding:6px; border-radius:6px; background:rgba(255,255,255,0.03); color:var(--text-muted); text-align:center;">Asr<br>15:06</div>
-              <div style="padding:6px; border-radius:6px; background:rgba(124,147,255,0.18); border:1px solid rgba(124,147,255,0.45); color:#fff; text-align:center;">Maghrib<br>17:58</div>
-              <div style="padding:6px; border-radius:6px; background:rgba(255,255,255,0.03); color:var(--text-muted); text-align:center;">Isha<br>19:11</div>
-            </div>
-          </div>`;
-      }
-      // Default: Agents
-      return `
-        <div style="display:flex; flex-direction:column; gap:7px;">
-          <div class="session-row thinking-row">
-            <div style="display:flex; align-items:center; gap:9px;">
-              ${SVG.mascot('#E07A55', 16)}
-              <div>
-                <div style="font-size:12.5px; font-weight:600; color:#fff;">CodeIsland · <span style="font-family:var(--font-mono); font-size:11px; color:#E07A55;">Thinking</span></div>
-                <div style="font-size:11px; color:var(--text-secondary);">Running Read on CyberMusicView.swift:1209</div>
-              </div>
-            </div>
-            <span class="chip-mini" style="background:rgba(224,122,85,0.18); color:#ffb092;">feat/#36</span>
-          </div>
-          <div class="session-row">
-            <div style="display:flex; align-items:center; gap:9px;">
-              ${SVG.mascot('#00E5C7', 16)}
-              <div>
-                <div style="font-size:12.5px; font-weight:550; color:#dce2ef;">api-gateway · <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">Idle</span></div>
-                <div style="font-size:11px; color:var(--text-muted);">All 42 unit assertions passed · waiting</div>
-              </div>
-            </div>
-            <span class="chip-mini" style="background:rgba(255,255,255,0.06); color:var(--text-secondary);">main</span>
-          </div>
-        </div>`;
-    }
+      const appRoot = document.getElementById("appRoot");
+      const compareGrid = document.getElementById("compareGrid");
+      const focusShell = document.getElementById("focusShell");
+      const focusCardHost = document.getElementById("focusCardHost");
+      const baselineSection = document.getElementById("baselineSection");
+      const baselineStage = document.getElementById("baselineStage");
+      const baselineDesc = document.getElementById("baselineDesc");
+      const diagnosisTags = document.getElementById("diagnosisTags");
+      const stateCaption = document.getElementById("stateCaption");
+      const guideToggleBtn = document.getElementById("guideToggleBtn");
 
-    /* ============================================================
-       RENDERERS FOR EACH OF THE 4 RADICALLY DIFFERENT VARIANTS
-       ============================================================ */
-    function renderVariantA(state, isCompare = false) {
-      if (state === 'resting') {
-        return `
-          <div class="var-a-shell">
-            <div class="var-a-bar var-a-resting">
-              <div style="display:flex; align-items:center; gap:7px;">
-                ${SVG.mascot('#E07A55', 15)}
-                <span style="font-size:11.5px; font-weight:600; color:#dce2ef;">Ready</span>
-              </div>
-              <div style="display:flex; align-items:center; gap:6px; color:var(--text-secondary);">
-                <span class="tabular" style="font-family:var(--font-mono); font-size:11px;">17:58</span>
-                ${SVG.chevron}
-              </div>
-            </div>
-          </div>`;
-      }
-      if (state === 'idleMusic') {
-        return `
-          <div class="var-a-shell scrim-music">
-            <div class="var-a-bar var-a-idle-music">
-              <div style="display:flex; align-items:center; gap:7px;">
-                ${SVG.mascot('#E07A55', 15)}
-                <span style="font-size:11.5px; font-weight:550; color:var(--text-secondary);">2 Idle</span>
-                <span class="pill-sep-dot"></span>
-                <span class="tabular" style="font-family:var(--font-mono); font-size:11px; color:#9db0ff;">-08m</span>
-              </div>
-              <div style="display:flex; align-items:center; gap:7px; min-width:0;">
-                <span class="art-thumb">${SVG.musicNote}</span>
-                <span style="font-size:11.5px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:96px;">From The Start</span>
-                ${SPECTRUM}
-              </div>
-            </div>
-            <div class="var-a-scrubber"><i></i></div>
-          </div>`;
-      }
-      if (state === 'thinking') {
-        return `
-          <div class="var-a-shell scrim-music">
-            <div class="var-a-bar var-a-thinking">
-              <div style="display:flex; align-items:center; gap:8px;">
-                ${SVG.mascot('#E07A55', 16)}
-                <span style="font-size:12px; font-weight:650; color:#fff;">Thinking</span>
-                <span style="font-family:var(--font-mono); font-size:11px; color:#ffb092; display:inline-flex; align-items:center; gap:4px;">${SVG.branch} feat/#36</span>
-                <span class="chip-mini tabular" style="background:rgba(255,255,255,0.08); color:#dce2ef;">5h 42%</span>
-              </div>
-              <div style="display:flex; align-items:center; gap:7px;">
-                <span class="art-thumb">${SVG.musicNote}</span>
-                ${SPECTRUM}
-              </div>
-            </div>
-            <div class="var-a-scrubber"><i></i></div>
-          </div>`;
-      }
-      if (state === 'lyrics') {
-        return `
-          <div class="var-a-shell scrim-music var-a-lyrics-pill">
-            <div class="var-a-bar" style="justify-content:space-between; height:31px;">
-              <div style="display:flex; align-items:center; gap:7px;">
-                ${SVG.mascot('#E07A55', 14)}
-                <span style="font-size:11px; color:var(--text-secondary);">Thinking · <span style="font-family:var(--font-mono);">feat/#36</span></span>
-              </div>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span style="font-size:11px; color:#ffb092;">Laufey — From The Start</span>
-                ${SPECTRUM}
-              </div>
-            </div>
-            <div class="var-a-lyric-stage">
-              <span class="var-a-lyric-main">Wait a minute, shouldn’t this feel right?</span>
-              <span class="var-a-lyric-next">Next: Never felt so easy…</span>
-            </div>
-            <div class="var-a-scrubber"><i></i></div>
-          </div>`;
-      }
-      if (state === 'toastMagsafe') {
-        return `
-          <div class="var-a-shell scrim-magsafe">
-            <div class="var-a-toast">
-              <div style="display:flex; align-items:center; gap:9px;">
-                <span style="width:24px;height:24px;border-radius:50%;background:rgba(48,209,88,0.18);border:1px solid rgba(48,209,88,0.55);color:#30d158;display:inline-flex;align-items:center;justify-content:center;">${SVG.bolt}</span>
-                <span style="font-size:12.5px; font-weight:650; color:#fff;">MagSafe Charging</span>
-              </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span class="tabular" style="font-family:var(--font-mono); font-size:13px; font-weight:700; color:#6ce88b;">94%</span>
-              </div>
-            </div>
-          </div>`;
-      }
-      if (state === 'toastPrayer') {
-        return `
-          <div class="var-a-shell scrim-prayer">
-            <div class="var-a-toast">
-              <div style="display:flex; align-items:center; gap:9px;">
-                <span style="width:24px;height:24px;border-radius:50%;background:rgba(124,147,255,0.2);border:1px solid rgba(124,147,255,0.5);color:#9db0ff;display:inline-flex;align-items:center;justify-content:center;">${SVG.moon}</span>
-                <span style="font-size:12.5px; font-weight:650; color:#fff;">Maghrib Upcoming</span>
-              </div>
-              <span class="tabular" style="font-family:var(--font-mono); font-size:11.5px; font-weight:650; color:#bac6ff;">-08m · 17:58</span>
-            </div>
-          </div>`;
-      }
-      // Expanded
-      return `
-        <div class="var-a-shell scrim-music var-a-expanded">
-          <div style="padding:11px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.08); position:relative; z-index:1;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              ${SVG.mascot('#E07A55', 16)}
-              <span style="font-size:12.5px; font-weight:650;">CodeIsland</span>
-              <span class="chip-mini" style="background:rgba(224,122,85,0.16); color:#ffb092;">2 Active</span>
-            </div>
-            <div class="exp-top-pill-tabs">
-              ${['agents','workspace','music','prayer'].map(t => `<button class="exp-tab-btn ${currentExpTab===t?'active':''}" onclick="event.stopPropagation(); setExpandedTab('${t}')">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}
-            </div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span class="chip-mini tabular" style="background:rgba(255,255,255,0.06); color:var(--text-secondary);">5h 42%</span>
-            </div>
-          </div>
-          <div style="padding:12px 14px; position:relative; z-index:1;">
-            ${renderExpandedBody(currentExpTab, 'A')}
-          </div>
-        </div>`;
-    }
+      function buildStageHTML(variant) {
+        const isNotched = state.mode === "notched";
+        const isExpanded = state.activeState === 7;
+        const notchMarkup = isNotched
+          ? '<div class="mac-notch-bezel"><span class="notch-camera"></span></div>'
+          : '';
+        const dropHint = isNotched
+          ? '<div class="notch-drop-hint">Dynamic Island floats cleanly 8px below physical notch</div>'
+          : '';
 
-    function renderVariantB(state) {
-      if (state === 'resting') {
-        return `
-          <div class="var-b-cluster">
-            <div class="var-b-pill" style="padding:0 11px;">
-              ${SVG.mascot('#E07A55', 15)}
-              <span style="font-size:11.5px; font-weight:600;">Idle</span>
-            </div>
-            <div class="var-b-pill" style="padding:0 10px; color:var(--text-secondary);">
-              <span class="tabular" style="font-family:var(--font-mono); font-size:11px;">-08m</span>
-              ${SVG.chevron}
-            </div>
-          </div>`;
+        return '<div class="stage-box' + (isExpanded ? ' is-expanded-stage' : '') + '">' +
+          '<div class="menubar-strip">' +
+            '<div class="menubar-left"><span>CodeIsland</span><span>File</span><span>View</span></div>' +
+            notchMarkup +
+            '<div class="menubar-right"><span>94%</span><span>Sun 23:45</span></div>' +
+          '</div>' +
+          dropHint +
+          '<div class="island-drop-anchor">' +
+            variant.renderState(state.activeState) +
+            '<div class="guide-ruler">' + variant.guideNote + '</div>' +
+          '</div>' +
+        '</div>';
       }
-      if (state === 'idleMusic') {
-        return `
-          <div class="var-b-cluster">
-            <div class="var-b-pill">
-              ${SVG.mascot('#E07A55', 15)}
-              <span style="font-size:11.5px; color:var(--text-secondary);">2 Agents</span>
-            </div>
-            <div class="var-b-pill var-b-media-pill">
-              <span class="art-thumb">${SVG.musicNote}</span>
-              <span style="font-size:11.5px; font-weight:600; color:#fff;">From The Start</span>
-              ${SPECTRUM}
-            </div>
-          </div>`;
-      }
-      if (state === 'thinking') {
-        return `
-          <div class="var-b-cluster">
-            <div class="var-b-pill" style="border-color:rgba(0,229,199,0.28);">
-              ${SVG.mascot('#E07A55', 15)}
-              <span style="font-size:12px; font-weight:650; color:#fff;">Thinking</span>
-              <span style="font-family:var(--font-mono); font-size:11px; color:#00E5C7; display:inline-flex; align-items:center; gap:3px;">${SVG.branch} feat/#36</span>
-            </div>
-            <div class="var-b-pill var-b-media-pill">
-              <span class="art-thumb">${SVG.musicNote}</span>
-              <span style="font-size:11px; color:var(--text-secondary);">Laufey</span>
-              ${SPECTRUM}
-            </div>
-          </div>`;
-      }
-      if (state === 'lyrics') {
-        return `
-          <div class="var-b-cluster">
-            <div class="var-b-pill" title="Compact Agent Pill yields width to Lyric Satellite">
-              ${SVG.mascot('#E07A55', 15)}
-              <span style="font-family:var(--font-mono); font-size:11px; color:#00E5C7;">2</span>
-            </div>
-            <div class="var-b-lyric-satellite">
-              <span class="art-thumb">${SVG.musicNote}</span>
-              <span style="font-size:12.5px; font-weight:650; color:#fff; white-space:nowrap;">Wait a minute, shouldn’t this feel right?</span>
-              ${SPECTRUM}
-              <span class="tabular" style="font-family:var(--font-mono); font-size:11px; color:#ffb092;">01:42</span>
-            </div>
-          </div>`;
-      }
-      if (state === 'toastMagsafe') {
-        return `
-          <div class="var-b-cluster">
-            <div class="var-b-pill" style="border-color:rgba(48,209,88,0.55); background:#0c1710; padding:0 14px;">
-              <span style="color:#30d158; display:inline-flex;">${SVG.bolt}</span>
-              <span style="font-size:12px; font-weight:650; color:#fff;">MagSafe</span>
-              <span class="tabular" style="font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:#6ce88b;">94%</span>
-            </div>
-            <div class="var-b-pill var-b-media-pill">
-              <span class="art-thumb">${SVG.musicNote}</span>
-              ${SPECTRUM}
-            </div>
-          </div>`;
-      }
-      if (state === 'toastPrayer') {
-        return `
-          <div class="var-b-cluster">
-            <div class="var-b-pill" style="border-color:rgba(124,147,255,0.55); background:#101426; padding:0 14px;">
-              <span style="color:#9db0ff; display:inline-flex;">${SVG.moon}</span>
-              <span style="font-size:12px; font-weight:650; color:#fff;">Maghrib · 17:58</span>
-              <span class="tabular" style="font-family:var(--font-mono); font-size:11px; color:#bac6ff;">-08m</span>
-            </div>
-            <div class="var-b-pill">
-              ${SVG.mascot('#E07A55', 14)}
-            </div>
-          </div>`;
-      }
-      // Expanded: Left Rail Architecture!
-      return `
-        <div class="var-b-expanded">
-          <aside class="var-b-rail">
-            <div>
-              <div style="display:flex; align-items:center; gap:7px; padding:2px 6px 10px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:8px;">
-                ${SVG.mascot('#E07A55', 15)}
-                <span style="font-size:12px; font-weight:650; color:#fff;">CodeIsland</span>
-              </div>
-              <button class="rail-tab ${currentExpTab==='agents'?'active':''}" onclick="event.stopPropagation(); setExpandedTab('agents')"><span>Agents</span><span class="tabular" style="font-size:11px;opacity:0.7;">2</span></button>
-              <button class="rail-tab ${currentExpTab==='workspace'?'active':''}" onclick="event.stopPropagation(); setExpandedTab('workspace')"><span>Workspace</span><span class="tabular" style="font-size:11px;opacity:0.7;">3M</span></button>
-              <button class="rail-tab ${currentExpTab==='music'?'active':''}" onclick="event.stopPropagation(); setExpandedTab('music')"><span>Music</span><span class="tabular" style="font-size:11px;opacity:0.7;">▶</span></button>
-              <button class="rail-tab ${currentExpTab==='prayer'?'active':''}" onclick="event.stopPropagation(); setExpandedTab('prayer')"><span>Prayer</span><span class="tabular" style="font-size:11px;opacity:0.7;">-8m</span></button>
-            </div>
-            <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); padding:0 6px;">QUOTA 42% · 5H</div>
-          </aside>
-          <div style="padding:13px 15px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-              <span style="font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">${currentExpTab}</span>
-              <span style="font-family:var(--font-mono); font-size:11px; color:#00E5C7;">Dual-Pill Fused</span>
-            </div>
-            ${renderExpandedBody(currentExpTab, 'B')}
-          </div>
-        </div>`;
-    }
 
-    function renderVariantC(state) {
-      const codeStrip = `
-        <span class="var-c-blocks" title="Saville Code: Agent · Git · Audio · Prayer">
-          <i style="background:${state==='resting' ? '#475063' : '#E07A55'}"></i>
-          <i style="background:#00E5C7"></i>
-          <i style="background:${state==='resting' ? '#2c3240' : '#F5B942'}"></i>
-          <i style="background:#7C93FF"></i>
-        </span>`;
+      function buildCardHTML(variant, isFocus) {
+        const footerBtn = isFocus
+          ? '<button type="button" class="footer-action" data-back-compare="1">Back to Compare All 4</button>'
+          : '<button type="button" class="footer-action" data-open-focus="' + variant.id + '">Inspect Focus View</button>';
 
-      if (state === 'resting') {
-        return `
-          <div class="var-c-shell">
-            <div class="var-c-strip">
-              <div class="var-c-cell">${codeStrip}</div>
-              <div class="var-c-cell" style="font-family:var(--font-mono); font-size:11px; letter-spacing:0.06em; color:var(--text-secondary);">STANDBY // 00</div>
-              <div class="var-c-cell tabular" style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">-08M</div>
-            </div>
-          </div>`;
+        return '<article class="variant-card' + (isFocus ? ' is-focus-pick' : '') + '">' +
+          '<div class="card-header">' +
+            '<div class="card-title-group">' +
+              '<span class="card-kicker">' + variant.kicker + '</span>' +
+              '<h2 class="card-title">' + variant.title + '</h2>' +
+              '<p class="card-summary">' + variant.summary + '</p>' +
+            '</div>' +
+            '<span class="icon-count-badge">' + variant.badge + '</span>' +
+          '</div>' +
+          buildStageHTML(variant) +
+          '<div class="card-footer">' +
+            '<span>' + variant.footerMetric + '</span>' +
+            footerBtn +
+          '</div>' +
+        '</article>';
       }
-      if (state === 'idleMusic') {
-        return `
-          <div class="var-c-shell">
-            <div class="var-c-strip">
-              <div class="var-c-cell">${codeStrip}</div>
-              <div class="var-c-cell"><span style="font-family:var(--font-mono); font-size:11px; color:var(--text-secondary);">2 IDLE</span></div>
-              <div class="var-c-cell"><span class="var-c-tag">TRK 04</span><span style="font-size:12.5px; font-weight:600; letter-spacing:0.02em;">FROM THE START — LAUFEY</span></div>
-              <div class="var-c-cell tabular" style="font-family:var(--font-mono); font-size:11px; color:#00E5C7;">01:42</div>
-            </div>
-          </div>`;
-      }
-      if (state === 'thinking') {
-        return `
-          <div class="var-c-shell">
-            <div class="var-c-strip">
-              <div class="var-c-cell">${codeStrip}</div>
-              <div class="var-c-cell"><span class="var-c-tag">ACT</span><span style="font-size:12.5px; font-weight:650; letter-spacing:0.02em;">CLAUDE READ · FEAT/#36</span></div>
-              <div class="var-c-cell">${SPECTRUM}<span style="font-size:12px; color:#d7dce8;">LAUFEY</span></div>
-              <div class="var-c-cell tabular" style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">Q:42%</div>
-            </div>
-          </div>`;
-      }
-      if (state === 'lyrics') {
-        return `
-          <div class="var-c-shell" style="width:454px;">
-            <div class="var-c-strip" style="justify-content:space-between;">
-              <div style="display:flex; align-items:stretch;">
-                <div class="var-c-cell">${codeStrip}</div>
-                <div class="var-c-cell"><span class="var-c-tag">LRC</span><span style="font-size:11.5px; letter-spacing:0.04em; color:var(--text-secondary);">FROM THE START</span></div>
-              </div>
-              <div class="var-c-cell tabular" style="font-family:var(--font-mono); font-size:11px; color:#00E5C7;">01:42 / 02:50</div>
-            </div>
-            <div class="var-c-lyric-drawer">
-              <span style="font-family:var(--font-work); font-size:13px; font-weight:650; color:#ffffff;">Wait a minute, shouldn’t this feel right?</span>
-              <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); white-space:nowrap;">[58%]</span>
-            </div>
-          </div>`;
-      }
-      if (state === 'toastMagsafe') {
-        return `
-          <div class="var-c-shell" style="border-color:#30d158;">
-            <div class="var-c-strip">
-              <div class="var-c-cell" style="background:#30d158; color:#050b07; font-family:var(--font-mono); font-size:11px; font-weight:700;">${SVG.bolt} PWR</div>
-              <div class="var-c-cell" style="font-size:12.5px; font-weight:700; letter-spacing:0.04em;">MAGSAFE CONNECTED</div>
-              <div class="var-c-cell tabular" style="font-family:var(--font-mono); font-size:11px; color:#6ce88b;">[█████████░] 94%</div>
-            </div>
-          </div>`;
-      }
-      if (state === 'toastPrayer') {
-        return `
-          <div class="var-c-shell" style="border-color:#7C93FF;">
-            <div class="var-c-strip">
-              <div class="var-c-cell" style="background:#7C93FF; color:#090b16; font-family:var(--font-mono); font-size:11px; font-weight:700;">${SVG.moon} SOLAT</div>
-              <div class="var-c-cell" style="font-size:12.5px; font-weight:700; letter-spacing:0.04em;">MAGHRIB · JAKARTA</div>
-              <div class="var-c-cell tabular" style="font-family:var(--font-mono); font-size:11px; color:#bac6ff;">17:58 (-08M)</div>
-            </div>
-          </div>`;
-      }
-      // Expanded Japanese High-Density Mosaic + Saville Coded Header
-      return `
-        <div class="var-c-shell var-c-expanded">
-          <div class="var-c-strip" style="justify-content:space-between; background:#0b0c10;">
-            <div style="display:flex; align-items:stretch;">
-              <div class="var-c-cell">${codeStrip}</div>
-              <div class="var-c-cell"><span style="font-size:12.5px; font-weight:700; letter-spacing:0.05em;">FAC//CODEISLAND</span></div>
-              <div class="var-c-cell" style="gap:3px;">
-                ${['agents','workspace','music','prayer'].map(t => `<button class="var-c-tag" style="cursor:pointer; border:none; background:${currentExpTab===t?'#e60023':'rgba(255,255,255,0.08)'}; color:#fff;" onclick="event.stopPropagation(); setExpandedTab('${t}')">${t.toUpperCase()}</button>`).join('')}
-              </div>
-            </div>
-            <div class="var-c-cell tabular" style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">5H 42% · 2 ACT</div>
-          </div>
-          <div class="var-c-dense-grid">
-            <div class="var-c-panel-cell" style="grid-column:span 8;">
-              ${renderExpandedBody(currentExpTab, 'C')}
-            </div>
-            <div class="var-c-panel-cell" style="grid-column:span 4; background:#0b0d12; display:flex; flex-direction:column; justify-content:space-between;">
-              <div>
-                <div style="font-family:var(--font-mono); font-size:11px; color:#e60023; font-weight:700; margin-bottom:6px;">LIVE TELEMETRY</div>
-                <div style="font-family:var(--font-mono); font-size:11px; color:#dce2ef; line-height:1.5;">BR: feat/#36<br>GIT: 3M 1U<br>AUD: LAUFEY ▶</div>
-              </div>
-              <div style="font-family:var(--font-mono); font-size:11px; color:#7C93FF; border-top:1px solid rgba(255,255,255,0.09); padding-top:6px;">MAGHRIB · -08M</div>
-            </div>
-          </div>
-        </div>`;
-    }
 
-    function renderVariantD(state) {
-      if (state === 'resting') {
-        return `
-          <div class="var-d-shell">
-            <div style="display:flex; align-items:center; gap:5px;">
-              <div class="var-d-oled" style="padding:4px 9px;">
-                ${SVG.mascot('#F5B942', 14)}
-                <span style="font-family:var(--font-mono); font-size:11px; color:#ffd37a;">STANDBY</span>
-              </div>
-              <span class="tabular" style="font-family:var(--font-mono); font-size:11px; color:var(--text-secondary); padding:0 6px;">17:58</span>
-            </div>
-          </div>`;
-      }
-      if (state === 'idleMusic') {
-        return `
-          <div class="var-d-shell">
-            <div style="display:flex; align-items:center; gap:5px;">
-              <div class="var-d-oled">
-                ${SVG.mascot('#E07A55', 14)}
-                <span style="font-family:var(--font-mono); font-size:11px; color:#00E5C7;">IDLE×2</span>
-                <span style="width:1px;height:12px;background:rgba(255,255,255,0.14);"></span>
-                <span style="font-size:11.5px; font-weight:600; color:#fff;">From The Start</span>
-                <span class="tabular" style="font-family:var(--font-mono); font-size:11px; color:#ffd37a;">01:42</span>
-              </div>
-              <button class="var-d-keycap" onclick="event.stopPropagation(); setStateMode('lyrics')" title="Toggle OLED Lyrics Bay">${SVG.pause}</button>
-            </div>
-          </div>`;
-      }
-      if (state === 'thinking') {
-        return `
-          <div class="var-d-shell">
-            <div style="display:flex; align-items:center; gap:5px;">
-              <div class="var-d-oled">
-                ${SVG.mascot('#E07A55', 14)}
-                <span style="font-family:var(--font-mono); font-size:11px; color:#ffb092;">THINKING · #36</span>
-                <span style="width:1px;height:12px;background:rgba(255,255,255,0.14);"></span>
-                ${SPECTRUM}
-                <span class="tabular" style="font-family:var(--font-mono); font-size:11px; color:#dce2ef;">01:42</span>
-              </div>
-              <button class="var-d-keycap" onclick="event.stopPropagation(); setStateMode('expanded')">DECK</button>
-            </div>
-          </div>`;
-      }
-      if (state === 'lyrics') {
-        return `
-          <div class="var-d-shell" style="width:458px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:1px 4px 5px;">
-              <div style="display:flex; align-items:center; gap:6px;">
-                ${SVG.mascot('#E07A55', 13)}
-                <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-secondary);">SIDE B · AUDIO</span>
-              </div>
-              <span class="tabular" style="font-family:var(--font-mono); font-size:11px; color:#ffd37a;">LAUFEY · 01:42 / 02:50</span>
-            </div>
-            <div class="var-d-oled" style="justify-content:space-between; padding:7px 11px;">
-              <div>
-                <div style="font-size:13px; font-weight:650; color:#ffd37a; letter-spacing:-0.01em;">Wait a minute, shouldn’t this feel right?</div>
-                <div style="font-size:11px; color:rgba(255,211,122,0.74);">Next: Isn’t this dynamic island finally clean…</div>
-              </div>
-              ${SPECTRUM}
-            </div>
-          </div>`;
-      }
-      if (state === 'toastMagsafe') {
-        return `
-          <div class="var-d-shell">
-            <div class="var-d-oled" style="border-color:rgba(48,209,88,0.45); padding:6px 12px; gap:12px;">
-              <span style="color:#30d158; display:inline-flex;">${SVG.bolt}</span>
-              <span style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:#6ce88b;">VFD // MAGSAFE CHG</span>
-              <span class="tabular" style="font-family:var(--font-mono); font-size:13px; font-weight:700; color:#ffffff;">94%</span>
-            </div>
-          </div>`;
-      }
-      if (state === 'toastPrayer') {
-        return `
-          <div class="var-d-shell">
-            <div class="var-d-oled" style="border-color:rgba(124,147,255,0.45); padding:6px 12px; gap:12px;">
-              <span style="color:#9db0ff; display:inline-flex;">${SVG.moon}</span>
-              <span style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:#bac6ff;">MAGHRIB · T-08M</span>
-              <span class="tabular" style="font-family:var(--font-mono); font-size:12px; font-weight:700; color:#ffffff;">17:58</span>
-            </div>
-          </div>`;
-      }
-      // Expanded Deck Console
-      const isSideA = (currentExpTab === 'agents' || currentExpTab === 'workspace');
-      return `
-        <div class="var-d-shell" style="width:604px; padding:6px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; padding:2px 6px 7px;">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <button class="var-d-keycap ${isSideA?'active-side':''}" onclick="event.stopPropagation(); setExpandedTab('agents')">SIDE A: FLOW</button>
-              <button class="var-d-keycap ${!isSideA?'active-side':''}" onclick="event.stopPropagation(); setExpandedTab('music')">SIDE B: MEDIA</button>
-            </div>
-            <div style="display:flex; align-items:center; gap:4px;">
-              ${['agents','workspace','music','prayer'].map(t => `<button class="var-d-keycap ${currentExpTab===t?'active-side':''}" style="height:22px; font-size:11px;" onclick="event.stopPropagation(); setExpandedTab('${t}')">${t.toUpperCase()}</button>`).join('')}
-            </div>
-          </div>
-          <div class="var-d-oled" style="display:block; padding:12px;">
-            ${renderExpandedBody(currentExpTab, 'D')}
-          </div>
-        </div>`;
-    }
+      function render() {
+        appRoot.classList.toggle("show-guides", state.showGuides);
+        guideToggleBtn.classList.toggle("active", state.showGuides);
+        guideToggleBtn.setAttribute("aria-pressed", state.showGuides ? "true" : "false");
 
-    function renderIsland(variant, state) {
-      if (variant === 'A') return renderVariantA(state);
-      if (variant === 'B') return renderVariantB(state);
-      if (variant === 'C') return renderVariantC(state);
-      return renderVariantD(state);
-    }
+        document.querySelectorAll("[data-view]").forEach(function (btn) {
+          btn.classList.toggle("active", btn.getAttribute("data-view") === state.view);
+        });
+        document.querySelectorAll("[data-mode]").forEach(function (btn) {
+          btn.classList.toggle("active", btn.getAttribute("data-mode") === state.mode);
+        });
+        document.querySelectorAll("[data-state]").forEach(function (btn) {
+          btn.classList.toggle("active", parseInt(btn.getAttribute("data-state"), 10) === state.activeState);
+        });
+        document.querySelectorAll("[data-focus]").forEach(function (btn) {
+          btn.classList.toggle("active", parseInt(btn.getAttribute("data-focus"), 10) === state.focusVariant);
+        });
 
-    function updateAnchorPlacement() {
-      const anchor = document.getElementById('islandAnchor');
-      const monitor = document.getElementById('monitorFrame');
-      const hwNotch = document.getElementById('hardwareNotch');
+        stateCaption.textContent = STATE_CAPTIONS[state.activeState] || "";
 
-      monitor.classList.toggle('screen-notched', currentScreen === 'notched');
-      hwNotch.classList.toggle('visible', currentScreen === 'notched');
+        // Update Before Baseline Banner
+        const base = BASELINE_SPEC[state.activeState];
+        baselineDesc.textContent = base.desc;
+        baselineStage.innerHTML = base.render();
+        diagnosisTags.innerHTML = base.tags.map(function (t) {
+          return '<span class="diag-tag">' + t + '</span>';
+        }).join("");
+        baselineSection.classList.toggle("hidden", state.view === "focus" && state.activeState === 7);
 
-      anchor.classList.remove('mode-below-notch', 'mode-straddle-notch');
-      if (currentScreen === 'notched') {
-        if (currentVariant === 'B' && currentState !== 'expanded') {
-          // Variant B naturally hugs both shoulders of the MacBook camera cutout!
-          anchor.classList.add('mode-straddle-notch');
+        if (state.view === "compare") {
+          compareGrid.classList.remove("hidden");
+          focusShell.classList.add("hidden");
+          compareGrid.innerHTML = VARIANTS.map(function (v) {
+            return buildCardHTML(v, false);
+          }).join("");
         } else {
-          // Variants A, C, D and expanded fused state dock cleanly beneath cutout without fake dead center gap
-          anchor.classList.add('mode-below-notch');
+          compareGrid.classList.add("hidden");
+          focusShell.classList.remove("hidden");
+          const chosen = VARIANTS.find(function (v) { return v.id === state.focusVariant; }) || VARIANTS[1];
+          focusCardHost.innerHTML = buildCardHTML(chosen, true);
         }
       }
-    }
 
-    function renderSpecPanel() {
-      const m = META[currentVariant];
-      document.getElementById('specWorldId').textContent = m.worldId;
-      document.getElementById('specTitle').textContent = m.title;
-      document.getElementById('specThesis').textContent = m.thesis;
-      document.getElementById('specCollapsed').textContent = m.collapsed;
-      document.getElementById('specLyrics').textContent = m.lyrics;
-      document.getElementById('specExpanded').textContent = m.expanded;
-      document.getElementById('specRisk').textContent = m.risk;
-      document.getElementById('specPalette').innerHTML = m.palette.map(p =>
-        `<span class="swatch-pill"><i class="swatch-dot" style="background:${p.hex}"></i>${p.hex} · ${p.name}</span>`
-      ).join('');
-    }
+      document.addEventListener("click", function (e) {
+        const viewBtn = e.target.closest("[data-view]");
+        if (viewBtn) {
+          state.view = viewBtn.getAttribute("data-view");
+          render();
+          return;
+        }
+        const modeBtn = e.target.closest("[data-mode]");
+        if (modeBtn) {
+          state.mode = modeBtn.getAttribute("data-mode");
+          render();
+          return;
+        }
+        const stateBtn = e.target.closest("[data-state]");
+        if (stateBtn) {
+          state.activeState = parseInt(stateBtn.getAttribute("data-state"), 10);
+          render();
+          return;
+        }
+        const focusSel = e.target.closest("[data-focus]");
+        if (focusSel) {
+          state.focusVariant = parseInt(focusSel.getAttribute("data-focus"), 10);
+          render();
+          return;
+        }
+        const openFocus = e.target.closest("[data-open-focus]");
+        if (openFocus) {
+          state.focusVariant = parseInt(openFocus.getAttribute("data-open-focus"), 10);
+          state.view = "focus";
+          render();
+          return;
+        }
+        if (e.target.closest("[data-back-compare]")) {
+          state.view = "compare";
+          render();
+          return;
+        }
+        if (e.target.closest("#guideToggleBtn")) {
+          state.showGuides = !state.showGuides;
+          render();
+        }
+      });
 
-    function renderCompareGrid() {
-      const grid = document.getElementById('compareGrid');
-      grid.innerHTML = VARIANTS.map(v => {
-        const m = META[v];
-        return `
-          <div class="compare-row ${v===currentVariant?'selected':''}" onclick="selectFromCompare('${v}')">
-            <div>
-              <div class="compare-meta-title">${m.title}</div>
-              <div class="compare-meta-sub">${m.thesis}</div>
-              <div style="font-family:var(--font-mono); font-size:11px; color:var(--accent-cyan); margin-top:6px;">${m.worldId}</div>
-            </div>
-            <div class="compare-stage">
-              ${renderIsland(v, currentState)}
-            </div>
-          </div>`;
-      }).join('');
-    }
+      document.addEventListener("keydown", function (e) {
+        if (e.key >= "1" && e.key <= "7") {
+          state.activeState = parseInt(e.key, 10);
+          render();
+        } else if (e.key.toLowerCase() === "g") {
+          state.showGuides = !state.showGuides;
+          render();
+        }
+      });
 
-    function render() {
-      // Sync buttons
-      document.querySelectorAll('.variant-pill').forEach(b => b.classList.toggle('active', b.dataset.variant === currentVariant));
-      document.querySelectorAll('[data-state]').forEach(b => b.classList.toggle('active', b.dataset.state === currentState));
-      document.querySelectorAll('[data-screen]').forEach(b => b.classList.toggle('active', b.dataset.screen === currentScreen));
-      document.querySelectorAll('[data-exptab]').forEach(b => b.classList.toggle('active', b.dataset.exptab === currentExpTab));
-
-      document.getElementById('expandedTabBar').style.display = currentState === 'expanded' ? 'inline-flex' : 'none';
-      document.getElementById('btnViewFocus').classList.toggle('active', currentView === 'focus');
-      document.getElementById('btnViewCompare').classList.toggle('active', currentView === 'compare');
-      document.getElementById('btnToggleNotes').classList.toggle('active', showNotes);
-
-      const focusGrid = document.getElementById('focusGrid');
-      const compareGrid = document.getElementById('compareGrid');
-      const specPanel = document.getElementById('specPanel');
-
-      focusGrid.classList.toggle('hidden', currentView !== 'focus');
-      compareGrid.classList.toggle('visible', currentView === 'compare');
-      focusGrid.classList.toggle('notes-hidden', !showNotes);
-      specPanel.style.display = showNotes ? 'flex' : 'none';
-
-      updateAnchorPlacement();
-      document.getElementById('focusIslandMount').innerHTML = renderIsland(currentVariant, currentState);
-      renderSpecPanel();
-      if (currentView === 'compare') renderCompareGrid();
-
-      const params = new URLSearchParams(location.search);
-      params.set('variant', currentVariant);
-      params.set('state', currentState);
-      params.set('screen', currentScreen);
-      history.replaceState(null, '', '?' + params.toString());
-    }
-
-    function setVariant(v) { currentVariant = v; render(); }
-    function stepVariant(dir) {
-      const idx = VARIANTS.indexOf(currentVariant);
-      currentVariant = VARIANTS[(idx + dir + VARIANTS.length) % VARIANTS.length];
       render();
-    }
-    function setStateMode(s) { currentState = s; render(); }
-    function setScreenMode(s) { currentScreen = s; render(); }
-    function setExpandedTab(t) { currentExpTab = t; render(); }
-    function setViewMode(v) { currentView = v; render(); }
-    function toggleNotes() { showNotes = !showNotes; render(); }
-    function selectFromCompare(v) { currentVariant = v; currentView = 'focus'; render(); }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowLeft') stepVariant(-1);
-      if (e.key === 'ArrowRight') stepVariant(1);
-      if (['1','2','3','4','5','6'].includes(e.key)) {
-        const map = { '1':'resting', '2':'idleMusic', '3':'thinking', '4':'lyrics', '5':'toastMagsafe', '6':'expanded' };
-        setStateMode(map[e.key]);
-      }
-    });
-
-    render();
+    })();
   </script>
 </body>
 </html>
