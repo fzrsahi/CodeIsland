@@ -211,6 +211,7 @@ struct NotchPanelView: View {
     @State private var rightWingWidth: CGFloat = 0
     @State private var isHoveringRightWing = false
     @State private var musicAutoCollapseTimer: Timer?
+    @State private var musicAutoCollapseWorkItem: DispatchWorkItem?
     @State private var musicDeferCollapseOnMouseLeave = false
 
     private var expandedTabBinding: Binding<ExpandedContentTab> {
@@ -287,6 +288,35 @@ struct NotchPanelView: View {
 
     private var isToastOnly: Bool {
         (signals.showMiniPeekBanner || signals.showChargingBanner) && !appState.surface.isExpanded
+    }
+
+    private func triggerMusicAutoPeek() {
+        guard !appState.surface.isPrompting else { return }
+        musicAutoCollapseWorkItem?.cancel()
+        musicAutoCollapseWorkItem = nil
+        musicAutoCollapseTimer?.invalidate()
+        musicAutoCollapseTimer = nil
+        musicDeferCollapseOnMouseLeave = false
+
+        withAnimation(NotchAnimation.open) {
+            appState.transitionToTab(.music)
+            appState.surface = .sessionList
+        }
+
+        let item = DispatchWorkItem { [weak appState] in
+            guard let appState else { return }
+            if isHovered || appState.followUps.pointerOverIsland {
+                musicDeferCollapseOnMouseLeave = true
+            } else {
+                withAnimation(NotchAnimation.close) {
+                    if appState.surface == .sessionList && expandedTab == .music {
+                        appState.surface = .collapsed
+                    }
+                }
+            }
+        }
+        musicAutoCollapseWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: item)
     }
 
 
@@ -812,7 +842,11 @@ struct NotchPanelView: View {
                 displayedToolStatus = showToolStatus
                 prayerManager.appState = appState
             }
-
+            .onChange(of: signals.musicTitle) { oldTitle, newTitle in
+                if !newTitle.isEmpty && newTitle != oldTitle && signals.isPlaying {
+                    triggerMusicAutoPeek()
+                }
+            }
             .onChange(of: signals.isPlaying) { _, isPlaying in
                 if isPlaying && expandedTab == .music && appState.surface.isExpanded {
                     appState.transitionToTab(.music)
@@ -906,6 +940,8 @@ struct NotchPanelView: View {
                 isHovered = hovering
                 if !hovering && musicDeferCollapseOnMouseLeave {
                     musicDeferCollapseOnMouseLeave = false
+                    musicAutoCollapseWorkItem?.cancel()
+                    musicAutoCollapseWorkItem = nil
                     musicAutoCollapseTimer?.invalidate()
                     musicAutoCollapseTimer = nil
                     withAnimation(NotchAnimation.close) {
@@ -916,7 +952,9 @@ struct NotchPanelView: View {
                     return
                 }
                 if hovering {
-                    if musicAutoCollapseTimer != nil {
+                    if musicAutoCollapseWorkItem != nil || musicAutoCollapseTimer != nil {
+                        musicAutoCollapseWorkItem?.cancel()
+                        musicAutoCollapseWorkItem = nil
                         musicAutoCollapseTimer?.invalidate()
                         musicAutoCollapseTimer = nil
                         musicDeferCollapseOnMouseLeave = true
@@ -990,6 +1028,8 @@ struct NotchPanelView: View {
             }
             .onChange(of: appState.expandedTab) { _, newTab in
                 if newTab != .music {
+                    musicAutoCollapseWorkItem?.cancel()
+                    musicAutoCollapseWorkItem = nil
                     musicAutoCollapseTimer?.invalidate()
                     musicAutoCollapseTimer = nil
                     musicDeferCollapseOnMouseLeave = false

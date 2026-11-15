@@ -636,8 +636,23 @@ final class NowPlayingManager: ObservableObject {
         // Music notifications disabled: music is smoothly presented in Dynamic Island wing & chin lyrics
     }
 
+    public func triggerTestTrackChange() {
+        let testTracks = [
+            ("Midnight City", "M83"),
+            ("Starman", "David Bowie"),
+            ("Bohemian Rhapsody", "Queen"),
+            ("Viva La Vida", "Coldplay")
+        ]
+        let current = title
+        let next = testTracks.first(where: { $0.0 != current }) ?? testTracks[0]
+        title = next.0
+        artist = next.1
+        isPlaying = true
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+    }
+
     public func triggerTestToast() {
-        // No-op
+        triggerTestTrackChange()
     }
 
     // MARK: - Playback Progress & Adaptive Polling
