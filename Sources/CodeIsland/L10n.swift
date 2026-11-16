@@ -55,6 +55,7 @@ final class L10n: ObservableObject {
         "workspace": "Workspace",
         "music": "Music",
         "mail": "Apple Mail",
+        "game": "Notch Hoops",
         "remote": "Remote",
         "hooks": "Hooks",
         "about": "About",

@@ -18,7 +18,7 @@ enum SettingsPage: String, Identifiable, Hashable {
     case music
     case prayer
     case mail
-
+    case game
     // System & Tools
     case behavior
     case remote
@@ -40,6 +40,7 @@ enum SettingsPage: String, Identifiable, Hashable {
         case .music: return "music.note.list"
         case .prayer: return "moon.stars.fill"
         case .mail: return "envelope.fill"
+        case .game: return "gamecontroller.fill"
         case .behavior: return "slider.horizontal.3"
         case .remote: return "network"
         case .hooks: return "link.circle.fill"
@@ -60,6 +61,7 @@ enum SettingsPage: String, Identifiable, Hashable {
         case .music: return Color(red: 1.0, green: 0.16, blue: 0.53)
         case .prayer: return Color(red: 0.12, green: 0.84, blue: 0.38)
         case .mail: return Color(red: 0.25, green: 0.52, blue: 0.96)
+        case .game: return .orange
         case .behavior: return .orange
         case .remote: return .mint
         case .hooks: return .purple
@@ -76,7 +78,7 @@ private struct SidebarGroup: Hashable {
 
 private let sidebarGroups: [SidebarGroup] = [
     SidebarGroup(title: "System", pages: [.general, .appearance, .mascots, .sound, .shortcuts]),
-    SidebarGroup(title: "Features & HUD", pages: [.agents, .workspace, .music, .prayer, .mail]),
+    SidebarGroup(title: "Features & HUD", pages: [.agents, .workspace, .music, .prayer, .mail, .game]),
     SidebarGroup(title: "CodeIsland", pages: [.behavior, .remote, .hooks, .buddy, .about]),
 ]
 
@@ -125,6 +127,7 @@ struct SettingsView: View {
                 case .music: MusicSettingsPage()
                 case .prayer: PrayerSettingsPage()
                 case .mail: MailSettingsPage()
+                case .game: GameSettingsPage()
                 case .behavior: BehaviorPage(appState: appState)
                 case .remote: RemoteHostsPage()
                 case .hooks: HooksPage(appState: appState)
@@ -1976,6 +1979,82 @@ private struct WorkspaceSettingsPage: View {
                 }
             }
             .disabled(!workspaceEnabled)
+        }
+        .formStyle(.grouped)
+    }
+}
+
+private struct GameSettingsPage: View {
+    @AppStorage(SettingsKey.gameEnabled) private var gameEnabled = SettingsDefaults.gameEnabled
+    @AppStorage(SettingsKey.notchHoopsHighScore) private var highScore = SettingsDefaults.notchHoopsHighScore
+    @AppStorage(SettingsKey.notchHoopsPositionMode) private var positionMode = SettingsDefaults.notchHoopsPositionMode
+    @AppStorage(SettingsKey.notchHoopsSoundEnabled) private var soundEnabled = SettingsDefaults.notchHoopsSoundEnabled
+
+    private func positionTitle(_ mode: NotchHoopsEngine.PositionMode) -> String {
+        switch mode {
+        case .random: return "Random (1PT / 2PT / 3PT)"
+        case .onePoint: return "1PT — Free Throw"
+        case .twoPoint: return "2PT — Mid-Range"
+        case .threePoint: return "3PT — Three-Point"
+        }
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Enable Notch Hoops Mini-Game", isOn: $gameEnabled)
+                    .font(.system(size: 13, weight: .semibold))
+                Text("Shows the Game tab in the expanded notch HUD. When disabled, Notch Hoops is unmounted with zero background CPU or memory usage.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Group {
+                Section("Gameplay") {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Picker("Default Shooting Position", selection: $positionMode) {
+                            ForEach(NotchHoopsEngine.PositionMode.allCases, id: \.self) { mode in
+                                Text(positionTitle(mode)).tag(mode.rawValue)
+                            }
+                        }
+                        .pickerStyle(.menu)
+
+                        Text("Controls where each turn starts. Random moves the ball between 1PT, 2PT, and 3PT zones after every shot.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    Toggle("Sound Effects", isOn: $soundEnabled)
+                }
+
+                Section("Scoreboard") {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Best Score")
+                            Text("Highest score recorded in Notch Hoops.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                        }
+                        Spacer()
+                        Text("\(highScore)")
+                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(.orange)
+                    }
+
+                    Button("Reset High Score", role: .destructive) {
+                        highScore = 0
+                    }
+                    .disabled(highScore == 0)
+                }
+
+                Section("Controls") {
+                    Text("Click and drag upward toward the hoop inside the court to aim and shoot. Swish or bank shots score +1, +2, or +3 based on distance.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .disabled(!gameEnabled)
         }
         .formStyle(.grouped)
     }
