@@ -385,7 +385,6 @@ struct ModernWorkspaceView: View {
                         .padding(.horizontal, 24)
 
                     Button(action: {
-                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                         manager.chooseWorkspaceFolder()
                     }) {
                         HStack(spacing: 5) {
@@ -420,7 +419,6 @@ struct ModernWorkspaceView: View {
                                 .lineLimit(1)
 
                             Button(action: {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 manager.chooseWorkspaceFolder()
                             }) {
                                 Image(systemName: "arrow.triangle.2.circlepath")
@@ -496,7 +494,6 @@ struct ModernWorkspaceView: View {
                         ModernActiveAgentPill(appState: appState, cwd: manager.currentCwd)
 
                         Button(action: {
-                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                             manager.refresh(force: true)
                         }) {
                             Group {
@@ -567,7 +564,6 @@ struct ModernWorkspaceView: View {
                             }
 
                             Button(action: {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 NSWorkspace.shared.open(URL(fileURLWithPath: manager.currentCwd))
                             }) {
                                 HStack(spacing: 3.5) {
@@ -591,7 +587,6 @@ struct ModernWorkspaceView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 6) {
                                 Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                     withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                                         manager.generateAICommitMessage()
                                     }
@@ -633,7 +628,6 @@ struct ModernWorkspaceView: View {
                                 )
 
                                 Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                     manager.executeCommit(message: manager.proposedCommitMessage, push: false)
                                 }) {
                                     Text(manager.isCommitting ? "..." : "Commit")
@@ -650,7 +644,6 @@ struct ModernWorkspaceView: View {
                                 .disabled(manager.isCommitting || manager.proposedCommitMessage.isEmpty)
 
                                 Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                     manager.executeCommit(message: manager.proposedCommitMessage, push: true)
                                 }) {
                                     HStack(spacing: 2.5) {
@@ -771,7 +764,6 @@ struct PixelRetroWorkspaceView: View {
                         .padding(.horizontal, 24)
 
                     Button(action: {
-                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                         manager.chooseWorkspaceFolder()
                     }) {
                         HStack(spacing: 6) {
@@ -800,7 +792,6 @@ struct PixelRetroWorkspaceView: View {
                     HStack(alignment: .center, spacing: 6) {
                         // Project Name + Switcher
                         Button(action: {
-                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                             manager.chooseWorkspaceFolder()
                         }) {
                             HStack(spacing: 5) {
@@ -905,7 +896,6 @@ struct PixelRetroWorkspaceView: View {
 
                         // Refresh Button
                         Button(action: {
-                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                             manager.refresh(force: true)
                         }) {
                             WorkspacePixelIcon(
@@ -1003,7 +993,6 @@ struct PixelRetroWorkspaceView: View {
                             }
 
                             Button(action: {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 NSWorkspace.shared.open(URL(fileURLWithPath: manager.currentCwd))
                             }) {
                                 HStack(spacing: 4) {
@@ -1029,7 +1018,6 @@ struct PixelRetroWorkspaceView: View {
                         HStack(spacing: 5) {
                             // AI Suggest Button
                             Button(action: {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                                     manager.generateAICommitMessage()
                                 }
@@ -1073,7 +1061,6 @@ struct PixelRetroWorkspaceView: View {
 
                             // Commit Button
                             Button(action: {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 manager.executeCommit(message: manager.proposedCommitMessage, push: false)
                             }) {
                                 HStack(spacing: 3) {
@@ -1107,7 +1094,6 @@ struct PixelRetroWorkspaceView: View {
 
                             // Push Button
                             Button(action: {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 manager.executeCommit(message: manager.proposedCommitMessage, push: true)
                             }) {
                                 HStack(spacing: 3) {

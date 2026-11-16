@@ -2138,7 +2138,9 @@ private struct CompactRightWing: View {
     @ViewBuilder
     private var dockWorkspaceButton: some View {
         Button(action: {
-            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            if UserDefaults.standard.object(forKey: SettingsKey.hapticOnHover) as? Bool ?? SettingsDefaults.hapticOnHover {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            }
             withAnimation(NotchAnimation.open) {
                 expandedTab = .workspace
                 appState.surface = .sessionList

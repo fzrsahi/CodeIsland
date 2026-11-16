@@ -405,7 +405,10 @@ public final class WorkspaceMonitorManager: ObservableObject {
                 self.isCommitting = false
                 self.commitStatusMessage = push ? "Committed & pushed!" : "Committed successfully!"
                 self.proposedCommitMessage = ""
-                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                let hapticOn = UserDefaults.standard.object(forKey: SettingsKey.hapticOnHover) as? Bool ?? SettingsDefaults.hapticOnHover
+                if hapticOn {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                }
                 self.refresh(force: true)
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
