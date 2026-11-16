@@ -46,6 +46,11 @@ steps:
   # --------------------------------------------------------------------------
   - name: dotnet-core-tests
     image: bash
+    # TODO(#33): remove `failure: ignore` once the .NET 8 SDK is installed on
+    # ci-codeisland.azhr.cloud. Until then the step reports its real status to
+    # GitHub through report-status.py, so the gap stays visible on the PR
+    # without reddening the pipeline for every other change.
+    failure: ignore
     environment:
       GITHUB_TOKEN:
         from_secret: github_token
