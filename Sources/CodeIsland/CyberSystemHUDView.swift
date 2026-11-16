@@ -1,10 +1,12 @@
 import SwiftUI
 import AppKit
+import CodeIslandCore
 
 // MARK: - MagSafe Charging Dynamic Island Banner
 
 public struct MagSafeChargingBanner: View {
     let batteryLevel: Int
+    var displayMode: IslandDisplayMode = .notch
     var onDismiss: (() -> Void)? = nil
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @State private var pulseRing = false
@@ -14,8 +16,9 @@ public struct MagSafeChargingBanner: View {
         islandUITheme == IslandUITheme.pixel.rawValue
     }
 
-    public init(batteryLevel: Int, onDismiss: (() -> Void)? = nil) {
+    public init(batteryLevel: Int, displayMode: IslandDisplayMode = .notch, onDismiss: (() -> Void)? = nil) {
         self.batteryLevel = batteryLevel
+        self.displayMode = displayMode
         self.onDismiss = onDismiss
     }
 
@@ -29,7 +32,9 @@ public struct MagSafeChargingBanner: View {
 
     public var body: some View {
         Group {
-            if isPixel {
+            if displayMode == .dynamicIsland {
+                dynamicIslandFlushBanner
+            } else if isPixel {
                 pixelChargingBanner
             } else {
                 modernChargingBanner
@@ -43,6 +48,48 @@ public struct MagSafeChargingBanner: View {
                 pixelPulse = true
             }
         }
+    }
+
+    /// Flush full-pill MagSafe toast endorsed in Round 2 (@agungdunggio): zero nested gray card border.
+    private var dynamicIslandFlushBanner: some View {
+        HStack(spacing: 9) {
+            ZStack {
+                Circle()
+                    .fill(chargingGreen.opacity(0.20))
+                    .frame(width: 24, height: 24)
+                    .overlay(
+                        Circle()
+                            .strokeBorder(chargingGreen.opacity(0.45), lineWidth: 1)
+                    )
+
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color(red: 0.29, green: 0.87, blue: 0.50))
+                    .scaleEffect(pulseRing ? 1.08 : 0.96)
+            }
+
+            Text("MagSafe Charging")
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+
+            Spacer(minLength: 12)
+
+            Text("\(batteryLevel)%")
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color(red: 0.29, green: 0.87, blue: 0.50))
+        }
+        .padding(.leading, 8)
+        .padding(.trailing, 15)
+        .padding(.vertical, 7)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if let onDismiss {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                onDismiss()
+            }
+        }
+        .help("MagSafe Charging — Click to dismiss")
     }
 
     // MARK: - 1. Pixel Retro 16-Bit Cyber Cartridge Banner (Impeccable Lineless)

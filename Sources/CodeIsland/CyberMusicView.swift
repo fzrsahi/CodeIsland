@@ -404,12 +404,45 @@ struct ModernMarqueeText: View {
 
 // MARK: - Compact Wing Music View (Ultra-Compact for Small Notch)
 
+struct CompactAlbumArtworkThumbnail: View {
+    let artworkImage: NSImage?
+    let size: CGFloat
+    let cornerRadius: CGFloat
+    let accentColor: Color
+    var placeholderFill: Color = Color.white.opacity(0.12)
+    var borderOpacity: Double = 0.22
+
+    var body: some View {
+        Group {
+            if let art = artworkImage {
+                Image(nsImage: art)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                ZStack {
+                    placeholderFill
+                    Image(systemName: "music.note")
+                        .font(.system(size: max(8, size * 0.48), weight: .semibold))
+                        .foregroundStyle(accentColor)
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(Color.white.opacity(borderOpacity), lineWidth: 0.6)
+        )
+    }
+}
+
 struct CyberMusicWingView: View {
     @ObservedObject var nowPlaying: NowPlayingManager
     var isHovered: Bool = false
     var isThinking: Bool = false
     var isEnlarged: Bool = false
     var isBilateralWingsLyricActive: Bool = false
+    var isDynamicIslandCompact: Bool = false
     var wingWidth: CGFloat = 0
     var maxContentWidth: CGFloat? = nil
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
@@ -425,6 +458,7 @@ struct CyberMusicWingView: View {
         isThinking: Bool = false,
         isEnlarged: Bool = false,
         isBilateralWingsLyricActive: Bool = false,
+        isDynamicIslandCompact: Bool = false,
         wingWidth: CGFloat = 0,
         maxContentWidth: CGFloat? = nil
     ) {
@@ -433,6 +467,7 @@ struct CyberMusicWingView: View {
         self.isThinking = isThinking
         self.isEnlarged = isEnlarged
         self.isBilateralWingsLyricActive = isBilateralWingsLyricActive
+        self.isDynamicIslandCompact = isDynamicIslandCompact
         self.wingWidth = wingWidth
         self.maxContentWidth = maxContentWidth
     }
@@ -533,11 +568,11 @@ struct CyberMusicWingView: View {
 
     var body: some View {
         let narrow = isCompactNarrow
-        let artSize: CGFloat = isEnlarged ? 23 : (narrow ? 14 : 17)
+        let artSize: CGFloat = isEnlarged ? 23 : (narrow ? 14 : (isDynamicIslandCompact ? 19 : 17))
         let spectrumMaxH: CGFloat = isEnlarged ? 14.0 : (narrow ? 9.5 : 11.0)
-        let itemSpacing: CGFloat = isEnlarged ? 5 : (narrow ? 3 : 4)
+        let itemSpacing: CGFloat = isDynamicIslandCompact ? 7 : (isEnlarged ? 5 : (narrow ? 3 : 4))
         let barWidth: CGFloat = isEnlarged ? 2.4 : (narrow ? 1.8 : 2.0)
-        let horizPadding: CGFloat = narrow ? 0 : 2
+        let horizPadding: CGFloat = (narrow || isDynamicIslandCompact) ? 0 : 2
         let titleMaxWidth = resolvedTitleMaxWidth(artSize: artSize, spacing: itemSpacing)
 
         if isBilateralWingsLyricActive {
@@ -586,9 +621,10 @@ struct CyberMusicWingView: View {
             HStack(alignment: .center, spacing: itemSpacing) {
                 compactAlbumArt(
                     size: artSize,
-                    cornerRadius: isEnlarged ? 5 : 4,
+                    cornerRadius: (isEnlarged || isDynamicIslandCompact) ? 5 : 4,
                     fallbackFill: Color.white.opacity(0.12),
-                    fallbackIconColor: Color.white.opacity(0.85)
+                    fallbackIconColor: Color.white.opacity(0.85),
+                    borderOpacity: isDynamicIslandCompact ? 0.22 : 0.0
                 )
 
                 if let titleMaxW = titleMaxWidth {
@@ -615,9 +651,10 @@ struct CyberMusicWingView: View {
             HStack(alignment: .center, spacing: itemSpacing) {
                 compactAlbumArt(
                     size: artSize,
-                    cornerRadius: isEnlarged ? 4.5 : 3.5,
+                    cornerRadius: (isEnlarged || isDynamicIslandCompact) ? 4.5 : 3.5,
                     fallbackFill: Color(red: 0.08, green: 0.09, blue: 0.12),
-                    fallbackIconColor: accentColor.opacity(0.85)
+                    fallbackIconColor: accentColor.opacity(0.85),
+                    borderOpacity: isDynamicIslandCompact ? 0.20 : 0.0
                 )
 
                 if let titleMaxW = titleMaxWidth {
@@ -631,7 +668,7 @@ struct CyberMusicWingView: View {
                 }
 
                 CyberAudioSpectrumView(
-                    barCount: (titleMaxWidth != nil || narrow) ? 3 : 4,
+                    barCount: (titleMaxWidth != nil || narrow || isDynamicIslandCompact) ? 3 : 4,
                     isPlaying: nowPlaying.isPlaying,
                     barWidth: barWidth,
                     segmentHeight: isEnlarged ? 2.0 : 1.6,
@@ -1233,6 +1270,114 @@ struct IntegratedNotchChinLyricView: View {
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .help("♫ Live Synced Lyrics (Click to open Music HUD)")
+    }
+}
+
+// MARK: - Dynamic Island Native Inline Lyric Ribbon (Non-Notch Balanced Twin)
+
+/// Pitch-black inline lyric pill replacing detached sub-notch floating bars in Dynamic Island mode.
+struct DynamicIslandInlineLyricPillView: View {
+    @ObservedObject var nowPlaying: NowPlayingManager
+    let mascotSource: String
+    let mascotStatus: MascotAgentStatus
+    let mascotSize: CGFloat
+    let width: CGFloat
+    var onOpenFull: () -> Void = {}
+
+    @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
+    @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
+    @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+
+    private var accentColor: Color {
+        if (syncThemeWithAlbumArt || floatingLyricTextColor == "album" || musicHUDProgressColor == "album"),
+           nowPlaying.isPlaying, nowPlaying.artworkImage != nil {
+            return nowPlaying.albumPalette.primary
+        }
+        return Color(red: 0.18, green: 0.83, blue: 0.75) // Native Dynamic Island Cyan (#2DD4BF)
+    }
+
+    private var activeFontDesign: Font.Design {
+        switch FloatingLyricFontDesign(rawValue: floatingLyricFontDesign) ?? .rounded {
+        case .rounded: return .rounded
+        case .monospaced, .pixel: return .monospaced
+        case .system: return .default
+        case .serif: return .serif
+        }
+    }
+
+    private var displayText: String {
+        let lyric = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !lyric.isEmpty { return lyric }
+        if nowPlaying.lyricsLoading { return "Loading lyrics..." }
+        if nowPlaying.currentLyricIndex > 0 { return "Instrumental Interlude" }
+        if !nowPlaying.title.isEmpty {
+            return nowPlaying.artist.isEmpty ? nowPlaying.title : "\(nowPlaying.title) — \(nowPlaying.artist)"
+        }
+        return "Music Playing"
+    }
+
+    private var progressFraction: CGFloat {
+        guard nowPlaying.trackDuration > 0 else { return 0.45 }
+        let elapsed = nowPlaying.position(at: Date())
+        return min(1.0, max(0.05, CGFloat(elapsed / nowPlaying.trackDuration)))
+    }
+
+    var body: some View {
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            onOpenFull()
+        }) {
+            VStack(spacing: 3) {
+                HStack(spacing: 10) {
+                    MascotView(source: mascotSource, status: mascotStatus, size: min(19, mascotSize))
+                        .frame(width: min(19, mascotSize), height: min(19, mascotSize))
+                        .fixedSize()
+
+                    Rectangle()
+                        .fill(Color.white.opacity(0.18))
+                        .frame(width: 1, height: 12)
+
+                    Text(displayText)
+                        .font(.system(size: min(11.5, max(10, CGFloat(floatingLyricFontSize))), weight: .semibold, design: activeFontDesign))
+                        .foregroundStyle(Color.white.opacity(0.95))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .center)
+
+                    CompactAlbumArtworkThumbnail(
+                        artworkImage: nowPlaying.artworkImage,
+                        size: 18,
+                        cornerRadius: 4.5,
+                        accentColor: accentColor,
+                        borderOpacity: 0.24
+                    )
+                }
+                .padding(.horizontal, 13)
+
+                // Subtle 2pt lyric progress hairline cleanly separated below the row
+                GeometryReader { geo in
+                    let trackW = max(40, geo.size.width - 46)
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.white.opacity(0.12))
+                            .frame(width: trackW, height: 2)
+                        Capsule()
+                            .fill(accentColor)
+                            .frame(width: trackW * progressFraction, height: 2)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
+                .frame(height: 2)
+            }
+            .padding(.top, 5)
+            .padding(.bottom, 4)
+            .frame(width: max(220, width))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Live Synced Lyrics (Click to open Music HUD)")
     }
 }
 

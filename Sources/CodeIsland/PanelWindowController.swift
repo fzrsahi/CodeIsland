@@ -1,6 +1,23 @@
 import AppKit
 import SwiftUI
+import CodeIslandCore
 import os.log
+
+enum PanelWindowLayout {
+    static func anchoredY(
+        screenMaxY: CGFloat,
+        panelHeight: CGFloat,
+        displayMode: IslandDisplayMode,
+        isFullscreenMode: Bool,
+        topOffset: Double = DynamicIslandTopOffset.defaultValue
+    ) -> CGFloat {
+        screenMaxY - panelHeight - CGFloat(IslandDisplayMetrics.floatingYOffset(
+            displayMode: displayMode,
+            isFullscreenMode: isFullscreenMode,
+            customTopOffset: topOffset
+        ))
+    }
+}
 
 private let log = Logger(subsystem: "com.codeisland", category: "Panel")
 
@@ -208,6 +225,7 @@ class PanelWindowController: NSObject, NSWindowDelegate {
     private var lastDisplayChoice = ""
     private var lastNotchHeightMode = SettingsDefaults.notchHeightMode
     private var lastCustomNotchHeight = SettingsDefaults.customNotchHeight
+    private var lastIslandDisplayMode = IslandDisplayMode.resolved(from: SettingsDefaults.islandDisplayMode)
 
     init(appState: AppState) {
         self.appState = appState
@@ -491,6 +509,7 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         lastDisplayChoice = SettingsManager.shared.displayChoice
         lastNotchHeightMode = SettingsManager.shared.notchHeightMode.rawValue
         lastCustomNotchHeight = SettingsManager.shared.customNotchHeight
+        lastIslandDisplayMode = SettingsManager.shared.islandDisplayMode
         let observer = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification,
             object: nil,
@@ -501,6 +520,7 @@ class PanelWindowController: NSObject, NSWindowDelegate {
                 let newChoice = SettingsManager.shared.displayChoice
                 let newHeightMode = SettingsManager.shared.notchHeightMode.rawValue
                 let newCustomHeight = SettingsManager.shared.customNotchHeight
+                let newDisplayMode = SettingsManager.shared.islandDisplayMode
                 if newChoice != self.lastDisplayChoice {
                     self.lastDisplayChoice = newChoice
                     self.refreshCurrentScreen(forceRebuild: true)
@@ -510,6 +530,9 @@ class PanelWindowController: NSObject, NSWindowDelegate {
                     self.lastNotchHeightMode = newHeightMode
                     self.lastCustomNotchHeight = newCustomHeight
                     self.refreshCurrentScreen(forceRebuild: true)
+                } else if newDisplayMode != self.lastIslandDisplayMode {
+                    self.lastIslandDisplayMode = newDisplayMode
+                    self.updatePosition()
                 } else {
                     self.updateVisibility()
                     self.updatePosition()
@@ -562,9 +585,18 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         }
 
         let x = clampedX(desiredX, panelWidth: size.width, on: screen)
-        let floatingYOffset: CGFloat = appState.isFullscreenMode ? 10 : 0
-        let y = screenFrame.maxY - size.height - floatingYOffset
+        let y = anchoredY(for: size.height, on: screen)
         return NSRect(x: x, y: y, width: size.width, height: size.height)
+    }
+
+    private func anchoredY(for panelHeight: CGFloat, on screen: NSScreen) -> CGFloat {
+        PanelWindowLayout.anchoredY(
+            screenMaxY: screen.frame.maxY,
+            panelHeight: panelHeight,
+            displayMode: SettingsManager.shared.islandDisplayMode,
+            isFullscreenMode: appState.isFullscreenMode,
+            topOffset: SettingsManager.shared.dynamicIslandTopOffset
+        )
     }
 
     private func centeredX(for size: NSSize, screen: NSScreen) -> CGFloat {
@@ -603,7 +635,7 @@ class PanelWindowController: NSObject, NSWindowDelegate {
                     let screen = self.chosenScreen()
                     let size = panel.frame.size
                     let newX = self.clampedX(startPanelX + deltaX, panelWidth: size.width, on: screen)
-                    let fixedY = screen.frame.maxY - size.height
+                    let fixedY = self.anchoredY(for: size.height, on: screen)
                     panel.setFrameOrigin(NSPoint(x: newX, y: fixedY))
                 }
             case .leftMouseUp:
@@ -764,7 +796,7 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         // top edge therefore means the system re-placed the panel — e.g. a display
         // reconfigure clamping it below the menu bar (#263) — so snap it back.
         guard !isDraggingPanel, !isAnimatingScreenHop, let panel = panel else { return }
-        let expectedY = chosenScreen().frame.maxY - panel.frame.height - (appState.isFullscreenMode ? 10 : 0)
+        let expectedY = anchoredY(for: panel.frame.height, on: chosenScreen())
         guard abs(panel.frame.origin.y - expectedY) > 0.5 else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self, !self.isDraggingPanel, !self.isAnimatingScreenHop else { return }
