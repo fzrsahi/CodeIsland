@@ -300,7 +300,7 @@ public struct NotchHoopsEngine: Sendable {
         collideWithRimPost(postX: Self.rimCenterX - Self.rimHalfWidth, postY: Self.rimY)
         collideWithRimPost(postX: Self.rimCenterX + Self.rimHalfWidth, postY: Self.rimY)
 
-        if ballX - Self.ballRadius > Self.backboardX {
+        if ballX - Self.ballRadius > Self.backboardX + 6 {
             wentBehindBackboard = true
         }
 
@@ -310,7 +310,7 @@ public struct NotchHoopsEngine: Sendable {
             ballVY > 0 &&
             prevBallY <= Self.rimY &&
             ballY >= Self.rimY &&
-            abs(ballX - Self.rimCenterX) <= (Self.rimHalfWidth - Self.ballRadius * 0.25) {
+            abs(ballX - Self.rimCenterX) <= Self.rimHalfWidth {
             scoredCurrentShot = true
             let isSwish = !touchedRimOrBackboard
             let points = currentShotZone.points

@@ -294,7 +294,9 @@ struct NotchPanelView: View {
     }
 
     private func triggerMusicAutoPeek() {
-        guard !appState.surface.isPrompting else { return }
+        guard !appState.surface.isPrompting,
+              expandedTab != .game,
+              !appState.isGameInteractionLocked else { return }
         musicAutoCollapseWorkItem?.cancel()
         musicAutoCollapseWorkItem = nil
         musicAutoCollapseTimer?.invalidate()

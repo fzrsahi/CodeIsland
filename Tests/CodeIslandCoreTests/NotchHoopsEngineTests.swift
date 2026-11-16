@@ -162,4 +162,28 @@ final class NotchHoopsEngineTests: XCTestCase {
         XCTAssertEqual(engine.score, 0)
         XCTAssertEqual(engine.ballsRemaining, NotchHoopsEngine.maxBalls - 1)
     }
+
+    func testBankShotOffBackboardStillScores() {
+        var foundBankScore = false
+        for dragX in stride(from: 60.0, through: 170.0, by: 2.0) {
+            for dragY in stride(from: -70.0, through: -160.0, by: -2.0) {
+                var engine = NotchHoopsEngine(highScore: 0, positionMode: .twoPoint, initialLaunchX: 160)
+                XCTAssertTrue(engine.launch(dragDeltaX: dragX, dragDeltaY: dragY))
+                var hitBackboard = false
+                for _ in 0..<300 {
+                    engine.step(dt: 1.0 / 60.0)
+                    let events = engine.drainSoundEvents()
+                    if events.contains(.rimOrBackboard) { hitBackboard = true }
+                    if engine.score > 0 && hitBackboard {
+                        foundBankScore = true
+                        break
+                    }
+                    if engine.phase != .flying { break }
+                }
+                if foundBankScore { break }
+            }
+            if foundBankScore { break }
+        }
+        XCTAssertTrue(foundBankScore)
+    }
 }

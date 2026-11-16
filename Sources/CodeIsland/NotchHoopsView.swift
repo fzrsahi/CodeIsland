@@ -35,7 +35,9 @@ struct NotchHoopsView: View {
     private static let crtBg = Color(red: 0.03, green: 0.055, blue: 0.07)
 
     private var isAnimating: Bool {
-        engine.needsTick && animationGate.animationsActive
+        // Gate only on panel visibility & wake state — never on mascot's musicPlaying suppression,
+        // otherwise throwing the ball while music is playing freezes physics in .flying.
+        engine.needsTick && animationGate.state.isVisible && animationGate.state.isAwake
     }
 
     var body: some View {
@@ -230,23 +232,23 @@ struct NotchHoopsView: View {
 
     private var interactiveCourt: some View {
         ZStack {
-            if isAnimating {
-                TimelineView(.animation(minimumInterval: reduceMotion ? 1.0 / 30.0 : 1.0 / 60.0)) { timeline in
-                    courtCanvas
-                        .onChange(of: timeline.date) { oldDate, newDate in
-                            let previous = lastTickDate ?? oldDate
-                            let dt = newDate.timeIntervalSince(previous)
-                            lastTickDate = newDate
-                            engine.step(dt: dt)
-                            flushSoundEvents()
-                            if !engine.needsTick {
-                                lastTickDate = nil
-                                updateInteractionLock(dragging: dragTranslation != nil, phase: engine.phase)
-                            }
-                        }
-                }
-            } else {
+            TimelineView(.animation(minimumInterval: reduceMotion ? 1.0 / 30.0 : nil, paused: !isAnimating)) { timeline in
                 courtCanvas
+                    .onChange(of: timeline.date) { oldDate, newDate in
+                        guard isAnimating else { return }
+                        let previous = lastTickDate ?? oldDate
+                        let dt = newDate.timeIntervalSince(previous)
+                        lastTickDate = newDate
+                        engine.step(dt: dt)
+                        flushSoundEvents()
+                        if !engine.needsTick {
+                            lastTickDate = nil
+                            updateInteractionLock(dragging: dragTranslation != nil, phase: engine.phase)
+                        }
+                    }
+            }
+            .onChange(of: isAnimating) { _, active in
+                if !active { lastTickDate = nil }
             }
 
             CourtGestureOverlay(
@@ -592,7 +594,10 @@ struct NotchHoopsView: View {
     }
 
     private func updateInteractionLock(dragging: Bool, phase: NotchHoopsEngine.Phase) {
-        appState.isGameInteractionLocked = dragging || phase == .flying
+        let locked = dragging || phase == .flying
+        if appState.isGameInteractionLocked != locked {
+            appState.isGameInteractionLocked = locked
+        }
     }
 
     private func flushSoundEvents() {
