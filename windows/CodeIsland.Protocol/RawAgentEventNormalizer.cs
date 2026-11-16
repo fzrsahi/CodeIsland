@@ -55,21 +55,25 @@ public static class RawAgentEventNormalizer
     private static string? ResolveSource(JsonElement root, string? sourceTag)
     {
         var declaredSource = string.IsNullOrWhiteSpace(sourceTag) ? null : sourceTag.Trim();
-        var explicitPayloadSource = FirstString(root, "_source", "agent");
-        var isClaudeHookOrUndeclared = declaredSource is null
-            || string.Equals(declaredSource, "claude", StringComparison.OrdinalIgnoreCase);
+        var isClaudeHook = string.Equals(declaredSource, "claude", StringComparison.OrdinalIgnoreCase);
+        if (declaredSource is not null && !isClaudeHook)
+        {
+            return declaredSource;
+        }
 
-        // Cursor runs imported Claude Code hooks (--source claude) with its own payload carrying cursor_version.
-        if (isClaudeHookOrUndeclared
-            && FirstString(root, "cursor_version") is not null
-            && (declaredSource is not null
-                || explicitPayloadSource is null
-                || string.Equals(explicitPayloadSource, "claude", StringComparison.OrdinalIgnoreCase)))
+        var eventSource = FirstString(root, "_source", "source", "agent");
+        if (eventSource is not null && ParseAgent(eventSource) is not (AgentKind.Unknown or AgentKind.Claude))
+        {
+            return eventSource;
+        }
+
+        // Cursor runs imported Claude Code hooks (--source claude) with its own HookEvent carrying cursor_version.
+        if (FirstString(root, "cursor_version") is not null)
         {
             return "cursor";
         }
 
-        return declaredSource ?? FirstString(root, "_source", "source", "agent");
+        return declaredSource ?? eventSource;
     }
 
     private static AgentKind ParseAgent(string? value) => value?.Trim().ToLowerInvariant() switch

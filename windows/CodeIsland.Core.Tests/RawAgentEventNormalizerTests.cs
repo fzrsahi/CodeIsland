@@ -80,4 +80,34 @@ public sealed class RawAgentEventNormalizerTests
 
         Assert.Equal(AgentKind.Codex, agentEvent.Agent);
     }
+
+    [Fact]
+    public void Normalize_KnownEventSourceUnderClaudeHook_IsNotOverriddenByCursorVersion()
+    {
+        var agentEvent = RawAgentEventNormalizer.Normalize("""
+            {
+              "_source": "codex",
+              "session_id": "codex-2",
+              "hook_event_name": "Stop",
+              "cursor_version": "3.25.9"
+            }
+            """, "claude");
+
+        Assert.Equal(AgentKind.Codex, agentEvent.Agent);
+    }
+
+    [Fact]
+    public void Normalize_SessionStartSourceStartupWithCursorVersion_ResolvesToCursor()
+    {
+        var agentEvent = RawAgentEventNormalizer.Normalize("""
+            {
+              "source": "startup",
+              "session_id": "cursor-start-1",
+              "hook_event_name": "SessionStart",
+              "cursor_version": "3.25.9"
+            }
+            """);
+
+        Assert.Equal(AgentKind.Cursor, agentEvent.Agent);
+    }
 }
