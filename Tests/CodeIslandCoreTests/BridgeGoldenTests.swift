@@ -87,15 +87,43 @@ final class BridgeGoldenTests: XCTestCase {
             .deletingLastPathComponent()
             .appendingPathComponent("fixtures", isDirectory: true)
 
+        var docsByScopeAndName: [BridgeGoldenJSONExporter.Scope: [String: [String: Any]]] = [:]
         for scope in BridgeGoldenJSONExporter.Scope.allCases {
             let scopeDir = fixturesRoot.appendingPathComponent(scope.rawValue, isDirectory: true)
             let files = try FileManager.default.contentsOfDirectory(at: scopeDir, includingPropertiesForKeys: nil)
                 .filter { $0.pathExtension == "json" }
-                .map { $0.deletingPathExtension().lastPathComponent }
+                .map(\.lastPathComponent)
             XCTAssertEqual(
-                Set(files),
-                Set(BridgeGoldenFixtures.all.map(\.name)),
-                "\(scope.rawValue): exported fixture file set must match BridgeGoldenFixtures.all"
+                files,
+                [BridgeGoldenJSONExporter.bundleFilename],
+                "\(scope.rawValue): expected only \(BridgeGoldenJSONExporter.bundleFilename)"
+            )
+
+            let bundleURL = scopeDir.appendingPathComponent(BridgeGoldenJSONExporter.bundleFilename)
+            let bundleData = try Data(contentsOf: bundleURL)
+            let bundleObj = try XCTUnwrap(
+                try JSONSerialization.jsonObject(with: bundleData) as? [String: Any],
+                "\(scope.rawValue): bundle root must be JSON object"
+            )
+            XCTAssertEqual(bundleObj["scope"] as? String, scope.rawValue)
+
+            let expectedBundle = try BridgeGoldenJSONExporter.bundleDocument(scope: scope)
+            XCTAssertEqual(
+                try BridgeGoldenJSONExporter.canonicalJSONString(bundleObj),
+                try BridgeGoldenJSONExporter.canonicalJSONString(expectedBundle),
+                "\(scope.rawValue)/\(BridgeGoldenJSONExporter.bundleFilename): exported JSON mismatch"
+            )
+
+            let items = try XCTUnwrap(bundleObj["fixtures"] as? [[String: Any]])
+            XCTAssertEqual(
+                items.compactMap { $0["name"] as? String },
+                BridgeGoldenFixtures.all.map(\.name),
+                "\(scope.rawValue): fixture order/names must match BridgeGoldenFixtures.all"
+            )
+            docsByScopeAndName[scope] = Dictionary(
+                uniqueKeysWithValues: items.compactMap { item in
+                    (item["name"] as? String).map { ($0, item) }
+                }
             )
         }
 
@@ -107,30 +135,12 @@ final class BridgeGoldenTests: XCTestCase {
 
             var neutralPayloadsByScope: [BridgeGoldenJSONExporter.Scope: String?] = [:]
             for scope in BridgeGoldenJSONExporter.Scope.allCases {
-                let fileURL = fixturesRoot
-                    .appendingPathComponent(scope.rawValue, isDirectory: true)
-                    .appendingPathComponent("\(fixture.name).json")
-                let data = try Data(contentsOf: fileURL)
-                let doc = try XCTUnwrap(
-                    try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                    "\(scope.rawValue)/\(fixture.name): root must be JSON object"
-                )
-
-                XCTAssertEqual(doc["name"] as? String, fixture.name)
+                let doc = try XCTUnwrap(docsByScopeAndName[scope]?[fixture.name])
                 XCTAssertEqual(doc["scope"] as? String, scope.rawValue)
 
                 let expectationObj = try XCTUnwrap(doc["expectation"] as? [String: Any])
                 XCTAssertEqual(expectationObj["stdout"] as? String, expected.stdout, "\(scope.rawValue)/\(fixture.name): stdout")
                 XCTAssertEqual((expectationObj["status"] as? NSNumber)?.int32Value, expected.status, "\(scope.rawValue)/\(fixture.name): status")
-
-                let expectedDoc = try BridgeGoldenJSONExporter.fixtureDocument(
-                    fixture: fixture,
-                    expectation: expected,
-                    scope: scope
-                )
-                let expectedCanonical = try BridgeGoldenJSONExporter.canonicalJSONString(expectedDoc)
-                let actualCanonical = try BridgeGoldenJSONExporter.canonicalJSONString(doc)
-                XCTAssertEqual(actualCanonical, expectedCanonical, "\(scope.rawValue)/\(fixture.name): exported JSON mismatch")
 
                 if let fwdObj = expectationObj["forwarded"] as? [String: Any] {
                     if scope == .macos, let expectedRaw = expected.forwarded {

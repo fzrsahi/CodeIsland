@@ -1,80 +1,97 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codeisland.dev/schemas/golden-fixture.schema.json",
-  "title": "CodeIsland Golden Fixture",
-  "description": "Exported bridge golden fixture and expectation for cross-platform conformance.",
+  "title": "CodeIsland Golden Fixture Bundle",
+  "description": "Exported per-scope bundle of bridge golden fixtures and expectations for cross-platform conformance.",
   "type": "object",
-  "required": ["name", "scope", "input", "expectation"],
+  "required": ["scope", "fixtures"],
   "additionalProperties": false,
   "properties": {
-    "name": { "type": "string", "minLength": 1 },
     "scope": {
       "type": "string",
       "enum": ["neutral", "macos", "linux", "windows"]
     },
-    "input": {
+    "fixtures": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/fixture" }
+    }
+  },
+  "$defs": {
+    "fixture": {
       "type": "object",
-      "required": [
-        "arguments",
-        "environment",
-        "stdin",
-        "ancestors",
-        "bundle_identifiers",
-        "reply",
-        "files",
-        "has_socket"
-      ],
+      "required": ["name", "scope", "input", "expectation"],
       "additionalProperties": false,
       "properties": {
-        "arguments": {
-          "type": "array",
-          "items": { "type": "string" }
+        "name": { "type": "string", "minLength": 1 },
+        "scope": {
+          "type": "string",
+          "enum": ["neutral", "macos", "linux", "windows"]
         },
-        "environment": {
+        "input": {
           "type": "object",
-          "additionalProperties": { "type": "string" }
-        },
-        "stdin": { "type": "string" },
-        "ancestors": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["path", "arguments"],
-            "additionalProperties": false,
-            "properties": {
-              "path": { "type": "string", "minLength": 1 },
-              "arguments": {
-                "type": "array",
-                "items": { "type": "string" }
+          "required": [
+            "arguments",
+            "environment",
+            "stdin",
+            "ancestors",
+            "bundle_identifiers",
+            "reply",
+            "files",
+            "has_socket"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "arguments": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "environment": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "stdin": { "type": "string" },
+            "ancestors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["path", "arguments"],
+                "additionalProperties": false,
+                "properties": {
+                  "path": { "type": "string", "minLength": 1 },
+                  "arguments": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                }
               }
-            }
+            },
+            "bundle_identifiers": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "reply": { "type": "string" },
+            "files": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "has_socket": { "type": "boolean" }
           }
         },
-        "bundle_identifiers": {
+        "expectation": {
           "type": "object",
-          "additionalProperties": { "type": "string" }
-        },
-        "reply": { "type": "string" },
-        "files": {
-          "type": "object",
-          "additionalProperties": { "type": "string" }
-        },
-        "has_socket": { "type": "boolean" }
-      }
-    },
-    "expectation": {
-      "type": "object",
-      "required": ["forwarded", "stdout", "status"],
-      "additionalProperties": false,
-      "properties": {
-        "forwarded": {
-          "oneOf": [
-            { "type": "null" },
-            { "$ref": "hook-payload.schema.json" }
-          ]
-        },
-        "stdout": { "type": "string" },
-        "status": { "type": "integer" }
+          "required": ["forwarded", "stdout", "status"],
+          "additionalProperties": false,
+          "properties": {
+            "forwarded": {
+              "oneOf": [
+                { "type": "null" },
+                { "$ref": "hook-payload.schema.json" }
+              ]
+            },
+            "stdout": { "type": "string" },
+            "status": { "type": "integer" }
+          }
+        }
       }
     }
   }

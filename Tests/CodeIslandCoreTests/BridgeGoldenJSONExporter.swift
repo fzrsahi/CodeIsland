@@ -1,8 +1,8 @@
 import Foundation
 
 /// Exports ``BridgeGoldenFixtures`` + ``BridgeGoldenExpectations`` into
-/// language-neutral and per-OS JSON fixture directories (`fixtures/neutral`,
-/// `fixtures/macos`, `fixtures/linux`, `fixtures/windows`) and verifies them.
+/// language-neutral and per-OS JSON bundle files (`fixtures/{neutral,macos,linux,windows}/bridge-golden.json`)
+/// and provides canonicalization helpers for verification.
 enum BridgeGoldenJSONExporter {
     enum Scope: String, CaseIterable {
         case neutral
@@ -10,6 +10,8 @@ enum BridgeGoldenJSONExporter {
         case linux
         case windows
     }
+
+    static let bundleFilename = "bridge-golden.json"
 
     /// Keys in forwarded payloads that depend on OS-specific process trees,
     /// macOS app bundles, iTerm2, or terminal/TTY metadata.
@@ -122,40 +124,45 @@ enum BridgeGoldenJSONExporter {
         ]
     }
 
+    static func bundleDocument(scope: Scope) throws -> [String: Any] {
+        var fixtures: [[String: Any]] = []
+        fixtures.reserveCapacity(BridgeGoldenFixtures.all.count)
+        for fixture in BridgeGoldenFixtures.all {
+            guard let expectation = BridgeGoldenExpectations.all[fixture.name] else {
+                throw NSError(
+                    domain: "BridgeGoldenJSONExporter",
+                    code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: "Missing expectation for \(fixture.name)"]
+                )
+            }
+            fixtures.append(try fixtureDocument(fixture: fixture, expectation: expectation, scope: scope))
+        }
+        return [
+            "scope": scope.rawValue,
+            "fixtures": fixtures,
+        ]
+    }
+
     static func exportAll(to fixturesRoot: URL) throws {
         let fm = FileManager.default
         for scope in Scope.allCases {
             let scopeDir = fixturesRoot.appendingPathComponent(scope.rawValue, isDirectory: true)
             try fm.createDirectory(at: scopeDir, withIntermediateDirectories: true)
 
-            let expectedNames = Set(BridgeGoldenFixtures.all.map(\.name))
             if let existing = try? fm.contentsOfDirectory(at: scopeDir, includingPropertiesForKeys: nil) {
-                for url in existing where url.pathExtension == "json" {
-                    let stem = url.deletingPathExtension().lastPathComponent
-                    if !expectedNames.contains(stem) {
-                        try fm.removeItem(at: url)
-                    }
+                for url in existing where url.pathExtension == "json" && url.lastPathComponent != bundleFilename {
+                    try fm.removeItem(at: url)
                 }
             }
 
-            for fixture in BridgeGoldenFixtures.all {
-                guard let expectation = BridgeGoldenExpectations.all[fixture.name] else {
-                    throw NSError(
-                        domain: "BridgeGoldenJSONExporter",
-                        code: 2,
-                        userInfo: [NSLocalizedDescriptionKey: "Missing expectation for \(fixture.name)"]
-                    )
-                }
-                let doc = try fixtureDocument(fixture: fixture, expectation: expectation, scope: scope)
-                let data = try JSONSerialization.data(
-                    withJSONObject: doc,
-                    options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-                )
-                var out = data
-                out.append(0x0A) // trailing newline
-                let fileURL = scopeDir.appendingPathComponent("\(fixture.name).json")
-                try out.write(to: fileURL)
-            }
+            let bundle = try bundleDocument(scope: scope)
+            let data = try JSONSerialization.data(
+                withJSONObject: bundle,
+                options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+            )
+            var out = data
+            out.append(0x0A) // trailing newline
+            try out.write(to: scopeDir.appendingPathComponent(bundleFilename))
         }
     }
 }

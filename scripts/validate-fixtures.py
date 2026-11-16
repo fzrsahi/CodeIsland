@@ -298,28 +298,35 @@ def validate_fixtures_dir(
         for path in sorted(scope_dir.glob("*.json")):
             file_count += 1
             try:
-                doc = json.loads(path.read_text(encoding="utf-8"))
+                bundle = json.loads(path.read_text(encoding="utf-8"))
             except json.JSONDecodeError as exc:
                 errors.append(f"{path}: invalid JSON: {exc}")
                 continue
 
-            errs = validator.validate(doc, fixture_schema)
-            errs.extend(_optional_jsonschema_check(registry, "golden-fixture.schema.json", doc))
+            errs = validator.validate(bundle, fixture_schema)
+            errs.extend(_optional_jsonschema_check(registry, "golden-fixture.schema.json", bundle))
             if errs:
                 errors.extend(f"{path}: {e}" for e in errs)
                 continue
 
-            if doc["scope"] != scope:
-                errors.append(f"{path}: scope {doc['scope']!r} does not match directory {scope!r}")
+            if bundle["scope"] != scope:
+                errors.append(f"{path}: bundle scope {bundle['scope']!r} does not match directory {scope!r}")
 
-            forwarded = doc["expectation"]["forwarded"]
-            if forwarded is not None:
-                p_errs = validator.validate(forwarded, payload_schema)
-                p_errs.extend(_optional_jsonschema_check(registry, "hook-payload.schema.json", forwarded))
-                if p_errs:
-                    errors.extend(f"{path} (forwarded): {e}" for e in p_errs)
+            for item in bundle["fixtures"]:
+                name = item["name"]
+                if item["scope"] != scope:
+                    errors.append(f"{path} ({name}): item scope {item['scope']!r} does not match {scope!r}")
+                if name in fixtures_by_scope[scope]:
+                    errors.append(f"{path}: duplicate fixture name {name!r}")
 
-            fixtures_by_scope[scope][doc["name"]] = doc
+                forwarded = item["expectation"]["forwarded"]
+                if forwarded is not None:
+                    p_errs = validator.validate(forwarded, payload_schema)
+                    p_errs.extend(_optional_jsonschema_check(registry, "hook-payload.schema.json", forwarded))
+                    if p_errs:
+                        errors.extend(f"{path} ({name} forwarded): {e}" for e in p_errs)
+
+                fixtures_by_scope[scope][name] = item
 
     errors.extend(check_cross_os_neutrality(fixtures_by_scope))
     return file_count, errors
@@ -610,22 +617,32 @@ def run_self_tests(validator: Draft202012Validator, registry: SchemaRegistry) ->
             "status": 0,
         },
     }
-    expect_valid("golden-fixture-neutral", "golden-fixture.schema.json", fixture_schema, neutral_fixture)
     expect_valid(
-        "golden-fixture-null-forwarded",
+        "golden-fixture-neutral-bundle",
+        "golden-fixture.schema.json",
+        fixture_schema,
+        {"scope": "neutral", "fixtures": [neutral_fixture]},
+    )
+    expect_valid(
+        "golden-fixture-null-forwarded-bundle",
         "golden-fixture.schema.json",
         fixture_schema,
         {
-            "name": "empty-stdin",
             "scope": "neutral",
-            "input": sample_input,
-            "expectation": {"forwarded": None, "stdout": "", "status": 0},
+            "fixtures": [
+                {
+                    "name": "empty-stdin",
+                    "scope": "neutral",
+                    "input": sample_input,
+                    "expectation": {"forwarded": None, "stdout": "", "status": 0},
+                }
+            ],
         },
     )
     expect_invalid(
         "golden-fixture-bad-scope",
         fixture_schema,
-        {**neutral_fixture, "scope": "freebsd"},
+        {"scope": "freebsd", "fixtures": [{**neutral_fixture, "scope": "freebsd"}]},
     )
 
     neutrality_ok = check_cross_os_neutrality({

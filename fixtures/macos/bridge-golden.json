@@ -1,0 +1,3777 @@
+{
+  "fixtures" : [
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_iterm_session" : "6A1B2C3D-0000-4000-8000-ABCDEF012345",
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "_term_app" : "iTerm.app",
+          "_term_bundle" : "com.googlecode.iterm2",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "SessionStart",
+          "model" : "claude-opus-4-5",
+          "session_id" : "c1a0de00-0000-4000-8000-000000000001",
+          "source" : "startup",
+          "transcript_path" : "/Users/golden/.claude/projects/-Users-golden-project/c1a0de00-0000-4000-8000-000000000001.jsonl"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/claude/versions/2.1.294"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "__CFBundleIdentifier" : "com.googlecode.iterm2",
+          "ITERM_SESSION_ID" : "w0t1p0:6A1B2C3D-0000-4000-8000-ABCDEF012345",
+          "TERM_PROGRAM" : "iTerm.app"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-000000000001\",\"transcript_path\":\"/Users/golden/.claude/projects/-Users-golden-project/c1a0de00-0000-4000-8000-000000000001.jsonl\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"SessionStart\",\"source\":\"startup\",\"model\":\"claude-opus-4-5\"}"
+      },
+      "name" : "claude-native-session-start",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "_term_app" : "Apple_Terminal",
+          "_term_bundle" : "com.apple.Terminal",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PermissionRequest",
+          "permission_mode" : "default",
+          "permission_suggestions" : [
+            {
+              "behavior" : "allow",
+              "destination" : "localSettings",
+              "rules" : [
+                {
+                  "ruleContent" : "swift test:*",
+                  "toolName" : "Bash"
+                }
+              ],
+              "type" : "addRules"
+            }
+          ],
+          "session_id" : "c1a0de00-0000-4000-8000-000000000002",
+          "tool_input" : {
+            "command" : "swift test",
+            "description" : "Run the tests"
+          },
+          "tool_name" : "Bash",
+          "transcript_path" : "/Users/golden/.claude/projects/-Users-golden-project/c1a0de00-0000-4000-8000-000000000002.jsonl"
+        },
+        "status" : 0,
+        "stdout" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}"
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "opt/homebrew/bin/claude"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "__CFBundleIdentifier" : "com.apple.Terminal",
+          "TERM_PROGRAM" : "Apple_Terminal"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}",
+        "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-000000000002\",\"transcript_path\":\"/Users/golden/.claude/projects/-Users-golden-project/c1a0de00-0000-4000-8000-000000000002.jsonl\",\"cwd\":\"/Users/golden/project\",\"permission_mode\":\"default\",\"hook_event_name\":\"PermissionRequest\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"swift test\",\"description\":\"Run the tests\"},\"permission_suggestions\":[{\"type\":\"addRules\",\"rules\":[{\"toolName\":\"Bash\",\"ruleContent\":\"swift test:*\"}],\"behavior\":\"allow\",\"destination\":\"localSettings\"}]}"
+      },
+      "name" : "claude-homebrew-permission-allow",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PermissionRequest",
+          "session_id" : "c1a0de00-0000-4000-8000-000000000003",
+          "tool_input" : {
+            "content" : "x",
+            "file_path" : "/etc/hosts"
+          },
+          "tool_name" : "Write"
+        },
+        "status" : 0,
+        "stdout" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied on the island\"}}}"
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/claude/versions/2.1.294"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied on the island\"}}}",
+        "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-000000000003\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PermissionRequest\",\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"/etc/hosts\",\"content\":\"x\"}}"
+      },
+      "name" : "claude-permission-deny",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PermissionRequest",
+          "session_id" : "c1a0de00-0000-4000-8000-000000000004",
+          "tool_input" : {
+            "command" : "ls"
+          },
+          "tool_name" : "Bash"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/claude/versions/2.1.294"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "",
+        "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-000000000004\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PermissionRequest\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}"
+      },
+      "name" : "claude-permission-empty-reply",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Notification",
+          "message" : "Claude needs your input",
+          "options" : [
+            "main",
+            "dev"
+          ],
+          "question" : "Which branch should I use?",
+          "session_id" : "c1a0de00-0000-4000-8000-000000000005"
+        },
+        "status" : 0,
+        "stdout" : "{\"answer\":\"main\"}"
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/claude/versions/2.1.294"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"answer\":\"main\"}",
+        "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-000000000005\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Notification\",\"message\":\"Claude needs your input\",\"question\":\"Which branch should I use?\",\"options\":[\"main\",\"dev\"]}"
+      },
+      "name" : "claude-notification-question",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Notification",
+          "message" : "Claude is waiting for your input",
+          "notification_type" : "idle_prompt",
+          "session_id" : "c1a0de00-0000-4000-8000-000000000006"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/claude/versions/2.1.294"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"ignored\":true}",
+        "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-000000000006\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Notification\",\"message\":\"Claude is waiting for your input\",\"notification_type\":\"idle_prompt\"}"
+      },
+      "name" : "claude-notification-plain",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Notification",
+          "question" : {
+            "text" : "not a string"
+          },
+          "session_id" : "c1a0de00-0000-4000-8000-000000000007"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/claude/versions/2.1.294"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"ignored\":true}",
+        "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-000000000007\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Notification\",\"question\":{\"text\":\"not a string\"}}"
+      },
+      "name" : "claude-notification-non-string-question",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "_term_app" : "tmux",
+          "_tmux" : "/tmp/ci-golden-no-tmux/tmux-501/default,4242,0",
+          "_tmux_pane" : "%7",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PreToolUse",
+          "session_id" : "c1a0de00-0000-4000-8000-000000000008",
+          "tool_input" : {
+            "file_path" : "/Users/golden/project/README.md"
+          },
+          "tool_name" : "Read",
+          "tool_use_id" : "toolu_01"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/bin/claude"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "TERM_PROGRAM" : "tmux",
+          "TMUX" : "/tmp/ci-golden-no-tmux/tmux-501/default,4242,0",
+          "TMUX_PANE" : "%7"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-000000000008\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"/Users/golden/project/README.md\"},\"tool_use_id\":\"toolu_01\"}"
+      },
+      "name" : "claude-in-tmux-pretooluse",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "_tmux" : "/tmp/ci-golden-no-tmux/tmux-501/default,4242,0",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PostToolUse",
+          "session_id" : "c1a0de00-0000-4000-8000-000000000009",
+          "tool_name" : "Read"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/claude/versions/2.1.294"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "TMUX" : "/tmp/ci-golden-no-tmux/tmux-501/default,4242,0"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-000000000009\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PostToolUse\",\"tool_name\":\"Read\"}"
+      },
+      "name" : "claude-tmux-without-pane",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_claude_desktop_session" : "local_0f3c2a1b-1111-4222-8333-944455556666",
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "_term_bundle" : "com.anthropic.claudefordesktop",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "UserPromptSubmit",
+          "prompt" : "Add a test",
+          "session_id" : "c1a0de00-0000-4000-8000-00000000000a"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/Claude.app/Contents/Resources/app/claude-code/claude"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "__CFBundleIdentifier" : "com.anthropic.claudefordesktop",
+          "CLAUDE_CODE_HOST_SESSION_ID" : "local_0f3c2a1b-1111-4222-8333-944455556666"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-00000000000a\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"Add a test\"}"
+      },
+      "name" : "claude-desktop-code-tab",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Stop",
+          "session_id" : "c1a0de00-0000-4000-8000-00000000000b",
+          "stop_hook_active" : false
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "usr-local/bin/node"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-00000000000b\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Stop\",\"stop_hook_active\":false}"
+      },
+      "name" : "claude-as-node-script",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "UserPromptSubmit",
+          "prompt" : "hello",
+          "session_id" : "c1a0de00-0000-4000-8000-00000000000c"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/claude/versions/2.1.294"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "bin/zsh"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/Cursor.app/Contents/Frameworks/Cursor Helper (Plugin).app/Contents/MacOS/Cursor Helper (Plugin)"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/Cursor.app/Contents/MacOS/Cursor"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-00000000000c\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"hello\"}"
+      },
+      "name" : "claude-inside-cursor-terminal",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "opencode",
+          "_via_plugin" : true,
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PreToolUse",
+          "session_id" : "omo-ses-1",
+          "tool_input" : {
+            "command" : "ls"
+          },
+          "tool_name" : "bash"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.opencode/bin/opencode"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"omo-ses-1\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"bash\",\"tool_input\":{\"command\":\"ls\"}}"
+      },
+      "name" : "omo-opencode-fires-claude-hook",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "PreToolUse",
+          "hookEventName" : "PreToolUse",
+          "session_id" : "fork-session-1",
+          "sessionId" : "fork-session-1",
+          "toolInput" : {
+            "path" : "a.txt"
+          },
+          "toolName" : "Read"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hookEventName\":\"PreToolUse\",\"sessionId\":\"fork-session-1\",\"toolName\":\"Read\",\"toolInput\":{\"path\":\"a.txt\"}}"
+      },
+      "name" : "camelcase-fork",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "cwd" : "/Users/golden/project",
+          "eventName" : "Stop",
+          "hook_event_name" : "Stop",
+          "payload" : {
+            "sessionId" : "nested-session-1"
+          },
+          "session_id" : "nested-session-1"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"eventName\":\"Stop\",\"payload\":{\"sessionId\":\"nested-session-1\"},\"cwd\":\"/Users/golden/project\"}"
+      },
+      "name" : "nested-payload-session-and-event-name",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "cwd" : "$ROOT/work",
+          "data" : {
+            "session_id" : "nested-session-2"
+          },
+          "event" : "SessionEnd",
+          "hook_event_name" : "SessionEnd",
+          "session_id" : "nested-session-2"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"event\":\"SessionEnd\",\"data\":{\"session_id\":\"nested-session-2\"}}"
+      },
+      "name" : "nested-data-session-and-event",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Stop",
+          "session_id" : "weird-1"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/claude/versions/2.1.294"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"weird-1\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Stop\",\"_source\":\"not-a-real-agent\"}"
+      },
+      "name" : "unsupported-payload-source-inferred-claude",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "codex",
+          "_term_app" : "ghostty",
+          "_term_bundle" : "com.mitchellh.ghostty",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PreToolUse",
+          "model" : "gpt-5.5-codex",
+          "session_id" : "019a0000-0000-7000-8000-000000000001",
+          "tool_input" : {
+            "command" : [
+              "bash",
+              "-lc",
+              "ls"
+            ]
+          },
+          "tool_name" : "shell",
+          "transcript_path" : "/Users/golden/.codex/sessions/2026/10/22/rollout-2026-10-22T08-00-00-019a0000-0000-7000-8000-000000000001.jsonl",
+          "turn_id" : "t-1"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "opt/homebrew/bin/codex"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "__CFBundleIdentifier" : "com.mitchellh.ghostty",
+          "TERM_PROGRAM" : "ghostty"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"019a0000-0000-7000-8000-000000000001\",\"transcript_path\":\"/Users/golden/.codex/sessions/2026/10/22/rollout-2026-10-22T08-00-00-019a0000-0000-7000-8000-000000000001.jsonl\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PreToolUse\",\"model\":\"gpt-5.5-codex\",\"tool_name\":\"shell\",\"tool_input\":{\"command\":[\"bash\",\"-lc\",\"ls\"]},\"turn_id\":\"t-1\"}"
+      },
+      "name" : "codex-cli-pretooluse",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "codex",
+          "_term_bundle" : "com.openai.codex",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "UserPromptSubmit",
+          "prompt" : "Ship it",
+          "session_id" : "019a0000-0000-7000-8000-000000000002"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+              "app-server",
+              "--analytics-default-enabled"
+            ],
+            "path" : "Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+          "Applications/ChatGPT.app" : "com.openai.codex"
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"019a0000-0000-7000-8000-000000000002\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"Ship it\"}"
+      },
+      "name" : "codex-desktop-app-server",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "codex",
+          "_term_bundle" : "com.openai.codex",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Stop",
+          "session_id" : "019a0000-0000-7000-8000-000000000003"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+              "-c",
+              "model=\"gpt-5.5\"",
+              "app-server"
+            ],
+            "path" : "Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+          "Applications/ChatGPT.app" : "com.openai.codex"
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"019a0000-0000-7000-8000-000000000003\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Stop\"}"
+      },
+      "name" : "codex-desktop-config-flags",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "codex",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Stop",
+          "session_id" : "019a0000-0000-7000-8000-000000000004"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+              "exec",
+              "ls"
+            ],
+            "path" : "Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+          "Applications/ChatGPT.app" : "com.openai.codex"
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"019a0000-0000-7000-8000-000000000004\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Stop\"}"
+      },
+      "name" : "codex-chatgpt-terminal-exec",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "codex",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Stop",
+          "session_id" : "019a0000-0000-7000-8000-000000000005"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+              "app-server"
+            ],
+            "path" : "Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/ChatGPT.app/Contents/Resources/helper"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+          "Applications/ChatGPT.app" : "com.openai.codex"
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"019a0000-0000-7000-8000-000000000005\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Stop\"}"
+      },
+      "name" : "codex-app-server-under-other-host",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "codex",
+          "_term_bundle" : "com.openai.codex",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "SessionStart",
+          "session_id" : "019a0000-0000-7000-8000-000000000006",
+          "source" : "startup"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+              "app-server"
+            ],
+            "path" : "Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+          "Applications/ChatGPT.app" : "com.openai.codex"
+        },
+        "environment" : {
+          "__CFBundleIdentifier" : "com.openai.codex"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"019a0000-0000-7000-8000-000000000006\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}"
+      },
+      "name" : "codex-desktop-with-bundle-env",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "codex",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PermissionRequest",
+          "session_id" : "019a0000-0000-7000-8000-000000000007",
+          "tool_input" : {
+            "command" : [
+              "rm",
+              "-rf",
+              "build"
+            ]
+          },
+          "tool_name" : "shell"
+        },
+        "status" : 0,
+        "stdout" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied on the island\"}}}"
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "opt/homebrew/bin/codex"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied on the island\"}}}",
+        "stdin" : "{\"session_id\":\"019a0000-0000-7000-8000-000000000007\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PermissionRequest\",\"tool_name\":\"shell\",\"tool_input\":{\"command\":[\"rm\",\"-rf\",\"build\"]}}"
+      },
+      "name" : "codex-permission-request-deny",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_cursor_payload_digest" : "04d112b6484faa502ceacc9a4a59c4fb18ca320f6d8439733f31c5c19c47eb9e",
+          "_ppid" : "$PID0",
+          "_source" : "cursor",
+          "command" : "swift test",
+          "conversation_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+          "cursor_version" : "3.25.9",
+          "cwd" : "",
+          "generation_id" : "gen-1",
+          "hook_event_name" : "beforeShellExecution",
+          "model" : "composer-2.5",
+          "session_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+          "transcript_path" : "/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl",
+          "user_email" : null,
+          "workspace_roots" : [
+            "/Users/golden/project"
+          ]
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/Cursor.app/Contents/Frameworks/Cursor Helper (Plugin).app/Contents/MacOS/Cursor Helper (Plugin)"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/Cursor.app/Contents/MacOS/Cursor"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "cursor",
+          "--event",
+          "beforeShellExecution"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"conversation_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"generation_id\":\"gen-1\",\"session_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"model\":\"composer-2.5\",\"hook_event_name\":\"beforeShellExecution\",\"cursor_version\":\"3.25.9\",\"workspace_roots\":[\"/Users/golden/project\"],\"user_email\":null,\"transcript_path\":\"/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl\",\"command\":\"swift test\",\"cwd\":\"\"}"
+      },
+      "name" : "cursor-native-before-shell",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_cursor_payload_digest" : "24c312ff5564a75b3f38e5a21d784262a8d5c03f98ff53994b21e5577ed7aa5b",
+          "_ppid" : "$PID0",
+          "_source" : "cursor",
+          "conversation_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+          "cursor_version" : "3.25.9",
+          "cwd" : "$ROOT/work",
+          "generation_id" : "gen-1",
+          "hook_event_name" : "stop",
+          "loop_count" : 0,
+          "model" : "composer-2.5",
+          "session_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+          "status" : "completed",
+          "transcript_path" : "/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl",
+          "user_email" : null,
+          "workspace_roots" : [
+            "/Users/golden/project"
+          ]
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/Cursor.app/Contents/Frameworks/Cursor Helper (Plugin).app/Contents/MacOS/Cursor Helper (Plugin)"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"conversation_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"generation_id\":\"gen-1\",\"session_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"model\":\"composer-2.5\",\"hook_event_name\":\"stop\",\"cursor_version\":\"3.25.9\",\"workspace_roots\":[\"/Users/golden/project\"],\"user_email\":null,\"transcript_path\":\"/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl\",\"status\":\"completed\",\"loop_count\":0}"
+      },
+      "name" : "cursor-imported-claude-stop",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_cursor_payload_digest" : "99f49b21dd5909ca80258d3da5c304ecbdc3a2a8754b4e2ef3a04b0a30297165",
+          "_ppid" : "$PID0",
+          "_source" : "cursor",
+          "conversation_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+          "cursor_version" : "3.25.9",
+          "cwd" : "$ROOT/work",
+          "generation_id" : "gen-1",
+          "hook_event_name" : "PermissionRequest",
+          "model" : "composer-2.5",
+          "question" : "Run swift test?",
+          "session_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+          "tool_name" : "Shell",
+          "transcript_path" : "/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl",
+          "user_email" : null,
+          "workspace_roots" : [
+            "/Users/golden/project"
+          ]
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}",
+        "stdin" : "{\"conversation_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"generation_id\":\"gen-1\",\"session_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"model\":\"composer-2.5\",\"hook_event_name\":\"PermissionRequest\",\"cursor_version\":\"3.25.9\",\"workspace_roots\":[\"/Users/golden/project\"],\"user_email\":null,\"transcript_path\":\"/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl\",\"tool_name\":\"Shell\",\"question\":\"Run swift test?\"}"
+      },
+      "name" : "cursor-imported-claude-permission-never-held",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_cursor_payload_digest" : "f45fdc714d571ef50fc50cf25ef80007f6241797ff86719d412648e2f2cfb7bd",
+          "_ppid" : "$PID0",
+          "_source" : "cursor-cli",
+          "conversation_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+          "cursor_version" : "3.25.9",
+          "cwd" : "$ROOT/work",
+          "edits" : [
+
+          ],
+          "file_path" : "/Users/golden/project/a.swift",
+          "generation_id" : "gen-1",
+          "hook_event_name" : "afterFileEdit",
+          "model" : "composer-2.5",
+          "session_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+          "transcript_path" : "/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl",
+          "user_email" : null,
+          "workspace_roots" : [
+            "/Users/golden/project"
+          ]
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/cursor-agent/versions/2026.10.01-1a2b3c4/cursor-agent"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "cursor",
+          "--event",
+          "afterFileEdit"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"conversation_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"generation_id\":\"gen-1\",\"session_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"model\":\"composer-2.5\",\"hook_event_name\":\"afterFileEdit\",\"cursor_version\":\"3.25.9\",\"workspace_roots\":[\"/Users/golden/project\"],\"user_email\":null,\"transcript_path\":\"/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl\",\"file_path\":\"/Users/golden/project/a.swift\",\"edits\":[]}"
+      },
+      "name" : "cursor-agent-hooks-json",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_cursor_payload_digest" : "c5f253abc5601daf7a127877d88584b7bf62ad6eb060e5675fd2bb3e57743f69",
+          "_hook_ppid" : "$PID0",
+          "_ppid" : "$PID1",
+          "_source" : "cursor-cli",
+          "conversation_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+          "cursor_version" : "3.25.9",
+          "cwd" : "$ROOT/work",
+          "generation_id" : "gen-1",
+          "hook_event_name" : "beforeSubmitPrompt",
+          "model" : "composer-2.5",
+          "prompt" : "Fix it",
+          "session_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+          "transcript_path" : "/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl",
+          "user_email" : null,
+          "workspace_roots" : [
+            "/Users/golden/project"
+          ]
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "bin/sh"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/cursor-agent/versions/2026.10.01-1a2b3c4/cursor-agent"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"conversation_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"generation_id\":\"gen-1\",\"session_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"model\":\"composer-2.5\",\"hook_event_name\":\"beforeSubmitPrompt\",\"cursor_version\":\"3.25.9\",\"workspace_roots\":[\"/Users/golden/project\"],\"user_email\":null,\"transcript_path\":\"/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl\",\"prompt\":\"Fix it\"}"
+      },
+      "name" : "cursor-agent-imported-claude",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "cursor",
+          "conversation_id" : "conv-old",
+          "cursor_version" : "  ",
+          "cwd" : "$ROOT/work",
+          "generation_id" : "g",
+          "hook_event_name" : "beforeSubmitPrompt",
+          "prompt" : "hi",
+          "session_id" : "cursor-ppid-$PID0",
+          "workspace_roots" : [
+            "/Users/golden/project"
+          ]
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "cursor",
+          "--event",
+          "beforeSubmitPrompt"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"conversation_id\":\"conv-old\",\"generation_id\":\"g\",\"hook_event_name\":\"beforeSubmitPrompt\",\"prompt\":\"hi\",\"cursor_version\":\"  \",\"workspace_roots\":[\"/Users/golden/project\"]}"
+      },
+      "name" : "cursor-without-version",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : 0,
+          "_source" : "cline",
+          "clineVersion" : "3.40.0",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "PreToolUse",
+          "hookName" : "PreToolUse",
+          "preToolUse" : {
+            "parameters" : {
+              "command" : "ls -la",
+              "requires_approval" : "false"
+            },
+            "toolName" : "execute_command"
+          },
+          "session_id" : "1761120000000",
+          "taskId" : "1761120000000",
+          "timestamp" : "1761120000000",
+          "tool_input" : {
+            "command" : "ls -la",
+            "requires_approval" : "false"
+          },
+          "tool_name" : "execute_command",
+          "userId" : "u",
+          "workspaceRoots" : [
+            "/Users/golden/project"
+          ]
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "bin/bash"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "cline"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"clineVersion\":\"3.40.0\",\"hookName\":\"PreToolUse\",\"timestamp\":\"1761120000000\",\"taskId\":\"1761120000000\",\"workspaceRoots\":[\"/Users/golden/project\"],\"userId\":\"u\",\"preToolUse\":{\"toolName\":\"execute_command\",\"parameters\":{\"command\":\"ls -la\",\"requires_approval\":\"false\"}}}"
+      },
+      "name" : "cline-pretooluse",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : 0,
+          "_source" : "cline",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "PostToolUse",
+          "hookName" : "PostToolUse",
+          "postToolUse" : {
+            "parameters" : {
+              "path" : "a.txt"
+            },
+            "result" : "ok",
+            "success" : true,
+            "toolName" : "read_file"
+          },
+          "session_id" : "1761120000001",
+          "taskId" : "1761120000001",
+          "tool_name" : "read_file"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "cline"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hookName\":\"PostToolUse\",\"taskId\":\"1761120000001\",\"postToolUse\":{\"toolName\":\"read_file\",\"parameters\":{\"path\":\"a.txt\"},\"result\":\"ok\",\"success\":true}}"
+      },
+      "name" : "cline-posttooluse",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : 0,
+          "_source" : "cline",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "TaskStart",
+          "hookName" : "TaskStart",
+          "session_id" : "1761120000002",
+          "taskId" : "1761120000002",
+          "taskStart" : {
+            "taskMetadata" : {
+              "taskId" : "1761120000002"
+            }
+          }
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "cline"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hookName\":\"TaskStart\",\"taskId\":\"1761120000002\",\"taskStart\":{\"taskMetadata\":{\"taskId\":\"1761120000002\"}}}"
+      },
+      "name" : "cline-task-start",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_hermes_home" : "$HOME/.hermes/profiles/work",
+          "_ppid" : "$PID0",
+          "_source" : "hermes",
+          "cwd" : "/Users/golden/project",
+          "extra" : {
+            "assistant_response" : "Fixed.",
+            "model" : "hermes-4",
+            "platform" : "cli",
+            "user_message" : "Fix the login bug"
+          },
+          "hook_event_name" : "post_llm_call",
+          "profile" : "work",
+          "session_id" : "20261009_101151_eafbd0",
+          "tool_input" : null,
+          "tool_name" : null
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/bin/hermes"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "hermes"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "HERMES_HOME" : "~/.hermes/profiles/work"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hook_event_name\":\"post_llm_call\",\"tool_name\":null,\"tool_input\":null,\"session_id\":\"20261009_101151_eafbd0\",\"cwd\":\"/Users/golden/project\",\"profile\":\"work\",\"extra\":{\"user_message\":\"Fix the login bug\",\"assistant_response\":\"Fixed.\",\"conversation_history\":[{\"role\":\"user\",\"content\":\"SECRET-EARLIER-TURN\"}],\"model\":\"hermes-4\",\"platform\":\"cli\"}}"
+      },
+      "name" : "hermes-post-llm-call",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_hermes_home" : "/srv/hermes",
+          "_ppid" : "$PID0",
+          "_source" : "hermes",
+          "cwd" : "/Users/golden/project",
+          "extra" : {
+
+          },
+          "hook_event_name" : "pre_tool_call",
+          "session_id" : "20261009_101151_eafbd1",
+          "tool_input" : {
+            "command" : "ls"
+          },
+          "tool_name" : "terminal"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "hermes"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "HERMES_HOME" : "  /srv/hermes  "
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hook_event_name\":\"pre_tool_call\",\"tool_name\":\"terminal\",\"tool_input\":{\"command\":\"ls\"},\"session_id\":\"20261009_101151_eafbd1\",\"cwd\":\"/Users/golden/project\",\"extra\":{}}"
+      },
+      "name" : "hermes-absolute-home",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "hermes",
+          "cwd" : "/Users/golden/project",
+          "extra" : {
+            "completed" : true,
+            "platform" : "telegram"
+          },
+          "hook_event_name" : "on_session_end",
+          "session_id" : "20261009_101151_eafbd2"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "hermes"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hook_event_name\":\"on_session_end\",\"session_id\":\"20261009_101151_eafbd2\",\"cwd\":\"/Users/golden/project\",\"extra\":{\"completed\":true,\"platform\":\"telegram\"}}"
+      },
+      "name" : "hermes-no-home",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "gemini",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "BeforeTool",
+          "session_id" : "gemini-1",
+          "timestamp" : "2026-10-22T08:00:00Z",
+          "tool_input" : {
+            "command" : "ls"
+          },
+          "tool_name" : "run_shell_command",
+          "transcript_path" : "/Users/golden/.gemini/tmp/x/chats/session.json"
+        },
+        "status" : 0,
+        "stdout" : "{\"decision\":\"allow\"}"
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "opt/homebrew/bin/gemini"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "gemini",
+          "--event",
+          "BeforeTool"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}",
+        "stdin" : "{\"session_id\":\"gemini-1\",\"transcript_path\":\"/Users/golden/.gemini/tmp/x/chats/session.json\",\"hook_event_name\":\"BeforeTool\",\"timestamp\":\"2026-10-22T08:00:00Z\",\"tool_name\":\"run_shell_command\",\"tool_input\":{\"command\":\"ls\"}}"
+      },
+      "name" : "gemini-beforetool-allow",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "gemini",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "BeforeTool",
+          "session_id" : "gemini-2",
+          "tool_input" : {
+            "file_path" : "x"
+          },
+          "tool_name" : "write_file"
+        },
+        "status" : 0,
+        "stdout" : "{\"decision\":\"deny\"}"
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "gemini",
+          "--event",
+          "BeforeTool"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "not json but \"behavior\":\"deny\" anyway",
+        "stdin" : "{\"session_id\":\"gemini-2\",\"hook_event_name\":\"BeforeTool\",\"tool_name\":\"write_file\",\"tool_input\":{\"file_path\":\"x\"}}"
+      },
+      "name" : "gemini-beforetool-unparsable-deny",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "gemini",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "BeforeTool",
+          "session_id" : "gemini-3",
+          "tool_name" : "write_file"
+        },
+        "status" : 0,
+        "stdout" : "{\"hookSpecificOutput\":{\"decision\":\"behavior\"},\"x\":\"\\\"behavior\\\":\\\"always\\\"\"}"
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "gemini",
+          "--event",
+          "BeforeTool"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"decision\":\"behavior\"},\"x\":\"\\\"behavior\\\":\\\"always\\\"\"}",
+        "stdin" : "{\"session_id\":\"gemini-3\",\"hook_event_name\":\"BeforeTool\",\"tool_name\":\"write_file\"}"
+      },
+      "name" : "gemini-beforetool-unparsable-always",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "gemini",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "BeforeTool",
+          "session_id" : "gemini-4",
+          "tool_name" : "write_file"
+        },
+        "status" : 0,
+        "stdout" : "{}"
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "gemini",
+          "--event",
+          "BeforeTool"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"gemini-4\",\"hook_event_name\":\"BeforeTool\",\"tool_name\":\"write_file\"}"
+      },
+      "name" : "gemini-beforetool-raw-reply",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "gemini",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "AfterTool",
+          "session_id" : "gemini-5",
+          "tool_name" : "run_shell_command",
+          "tool_response" : {
+            "output" : "ok"
+          }
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "gemini",
+          "--event",
+          "AfterTool"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}",
+        "stdin" : "{\"session_id\":\"gemini-5\",\"hook_event_name\":\"AfterTool\",\"tool_name\":\"run_shell_command\",\"tool_response\":{\"output\":\"ok\"}}"
+      },
+      "name" : "gemini-aftertool",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "gemini",
+          "conversationId" : "agy-conv-0",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "PreToolUse",
+          "session_id" : "agy-conv-0",
+          "stepIdx" : 2,
+          "toolCall" : {
+            "args" : {
+              "AbsolutePath" : "/Users/golden/project/a.txt"
+            },
+            "name" : "view_file"
+          }
+        },
+        "status" : 0,
+        "stdout" : "{\"decision\":\"ask\"}"
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "gemini",
+          "--event",
+          "PreToolUse"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"conversationId\":\"agy-conv-0\",\"stepIdx\":2,\"toolCall\":{\"name\":\"view_file\",\"args\":{\"AbsolutePath\":\"/Users/golden/project/a.txt\"}}}"
+      },
+      "name" : "gemini-pretooluse-is-antigravity",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "google-antigravity",
+          "conversationId" : "agy-conv-1",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "PreToolUse",
+          "session_id" : "agy-conv-1",
+          "stepIdx" : 1,
+          "toolCall" : {
+            "args" : {
+              "CommandLine" : "npm test"
+            },
+            "name" : "run_command"
+          },
+          "transcript_path" : "/Users/golden/.gemini/antigravity/brain/agy-conv-1/transcript.jsonl",
+          "transcriptPath" : "/Users/golden/.gemini/antigravity/brain/agy-conv-1/transcript.jsonl"
+        },
+        "status" : 0,
+        "stdout" : "{\"decision\":\"ask\"}"
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/bin/agy"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "google-antigravity",
+          "--event",
+          "PreToolUse"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"conversationId\":\"agy-conv-1\",\"stepIdx\":1,\"toolCall\":{\"name\":\"run_command\",\"args\":{\"CommandLine\":\"npm test\"}},\"transcriptPath\":\"/Users/golden/.gemini/antigravity/brain/agy-conv-1/transcript.jsonl\"}"
+      },
+      "name" : "agy-pretooluse",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "google-antigravity",
+          "conversationId" : "agy-conv-2",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "PreToolUse",
+          "session_id" : "agy-conv-2",
+          "toolCall" : {
+            "args" : {
+              "CommandLine" : "ls"
+            },
+            "name" : "run_command"
+          }
+        },
+        "status" : 0,
+        "stdout" : "{\"decision\":\"ask\"}"
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "google-antigravity"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hook_event_name\":\"PreToolUse\",\"conversationId\":\"agy-conv-2\",\"toolCall\":{\"name\":\"run_command\",\"args\":{\"CommandLine\":\"ls\"}}}"
+      },
+      "name" : "agy-event-on-stdin",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "google-antigravity",
+          "conversationId" : "agy-conv-3",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "PermissionRequest",
+          "session_id" : "agy-conv-3",
+          "toolCall" : {
+            "args" : {
+              "CommandLine" : "rm -rf dist"
+            },
+            "name" : "run_command"
+          }
+        },
+        "status" : 0,
+        "stdout" : "{\"decision\":\"allow\"}"
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "google-antigravity",
+          "--event",
+          "PermissionRequest"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"always\"}}}",
+        "stdin" : "{\"conversationId\":\"agy-conv-3\",\"toolCall\":{\"name\":\"run_command\",\"args\":{\"CommandLine\":\"rm -rf dist\"}}}"
+      },
+      "name" : "agy-permission-always",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "agy",
+          "conversationId" : "agy-conv-4",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "PermissionRequest",
+          "session_id" : "agy-conv-4",
+          "toolCall" : {
+            "name" : "run_command"
+          }
+        },
+        "status" : 0,
+        "stdout" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied on the island\"}}}"
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "agy",
+          "--event",
+          "PermissionRequest"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied on the island\"}}}",
+        "stdin" : "{\"conversationId\":\"agy-conv-4\",\"toolCall\":{\"name\":\"run_command\"}}"
+      },
+      "name" : "agy-agent-alias-permission-deny",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : null,
+        "status" : 0,
+        "stdout" : "{\"decision\":\"ask\"}"
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "google-antigravity",
+          "--event",
+          "PreToolUse"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "CODEISLAND_SKIP" : "1"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"conversationId\":\"agy-conv-5\"}"
+      },
+      "name" : "agy-pretooluse-skip",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : null,
+        "status" : 0,
+        "stdout" : "{\"decision\":\"ask\"}"
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "google-antigravity",
+          "--event",
+          "PreToolUse"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : false,
+        "reply" : "{}",
+        "stdin" : "{\"conversationId\":\"agy-conv-6\"}"
+      },
+      "name" : "agy-pretooluse-island-not-running",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_hook_ppid" : "$PID0",
+          "_ppid" : "$PID1",
+          "_source" : "copilot",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "preToolUse",
+          "session_id" : "copilot-ppid-$PID3",
+          "timestamp" : 1761120000000,
+          "tool_input" : {
+            "command" : "ls -la",
+            "description" : "List"
+          },
+          "tool_name" : "bash",
+          "toolArgs" : "{\"command\":\"ls -la\",\"description\":\"List\"}",
+          "toolName" : "bash"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "usr-local/bin/node"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.npm-global/lib/node_modules/@github/copilot"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "bin/zsh"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.npm-global/bin/copilot"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "copilot",
+          "--event",
+          "preToolUse"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"timestamp\":1761120000000,\"cwd\":\"/Users/golden/project\",\"toolName\":\"bash\",\"toolArgs\":\"{\\\"command\\\":\\\"ls -la\\\",\\\"description\\\":\\\"List\\\"}\"}"
+      },
+      "name" : "copilot-pretooluse-fallback-session",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "copilot",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "sessionStart",
+          "initialPrompt" : "hi",
+          "session_id" : "copilot-sess-1",
+          "sessionId" : "copilot-sess-1",
+          "source" : "new",
+          "timestamp" : 1761120000000,
+          "toolArgs" : "not json"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "copilot",
+          "--event",
+          "sessionStart"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"sessionId\":\"copilot-sess-1\",\"timestamp\":1761120000000,\"cwd\":\"/Users/golden/project\",\"source\":\"new\",\"initialPrompt\":\"hi\",\"toolArgs\":\"not json\"}"
+      },
+      "name" : "copilot-session-start-with-id",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "qoder",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Stop",
+          "session_id" : "qoder-1"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/Qoder.app/Contents/MacOS/Electron"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "qoder"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"qoder-1\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Stop\"}"
+      },
+      "name" : "qoder-ide-stop",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "qoder-cli",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PreToolUse",
+          "session_id" : "qoder-2",
+          "tool_name" : "Bash"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "opt/homebrew/bin/qodercli"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "qoder"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"qoder-2\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Bash\"}"
+      },
+      "name" : "qoder-cli-promoted",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "qoder-cli",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "UserPromptSubmit",
+          "prompt" : "你好",
+          "session_id" : "qoder-3"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.qoder-cn/bin/qoderclicn-1.1.5"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "qoder-cli"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"qoder-3\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"你好\"}"
+      },
+      "name" : "qoder-cn-cli",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "kimi",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "UserPromptSubmit",
+          "prompt" : [
+            {
+              "text" : "Explain this",
+              "type" : "text"
+            }
+          ],
+          "session_id" : "session_kimi_1"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.kimi-code/bin/kimi"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "kimi"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"session_kimi_1\",\"cwd\":\"/Users/golden/project\",\"prompt\":[{\"type\":\"text\",\"text\":\"Explain this\"}]}"
+      },
+      "name" : "kimi-user-prompt",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "trae",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "beforeSubmitPrompt",
+          "prompt" : "first task",
+          "session_id" : "trae-1",
+          "workspace_roots" : [
+            "/Users/golden/project"
+          ]
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/Trae.app/Contents/MacOS/Electron"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "trae",
+          "--event",
+          "beforeSubmitPrompt"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"trae-1\",\"prompt\":\"first task\",\"workspace_roots\":[\"/Users/golden/project\"]}"
+      },
+      "name" : "trae-ide-before-submit",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_hook_ppid" : "$PID0",
+          "_ppid" : "$PID1",
+          "_source" : "traecn",
+          "command" : "ls",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "beforeShellExecution",
+          "session_id" : "traecn-1"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "bin/bash"
+          },
+          {
+            "arguments" : [
+
+            ],
+            "path" : "Applications/Trae CN.app/Contents/MacOS/Electron"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "traecn",
+          "--event",
+          "beforeShellExecution"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"traecn-1\",\"command\":\"ls\",\"cwd\":\"/Users/golden/project\"}"
+      },
+      "name" : "traecn-runs-hooks-through-bash",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "traecli",
+          "agent_id" : "a1",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "pre_tool_use",
+          "session_id" : "traecli-1",
+          "tool_input" : {
+            "command" : "ls"
+          },
+          "tool_name" : "RunCommand"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/bin/coco"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "traecli",
+          "--event",
+          "pre_tool_use"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"traecli-1\",\"hook_event_name\":\"pre_tool_use\",\"tool_name\":\"RunCommand\",\"tool_input\":{\"command\":\"ls\"},\"cwd\":\"/Users/golden/project\",\"agent_id\":\"a1\"}"
+      },
+      "name" : "traecli-pre-tool-use",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "minimax",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PreToolUse",
+          "session_id" : "mm-1",
+          "tool_input" : {
+            "command" : "ls"
+          },
+          "tool_name" : "Bash"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.npm/lib/node_modules/@minimax-ai/code/bin/minimax-code"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "minimax"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"mm-1\",\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"},\"cwd\":\"/Users/golden/project\"}"
+      },
+      "name" : "minimax-pretooluse",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "grok",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PreToolUse",
+          "hookEventName" : "PreToolUse",
+          "session_id" : "grok-sess-1",
+          "sessionId" : "grok-sess-1",
+          "toolInput" : {
+            "command" : "ls"
+          },
+          "toolName" : "bash",
+          "transcript_path" : "$ROOT/grokhome/sessions/%2FUsers%2Fgolden%2Fproject/grok-sess-1/chat_history.jsonl",
+          "workspaceRoot" : "/Users/golden/project"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.grok/downloads/grok-0.2.106-macos-aarch64"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "grok"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "GROK_HOME" : "$ROOT/grokhome",
+          "GROK_HOOK_EVENT" : "PreToolUse",
+          "GROK_SESSION_ID" : "grok-sess-1",
+          "GROK_WORKSPACE_ROOT" : "/Users/golden/other"
+        },
+        "files" : {
+          "grokhome/sessions/%2FUsers%2Fgolden%2Fproject/grok-sess-1/chat_history.jsonl" : "{}\n"
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hookEventName\":\"PreToolUse\",\"sessionId\":\"grok-sess-1\",\"workspaceRoot\":\"/Users/golden/project\",\"toolName\":\"bash\",\"toolInput\":{\"command\":\"ls\"}}"
+      },
+      "name" : "grok-managed-hook",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "grok",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Stop",
+          "hookEventName" : "Stop",
+          "session_id" : "grok-sess-2",
+          "sessionId" : "grok-sess-2",
+          "toolName" : "bash"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "grok"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "GROK_HOME" : "$ROOT/grokhome",
+          "GROK_HOOK_EVENT" : "Stop",
+          "GROK_SESSION_ID" : "grok-sess-2",
+          "GROK_WORKSPACE_ROOT" : "/Users/golden/project"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"toolName\":\"bash\"}"
+      },
+      "name" : "grok-env-only",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "grok",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "SessionStart",
+          "hookEventName" : "SessionStart",
+          "session_id" : "grok-sess-3",
+          "sessionId" : "grok-sess-3"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "grok"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "GROK_HOME" : "$ROOT/grokhome",
+          "GROK_SESSION_ID" : "grok-sess-3"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hookEventName\":\"SessionStart\",\"sessionId\":\"grok-sess-3\",\"cwd\":\"/Users/golden/project\"}"
+      },
+      "name" : "grok-transcript-not-written-yet",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : null,
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "GROK_HOOK_EVENT" : "Stop",
+          "GROK_SESSION_ID" : "grok-sess-4"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hook_event_name\":\"Stop\",\"session_id\":\"grok-sess-4\",\"cwd\":\"/Users/golden/project\"}"
+      },
+      "name" : "grok-runs-imported-claude-hook",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "zcode",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PreToolUse",
+          "hookEventName" : "PreToolUse",
+          "session_id" : "zc-session-1",
+          "sessionId" : "zc-session-1",
+          "toolCallId" : "call-1",
+          "toolInput" : {
+            "command" : "ls"
+          },
+          "toolName" : "bash"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "zcode"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hookEventName\":\"PreToolUse\",\"sessionId\":\"zc-session-1\",\"toolCallId\":\"call-1\",\"toolName\":\"bash\",\"toolInput\":{\"command\":\"ls\"},\"cwd\":\"/Users/golden/project\"}"
+      },
+      "name" : "zcode-tool",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "kiro",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "agentSpawn",
+          "session_id" : "kiro-ppid-$PID0"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/bin/kiro-cli"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "kiro"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hook_event_name\":\"agentSpawn\",\"cwd\":\"/Users/golden/project\"}"
+      },
+      "name" : "kiro-agent-spawn-fallback-session",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "droid",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "SessionStart",
+          "session_id" : "droid-1",
+          "source" : "startup"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/bin/droid"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "droid"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"droid-1\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}"
+      },
+      "name" : "droid-session-start",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "codebuddy",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PermissionRequest",
+          "session_id" : "cb-1",
+          "tool_input" : {
+            "command" : "make"
+          },
+          "tool_name" : "Bash"
+        },
+        "status" : 0,
+        "stdout" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}"
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "codebuddy"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}",
+        "stdin" : "{\"session_id\":\"cb-1\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PermissionRequest\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"make\"}}"
+      },
+      "name" : "codebuddy-permission",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "qwen",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "Stop",
+          "session_id" : "qwen-1"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "qwen",
+          "--event",
+          "Stop"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"qwen-1\"}"
+      },
+      "name" : "qwen-event-from-flag",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "mycli",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "Stop",
+          "session_id" : "mycli-ppid-$PID0"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "usr-local/bin/mycli"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "mycli"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hook_event_name\":\"Stop\"}"
+      },
+      "name" : "custom-source-fallback-session",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_env" : {
+            "TERM_PROGRAM" : "ghostty"
+          },
+          "_ppid" : "$PID0",
+          "_server_port" : 4096,
+          "_source" : "opencode",
+          "_tty" : "/dev/ttys009",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PermissionRequest",
+          "session_id" : "opencode-ses_1",
+          "tool_input" : {
+            "command" : "rm -rf build"
+          },
+          "tool_name" : "Bash"
+        },
+        "status" : 0,
+        "stdout" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}"
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.opencode/bin/opencode"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}",
+        "stdin" : "{\"hook_event_name\":\"PermissionRequest\",\"session_id\":\"opencode-ses_1\",\"_source\":\"opencode\",\"_ppid\":4242,\"_env\":{\"TERM_PROGRAM\":\"ghostty\"},\"_tty\":\"/dev/ttys009\",\"_server_port\":4096,\"cwd\":\"/Users/golden/project\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"rm -rf build\"}}"
+      },
+      "name" : "opencode-plugin-permission",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : 0,
+          "_source" : "opencode",
+          "_untracked_process" : true,
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Notification",
+          "options" : [
+            "a",
+            "b"
+          ],
+          "question" : "Pick one",
+          "session_id" : "opencode-ses_2"
+        },
+        "status" : 0,
+        "stdout" : "{\"answers\":{\"Pick one\":\"a\"}}"
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.opencode/bin/opencode"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"answers\":{\"Pick one\":\"a\"}}",
+        "stdin" : "{\"hook_event_name\":\"Notification\",\"session_id\":\"opencode-ses_2\",\"_source\":\"opencode\",\"_untracked_process\":true,\"cwd\":\"/Users/golden/project\",\"question\":\"Pick one\",\"options\":[\"a\",\"b\"]}"
+      },
+      "name" : "opencode2-shared-service-question",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "mimo",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PermissionRequest",
+          "session_id" : "mimo-ses_1",
+          "tool_name" : "Edit"
+        },
+        "status" : 0,
+        "stdout" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied on the island\"}}}"
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.mimocode/bin/mimo"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied on the island\"}}}",
+        "stdin" : "{\"hook_event_name\":\"PermissionRequest\",\"session_id\":\"mimo-ses_1\",\"_source\":\"mimo\",\"_ppid\":4343,\"cwd\":\"/Users/golden/project\",\"tool_name\":\"Edit\"}"
+      },
+      "name" : "mimo-plugin-permission",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_env" : {
+            "HERDR_ENV" : "1",
+            "HERDR_PANE_ID" : "p-3",
+            "HERDR_SOCKET_PATH" : "/tmp/herdr-golden.sock"
+          },
+          "_herdr_pane_id" : "p-3",
+          "_herdr_socket_path" : "/tmp/herdr-golden.sock",
+          "_pi_tool_call_id" : "call_1",
+          "_ppid" : "$PID0",
+          "_server_port" : 0,
+          "_source" : "pi",
+          "_tty" : null,
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PermissionRequest",
+          "session_id" : "pi-0193",
+          "tool_input" : {
+            "command" : "rm -rf node_modules"
+          },
+          "tool_name" : "Bash"
+        },
+        "status" : 0,
+        "stdout" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}"
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "usr-local/bin/node"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "HERDR_ENV" : "1",
+          "HERDR_PANE_ID" : "p-3",
+          "HERDR_SOCKET_PATH" : "/tmp/herdr-golden.sock"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}",
+        "stdin" : "{\"session_id\":\"pi-0193\",\"_source\":\"pi\",\"_ppid\":5151,\"_env\":{\"HERDR_ENV\":\"1\",\"HERDR_PANE_ID\":\"p-3\",\"HERDR_SOCKET_PATH\":\"/tmp/herdr-golden.sock\"},\"_herdr_pane_id\":\"p-3\",\"_herdr_socket_path\":\"/tmp/herdr-golden.sock\",\"_tty\":null,\"_server_port\":0,\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PermissionRequest\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"rm -rf node_modules\"},\"_pi_tool_call_id\":\"call_1\"}"
+      },
+      "name" : "pi-plugin-permission",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "pi",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Notification",
+          "options" : [
+            "Yes",
+            "No"
+          ],
+          "question" : "Continue?",
+          "session_id" : "omp-77"
+        },
+        "status" : 0,
+        "stdout" : "{\"answer\":\"Yes\"}"
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.bun/bin/bun"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"answer\":\"Yes\"}",
+        "stdin" : "{\"session_id\":\"omp-77\",\"_source\":\"pi\",\"_ppid\":6161,\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Notification\",\"question\":\"Continue?\",\"options\":[\"Yes\",\"No\"]}"
+      },
+      "name" : "omp-plugin-question",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_env" : {
+
+          },
+          "_ppid" : "$PID0",
+          "_source" : "openclaw",
+          "_tty" : null,
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "PermissionRequest",
+          "session_id" : "openclaw-agent:main",
+          "tool_input" : {
+            "command" : "ls"
+          },
+          "tool_name" : "exec"
+        },
+        "status" : 0,
+        "stdout" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}"
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "opt/homebrew/bin/openclaw"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}",
+        "stdin" : "{\"session_id\":\"openclaw-agent:main\",\"_source\":\"openclaw\",\"_ppid\":7171,\"_env\":{},\"_tty\":null,\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PermissionRequest\",\"tool_name\":\"exec\",\"tool_input\":{\"command\":\"ls\"}}"
+      },
+      "name" : "openclaw-plugin-permission",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "antigravity",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Stop",
+          "session_id" : "ag-1"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/claude/versions/2.1.294"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"ag-1\",\"_source\":\"Anti-Gravity\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Stop\"}"
+      },
+      "name" : "plugin-source-alias-normalized",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_claude_desktop_session" : "local_x",
+          "_cmux_surface_id" : "surface-1",
+          "_cmux_workspace_id" : "workspace-1",
+          "_herdr_bin_path" : "/opt/herdr/bin/herdr",
+          "_herdr_pane_id" : "p-1",
+          "_herdr_socket_path" : "/tmp/herdr.sock",
+          "_iterm_session" : "no-colon-guid",
+          "_kitty_window" : "3",
+          "_orca_terminal_handle" : "orca-1",
+          "_orca_worktree_id" : "wt-1",
+          "_ppid" : "$PID0",
+          "_source" : "codex",
+          "_superset_pane_id" : "st-1",
+          "_superset_workspace_id" : "sw-1",
+          "_term_app" : "WezTerm",
+          "_term_bundle" : "com.github.wez.wezterm",
+          "_wezterm_pane" : "12",
+          "_zellij" : "0",
+          "_zellij_pane_id" : "5",
+          "_zellij_session_name" : "main",
+          "cwd" : "/Users/golden/project",
+          "hook_event_name" : "Stop",
+          "session_id" : "term-1"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "opt/homebrew/bin/codex"
+          }
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "__CFBundleIdentifier" : "com.github.wez.wezterm",
+          "CLAUDE_CODE_HOST_SESSION_ID" : "local_x",
+          "CMUX_SURFACE_ID" : "surface-1",
+          "CMUX_WORKSPACE_ID" : "workspace-1",
+          "HERDR_BIN_PATH" : "/opt/herdr/bin/herdr",
+          "HERDR_ENV" : "1",
+          "HERDR_PANE_ID" : " p-1 ",
+          "HERDR_SOCKET_PATH" : " /tmp/herdr.sock ",
+          "ITERM_SESSION_ID" : "no-colon-guid",
+          "KITTY_WINDOW_ID" : "3",
+          "ORCA_TERMINAL_HANDLE" : "orca-1",
+          "ORCA_WORKTREE_ID" : "wt-1",
+          "SUPERSET_TERMINAL_ID" : "st-1",
+          "SUPERSET_WORKSPACE_ID" : "sw-1",
+          "TERM_PROGRAM" : "WezTerm",
+          "UNRELATED_SECRET" : "must-not-leak",
+          "WEZTERM_PANE" : "12",
+          "ZELLIJ" : "0",
+          "ZELLIJ_PANE_ID" : "5",
+          "ZELLIJ_SESSION_NAME" : "main"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"term-1\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Stop\"}"
+      },
+      "name" : "terminal-env-everything",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "_source" : "claude",
+          "_superset_pane_id" : "sp-1",
+          "cwd" : "$ROOT/work",
+          "hook_event_name" : "Stop",
+          "session_id" : "term-2"
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+          {
+            "arguments" : [
+
+            ],
+            "path" : "home/.local/share/claude/versions/2.1.294"
+          }
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "HERDR_ENV" : "1",
+          "HERDR_PANE_ID" : "p-2",
+          "KITTY_WINDOW_ID" : "",
+          "SUPERSET_PANE_ID" : "sp-1",
+          "SUPERSET_TERMINAL_ID" : "st-2",
+          "TERM_PROGRAM" : "",
+          "ZELLIJ_PANE_ID" : "5"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"term-2\",\"hook_event_name\":\"Stop\"}"
+      },
+      "name" : "terminal-env-partial",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : null,
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hook_event_name\":\"Stop\",\"cwd\":\"/Users/golden/project\"}"
+      },
+      "name" : "no-session-no-source",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : {
+          "_ppid" : "$PID0",
+          "cwd" : "/x",
+          "hook_event_name" : "Stop",
+          "session_id" : "   ",
+          "sessionId" : ""
+        },
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"hook_event_name\":\"Stop\",\"session_id\":\"   \",\"sessionId\":\"\",\"cwd\":\"/x\"}"
+      },
+      "name" : "blank-session-no-source",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : null,
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : ""
+      },
+      "name" : "empty-stdin",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : null,
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "not json"
+      },
+      "name" : "invalid-json",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : null,
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "[1,2]"
+      },
+      "name" : "json-array",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : null,
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+          "CODEISLAND_SKIP" : "1"
+        },
+        "files" : {
+
+        },
+        "has_socket" : true,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"s\",\"hook_event_name\":\"Stop\"}"
+      },
+      "name" : "skip-env",
+      "scope" : "macos"
+    },
+    {
+      "expectation" : {
+        "forwarded" : null,
+        "status" : 0,
+        "stdout" : ""
+      },
+      "input" : {
+        "ancestors" : [
+
+        ],
+        "arguments" : [
+          "--source",
+          "codex"
+        ],
+        "bundle_identifiers" : {
+
+        },
+        "environment" : {
+
+        },
+        "files" : {
+
+        },
+        "has_socket" : false,
+        "reply" : "{}",
+        "stdin" : "{\"session_id\":\"s\",\"hook_event_name\":\"Stop\"}"
+      },
+      "name" : "island-not-running",
+      "scope" : "macos"
+    }
+  ],
+  "scope" : "macos"
+}
