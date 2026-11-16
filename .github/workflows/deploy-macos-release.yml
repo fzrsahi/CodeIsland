@@ -61,7 +61,7 @@ jobs:
         run: |
           XCODE_APP="$(find /Applications -maxdepth 1 \( -name 'Xcode_26*.app' -o -name 'Xcode_16*.app' -o -name 'Xcode*.app' \) -type d | sort -V | tail -n 1)"
           if [ -z "$XCODE_APP" ]; then
-            echo "Xcode is required to compile CodeIsland"
+            echo "Xcode is required to compile Morrow"
             exit 1
           fi
           echo "Selected Xcode: $XCODE_APP"
@@ -85,15 +85,15 @@ jobs:
             echo "::notice::Building ad-hoc signed DMG. Updates will be cryptographically verified by Sparkle Ed25519 signature."
           fi
 
-      - name: Build CodeIsland.dmg
+      - name: Build Morrow.dmg
         run: ./scripts/build-dmg.sh "$VERSION"
 
       - name: Verify binary integrity
         run: |
-          test -f .build/CodeIsland.dmg
-          APP_BIN=".build/dmg-staging/CodeIsland.app/Contents/MacOS/CodeIsland"
+          test -f .build/Morrow.dmg
+          APP_BIN=".build/dmg-staging/Morrow.app/Contents/MacOS/CodeIsland"
           test "$(lipo -archs "$APP_BIN")" = "arm64"
-          ls -lh .build/CodeIsland.dmg
+          ls -lh .build/Morrow.dmg
 
       - name: Extract release changelog
         shell: bash
@@ -102,8 +102,8 @@ jobs:
           if ./scripts/extract-changelog.sh "$VERSION" > .build/dist/CHANGELOG_SNIPPET.md 2>/dev/null; then
             echo "Successfully extracted changelog snippet."
           else
-            echo "### CodeIsland v$VERSION" > .build/dist/CHANGELOG_SNIPPET.md
-            echo "Automated release build for CodeIsland v$VERSION." >> .build/dist/CHANGELOG_SNIPPET.md
+            echo "### Morrow v$VERSION" > .build/dist/CHANGELOG_SNIPPET.md
+            echo "Automated release build for Morrow v$VERSION." >> .build/dist/CHANGELOG_SNIPPET.md
           fi
 
       - name: Update Sparkle appcast feed & sign with Ed25519
@@ -113,7 +113,7 @@ jobs:
         run: |
           if [ -n "$SPARKLE_PRIVATE_KEY" ]; then
             echo "Sparkle private key detected. Signing DMG and generating appcast item..."
-            ./scripts/update-appcast.sh "$VERSION" .build/CodeIsland.dmg
+            ./scripts/update-appcast.sh "$VERSION" .build/Morrow.dmg
           else
             echo "::warning::SPARKLE_PRIVATE_KEY secret is not configured. Skipping Sparkle Ed25519 signing."
           fi
@@ -122,14 +122,14 @@ jobs:
         shell: bash
         run: |
           cd .build
-          shasum -a 256 CodeIsland.dmg > SHA256SUMS.txt
+          shasum -a 256 Morrow.dmg > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - name: Publish or update GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RELEASE_FILES=(".build/CodeIsland.dmg" ".build/SHA256SUMS.txt")
+          RELEASE_FILES=(".build/Morrow.dmg" ".build/SHA256SUMS.txt")
           if [ -f "appcast.xml" ]; then
             RELEASE_FILES+=("appcast.xml")
           fi
@@ -140,7 +140,7 @@ jobs:
           else
             echo "Creating GitHub Release $TAG..."
             gh release create "$TAG" "${RELEASE_FILES[@]}" \
-              --title "CodeIsland v$VERSION" \
+              --title "Morrow v$VERSION" \
               --notes-file .build/dist/CHANGELOG_SNIPPET.md
           fi
 
@@ -158,7 +158,7 @@ jobs:
           fi
 
           SHA256="$(awk '{print $1}' .build/SHA256SUMS.txt)"
-          DMG_URL="https://github.com/$GITHUB_REPO/releases/download/$TAG/CodeIsland.dmg"
+          DMG_URL="https://github.com/$GITHUB_REPO/releases/download/$TAG/Morrow.dmg"
 
           echo "Sending deployment dispatch to Debian via Cloudflared Tunnel: $WEBHOOK_URL"
           PAYLOAD=$(printf '{"version":"%s","tag":"%s","repository":"%s","dmg_url":"%s","sha256":"%s","timestamp":"%s"}' \
@@ -182,9 +182,9 @@ jobs:
       - name: Upload artifact for backup
         uses: actions/upload-artifact@v4
         with:
-          name: CodeIsland-v${{ env.VERSION }}-arm64
+          name: Morrow-v${{ env.VERSION }}-arm64
           path: |
-            .build/CodeIsland.dmg
+            .build/Morrow.dmg
             .build/SHA256SUMS.txt
             appcast.xml
           if-no-files-found: warn

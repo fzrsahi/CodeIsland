@@ -70,7 +70,7 @@
             android:layout_marginTop="@dimen/watch_gap_medium"
             android:gravity="center"
             android:lineSpacingExtra="2dp"
-            android:text="Open CodeIsland&#10;Settings &gt; Buddy&#10;Connect by Bluetooth"
+            android:text="Open Morrow&#10;Settings &gt; Buddy&#10;Connect by Bluetooth"
             android:textColor="#A0A0AA"
             android:textSize="@dimen/watch_status_detail_text_size" />
 
@@ -89,7 +89,7 @@
             android:textSize="@dimen/watch_chip_text_size"
             android:textStyle="bold" />
 
-        <com.codeisland.buddywatch.BuddyMascotView
+        <com.morrow.buddywatch.BuddyMascotView
             android:id="@+id/mascotView"
             android:layout_width="@dimen/watch_badge_size"
             android:layout_height="@dimen/watch_badge_size"
@@ -118,7 +118,7 @@
             android:paddingTop="@dimen/watch_chip_padding_vertical"
             android:paddingEnd="@dimen/watch_chip_padding_horizontal"
             android:paddingBottom="@dimen/watch_chip_padding_vertical"
-            android:text="CodeIsland"
+            android:text="Morrow"
             android:textColor="@android:color/white"
             android:textSize="@dimen/watch_chip_text_size"
             android:textStyle="bold"

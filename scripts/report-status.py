@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CodeIsland Granular GitHub Status Reporter
+Morrow Granular GitHub Status Reporter
 Zero-dependency CLI tool to publish granular commit statuses to the GitHub REST API.
 Enables multi-check branch protection rules without relying on GitHub Actions.
 """
@@ -58,7 +58,7 @@ def post_status(repo, sha, context, state, description=None, target_url=None, to
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github.v3+json",
             "Content-Type": "application/json",
-            "User-Agent": "CodeIsland-CI",
+            "User-Agent": "Morrow-CI",
         },
         method="POST",
     )
@@ -81,7 +81,7 @@ def post_status(repo, sha, context, state, description=None, target_url=None, to
 
 def main():
     parser = argparse.ArgumentParser(description="Report granular commit status to GitHub")
-    parser.add_argument("--context", required=True, help="Status context name (e.g. 'CodeIsland / XCTest')")
+    parser.add_argument("--context", required=True, help="Status context name (e.g. 'Morrow / XCTest')")
     parser.add_argument("--state", required=True, choices=["pending", "success", "failure", "error"], help="Check state")
     parser.add_argument("--description", help="Short summary text (max 140 chars)")
     parser.add_argument("--url", help="Target URL (e.g. CI pipeline link)")

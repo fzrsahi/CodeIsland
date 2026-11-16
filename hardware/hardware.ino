@@ -87,10 +87,10 @@ static char bleDeviceName[BLE_DEVICE_NAME_LEN] = "Buddy";
 #define PAIR_REJECT_DELAY_MS   500UL
 #define SUPER_LONG_PRESS_MS    3000
 
-// QR code for https://github.com/wxtsky/CodeIsland (version 3, ECC M, border 2).
-#define CODEISLAND_QR_SIZE 33
-#define CODEISLAND_QR_SCALE 4
-static const char CODEISLAND_QR[CODEISLAND_QR_SIZE][CODEISLAND_QR_SIZE + 1] PROGMEM = {
+// QR code for https://github.com/wxtsky/Morrow (version 3, ECC M, border 2).
+#define MORROW_QR_SIZE 33
+#define MORROW_QR_SCALE 4
+static const char MORROW_QR[MORROW_QR_SIZE][MORROW_QR_SIZE + 1] PROGMEM = {
   "000000000000000000000000000000000",
   "000000000000000000000000000000000",
   "001111111011101101000110111111100",
@@ -378,12 +378,12 @@ void drawCenteredText(const char* text, int y, uint8_t textSize, uint16_t color)
   gfx->print(text);
 }
 
-void drawCodeIslandQR(int x, int y, uint8_t scale) {
-  int qrPixels = CODEISLAND_QR_SIZE * scale;
+void drawMorrowQR(int x, int y, uint8_t scale) {
+  int qrPixels = MORROW_QR_SIZE * scale;
   gfx->fillRect(x - 4, y - 4, qrPixels + 8, qrPixels + 8, RGB565(245, 245, 245));
-  for (int row = 0; row < CODEISLAND_QR_SIZE; row++) {
-    for (int col = 0; col < CODEISLAND_QR_SIZE; col++) {
-      char bit = (char)pgm_read_byte(&CODEISLAND_QR[row][col]);
+  for (int row = 0; row < MORROW_QR_SIZE; row++) {
+    for (int col = 0; col < MORROW_QR_SIZE; col++) {
+      char bit = (char)pgm_read_byte(&MORROW_QR[row][col]);
       if (bit == '1') {
         gfx->fillRect(x + col * scale, y + row * scale, scale, scale, RGB565(10, 10, 14));
       }
@@ -1072,13 +1072,13 @@ void drawOnboardScreen(float t) {
   drawCenteredText(bleDeviceName, 50, 1, RGB565(120, 200, 255));
   drawCenteredText("Scan to get app", 64, 1, RGB565(130, 130, 150));
 
-  int qrPixels = CODEISLAND_QR_SIZE * CODEISLAND_QR_SCALE;
+  int qrPixels = MORROW_QR_SIZE * MORROW_QR_SCALE;
   int qrX = (LCD_W - qrPixels) / 2;
   int qrY = 84;
-  drawCodeIslandQR(qrX, qrY, CODEISLAND_QR_SCALE);
+  drawMorrowQR(qrX, qrY, MORROW_QR_SCALE);
 
   int y = qrY + qrPixels + 16;
-  drawCenteredText("Open CodeIsland", y, 1, RGB565(170, 170, 190));
+  drawCenteredText("Open Morrow", y, 1, RGB565(170, 170, 190));
   drawCenteredText("Settings > Buddy", y + 14, 1, RGB565(120, 200, 255));
   drawCenteredText("Connect by Bluetooth", y + 28, 1, RGB565(130, 130, 150));
 

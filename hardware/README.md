@@ -1,8 +1,8 @@
-# Buddy — CodeIsland 的硬件桌宠
+# Buddy — Morrow 的硬件桌宠
 
 > 把 macOS 灵动岛上的 AI Coding Agent 状态动画，搬到一颗放在桌上的 ESP32 小屏幕上。
 
-Buddy 是 [CodeIsland](https://github.com/wxtsky/CodeIsland) 的硬件外设功能。Mac 上运行的 CodeIsland 通过蓝牙低功耗（BLE）把当前 AI Coding Agent（Claude / Codex / Gemini / Cursor / Copilot / Trae / Qoder / Factory / CodeBuddy / OpenCode / Kimi / …）的工作状态实时推送给 ESP32，ESP32 在 1.47 寸彩屏上播放对应的像素吉祥物动画：
+Buddy 是 [Morrow](https://github.com/wxtsky/Morrow) 的硬件外设功能。Mac 上运行的 Morrow 通过蓝牙低功耗（BLE）把当前 AI Coding Agent（Claude / Codex / Gemini / Cursor / Copilot / Trae / Qoder / Factory / CodeBuddy / OpenCode / Kimi / …）的工作状态实时推送给 ESP32，ESP32 在 1.47 寸彩屏上播放对应的像素吉祥物动画：
 
 - **空闲（idle）→ Sleep 场景**：吉祥物闭眼休眠
 - **处理中（processing / running）→ Work 场景**：吉祥物在敲代码
@@ -43,8 +43,8 @@ Buddy 目前只适配下面这一款开发板，零售价约 60 CNY，淘宝上�
 ## 2. 拉取代码
 
 ```bash
-git clone https://github.com/wxtsky/CodeIsland.git
-cd CodeIsland/hardware
+git clone https://github.com/wxtsky/Morrow.git
+cd Morrow/hardware
 ```
 
 `hardware/` 目录关键文件：
@@ -98,7 +98,7 @@ ESP32-C6 需要 **Arduino-ESP32 v3.0 或更高**。
 
 ## 6. 打开工程
 
-1. 在 Arduino IDE 中点击 **File → Open…**，选择 `CodeIsland/hardware/hardware.ino`。
+1. 在 Arduino IDE 中点击 **File → Open…**，选择 `Morrow/hardware/hardware.ino`。
 2. 若 IDE 弹出 "this sketch needs to be inside a folder named hardware" 的提示，直接确认/忽略即可——文件本身就在 `hardware/` 目录里。
 3. 打开后侧栏应能看到 `hardware.ino` 以及全部 `mascot_*.h` 头文件。
 
@@ -137,16 +137,16 @@ ESP32-C6 需要 **Arduino-ESP32 v3.0 或更高**。
 
 ---
 
-## 9. 与 macOS 端 CodeIsland 配对
+## 9. 与 macOS 端 Morrow 配对
 
-1. 启动 [CodeIsland](https://github.com/wxtsky/CodeIsland) 主程序（需为支持 ESP32 桥接的版本）。
+1. 启动 [Morrow](https://github.com/wxtsky/Morrow) 主程序（需为支持 ESP32 桥接的版本）。
 2. 打开 **Preferences → ESP32 / Buddy** 面板，启用桥接开关。
 3. 首次连接时 macOS 会请求蓝牙权限，授权后等待扫描到 `Buddy-XXXXXX`，点击连接。
 4. Buddy 屏幕出现 `Pair?` 后，短按 **BOOT** 确认配对；如果不想配对，长按 **BOOT** 拒绝。
 5. 触发任意 AI Coding Agent（例如让 Claude Code 跑一条命令），Buddy 屏幕会立即切到对应吉祥物的 **Work** 场景。
 6. 在 macOS 端可远程调节屏幕亮度（10%–100%）与翻转方向（朝上 / 朝下），无需重新烧录。
 
-> 一直扫不到设备？请到 **系统设置 → 隐私与安全性 → 蓝牙** 确认 CodeIsland 已被授权，然后关掉再打开 Buddy 桥接开关重新触发扫描。
+> 一直扫不到设备？请到 **系统设置 → 隐私与安全性 → 蓝牙** 确认 Morrow 已被授权，然后关掉再打开 Buddy 桥接开关重新触发扫描。
 
 ---
 

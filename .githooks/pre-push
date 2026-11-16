@@ -1,6 +1,10 @@
 #!/bin/sh
-# CodeIsland Local Pre-Push Verification Hook
+# Morrow Local Pre-Push Verification Hook
 # Catches compiler timeouts, syntax errors, and unit test regressions before code is pushed.
+
+if [ -d /Applications/Xcode.app/Contents/Developer ]; then
+    export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+fi
 
 if ! command -v swift >/dev/null 2>&1; then
     echo "==> [Pre-Push Hook] 'swift' not found in PATH. Skipping local SwiftPM verification."

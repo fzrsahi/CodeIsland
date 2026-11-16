@@ -129,7 +129,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
-          xcrun notarytool store-credentials CodeIsland \
+          xcrun notarytool store-credentials Morrow \
             --apple-id "$APPLE_ID" \
             --team-id "$APPLE_TEAM_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD"
@@ -139,26 +139,26 @@ jobs:
 
       - name: Verify ARM64 app binary
         run: |
-          APP_ARCHS="$(lipo -archs .build/dmg-staging/CodeIsland.app/Contents/MacOS/CodeIsland)"
-          HELPER_ARCHS="$(lipo -archs .build/dmg-staging/CodeIsland.app/Contents/Helpers/codeisland-bridge)"
-          SPARKLE_ARCHS="$(lipo -archs .build/dmg-staging/CodeIsland.app/Contents/Frameworks/Sparkle.framework/Sparkle)"
+          APP_ARCHS="$(lipo -archs .build/dmg-staging/Morrow.app/Contents/MacOS/CodeIsland)"
+          HELPER_ARCHS="$(lipo -archs .build/dmg-staging/Morrow.app/Contents/Helpers/morrow-bridge)"
+          SPARKLE_ARCHS="$(lipo -archs .build/dmg-staging/Morrow.app/Contents/Frameworks/Sparkle.framework/Sparkle)"
           test "$APP_ARCHS" = "arm64"
           test "$HELPER_ARCHS" = "arm64"
           test "$SPARKLE_ARCHS" = "arm64"
-          test -s .build/dmg-staging/CodeIsland.app/Contents/Resources/AppIcon.icns
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' .build/dmg-staging/CodeIsland.app/Contents/Info.plist)" = "AppIcon"
-          codesign --verify --deep --strict --verbose=2 .build/dmg-staging/CodeIsland.app
-          ls -lh .build/CodeIsland.dmg
+          test -s .build/dmg-staging/Morrow.app/Contents/Resources/AppIcon.icns
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' .build/dmg-staging/Morrow.app/Contents/Info.plist)" = "AppIcon"
+          codesign --verify --deep --strict --verbose=2 .build/dmg-staging/Morrow.app
+          ls -lh .build/Morrow.dmg
 
       - name: Verify notarized app launch policy
         if: ${{ inputs.sign_and_notarize }}
         run: |
-          spctl --assess --type execute --verbose=4 .build/dmg-staging/CodeIsland.app
-          xcrun stapler validate .build/CodeIsland.dmg
+          spctl --assess --type execute --verbose=4 .build/dmg-staging/Morrow.app
+          xcrun stapler validate .build/Morrow.dmg
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CodeIsland-macos-arm64-dmg
-          path: .build/CodeIsland.dmg
+          name: Morrow-macos-arm64-dmg
+          path: .build/Morrow.dmg
           if-no-files-found: error

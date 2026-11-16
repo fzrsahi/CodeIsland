@@ -1,20 +1,20 @@
-# CodeIsland for Windows
+# Morrow for Windows
 
-面向 Windows 的实时 AI 编程智能体状态面板，改编自 [wxtsky/CodeIsland](https://github.com/wxtsky/CodeIsland)。
+面向 Windows 的实时 AI 编程智能体状态面板，改编自 [wxtsky/Morrow](https://github.com/wxtsky/Morrow)。
 
 [安装](#安装) · [功能](#功能) · [支持的工具](#支持的工具) · [源码构建](#源码构建) · [English](README.md)
 
 ---
 
-![CodeIsland for Windows 展开界面](docs/images/big.png)
+![Morrow for Windows 展开界面](docs/images/big.png)
 
-## CodeIsland for Windows 是什么？
+## Morrow for Windows 是什么？
 
-CodeIsland for Windows 是一款置顶显示的紧凑型 AI 编程智能体状态面板。它能够展示正在运行的会话、工具调用、权限申请、智能体提问、完成状态和错误信息，减少在终端、IDE 与 AI 桌面应用之间反复切换的操作。
+Morrow for Windows 是一款置顶显示的紧凑型 AI 编程智能体状态面板。它能够展示正在运行的会话、工具调用、权限申请、智能体提问、完成状态和错误信息，减少在终端、IDE 与 AI 桌面应用之间反复切换的操作。
 
 软件采用纯黑色像素风 Windows 灵动岛界面。双击可以在完整会话列表与极简状态条之间切换，也可以将界面拖到任意屏幕边缘，或在多个显示器之间移动。当收到权限申请、问题或错误事件时，缩小界面会自动展开，避免遗漏重要交互。
 
-本项目改编自 macOS 平台的 [CodeIsland](https://github.com/wxtsky/CodeIsland)，是独立实现的 Windows 移植版本，并非上游项目的官方 Windows 发行版。
+本项目改编自 macOS 平台的 [Morrow](https://github.com/wxtsky/Morrow)，是独立实现的 Windows 移植版本，并非上游项目的官方 Windows 发行版。
 
 ## 功能
 
@@ -55,12 +55,12 @@ CodeIsland for Windows 是一款置顶显示的紧凑型 AI 编程智能体状�
 
 ### 使用发布包
 
-1. 下载发布产物中的 `CodeIsland-Windows-0.2.1-win-x64.zip`。
+1. 下载发布产物中的 `Morrow-Windows-0.2.1-win-x64.zip`。
 2. 将 ZIP 完整解压到固定目录。
-3. 运行 `CodeIsland.Windows.exe`。
+3. 运行 `Morrow.Windows.exe`。
 4. 打开 **设置 → Hooks**，为检测到的工具安装或修复 Hook。
 
-> 不能只复制 EXE。CodeIsland 使用依赖框架的发布方式，运行时还需要同目录中的 DLL、运行时配置、Bridge 程序、图标和 GIF 资源。
+> 不能只复制 EXE。Morrow 使用依赖框架的发布方式，运行时还需要同目录中的 DLL、运行时配置、Bridge 程序、图标和 GIF 资源。
 
 ### 系统要求
 
@@ -74,10 +74,10 @@ CodeIsland for Windows 是一款置顶显示的紧凑型 AI 编程智能体状�
 
 ```text
 AI 编程工具
-    → CodeIsland Hook 或 Codex JSONL 会话记录
-    → CodeIsland.Bridge
+    → Morrow Hook 或 Codex JSONL 会话记录
+    → Morrow.Bridge
     → 当前用户专属的 Windows 命名管道
-    → CodeIsland.Windows
+    → Morrow.Windows
     → 实时会话状态与交互控件
 ```
 
@@ -114,14 +114,14 @@ Codex Desktop 还支持实时会话记录恢复。即使没有传统 CLI Hook，
 ```powershell
 # 在已经克隆的源码目录中执行
 cd CodexStatus
-dotnet build CodeIsland.Windows.sln -c Release
-dotnet run --project CodeIsland.Windows\CodeIsland.Windows.csproj
+dotnet build Morrow.Windows.sln -c Release
+dotnet run --project Morrow.Windows\Morrow.Windows.csproj
 ```
 
 运行 Smoke 测试：
 
 ```powershell
-dotnet run --project CodeIsland.Windows.Smoke\CodeIsland.Windows.Smoke.csproj -c Release
+dotnet run --project Morrow.Windows.Smoke\Morrow.Windows.Smoke.csproj -c Release
 ```
 
 生成 Windows 发布 ZIP：
@@ -136,19 +136,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-release.
 
 | 项目 | 职责 |
 | --- | --- |
-| `CodeIsland.Windows` | WPF 界面、托盘、设置、会话显示和 Codex 会话跟踪 |
-| `CodeIsland.Core` | 统一事件模型与会话状态机 |
-| `CodeIsland.Protocol` | 智能体事件转换与 Codex 会话记录解析 |
-| `CodeIsland.Ipc` | 当前用户专属的 Windows 命名管道通信 |
-| `CodeIsland.Hooks` | 支持工具定义与 Hook 配置 |
-| `CodeIsland.Bridge` | Hook 到桌面应用的事件桥接 |
-| `CodeIsland.Windows.Smoke` | 端到端 Smoke 验证 |
+| `Morrow.Windows` | WPF 界面、托盘、设置、会话显示和 Codex 会话跟踪 |
+| `Morrow.Core` | 统一事件模型与会话状态机 |
+| `Morrow.Protocol` | 智能体事件转换与 Codex 会话记录解析 |
+| `Morrow.Ipc` | 当前用户专属的 Windows 命名管道通信 |
+| `Morrow.Hooks` | 支持工具定义与 Hook 配置 |
+| `Morrow.Bridge` | Hook 到桌面应用的事件桥接 |
+| `Morrow.Windows.Smoke` | 端到端 Smoke 验证 |
 
 ## 致谢
 
-本项目改编自 [wxtsky/CodeIsland](https://github.com/wxtsky/CodeIsland)。原项目率先将 AI 编程智能体的实时状态带入 macOS 刘海区域，为本 Windows 移植版提供了产品概念、交互方式、像素风视觉方向和开源实现参考。
+本项目改编自 [wxtsky/Morrow](https://github.com/wxtsky/Morrow)。原项目率先将 AI 编程智能体的实时状态带入 macOS 刘海区域，为本 Windows 移植版提供了产品概念、交互方式、像素风视觉方向和开源实现参考。
 
-特别感谢 [@wxtsky](https://github.com/wxtsky) 以及所有上游贡献者。若你正在使用或继续开发本项目，也请关注并支持原始 CodeIsland 项目。
+特别感谢 [@wxtsky](https://github.com/wxtsky) 以及所有上游贡献者。若你正在使用或继续开发本项目，也请关注并支持原始 Morrow 项目。
 
 ## 许可证
 

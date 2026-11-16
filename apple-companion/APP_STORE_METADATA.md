@@ -7,7 +7,7 @@ Use this file as the source text when preparing the first public App Store submi
 - Version: `1.0.0`
 - Build: `4`
 - Platforms: iPhone, Apple Watch
-- Bundle ID: `top.fengye.CodeIslandCompanion`
+- Bundle ID: `top.fengye.MorrowCompanion`
 - Category: Developer Tools
 - Secondary category: Productivity
 
@@ -120,13 +120,13 @@ Initial public release. Adds iPhone, Dynamic Island, Lock Screen, StandBy, Apple
 Support URL:
 
 ```text
-https://github.com/wxtsky/CodeIsland
+https://github.com/wxtsky/Morrow
 ```
 
 Marketing URL:
 
 ```text
-https://github.com/wxtsky/CodeIsland
+https://github.com/wxtsky/Morrow
 ```
 
 Privacy Policy URL:

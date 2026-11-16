@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Automated GitHub PR Failure Reporting for CodeIsland CI/CD.
+Automated GitHub PR Failure Reporting for Morrow CI/CD.
 Extracts relevant compiler/test failure logs and posts or updates
 a single sticky comment on the GitHub Pull Request thread.
 """
@@ -12,7 +12,7 @@ import argparse
 import urllib.request
 import urllib.error
 
-MARKER = "<!-- codeisland-ci-status -->"
+MARKER = "<!-- morrow-ci-status -->"
 
 def make_request(url, method="GET", headers=None, data=None):
     req = urllib.request.Request(url, method=method, data=data)
@@ -63,7 +63,7 @@ def upsert_pr_comment(repo, pr_number, token, body):
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "CodeIsland-CI-Notifier",
+        "User-Agent": "Morrow-CI-Notifier",
         "Content-Type": "application/json"
     }
 

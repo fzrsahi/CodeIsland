@@ -21,7 +21,7 @@ jobs:
       - name: Build Sparkle binary artifacts
         run: |
           swift package resolve
-          swift build -c release --product CodeIsland
+          swift build -c release --product Morrow
 
       - name: Generate and output Ed25519 keypair
         run: |

@@ -1,20 +1,20 @@
-# CodeIsland for Windows
+# Morrow for Windows
 
-Real-time AI coding agent status panel for Windows, adapted from [wxtsky/CodeIsland](https://github.com/wxtsky/CodeIsland).
+Real-time AI coding agent status panel for Windows, adapted from [wxtsky/Morrow](https://github.com/wxtsky/Morrow).
 
 [Installation](#installation) · [Features](#features) · [Supported Tools](#supported-tools) · [Build](#build-from-source) · [简体中文](README.zh-CN.md)
 
 ---
 
-![CodeIsland for Windows expanded panel](docs/images/big.png)
+![Morrow for Windows expanded panel](docs/images/big.png)
 
-## What is CodeIsland for Windows?
+## What is Morrow for Windows?
 
-CodeIsland for Windows is a compact, always-on-top status panel for AI coding agents. It shows active sessions, tool calls, permission requests, questions, completion states, and errors without requiring you to keep switching back to a terminal or AI desktop app.
+Morrow for Windows is a compact, always-on-top status panel for AI coding agents. It shows active sessions, tool calls, permission requests, questions, completion states, and errors without requiring you to keep switching back to a terminal or AI desktop app.
 
 The interface is designed around a pure-black, pixel-style Windows island. Double-click to collapse it into a minimal status strip, drag it to any screen edge, or move it between monitors. Interactive requests automatically expand the panel so they are not missed.
 
-This is a Windows adaptation of the original macOS [CodeIsland](https://github.com/wxtsky/CodeIsland). It is an independent port and is not an official Windows release of the upstream project.
+This is a Windows adaptation of the original macOS [Morrow](https://github.com/wxtsky/Morrow). It is an independent port and is not an official Windows release of the upstream project.
 
 ## Features
 
@@ -56,12 +56,12 @@ Event coverage depends on the hook API exposed by each tool and may vary between
 
 ### Release package
 
-1. Download `CodeIsland-Windows-0.2.1-win-x64.zip` from the release artifacts.
+1. Download `Morrow-Windows-0.2.1-win-x64.zip` from the release artifacts.
 2. Extract the entire ZIP to a permanent folder.
-3. Run `CodeIsland.Windows.exe`.
+3. Run `Morrow.Windows.exe`.
 4. Open **Settings → Hooks**, then install or repair the hooks for the detected tools.
 
-> Do not copy only the EXE. CodeIsland is framework-dependent and requires the DLL, runtime configuration, bridge executable, icons, and GIF assets included beside it.
+> Do not copy only the EXE. Morrow is framework-dependent and requires the DLL, runtime configuration, bridge executable, icons, and GIF assets included beside it.
 
 ### Requirements
 
@@ -75,10 +75,10 @@ Windows SmartScreen may warn about an unsigned build on first launch. Verify the
 
 ```text
 AI coding tool
-    → CodeIsland hook or Codex JSONL transcript
-    → CodeIsland.Bridge
+    → Morrow hook or Codex JSONL transcript
+    → Morrow.Bridge
     → user-scoped Windows named pipe
-    → CodeIsland.Windows
+    → Morrow.Windows
     → live session state and interactive controls
 ```
 
@@ -115,14 +115,14 @@ Requires the .NET 8 SDK specified by `global.json`.
 ```powershell
 # Run from an existing source checkout
 cd CodexStatus
-dotnet build CodeIsland.Windows.sln -c Release
-dotnet run --project CodeIsland.Windows\CodeIsland.Windows.csproj
+dotnet build Morrow.Windows.sln -c Release
+dotnet run --project Morrow.Windows\Morrow.Windows.csproj
 ```
 
 Run the smoke suite:
 
 ```powershell
-dotnet run --project CodeIsland.Windows.Smoke\CodeIsland.Windows.Smoke.csproj -c Release
+dotnet run --project Morrow.Windows.Smoke\Morrow.Windows.Smoke.csproj -c Release
 ```
 
 Create the Windows release ZIP:
@@ -137,17 +137,17 @@ The generated package and SHA-256 manifest are written to `artifacts/`.
 
 | Project | Responsibility |
 | --- | --- |
-| `CodeIsland.Windows` | WPF UI, tray integration, settings, session display, Codex transcript tailing |
-| `CodeIsland.Core` | Shared event model and session state machine |
-| `CodeIsland.Protocol` | Agent payload normalization and Codex transcript parsing |
-| `CodeIsland.Ipc` | User-scoped Windows named-pipe transport |
-| `CodeIsland.Hooks` | Supported tool definitions and hook configuration |
-| `CodeIsland.Bridge` | Hook-to-application event bridge |
-| `CodeIsland.Windows.Smoke` | End-to-end smoke checks |
+| `Morrow.Windows` | WPF UI, tray integration, settings, session display, Codex transcript tailing |
+| `Morrow.Core` | Shared event model and session state machine |
+| `Morrow.Protocol` | Agent payload normalization and Codex transcript parsing |
+| `Morrow.Ipc` | User-scoped Windows named-pipe transport |
+| `Morrow.Hooks` | Supported tool definitions and hook configuration |
+| `Morrow.Bridge` | Hook-to-application event bridge |
+| `Morrow.Windows.Smoke` | End-to-end smoke checks |
 
 ## Acknowledgments
 
-This project is adapted from [wxtsky/CodeIsland](https://github.com/wxtsky/CodeIsland), which created the original real-time AI coding agent panel for the macOS notch. Many thanks to [@wxtsky](https://github.com/wxtsky) and all upstream contributors for the product concept, interaction model, pixel-art direction, and open-source implementation that made this Windows port possible.
+This project is adapted from [wxtsky/Morrow](https://github.com/wxtsky/Morrow), which created the original real-time AI coding agent panel for the macOS notch. Many thanks to [@wxtsky](https://github.com/wxtsky) and all upstream contributors for the product concept, interaction model, pixel-art direction, and open-source implementation that made this Windows port possible.
 
 Please visit and support the original project if you use or build on this adaptation.
 

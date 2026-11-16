@@ -1,8 +1,8 @@
-# Contributing to CodeIsland
+# Contributing to Morrow
 
-Welcome, and thank you for your interest in contributing to **CodeIsland**! 🏝️
+Welcome, and thank you for your interest in contributing to **Morrow**! 🏝️
 
-CodeIsland transforms the MacBook notch into a living, real-time Dynamic Island for **AI Coding Agents**, **Interactive Git Graphs**, and **Floating Synced Music Lyrics**.
+Morrow transforms the MacBook notch into a living, real-time Dynamic Island for **AI Coding Agents**, **Interactive Git Graphs**, and **Floating Synced Music Lyrics**.
 
 This document provides guidelines and an overview of the codebase to help you get started quickly.
 
@@ -19,15 +19,15 @@ This document provides guidelines and an overview of the codebase to help you ge
 
 1. Clone the repository:
    ```bash
-   git clone git@github.com:fzrsahi/CodeIsland.git
-   cd CodeIsland
+   git clone git@github.com:fzrsahi/Morrow.git
+   cd Morrow
    ```
 
 2. Build and run locally:
    ```bash
    # Quick build and launch
    ./build.sh
-   open .build/release/CodeIsland.app
+   open .build/release/Morrow.app
    ```
 
 3. To rebuild during active development:
@@ -39,7 +39,7 @@ This document provides guidelines and an overview of the codebase to help you ge
 
 ## 🧭 Codebase Architecture Map
 
-All primary Swift source files are located in `Sources/CodeIsland/` and `Sources/CodeIslandCore/`:
+All primary Swift source files are located in `Sources/Morrow/` and `Sources/MorrowCore/`:
 
 | File / Module | Responsibility |
 | :--- | :--- |
@@ -91,7 +91,7 @@ When adding or modifying UI components:
 
 ## 🔋 Performance benchmark
 
-CodeIsland stays on screen all day, so idle CPU, wakeups and memory matter as much as features. `scripts/perf/bench.sh` measures them against `scripts/perf/baseline.json`.
+Morrow stays on screen all day, so idle CPU, wakeups and memory matter as much as features. `scripts/perf/bench.sh` measures them against `scripts/perf/baseline.json`.
 
 **When to run it:** before opening a PR that touches views, animations, timers, polling or discovery. Put the before/after tables in the PR description.
 
@@ -99,11 +99,11 @@ CodeIsland stays on screen all day, so idle CPU, wakeups and memory matter as mu
 scripts/perf/bench.sh                    # quick suite, ~6 min: idle, idle-prayer, working, music
 scripts/perf/bench.sh full               # + multi, stress, working-expanded, waiting-long
 scripts/perf/bench.sh --scenario music   # one scenario (repeatable)
-scripts/perf/bench.sh --no-build         # reuse .build/release/CodeIsland.app
+scripts/perf/bench.sh --no-build         # reuse .build/release/Morrow.app
 scripts/perf/bench.sh --soak 24          # footprint every 10 min for 24 h, then `leaks`
 ```
 
-**What it does:** builds the release app, quits a running CodeIsland (it is relaunched at the end; `--keep-installed` skips this), then for each scenario launches an isolated instance (`CODEISLAND_ISOLATED=1`, its own hook socket, no hooks, no discovery) with `--preview <scenario>` and settings pinned on the command line. After a 15 s warm-up (65 s for `waiting-long`) it measures a 60 s window: CPU from the process's CPU time, idle wakeups and POWER from two `top` samples, memory from `vmmap`, the app's internal counters, then a 10 s `sample` of the main thread. Keep the Mac otherwise quiet while it runs; the report shows the load average so a noisy run is easy to spot.
+**What it does:** builds the release app, quits a running Morrow (it is relaunched at the end; `--keep-installed` skips this), then for each scenario launches an isolated instance (`MORROW_ISOLATED=1`, its own hook socket, no hooks, no discovery) with `--preview <scenario>` and settings pinned on the command line. After a 15 s warm-up (65 s for `waiting-long`) it measures a 60 s window: CPU from the process's CPU time, idle wakeups and POWER from two `top` samples, memory from `vmmap`, the app's internal counters, then a 10 s `sample` of the main thread. Keep the Mac otherwise quiet while it runs; the report shows the load average so a noisy run is easy to spot.
 
 **Reading the report:** per scenario you get CPU %, idle wakeups/s, `top` POWER (the Energy Impact number), main-thread busy %, footprint at start/end/peak, RSS, counters per minute, and where the main thread spends its time.
 
@@ -129,7 +129,7 @@ The counters are only on when the app is launched with `CODEISLAND_PERF_COUNTERS
 
 ## 🧪 Quality Assurance & CI/CD Testing Flow
 
-CodeIsland uses a **Four-Tier Verification Architecture** to keep the `main` branch green and eliminate CI runner queue congestion without adding external dependencies (zero Node.js/Husky bloat):
+Morrow uses a **Four-Tier Verification Architecture** to keep the `main` branch green and eliminate CI runner queue congestion without adding external dependencies (zero Node.js/Husky bloat):
 
 1. **Tier 1 (Local Pre-Commit Staged Guard)**:
    Whenever you run `git commit`, `.githooks/pre-commit` inspects staged files in under 0.5 seconds:
@@ -153,12 +153,12 @@ CodeIsland uses a **Four-Tier Verification Architecture** to keep the `main` bra
 
 ### 🔒 GitHub Branch Protection Settings
 The CI pipeline publishes granular commit status checks to the GitHub REST API, allowing maintainers to require specific checks under **Settings > Branches > Require status checks to pass**:
-* `CodeIsland / Syntax & Git Hygiene Guard`: Verifies syntax and git hygiene.
-* `CodeIsland / XCTest Core Harness`: Enforces that all 1,098 unit tests pass before merge.
-* `CodeIsland / Artifact Integrity Smoke Test`: Asserts that production DMG artifacts are valid (> 1MB).
+* `Morrow / Syntax & Git Hygiene Guard`: Verifies syntax and git hygiene.
+* `Morrow / XCTest Core Harness`: Enforces that all 1,098 unit tests pass before merge.
+* `Morrow / Artifact Integrity Smoke Test`: Asserts that production DMG artifacts are valid (> 1MB).
 
 ---
 
 ## 📄 License
-CodeIsland is licensed under the [MIT License](LICENSE).
-Original upstream project by [wxtsky](https://github.com/wxtsky/CodeIsland).
+Morrow is licensed under the [MIT License](LICENSE).
+Original upstream project by [wxtsky](https://github.com/wxtsky/Morrow).

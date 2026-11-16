@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Usage: ./scripts/update-appcast.sh <version> <dmg-path> [appcast-file]
-# Example: ./scripts/update-appcast.sh 1.0.22 .build/CodeIsland.dmg
-# Example: ./scripts/update-appcast.sh 1.0.42-dev .build/CodeIsland.dmg appcast-dev.xml
+# Example: ./scripts/update-appcast.sh 1.0.22 .build/Morrow.dmg
+# Example: ./scripts/update-appcast.sh 1.0.42-dev .build/Morrow.dmg appcast-dev.xml
 #
 # Produces / updates appcast.xml at the repo root. Signs the DMG with the
 # private EdDSA key that lives in the macOS Keychain (added by Sparkle's
@@ -14,7 +14,7 @@ set -euo pipefail
 #   - A prior `swift build -c release` has populated .build/artifacts so
 #     Sparkle's sign_update binary is on disk.
 #   - The DMG is uploaded to
-#       https://github.com/wxtsky/CodeIsland/releases/download/v<version>/CodeIsland.dmg
+#       https://github.com/wxtsky/CodeIsland/releases/download/v<version>/Morrow.dmg
 #     (the default asset URL from build-dmg.sh + `gh release create`).
 
 VERSION="${1:-}"
@@ -50,7 +50,7 @@ fi
 # ---------------------------------------------------------------------------
 # Collect fields for the <enclosure> tag
 # ---------------------------------------------------------------------------
-DOWNLOAD_URL="${SPARKLE_DOWNLOAD_URL:-https://github.com/fzrsahi/CodeIsland/releases/download/v${VERSION}/CodeIsland.dmg}"
+DOWNLOAD_URL="${SPARKLE_DOWNLOAD_URL:-https://github.com/fzrsahi/CodeIsland/releases/download/v${VERSION}/Morrow.dmg}"
 PUB_DATE="$(LC_TIME=en_US.UTF-8 date -u "+%a, %d %b %Y %H:%M:%S +0000")"
 LENGTH="$(stat -f%z "$DMG_PATH")"
 MIN_OS="14.0"
@@ -98,9 +98,9 @@ if [[ ! -f "$APPCAST" ]]; then
      xmlns:dc="http://purl.org/dc/elements/1.1/"
      version="2.0">
   <channel>
-    <title>CodeIsland</title>
+    <title>Morrow</title>
     <link>https://codeisland.azhr.cloud/${APPCAST_BASENAME}</link>
-    <description>Most recent CodeIsland updates</description>
+    <description>Most recent Morrow updates</description>
     <language>en</language>
 ${NEW_ITEM}
   </channel>

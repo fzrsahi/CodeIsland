@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.codeisland.buddywatch"
+    namespace = "com.morrow.buddywatch"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.codeisland.buddywatch"
+        applicationId = "com.morrow.buddywatch"
         minSdk = 30
         targetSdk = 34
         versionCode = 5

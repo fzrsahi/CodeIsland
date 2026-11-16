@@ -1,6 +1,6 @@
 <h1 align="center">
-  <img src="logo.png" width="56" height="56" alt="CodeIsland logo" valign="middle">&nbsp;
-  CodeIsland
+  <img src="logo.png" width="56" height="56" alt="Morrow logo" valign="middle">&nbsp;
+  Morrow
 </h1>
 
 <p align="center">
@@ -9,12 +9,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wxtsky/CodeIsland/releases/latest"><img src="https://img.shields.io/github/v/release/wxtsky/CodeIsland?style=flat-square&color=4c8bf5&label=release" alt="最新版本"></a>
-  <a href="https://github.com/wxtsky/CodeIsland/releases"><img src="https://img.shields.io/github/downloads/wxtsky/CodeIsland/total?style=flat-square&color=2ea44f" alt="下载量"></a>
+  <a href="https://github.com/wxtsky/Morrow/releases/latest"><img src="https://img.shields.io/github/v/release/wxtsky/Morrow?style=flat-square&color=4c8bf5&label=release" alt="最新版本"></a>
+  <a href="https://github.com/wxtsky/Morrow/releases"><img src="https://img.shields.io/github/downloads/wxtsky/Morrow/total?style=flat-square&color=2ea44f" alt="下载量"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-111111?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+">
   <a href="https://apps.apple.com/us/app/code-island-buddy/id6773881129"><img src="https://img.shields.io/badge/iPhone%20%26%20Watch-Buddy-0d96f6?style=flat-square&logo=appstore&logoColor=white" alt="App Store 上的 Code Island Buddy"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/wxtsky/CodeIsland?style=flat-square&color=8250df" alt="MIT 许可证"></a>
-  <a href="https://github.com/wxtsky/CodeIsland/stargazers"><img src="https://img.shields.io/github/stars/wxtsky/CodeIsland?style=flat-square&color=e3b341" alt="GitHub stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/wxtsky/Morrow?style=flat-square&color=8250df" alt="MIT 许可证"></a>
+  <a href="https://github.com/wxtsky/Morrow/stargazers"><img src="https://img.shields.io/github/stars/wxtsky/Morrow?style=flat-square&color=e3b341" alt="GitHub stars"></a>
 </p>
 
 <p align="center">
@@ -28,12 +28,12 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/readme-hero-zh.png" width="760" alt="从 MacBook 刘海展开的 CodeIsland，显示 Claude Code、Codex、Cursor 和 Gemini CLI 的会话">
+  <img src="docs/images/readme-hero-zh.png" width="760" alt="从 MacBook 刘海展开的 Morrow，显示 Claude Code、Codex、Cursor 和 Gemini CLI 的会话">
 </p>
 
-## 为什么需要 CodeIsland？
+## 为什么需要 Morrow？
 
-编码 Agent 大部分时间不是在干活，就是在等你——而你只有切到它的窗口才知道是哪种。CodeIsland 把刘海变成所有 Agent 的实时状态栏：哪个会话在思考、哪个在等审批、哪个刚跑完，一目了然。审批和提问直接在刘海上处理，或者点一下跳到对应的终端标签页。
+编码 Agent 大部分时间不是在干活，就是在等你——而你只有切到它的窗口才知道是哪种。Morrow 把刘海变成所有 Agent 的实时状态栏：哪个会话在思考、哪个在等审批、哪个刚跑完，一目了然。审批和提问直接在刘海上处理，或者点一下跳到对应的终端标签页。
 
 支持 **30+ 款 AI 编码工具**，hook 自动安装，所有数据留在你的 Mac 上。
 
@@ -125,14 +125,14 @@
 <td align="center"><img src="docs/images/mascots/pi.gif" width="48" alt=""><br><sub><b>Pi / Oh My Pi</b></sub></td>
 <td align="center"><img src="docs/images/mascots/hermes.gif" width="48" alt=""><br><sub><b>Hermes</b></sub></td>
 <td align="center"><img src="docs/images/mascots/openclaw.gif" width="48" alt=""><br><sub><b>OpenClaw</b></sub></td>
-<td align="center"><img src="Sources/CodeIsland/Resources/cli-icons/antigravity.png" width="40" alt=""><br><sub><b>Google Antigravity</b></sub></td>
+<td align="center"><img src="Sources/Morrow/Resources/cli-icons/antigravity.png" width="40" alt=""><br><sub><b>Google Antigravity</b></sub></td>
 </tr>
 <tr>
 <td align="center"><img src="docs/images/mascots/kiro.gif" width="48" alt=""><br><sub><b>Kiro CLI</b></sub></td>
 <td align="center"><img src="docs/images/mascots/stepfun.gif" width="48" alt=""><br><sub><b>StepFun</b></sub></td>
 <td align="center"><img src="docs/images/mascots/workbuddy.gif" width="48" alt=""><br><sub><b>WorkBuddy</b></sub></td>
-<td align="center"><img src="Sources/CodeIsland/Resources/cli-icons/minimax.png" width="40" alt=""><br><sub><b>MiniMax Code CLI</b></sub></td>
-<td align="center"><img src="Sources/CodeIsland/Resources/cli-icons/dsh.png" width="40" alt=""><br><sub><b>DeepSeek Harness</b></sub></td>
+<td align="center"><img src="Sources/Morrow/Resources/cli-icons/minimax.png" width="40" alt=""><br><sub><b>MiniMax Code CLI</b></sub></td>
+<td align="center"><img src="Sources/Morrow/Resources/cli-icons/dsh.png" width="40" alt=""><br><sub><b>DeepSeek Harness</b></sub></td>
 <td align="center"><img src="docs/images/mascots/aiwork.gif" width="48" alt=""><br><sub><b>AiWork</b></sub></td>
 </tr>
 <tr>
@@ -154,7 +154,7 @@
 
 <br>
 
-CodeIsland 启动时会自动写入以下配置，配置被改动时会自动修复；每一项都可以在 **设置 → Hooks** 里单独关闭。
+Morrow 启动时会自动写入以下配置，配置被改动时会自动修复；每一项都可以在 **设置 → Hooks** 里单独关闭。
 
 | 工具 | 安装位置 |
 |------|----------|
@@ -163,22 +163,22 @@ CodeIsland 启动时会自动写入以下配置，配置被改动时会自动修
 | Gemini CLI | `~/.gemini/settings.json` |
 | Google Antigravity | `~/.gemini/config/hooks.json` |
 | Cursor / Cursor CLI | `~/.cursor/hooks.json` |
-| Grok CLI | `~/.grok/hooks/codeisland.json` |
+| Grok CLI | `~/.grok/hooks/morrow.json` |
 | Qoder（IDE 与 Qoder App）/ Qoder CN / QoderWork | `~/.qoder/`、`~/.qoder-cn/`、`~/.qoderwork/` 下的 `settings.json` |
 | Trae / Trae CN | `~/.trae/hooks.json`、`~/.trae-cn/hooks.json`（需在 Trae 里打开全局 Hook） |
 | Trae CLI / Trae CLI Next | `~/.trae/traecli.yaml`、`~/.trae/cli/hooks.json` |
 | Factory、CodeBuddy、StepFun、WorkBuddy、Qwen Code | `~/.<工具>/settings.json` |
-| Copilot CLI | `~/.copilot/hooks/codeisland.json` |
+| Copilot CLI | `~/.copilot/hooks/morrow.json` |
 | Kimi Code CLI | `~/.kimi-code/config.toml`（旧版为 `~/.kimi/`） |
-| Kiro CLI | `~/.kiro/agents/codeisland.json`，需用 `kiro --agent codeisland` 启动 |
+| Kiro CLI | `~/.kiro/agents/morrow.json`，需用 `kiro --agent morrow` 启动 |
 | Hermes | `~/.hermes/config.yaml`，[需要批准一次](#hermes) |
 | ZCode | `~/.zcode/cli/config.json` |
-| MiniMax Code CLI | 插件 `~/.minimax/plugins/codeisland/`（支持 `$MINIMAX_DATA_DIR`） |
+| MiniMax Code CLI | 插件 `~/.minimax/plugins/morrow/`（支持 `$MINIMAX_DATA_DIR`） |
 | Cline | `~/Documents/Cline/Hooks` |
-| OpenCode | 插件 `~/.config/opencode/plugins/codeisland.js` |
-| MiMo Code / Xiaomi MiMo | 插件 `~/.config/mimocode/plugins/codeisland.js`，见[下文](#mimo) |
-| Pi / Oh My Pi | 扩展 `~/.pi/agent/extensions/codeisland.ts` / `~/.omp/agent/extensions/codeisland.ts` |
-| OpenClaw | 插件 `~/.openclaw/codeisland-plugin/` |
+| OpenCode | 插件 `~/.config/opencode/plugins/morrow.js` |
+| MiMo Code / Xiaomi MiMo | 插件 `~/.config/mimocode/plugins/morrow.js`，见[下文](#mimo) |
+| Pi / Oh My Pi | 扩展 `~/.pi/agent/extensions/morrow.ts` / `~/.omp/agent/extensions/morrow.ts` |
+| OpenClaw | 插件 `~/.openclaw/morrow-plugin/` |
 | DeepSeek Harness | [dsh-island](https://github.com/cdxiaodong/dsh-island) 插件，见[下文](#deepseek-harness) |
 | AiWork | 无需安装，直接读取 AiWork 本机守护进程 |
 
@@ -190,13 +190,13 @@ CodeIsland 启动时会自动写入以下配置，配置被改动时会自动修
 
 ```bash
 brew tap wxtsky/tap
-brew install --cask codeisland
+brew install --cask morrow
 ```
 
 ### 手动下载
 
-1. 从 [最新 Release](https://github.com/wxtsky/CodeIsland/releases/latest) 下载 `CodeIsland.dmg`
-2. 把 `CodeIsland.app` 拖进「应用程序」
+1. 从 [最新 Release](https://github.com/wxtsky/Morrow/releases/latest) 下载 `Morrow.dmg`
+2. 把 `Morrow.app` 拖进「应用程序」
 3. 启动后，会自动为检测到的所有 AI 工具安装 hook
 
 App 已签名并经过 Apple 公证，通过 Sparkle 自动更新。
@@ -209,7 +209,7 @@ App 已签名并经过 Apple 公证，通过 Sparkle 自动更新。
 2. 在同一 Wi-Fi 下打开 App 完成配对，已连接的设备会列在开关下方。
 3. macOS 弹出权限请求时，**本地网络和蓝牙都要允许**。App 在前台时走本地网络传完整快照；退到后台后，靠蓝牙传压缩摘要来刷新实时活动和手表。
 
-companion 源码就在本仓库的 `ios/CodeIslandCompanion` 和 `apple-companion` 目录。
+companion 源码就在本仓库的 `ios/MorrowCompanion` 和 `apple-companion` 目录。
 
 ### 硬件桌宠 Buddy（ESP32）
 
@@ -223,9 +223,9 @@ companion 源码就在本仓库的 `ios/CodeIslandCompanion` 和 `apple-companio
 
 <br>
 
-Codex 不会执行没审核过的 hook。安装后启动 Codex，它会提示 `1 hook needs review before it can run.`，运行 `/hooks`，审核并信任 CodeIsland 的条目即可。审核之前 Codex 会静默忽略这些 hook，不报任何错，看起来就像 CodeIsland 不支持 Codex。Codex 会在 `~/.codex/config.toml` 的 `[hooks.state]` 里为每个已信任的 hook 记录内容哈希，所以 CodeIsland 更新后如果改写了 `~/.codex/hooks.json`，需要再审核一次。
+Codex 不会执行没审核过的 hook。安装后启动 Codex，它会提示 `1 hook needs review before it can run.`，运行 `/hooks`，审核并信任 Morrow 的条目即可。审核之前 Codex 会静默忽略这些 hook，不报任何错，看起来就像 Morrow 不支持 Codex。Codex 会在 `~/.codex/config.toml` 的 `[hooks.state]` 里为每个已信任的 hook 记录内容哈希，所以 Morrow 更新后如果改写了 `~/.codex/hooks.json`，需要再审核一次。
 
-Codex 自动审查（Auto Review）仍由 Codex 处理。某一轮使用自动审查时，CodeIsland 会把它的权限请求交还给 Codex，不代替它批准或拒绝。审查方取自本地 rollout 中该轮的 `turn_context`，因此在 Codex 桌面端权限菜单里的选择同样生效；读不到时再看 `config.toml` 里的 `approvals_reviewer`。设为人工审批的轮次和提问仍在刘海里处理。
+Codex 自动审查（Auto Review）仍由 Codex 处理。某一轮使用自动审查时，Morrow 会把它的权限请求交还给 Codex，不代替它批准或拒绝。审查方取自本地 rollout 中该轮的 `turn_context`，因此在 Codex 桌面端权限菜单里的选择同样生效；读不到时再看 `config.toml` 里的 `approvals_reviewer`。设为人工审批的轮次和提问仍在刘海里处理。
 
 Codex 回合进行中、且没有工具在运行时，收起状态的刘海会显示 Agent 最新的公开输出。隐藏推理、加密内容、工具结果和内部子 Agent 消息永远不会显示。
 
@@ -246,7 +246,7 @@ OpenCode 通过一个 JS 插件直连 socket，不需要 bridge 程序。同一�
 
 <br>
 
-MiMo Code 是 OpenCode 1.x 的分支，Xiaomi MiMo 桌面端又以 MiMo Code 作为内核，所以两者都会从 `~/.config/mimocode/plugins/` 加载 OpenCode 插件。CodeIsland 把插件以 MiMo 的身份写到这里，不改动 `mimocode.json`。MiMo 只在内核启动时读取插件，插件装好后需要重启一次 App（或 `mimo`）。审批和提问可以在刘海上处理，也可以在 MiMo 里处理，以先操作的一方为准。点击桌面端会话会把 Xiaomi MiMo 切到前台；它的 `xiaomi-mimo://` 链接只用于加入分享的会话，没办法直接打开某个对话。
+MiMo Code 是 OpenCode 1.x 的分支，Xiaomi MiMo 桌面端又以 MiMo Code 作为内核，所以两者都会从 `~/.config/mimocode/plugins/` 加载 OpenCode 插件。Morrow 把插件以 MiMo 的身份写到这里，不改动 `mimocode.json`。MiMo 只在内核启动时读取插件，插件装好后需要重启一次 App（或 `mimo`）。审批和提问可以在刘海上处理，也可以在 MiMo 里处理，以先操作的一方为准。点击桌面端会话会把 Xiaomi MiMo 切到前台；它的 `xiaomi-mimo://` 链接只用于加入分享的会话，没办法直接打开某个对话。
 
 </details>
 
@@ -256,7 +256,7 @@ MiMo Code 是 OpenCode 1.x 的分支，Xiaomi MiMo 桌面端又以 MiMo Code 作
 
 <br>
 
-Hermes 遇到没见过的 hook 会先询问，每个 hook 问一次。下次在终端启动 `hermes` 时，对 CodeIsland 的条目（`codeisland-bridge --source hermes`；SSH 远程主机上是 `codeisland-remote-hook.py` 那些）逐个回答 `y` 即可。没有终端的 Hermes（gateway 服务、桌面 App）无法询问，会直接跳过没批准的 hook，看起来就像 CodeIsland 看不到这些会话。在终端里批准一次即可（批准记录按 Hermes 主目录保存，gateway 和桌面 App 同样生效），或者在 `~/.hermes/config.yaml` 里设置 `hooks_auto_accept: true`。CodeIsland 更新后如果新增了 hook，Hermes 会就新的 hook 再问一次。
+Hermes 遇到没见过的 hook 会先询问，每个 hook 问一次。下次在终端启动 `hermes` 时，对 Morrow 的条目（`morrow-bridge --source hermes`；SSH 远程主机上是 `morrow-remote-hook.py` 那些）逐个回答 `y` 即可。没有终端的 Hermes（gateway 服务、桌面 App）无法询问，会直接跳过没批准的 hook，看起来就像 Morrow 看不到这些会话。在终端里批准一次即可（批准记录按 Hermes 主目录保存，gateway 和桌面 App 同样生效），或者在 `~/.hermes/config.yaml` 里设置 `hooks_auto_accept: true`。Morrow 更新后如果新增了 hook，Hermes 会就新的 hook 再问一次。
 
 Gateway 聊天（Telegram、Discord、Slack、WhatsApp、邮件等，以及 API Server）也会显示卡片，但不弹完成卡片、不响提示音，空闲 10 分钟后移除。会话结束时卡片随之移除：`/new`、退出 `hermes`、关闭桌面端对话，或 gateway 停止。会话标题只读地取自 Hermes 自己的 `state.db`。
 
@@ -268,7 +268,7 @@ Gateway 聊天（Telegram、Discord、Slack、WhatsApp、邮件等，以及 API 
 
 <br>
 
-DSH 原生支持插件，CodeIsland 不需要安装任何 hook。[dsh-island](https://github.com/cdxiaodong/dsh-island) 插件会监听 DSH 的内置事件并写入 CodeIsland 的 socket：
+DSH 原生支持插件，Morrow 不需要安装任何 hook。[dsh-island](https://github.com/cdxiaodong/dsh-island) 插件会监听 DSH 的内置事件并写入 Morrow 的 socket：
 
 ```bash
 dsh plugin --profile <profile> add github:cdxiaodong/dsh-island
@@ -290,7 +290,7 @@ Antigravity 的 `PreToolUse` hook 只能拒绝工具调用、不能批准，所�
 
 <br>
 
-在 **设置 → 远程** 添加主机。CodeIsland 会在服务器上安装一个小助手和 hook（合并进你现有的配置，不会覆盖），并通过 SSH 把事件转发回来。可选的「工作目录过滤」能在共享服务器上挡掉别人的会话。某个工具显示 `skipped` 时，状态行会写明原因，通常是那台主机上还没有它的配置目录。
+在 **设置 → 远程** 添加主机。Morrow 会在服务器上安装一个小助手和 hook（合并进你现有的配置，不会覆盖），并通过 SSH 把事件转发回来。可选的「工作目录过滤」能在共享服务器上挡掉别人的会话。某个工具显示 `skipped` 时，状态行会写明原因，通常是那台主机上还没有它的配置目录。
 
 </details>
 
@@ -300,7 +300,7 @@ Antigravity 的 `PreToolUse` hook 只能拒绝工具调用、不能批准，所�
 
 <br>
 
-Cowork 跑在 Claude Desktop 的沙盒里，hook 不会触发，所以 CodeIsland 改为读取 Claude Desktop 保存在你 Mac 上的会话文件（`~/Library/Application Support/Claude/local-agent-mode-sessions/`，只读，不在那里安装或写入任何东西）。Cowork 对话会有自己的卡片：标题、实时状态、正在运行的工具、最新回复和完成提示音；有待处理的权限请求时显示为等待中。审批仍在 Claude Desktop 里完成，点击卡片会打开对应的对话。只显示最近几分钟内活跃的会话，旧会话不会变成幽灵卡片。开关在 **设置 → Hooks → Claude Desktop**。
+Cowork 跑在 Claude Desktop 的沙盒里，hook 不会触发，所以 Morrow 改为读取 Claude Desktop 保存在你 Mac 上的会话文件（`~/Library/Application Support/Claude/local-agent-mode-sessions/`，只读，不在那里安装或写入任何东西）。Cowork 对话会有自己的卡片：标题、实时状态、正在运行的工具、最新回复和完成提示音；有待处理的权限请求时显示为等待中。审批仍在 Claude Desktop 里完成，点击卡片会打开对应的对话。只显示最近几分钟内活跃的会话，旧会话不会变成幽灵卡片。开关在 **设置 → Hooks → Claude Desktop**。
 
 </details>
 
@@ -318,15 +318,15 @@ Cowork 跑在 Claude Desktop 的沙盒里，hook 不会触发，所以 CodeIslan
 
 ```
 AI 工具（Claude Code / Codex / Gemini / Cursor / …）
-  └─ 触发 hook ─→ codeisland-bridge（原生 Swift 小程序）
-                    └─ Unix socket /tmp/codeisland-<uid>.sock
-                         └─ CodeIsland 实时更新刘海
+  └─ 触发 hook ─→ morrow-bridge（原生 Swift 小程序）
+                    └─ Unix socket /tmp/morrow-<uid>.sock
+                         └─ Morrow 实时更新刘海
                               └─ 可选：iPhone / Watch / ESP32 Buddy、推送、Webhook
 ```
 
-CodeIsland 往每个工具自己的配置里装一个轻量 hook。工具触发事件时（会话开始、工具调用、权限请求、提问、结束），bridge 把事件以 JSON 形式经本机 Unix socket 转发过来，刘海立即更新。需要你做决定的事件，答案也沿同一条路回传。
+Morrow 往每个工具自己的配置里装一个轻量 hook。工具触发事件时（会话开始、工具调用、权限请求、提问、结束），bridge 把事件以 JSON 形式经本机 Unix socket 转发过来，刘海立即更新。需要你做决定的事件，答案也沿同一条路回传。
 
-**隐私：** 除非你主动开启，事件不会离开你的 Mac。CodeIsland 发出的网络请求只有：Sparkle 更新检查；以及仅在你打开时才有的 Claude 套餐额度查询（用你自己的 Claude Code 登录请求 `api.anthropic.com`）、发往你所配置地址的 Webhook 转发，以及发往你所配置服务的推送。
+**隐私：** 除非你主动开启，事件不会离开你的 Mac。Morrow 发出的网络请求只有：Sparkle 更新检查；以及仅在你打开时才有的 Claude 套餐额度查询（用你自己的 Claude Code 登录请求 `api.anthropic.com`）、发往你所配置地址的 Webhook 转发，以及发往你所配置服务的推送。
 
 ## 设置
 
@@ -358,15 +358,15 @@ CodeIsland 往每个工具自己的配置里装一个轻量 hook。工具触发�
 需要 **macOS 14+** 和 **Swift 5.9+**。
 
 ```bash
-git clone https://github.com/wxtsky/CodeIsland.git
-cd CodeIsland
+git clone https://github.com/wxtsky/Morrow.git
+cd Morrow
 
 # 开发：debug 构建并启动（Buddy 蓝牙需要用下面打包出的 .app）
-swift build && ./.build/debug/CodeIsland
+swift build && ./.build/debug/Morrow
 
 # 发布：通用二进制（Apple Silicon + Intel）
 ./build.sh
-open .build/release/CodeIsland.app
+open .build/release/Morrow.app
 
 # 测试
 swift test
@@ -383,11 +383,11 @@ swift test
 
 ## Star History
 
-<a href="https://star-history.dera.page/#wxtsky/CodeIsland&type=date&legend=bottom-right">
+<a href="https://star-history.dera.page/#wxtsky/Morrow&type=date&legend=bottom-right">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=wxtsky/CodeIsland&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=wxtsky/CodeIsland&type=date&legend=top-left" />
-    <img alt="Star History 图表" src="https://star-history.dera.page/svg?repos=wxtsky/CodeIsland&type=date&legend=top-left" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=wxtsky/Morrow&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=wxtsky/Morrow&type=date&legend=top-left" />
+    <img alt="Star History 图表" src="https://star-history.dera.page/svg?repos=wxtsky/Morrow&type=date&legend=top-left" />
   </picture>
 </a>
 
