@@ -1,7 +1,7 @@
 # Progress — Windows & Linux port
 
-**Status:** fase 0 PR 2 selesai lokal di `test/#33-export-golden-fixtures`; PR 3 selesai lokal di branch terpisah `fix/#33-windows-cursor-version` (bercabang dari `origin/main`) menunggu verifikasi `dotnet test` di Windows CI.
-**Checkpoint terakhir:** 2026-11-16 — ekspor 84×4 golden fixtures ke JSON + JSON Schemas selesai lokal di `test/#33-export-golden-fixtures`.
+**Status:** fase 0 PR #49, #50, #51 sudah dibuka; PR #50 menunggu merge PR #49 & Woodpecker CI; PR #51 terblokir verifikasi `dotnet test` (tidak ada `.NET 8 SDK` lokal & GitHub Actions billing lock).
+**Checkpoint terakhir:** 2026-11-16 — PR #49 (`docs`), PR #50 (`fixtures + schema`), dan PR #51 (`cursor_version` Windows) dibuka di GitHub.
 **Fase kanonik:** [`plan-windows-linux.md`](plan-windows-linux.md) §7. Kalau dokumen ini berbeda dengan §7, §7 yang benar.
 
 ---
@@ -32,9 +32,9 @@ Status: `belum` · `sedang` · `PR dibuka` · `merged` · `gagal` · `dilewati`
 
 | Fase | PR | Isi | Status | Gate |
 |---|---|---|---|---|
-| — | 1 | `docs(#33)`: ADRs, glossary, plan, handoff | `PR dibuka` | — |
-| 0 | 2 | `test(#33)`: ekspor golden fixtures ke JSON + schema | `sedang` | `BridgeGoldenTests` hijau; schema memvalidasi semua fixture |
-| 0 | 3 | `fix(#33)`: hormati `cursor_version` di Windows | `belum` | `windows/CodeIsland.Core.Tests` hijau; hook Cursor tidak muncul sebagai `claude` |
+| — | 1 | `docs(#33)`: ADRs, glossary, plan, handoff ([#49](https://github.com/fzrsahi/CodeIsland/pull/49)) | `PR dibuka` | — |
+| 0 | 2 | `test(#33)`: ekspor golden fixtures ke JSON + schema ([#50](https://github.com/fzrsahi/CodeIsland/pull/50)) | `PR dibuka` | `BridgeGoldenTests` hijau; schema memvalidasi semua fixture |
+| 0 | 3 | `fix(#33)`: hormati `cursor_version` di Windows ([#51](https://github.com/fzrsahi/CodeIsland/pull/51)) | `PR dibuka` | `windows/CodeIsland.Core.Tests` hijau; hook Cursor tidak muncul sebagai `claude` |
 | 1 | 4 | `chore(#33)`: workspace Rust, protocol, ipc, CI purity check | `belum` | `cargo test`; `cargo tree -p codeisland-core` bersih |
 | 1 | 5 | `feat(#33)`: bridge untuk `claude` | `belum` | `fixtures/macos/*` byte-identik dengan bridge Swift |
 | 1 | 6 | `feat(#33)`: vertical slice island Linux X11 | `belum` | **`E2E-1`** — dua arah, <300 ms |
@@ -60,6 +60,12 @@ PR 4 → 5 → 6 di-stack. Lihat plan §8 untuk aturan slicing.
 ---
 
 ## Log Checkpoint
+
+### 2026-11-16 — fase 0 PR #49, #50, #51 dibuka
+
+- **Sudah:** branch `docs/#33-windows-linux-architecture`, `test/#33-export-golden-fixtures`, dan `fix/#33-windows-cursor-version` di-push ke `origin`; PR #49 (`docs(#33)` → `main`), PR #50 (`test(#33)` → `docs/#33-windows-linux-architecture`), dan PR #51 (`fix(#33)` → `main`) dibuka; `BridgeGoldenTests`, `HookEdgeFactsTests`, dan `scripts/validate-fixtures.py` (336 fixture + self-test) hijau lokal; Woodpecker CI sedang berjalan untuk ketiga PR.
+- **Berikutnya:** verifikasi `windows/CodeIsland.Core.Tests` untuk PR #51 (`dotnet test CodeIsland.Core.Tests/CodeIsland.Core.Tests.csproj`) di mesin Windows atau setelah GitHub Actions aktif kembali, lalu review & merge PR #49 → #50 dan PR #51 sebelum mulai Fase 1 PR 4 (`rust/` workspace).
+- **Blocker:** `.NET 8 SDK` tidak terpasang di mesin dev macOS arm64, dan job GitHub Actions `Windows / build-and-test` (run `43860088689`) gagal start dengan anotasi `"The job was not started because your account is locked due to a billing issue."` — gate `windows/CodeIsland.Core.Tests hijau` untuk PR #51 belum bisa dinilai sampai Windows runner atau mesin dengan `.NET 8` tersedia.
 
 ### 2026-11-16 — fase 0 PR 2 (ekspor fixtures JSON + JSON Schemas)
 
