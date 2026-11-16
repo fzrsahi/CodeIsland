@@ -70,3 +70,18 @@ Ketika user memberitahu bahwa PR sudah di-merge:
 3. `git branch -d <branch-lama>`
 4. `git fetch --prune`
 5. Konfirmasi ke user bahwa branch lama sudah dibersihkan dan `main` sudah sinkron, lalu bersiap untuk task berikutnya.
+
+---
+
+## 3. Port Windows/Linux — baca ini sebelum menyentuh `rust/`, `docs/`, atau `windows/`
+
+Port sedang berjalan dan punya dokumen sendiri. **Jangan mulai dari README, dan jangan mulai dari `windows/CodeIsland.*`** — kode C# di sana divergen dari protokol normatif.
+
+**Titik masuk:** [`docs/handoff-windows-linux-port.md`](docs/handoff-windows-linux-port.md) — urutan baca, status branch, dan daftar jebakan.
+
+Aturan yang mengikat:
+
+- **Fase kanonik** ada di [`docs/plan-windows-linux.md`](docs/plan-windows-linux.md) §7, identik dengan "Urutan Implementasi" di issue #33. Kalau ada dokumen lain yang daftar fasenya berbeda, dokumen itu usang.
+- `linux/CodeIsland-Linux-Development-Plan.md` (Avalonia) dan `windows/CodeIsland-Windows-Complete-Development-Plan.md` (WPF) **usang**. Masih berguna untuk acceptance criteria dan risiko Wayland; jangan ikuti fase atau pilihan teknologinya.
+- **macOS (`Sources/`) tidak disentuh** oleh port ini.
+- Kosakata: [`GLOSSARY.md`](GLOSSARY.md). **Source ≠ Agent ≠ Hook target** — 34 vs 14 vs 9, tiga konsep berbeda.
