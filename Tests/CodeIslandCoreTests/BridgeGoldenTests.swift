@@ -140,7 +140,7 @@ final class BridgeGoldenTests: XCTestCase {
                             "macos/\(fixture.name): byte-identical forwarded payload"
                         )
                     }
-                    let stripped = fwdObj.filter { !BridgeGoldenJSONExporter.osTelemetryKeys.contains($0.key) }
+                    let stripped = BridgeGoldenJSONExporter.projectedForwarded(fwdObj, scope: .neutral)
                     neutralPayloadsByScope[scope] = try BridgeGoldenJSONExporter.canonicalJSONString(stripped)
                 } else {
                     XCTAssertTrue(expectationObj["forwarded"] is NSNull, "\(scope.rawValue)/\(fixture.name): forwarded must be object or null")

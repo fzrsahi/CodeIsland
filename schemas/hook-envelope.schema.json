@@ -2,11 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codeisland.dev/schemas/hook-envelope.schema.json",
   "title": "CodeIsland Hook & IPC Envelope",
-  "description": "Versioned IPC and edge envelopes across CodeIsland cores.",
+  "description": "Versioned IPC and edge envelopes shared across CodeIsland cores.",
   "oneOf": [
     { "$ref": "#/$defs/edgePayload" },
-    { "$ref": "#/$defs/ipcEnvelopeV1" },
-    { "$ref": "#/$defs/windowsProtocolEnvelope" }
+    { "$ref": "#/$defs/ipcEnvelopeV1" }
   ],
   "$defs": {
     "edgeFacts": {
@@ -35,7 +34,7 @@
           "additionalProperties": { "type": "string" }
         },
         "tmux_client_tty": { "type": "string" },
-        "ppid": { "type": "integer", "minimum": 0 }
+        "ppid": false
       }
     },
     "edgePayload": {
@@ -53,64 +52,6 @@
       "properties": {
         "v": { "type": "integer", "const": 1 },
         "payload": { "$ref": "hook-payload.schema.json" }
-      }
-    },
-    "windowsProtocolEnvelope": {
-      "type": "object",
-      "required": ["protocolVersion", "event"],
-      "additionalProperties": false,
-      "properties": {
-        "protocolVersion": { "type": "integer", "const": 1 },
-        "event": {
-          "type": "object",
-          "required": ["eventId", "sessionId", "agent", "type", "timestamp"],
-          "additionalProperties": false,
-          "properties": {
-            "eventId": { "type": "string", "minLength": 1 },
-            "sessionId": { "type": "string", "minLength": 1 },
-            "agent": {
-              "type": "string",
-              "enum": [
-                "unknown",
-                "claude",
-                "codex",
-                "gemini",
-                "cursor",
-                "copilot",
-                "trae",
-                "qoder",
-                "factory",
-                "code_buddy",
-                "open_code",
-                "kimi",
-                "cline",
-                "pi"
-              ]
-            },
-            "type": {
-              "type": "string",
-              "enum": [
-                "session_start",
-                "session_end",
-                "tool_start",
-                "tool_end",
-                "permission_request",
-                "question",
-                "message",
-                "error",
-                "heartbeat"
-              ]
-            },
-            "timestamp": { "type": "string", "format": "date-time", "minLength": 1 },
-            "workingDirectory": { "type": ["string", "null"] },
-            "title": { "type": ["string", "null"] },
-            "text": { "type": ["string", "null"] },
-            "toolName": { "type": ["string", "null"] },
-            "payload": {},
-            "processId": { "type": ["integer", "null"] },
-            "terminalKind": { "type": ["string", "null"] }
-          }
-        }
       }
     }
   }

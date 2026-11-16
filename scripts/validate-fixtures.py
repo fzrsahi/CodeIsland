@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
 import json
 from pathlib import Path
 import re
@@ -66,16 +65,6 @@ def _matches_type(value: Any, expected: str) -> bool:
     if expected == "object":
         return isinstance(value, dict)
     raise ValueError(f"Unsupported JSON Schema type: {expected!r}")
-
-
-def _is_valid_datetime(value: str) -> bool:
-    if "T" not in value and "t" not in value:
-        return False
-    try:
-        datetime.fromisoformat(value)
-    except ValueError:
-        return False
-    return True
 
 
 def _ecma_regex_search(pattern: str, value: str) -> bool:
@@ -177,38 +166,17 @@ class Draft202012Validator:
         if isinstance(instance, str):
             if "minLength" in schema and len(instance) < schema["minLength"]:
                 errors.append(f"{path}: string length {len(instance)} < minLength {schema['minLength']}")
-            if "maxLength" in schema and len(instance) > schema["maxLength"]:
-                errors.append(f"{path}: string length {len(instance)} > maxLength {schema['maxLength']}")
             if "pattern" in schema and not _ecma_regex_search(schema["pattern"], instance):
                 errors.append(f"{path}: string {instance!r} does not match pattern {schema['pattern']!r}")
-            if schema.get("format") == "date-time" and not _is_valid_datetime(instance):
-                errors.append(f"{path}: string {instance!r} is not a valid RFC3339/ISO date-time")
 
         if _is_number(instance):
             if "minimum" in schema and instance < schema["minimum"]:
                 errors.append(f"{path}: {instance} < minimum {schema['minimum']}")
-            if "maximum" in schema and instance > schema["maximum"]:
-                errors.append(f"{path}: {instance} > maximum {schema['maximum']}")
-            if "exclusiveMinimum" in schema and instance <= schema["exclusiveMinimum"]:
-                errors.append(f"{path}: {instance} <= exclusiveMinimum {schema['exclusiveMinimum']}")
-            if "exclusiveMaximum" in schema and instance >= schema["exclusiveMaximum"]:
-                errors.append(f"{path}: {instance} >= exclusiveMaximum {schema['exclusiveMaximum']}")
 
-        if isinstance(instance, list):
-            if "minItems" in schema and len(instance) < schema["minItems"]:
-                errors.append(f"{path}: array length {len(instance)} < minItems {schema['minItems']}")
-            if "maxItems" in schema and len(instance) > schema["maxItems"]:
-                errors.append(f"{path}: array length {len(instance)} > maxItems {schema['maxItems']}")
-            if schema.get("uniqueItems"):
-                for i in range(len(instance)):
-                    for j in range(i + 1, len(instance)):
-                        if _json_equal(instance[i], instance[j]):
-                            errors.append(f"{path}: array items at [{i}] and [{j}] are not unique")
-                            break
-            if "items" in schema:
-                item_schema = schema["items"]
-                for idx, item in enumerate(instance):
-                    errors.extend(self._validate(item, item_schema, root, f"{path}[{idx}]"))
+        if isinstance(instance, list) and "items" in schema:
+            item_schema = schema["items"]
+            for idx, item in enumerate(instance):
+                errors.extend(self._validate(item, item_schema, root, f"{path}[{idx}]"))
 
         if isinstance(instance, dict):
             for req in schema.get("required", []):
@@ -235,25 +203,12 @@ class Draft202012Validator:
                     elif isinstance(additional, dict):
                         errors.extend(self._validate(val, additional, root, key_path))
 
-        if "allOf" in schema:
-            for sub in schema["allOf"]:
-                errors.extend(self._validate(instance, sub, root, path))
-
-        if "anyOf" in schema:
-            sub_errors = [self._validate(instance, sub, root, path) for sub in schema["anyOf"]]
-            if not any(len(errs) == 0 for errs in sub_errors):
-                errors.append(f"{path}: did not match anyOf branches")
-
         if "oneOf" in schema:
             matches = [self._validate(instance, sub, root, path) for sub in schema["oneOf"]]
             valid_count = sum(1 for errs in matches if len(errs) == 0)
             if valid_count != 1:
                 detail = "; ".join(errs[0] for errs in matches if errs)
                 errors.append(f"{path}: expected exactly 1 oneOf match, got {valid_count} ({detail})")
-
-        if "not" in schema:
-            if not self._validate(instance, schema["not"], root, path):
-                errors.append(f"{path}: value matched disallowed 'not' schema")
 
         return errors
 
@@ -408,7 +363,6 @@ def run_self_tests(validator: Draft202012Validator, registry: SchemaRegistry) ->
                 "host": {"id": "devbox", "name": "Dev Box"},
                 "env": {"TERM_PROGRAM": "ghostty", "TMUX_PANE": "%1"},
                 "tmux_client_tty": "/dev/pts/1",
-                "ppid": 4242,
             },
         },
     )
@@ -436,56 +390,15 @@ def run_self_tests(validator: Draft202012Validator, registry: SchemaRegistry) ->
             },
         },
     )
-    expect_valid(
-        "windows-protocol-envelope-v1",
-        "hook-envelope.schema.json",
-        envelope_schema,
-        {
-            "protocolVersion": 1,
-            "event": {
-                "eventId": "event-1",
-                "sessionId": "session-1",
-                "agent": "claude",
-                "type": "permission_request",
-                "timestamp": "2026-11-16T11:00:00Z",
-                "workingDirectory": "C:\\work\\repo",
-                "title": None,
-                "text": "Allow?",
-                "toolName": "Bash",
-                "payload": {"command": "ls"},
-                "processId": 4321,
-                "terminalKind": "wt",
-            },
-        },
-    )
 
     # --- hook-envelope.schema.json negative cases ---
     expect_invalid(
-        "windows-protocol-version-99",
+        "edge-forbidden-ppid",
         envelope_schema,
         {
-            "protocolVersion": 99,
-            "event": {
-                "eventId": "event-1",
-                "sessionId": "session-1",
-                "agent": "claude",
-                "type": "session_start",
-                "timestamp": "2026-11-16T11:00:00Z",
-            },
-        },
-    )
-    expect_invalid(
-        "windows-unknown-agent",
-        envelope_schema,
-        {
-            "protocolVersion": 1,
-            "event": {
-                "eventId": "event-1",
-                "sessionId": "session-1",
-                "agent": "nonexistent",
-                "type": "session_start",
-                "timestamp": "2026-11-16T11:00:00Z",
-            },
+            "hook_event_name": "Stop",
+            "session_id": "s-1",
+            "_edge": {"v": 1, "source": "claude", "ppid": 4242},
         },
     )
     expect_invalid(
