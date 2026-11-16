@@ -19,6 +19,70 @@ enum NotchWidthMetrics {
             displayMode: displayMode
         ))
     }
+
+    static func wingOuterPadding(forWingWidth wingWidth: CGFloat, expanded: Bool, bilateral: Bool) -> CGFloat {
+        if expanded || bilateral { return 12 }
+        if wingWidth < 48 { return 6 }
+        if wingWidth < 70 { return 8 }
+        return 10
+    }
+
+    static func collapsedInnerBudget(wingWidth: CGFloat, outerPadding: CGFloat, hasNotch: Bool) -> CGFloat {
+        max(0, wingWidth - outerPadding - (hasNotch ? 4 : 2))
+    }
+
+    static func collapsedInnerBudget(
+        wingWidth: CGFloat,
+        expanded: Bool,
+        bilateral: Bool,
+        hasNotch: Bool
+    ) -> CGFloat {
+        let outerPad = wingOuterPadding(forWingWidth: wingWidth, expanded: expanded, bilateral: bilateral)
+        return collapsedInnerBudget(wingWidth: wingWidth, outerPadding: outerPad, hasNotch: hasNotch)
+    }
+
+    /// Estimates single-line label width accounting for wider CJK/Hangul glyphs alongside monospace Latin text.
+    static func estimatedLabelWidth(_ text: String, isPixel: Bool) -> CGFloat {
+        text.unicodeScalars.reduce(CGFloat(0)) { sum, scalar in
+            let isWideCJK = (0x1100...0x11FF).contains(scalar.value)
+                || (0x2E80...0x9FFF).contains(scalar.value)
+                || (0xAC00...0xD7AF).contains(scalar.value)
+                || (0xF900...0xFAFF).contains(scalar.value)
+            let charWidth: CGFloat = isWideCJK ? 10.0 : (isPixel ? 6.5 : 5.8)
+            return sum + charWidth
+        }
+    }
+
+    static func statusBadgesWidth(
+        inQuietHours: Bool,
+        hasCompletionGlance: Bool,
+        hasPendingQuestionOrApproval: Bool
+    ) -> CGFloat {
+        var width: CGFloat = 0
+        if inQuietHours { width += 13 }
+        if hasCompletionGlance { width += 13 }
+        if hasPendingQuestionOrApproval { width += 15 }
+        return width
+    }
+
+    @MainActor
+    static func statusBadgesWidth(for appState: AppState, inQuietHours: Bool) -> CGFloat {
+        let hasPendingBadge = appState.hiddenPendingQuestionSessionId != nil
+            || appState.followUps.hintActive
+            || appState.status == .waitingApproval
+            || appState.status == .waitingQuestion
+        return statusBadgesWidth(
+            inQuietHours: inQuietHours,
+            hasCompletionGlance: appState.glanceCompletionActive,
+            hasPendingQuestionOrApproval: hasPendingBadge
+        )
+    }
+
+    @MainActor
+    static func statusBadgeReserve(for appState: AppState, inQuietHours: Bool) -> CGFloat {
+        let width = statusBadgesWidth(for: appState, inQuietHours: inQuietHours)
+        return width > 0 ? (width + 5) : 0
+    }
 }
 
 // MARK: - Hover interaction state machine
@@ -224,6 +288,10 @@ struct NotchPanelView: View {
         case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
         }
     }
+    private var mailAccentColor: Color {
+        AppColorTheme.accent(for: musicHUDProgressColor, isModern: islandUITheme != IslandUITheme.pixel.rawValue)
+    }
+
     @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
     /// Managers are plain references here: the root does not observe them.
     /// Everything it *shows* comes from `signals`, so a track position or a
@@ -235,6 +303,7 @@ struct NotchPanelView: View {
     private let prayerManager = PrayerTimeManager.shared
     private let volumeManager = SystemVolumeManager.shared
     private let signals = IslandSignals.shared
+    @ObservedObject private var mailManager = MailManager.shared
     /// The single source of truth for which animation classes may run. Read
     /// here, at the panel root, so every loop below inherits one decision.
     @ObservedObject private var animationGate = MascotAnimationGate.shared
@@ -262,6 +331,8 @@ struct NotchPanelView: View {
     @State private var musicAutoCollapseTimer: Timer?
     @State private var musicAutoCollapseWorkItem: DispatchWorkItem?
     @State private var musicDeferCollapseOnMouseLeave = false
+    @State private var mailAutoCollapseTimer: Timer?
+    @State private var mailDeferCollapseOnMouseLeave = false
 
     private var expandedTabBinding: Binding<ExpandedContentTab> {
         Binding(
@@ -311,7 +382,7 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if signals.isPlaying || nowPlaying.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner { return true }
+        if signals.isPlaying || nowPlaying.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner || mailManager.showMailArrivalAnimation { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
@@ -368,7 +439,30 @@ struct NotchPanelView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: item)
     }
 
+    private func triggerMailAutoPeek() {
+        guard !appState.surface.isPrompting else { return }
+        mailAutoCollapseTimer?.invalidate()
+        mailDeferCollapseOnMouseLeave = false
 
+        withAnimation(NotchAnimation.open) {
+            appState.transitionToTab(.mail)
+            appState.surface = .sessionList
+        }
+
+        mailAutoCollapseTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
+            Task { @MainActor in
+                if isHovered || appState.followUps.pointerOverIsland {
+                    mailDeferCollapseOnMouseLeave = true
+                } else {
+                    withAnimation(NotchAnimation.close) {
+                        if appState.surface == .sessionList && expandedTab == .mail {
+                            appState.surface = .collapsed
+                        }
+                    }
+                }
+            }
+        }
+    }
     private var isBarVisible: Bool {
         showBar || shouldShowExpanded || showIdleIndicator || isToastOnly
     }
@@ -470,100 +564,104 @@ struct NotchPanelView: View {
         let clampedScale = Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))
         let widthScaleFactor = CGFloat(clampedScale) / 100.0
 
+        let badgeReserve = NotchWidthMetrics.statusBadgeReserve(for: appState, inQuietHours: signals.inQuietHours)
+
         if isBilateralWingsLyricActive {
             // PANORAMIC NOTCH WINGS MODE (Icon - Lirik - Notch Asli - Lirik - Icon)
-            // Dynamically scale wing width based on lyric text length so text is fully legible without truncation.
+            // Dynamically scale wing width based on lyric text length and Settings Island Width (0% - 200%).
             let curLyric = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
             let nextLyric = nowPlaying.nextLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
             let maxLyricLen = max(curLyric.count, nextLyric.count, nowPlaying.title.count)
 
-            let naturalLyricWing: CGFloat = {
+            let baseLyricWing: CGFloat = {
                 if maxLyricLen >= 35 { return 270 }
                 if maxLyricLen >= 25 { return 255 }
                 if maxLyricLen >= 15 { return 240 }
                 if maxLyricLen >= 5 { return 225 }
                 return 210
             }()
+            let naturalLyricWing = baseLyricWing + badgeReserve
+            let floorWing: CGFloat = 148 + badgeReserve
 
-            // Floor at 205pt so wings never collapse into a tiny unreadable stub, while allowing slider to expand up to ~310pt
             let scaledLyricWing: CGFloat = {
                 if widthScaleFactor >= 1.0 {
                     return naturalLyricWing + (naturalLyricWing * (widthScaleFactor - 1.0) * 0.4)
                 } else {
-                    let floorWing: CGFloat = 205
                     return floorWing + (naturalLyricWing - floorWing) * widthScaleFactor
                 }
             }()
 
-            let maxSafeLyricBarWidth = min(screenWidth * 0.56, 740)
-            let maxAllowedWing = max(205, (maxSafeLyricBarWidth - effectiveNotchW) / 2)
+            let maxSafeLyricBarWidth = min(maxPanelWidth, screenWidth * 0.56)
+            let maxAllowedWing = max(floorWing, (maxSafeLyricBarWidth - collapsedMinCenterGap) / 2)
             return min(scaledLyricWing, maxAllowedWing)
         }
 
-        // 1. Natural width required for Left Wing in each phase (Agent Mascot + Tool / Thinking / Quota)
-        let wingPadReserve: CGFloat = displayMode == .dynamicIsland ? 15 : 8
+        // 1. Natural width required for Left Wing in each phase (matches CompactLeftWing priority order)
         let effectiveNaturalLeft: CGFloat = {
+            let isToolActive = showToolStatus && showAgentDetails && appState.currentTool != nil
+            if isToolActive {
+                let minTool: CGFloat = isPixel ? 96 : 88
+                if leftWingWidth > 0 {
+                    return max(minTool, min(leftWingWidth + 14, isPixel ? 136 : 128))
+                }
+                return minTool
+            }
             if isThinking {
-                return isPixel ? 96 : 88
+                let estTextWidth = NotchWidthMetrics.estimatedLabelWidth(L10n.shared["typing_thinking"], isPixel: isPixel)
+                let minThinking = max(isPixel ? 128 : 118, mascotSize + 48 + estTextWidth)
+                if leftWingWidth > 0 {
+                    return max(minThinking, min(leftWingWidth + 14, isPixel ? 168 : 160))
+                }
+                return minThinking
             }
             if hasQuotaChip {
                 return quotaWingWidth
             }
-            let isToolActive = showToolStatus && showAgentDetails && (appState.currentTool != nil || appState.status == .running || appState.status == .processing)
-            if isToolActive {
-                if leftWingWidth > 0 {
-                    return max(compactWingWidth, min(leftWingWidth + wingPadReserve, isPixel ? 96 : 90))
-                }
-                return isPixel ? 76 : 70
-            }
-            // Idle / Standby: strictly hug measured mascot content + outer padding reserve
+            // Idle / Standby: strictly hug measured mascot content + breathing room
             if leftWingWidth > 0 {
-                return max(compactWingWidth, min(leftWingWidth + wingPadReserve, 56))
+                return max(compactWingWidth, min(leftWingWidth + 12, 54))
             }
             return compactWingWidth
         }()
 
-        // 2. Natural width required for Right Wing in each phase (Music / Prayer / Actions / Standby)
+        // 2. Natural width required for Right Wing in each phase (Mail Arrival / Music / Prayer / Actions / Standby)
         let effectiveNaturalRight: CGFloat = {
+            if mailManager.showMailArrivalAnimation {
+                return isThinking ? 118 : 52
+            }
             if isHoveringRightWing {
-                return 115
+                let hoverBaseline = 136 + badgeReserve
+                if rightWingWidth > 0 {
+                    return max(hoverBaseline, min(rightWingWidth + 14, 196))
+                }
+                return min(hoverBaseline, 196)
             }
             if prayerManager.isPrayerPrioritized {
-                return 80
+                if rightWingWidth > 0 {
+                    return max(92, min(rightWingWidth + 14, 140))
+                }
+                return 96
             }
             if signals.isPlaying || nowPlaying.isPlaying {
-                if isConnectedChinLyricActive {
-                    return 56
-                }
+                let baseMusic: CGFloat = isThinking
+                    ? (isConnectedChinLyricActive ? 148 : (isPixel ? 136 : 132))
+                    : (isConnectedChinLyricActive ? 68 : 62)
+                let musicBaseline = baseMusic + badgeReserve
+                let cap: CGFloat = (isThinking ? 176 : 112) + badgeReserve
                 if rightWingWidth > 0 {
-                    return max(compactWingWidth, min(rightWingWidth + wingPadReserve, 84))
+                    return max(musicBaseline, min(rightWingWidth + 14, cap))
                 }
-                return displayMode == .dynamicIsland ? 56 : 44
+                return min(musicBaseline, cap)
             }
             // Standby / Agent mode:
             let hasBranchOrProject = appState.sessions.values.contains {
                 !($0.gitBranch ?? "").isEmpty || !($0.cwd ?? "").isEmpty
             }
-            var extraBadges: CGFloat = 0
-            if signals.inQuietHours { extraBadges += 10 }
-            if appState.glanceCompletionActive { extraBadges += 12 }
-            if appState.hiddenPendingQuestionSessionId != nil || appState.status == .waitingApproval || appState.status == .waitingQuestion {
-                extraBadges += 12
+            let standbyBaseline = min((hasBranchOrProject ? 84 : 58) + badgeReserve, 176)
+            if rightWingWidth > 0 {
+                return max(compactWingWidth, min(rightWingWidth + 14, 176))
             }
-
-            if hasBranchOrProject {
-                if rightWingWidth > 0 {
-                    return max(compactWingWidth, min(rightWingWidth + wingPadReserve, isPixel ? 104 : 98))
-                }
-                let targetWidth = 58 + extraBadges + (displayMode == .dynamicIsland ? 8 : 0)
-                return min(targetWidth, isPixel ? 96 : 92)
-            } else {
-                // Clock / Idle mode: strictly compact
-                if rightWingWidth > 0 {
-                    return max(compactWingWidth, min(rightWingWidth + wingPadReserve, 60))
-                }
-                return compactWingWidth
-            }
+            return standbyBaseline
         }()
 
         // 3. Balanced Dynamic Island natural width for current phase
@@ -583,8 +681,10 @@ struct NotchPanelView: View {
             return max(effectiveNaturalLeft, effectiveNaturalRight)
         }()
 
-        // 4. Absolute compact floor at 0% slider (fits mascot / essential indicators cleanly)
-        let absoluteMinimumWing: CGFloat = 36
+        // 4. Absolute compact floor at 0% slider (preserves mascot, badges & unclipped artwork/visualizer)
+        let absoluteMinimumWing: CGFloat = (signals.isPlaying || nowPlaying.isPlaying)
+            ? (badgeReserve > 0 ? 56 + badgeReserve : 42)
+            : (badgeReserve > 0 ? 46 + badgeReserve : 36)
 
         // 5. Scale adaptively across all phases based on user's Island Width setting (0% - 200%)
         let scaledWingWidth: CGFloat = {
@@ -596,11 +696,50 @@ struct NotchPanelView: View {
         }()
 
         // 6. Absolute safe ceiling to guarantee it NEVER collides with the macOS menu bar:
-        // Normal collapsed island never exceeds 400pt wide (or 38% screen width), leaving plenty of clearance for menu items.
-        // In wide contiguous lyric island mode, allows up to 480pt.
-        let maxSafeCollapsedBarWidth = min(screenWidth * 0.44, isConnectedChinLyricActive ? 480 : 400)
-        let maxSingleWingWidth = max(absoluteMinimumWing, (maxSafeCollapsedBarWidth - effectiveNotchW) / 2)
-        return min(scaledWingWidth, maxSingleWingWidth)
+        let maxSingleWingWidth = max(absoluteMinimumWing, (maxSafeCollapsedBarWidth - collapsedMinCenterGap) / 2)
+        let minimumRequiredWing: CGFloat = mailManager.showMailArrivalAnimation ? (isThinking ? 118 : 52) : 0
+        return min(max(scaledWingWidth, minimumRequiredWing), maxSingleWingWidth)
+    }
+
+    /// Physical minimum center gap in the collapsed bar — never intrudes into a hardware notch,
+    /// while non-notched screens can compress down to 0pt at 0% width scale.
+    private var collapsedMinCenterGap: CGFloat {
+        hasNotch ? notchW : 0
+    }
+
+    /// Idle-indicator wing width that scales across 0%–200% Island Width when no sessions are active.
+    private var idleIndicatorWingWidth: CGFloat {
+        let clampedScale = Swift.max(NotchWidthScale.min, Swift.min(collapsedWidthScale, NotchWidthScale.max))
+        let factor = CGFloat(clampedScale) / 100.0
+        let minFloor: CGFloat = 32
+        let scaled = factor >= 1.0
+            ? compactWingWidth + (compactWingWidth * (factor - 1.0) * 0.5)
+            : minFloor + (compactWingWidth - minFloor) * factor
+        let hoveredWidth = idleHovered ? (scaled + 6) : scaled
+        let withPrayer = prayerManager.isEnabled ? max(hoveredWidth, IdleIndicatorBar.idlePrayerWingMinWidth) : hoveredWidth
+        let desired = mailManager.showMailArrivalAnimation ? max(withPrayer, 52) : withPrayer
+        let maxWing = max(minFloor, (maxSafeCollapsedBarWidth - collapsedMinCenterGap) / 2)
+        return min(desired, maxWing)
+    }
+
+    /// Collapsed center gap between left & right wings: honors `effectiveNotchW`, but when high width
+    /// scales hit `maxSafeCollapsedBarWidth`, yields excess empty center padding before squeezing wings.
+    private var collapsedNotchGapWidth: CGFloat {
+        guard !shouldShowExpanded else { return expandedNotchCutoutWidth }
+        guard isActive || showIdleIndicator else { return effectiveNotchW }
+        let activeWing = showIdleIndicator ? idleIndicatorWingWidth : symmetricWingWidth
+        let remaining = max(collapsedMinCenterGap, maxSafeCollapsedBarWidth - activeWing * 2)
+        return min(effectiveNotchW, remaining)
+    }
+
+    private var maxSafeCollapsedBarWidth: CGFloat {
+        if isBilateralWingsLyricActive {
+            return min(maxPanelWidth, screenWidth * 0.56)
+        }
+        let ceiling: CGFloat = (hasQuotaChip || isThinking || isHoveringRightWing || isConnectedChinLyricActive) ? 540 : 460
+        // Preserve wing scaling across 100%–200% Island Width even on 1280–1440pt screens while leaving >= 38% menu bar space.
+        let wingAllowance: CGFloat = (isThinking || hasQuotaChip || isHoveringRightWing || isConnectedChinLyricActive) ? 400 : 340
+        return min(maxPanelWidth, min(screenWidth * 0.62, max(ceiling, effectiveNotchW + wingAllowance)))
     }
 
     /// Notch cutout reserved in the center of the expanded header.
@@ -663,6 +802,9 @@ struct NotchPanelView: View {
         }
         if showIdleIndicator {
             if displayMode == .dynamicIsland && !hasNotch {
+                if mailManager.showMailArrivalAnimation {
+                    return min(collapsedNotchGapWidth + 52 * 2, maxSafeCollapsedBarWidth)
+                }
                 if prayerManager.isEnabled {
                     return max(136, compactWingWidth + 96)
                 }
@@ -673,20 +815,20 @@ struct NotchPanelView: View {
                     displayMode: displayMode
                 ))
             }
-            let wing = IdleIndicatorBar.wingWidth(
-                compactWingWidth: compactWingWidth,
-                hovered: idleHovered,
-                prayerEnabled: prayerManager.isEnabled
-            )
-            return nw + wing * 2
+            return min(collapsedNotchGapWidth + idleIndicatorWingWidth * 2, maxSafeCollapsedBarWidth)
         }
         if !isActive {
-            return CGFloat(IslandDisplayMetrics.restingWidth(
-                notchWidth: Double(notchW),
-                scalePercent: collapsedWidthScale,
-                hasNotch: hasNotch,
-                displayMode: displayMode
-            ))
+            if mailManager.showMailArrivalAnimation {
+                return min(collapsedNotchGapWidth + 52 * 2, maxSafeCollapsedBarWidth)
+            }
+            return displayMode == .dynamicIsland && !hasNotch
+                ? CGFloat(IslandDisplayMetrics.restingWidth(
+                    notchWidth: Double(notchW),
+                    scalePercent: collapsedWidthScale,
+                    hasNotch: hasNotch,
+                    displayMode: displayMode
+                ))
+                : nw
         }
         if isDynamicIslandInlineLyrics {
             let lyric = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -708,10 +850,14 @@ struct NotchPanelView: View {
             )
             return min(CGFloat(width) + prehoverExtra, maxSafe)
         }
-        let requiredActiveBarWidth = nw + symmetricWingWidth * 2
-        let maxSafeCollapsed = isBilateralWingsLyricActive
-            ? min(screenWidth * 0.56, 740)
-            : min(screenWidth * 0.44, isConnectedChinLyricActive ? 480 : 400)
+        let requiredActiveBarWidth = collapsedNotchGapWidth + symmetricWingWidth * 2
+        if signals.showChargingBanner && !appState.surface.isExpanded {
+            return min(max(280, requiredActiveBarWidth), maxPanelWidth)
+        }
+        if signals.showMiniPeekBanner && !appState.surface.isExpanded {
+            return min(max(280, requiredActiveBarWidth), maxPanelWidth)
+        }
+        let maxSafeCollapsed = maxSafeCollapsedBarWidth
         return min(requiredActiveBarWidth, maxSafeCollapsed)
     }
 
@@ -730,7 +876,7 @@ struct NotchPanelView: View {
     private var collapsedBarWidth: CGFloat {
         // Immediate hover acknowledgement: a slight widen while the expand delay runs
         let prehoverExtra: CGFloat = shouldShowPrehover ? NotchHoverInteraction.prehoverWidthDelta : 0
-        return effectiveNotchW + compactWingWidth * 2 + collapsedStatusExtra + prehoverExtra
+        return collapsedNotchGapWidth + compactWingWidth * 2 + collapsedStatusExtra + prehoverExtra
     }
 
     /// Status and tool-status reserves, split evenly between the two wings.
@@ -780,6 +926,14 @@ struct NotchPanelView: View {
 
     private func handleRightWingTap() {
         guard !shouldShowExpanded else { return }
+        if mailManager.showMailArrivalAnimation {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                mailManager.dismissMailArrival()
+                expandedTab = .mail
+                appState.surface = .sessionList
+            }
+            return
+        }
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             expandedTab = (signals.isPlaying || signals.hasTitle) ? .music : .agents
             appState.surface = .sessionList
@@ -814,7 +968,7 @@ struct NotchPanelView: View {
         let wasWorking = (oldStatus == .processing || oldStatus == .running)
         let isNowIdle = (newStatus == .idle)
         if wasWorking && isNowIdle {
-            let isSecondaryTab = (expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer)
+            let isSecondaryTab = (expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer || expandedTab == .mail)
             if isSecondaryTab {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                     expandedTab = .agents
@@ -825,7 +979,7 @@ struct NotchPanelView: View {
 
     private func handleCompletedSession(_ completedId: String?) {
         guard completedId != nil else { return }
-        if expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer {
+        if expandedTab == .music || expandedTab == .workspace || expandedTab == .prayer || expandedTab == .mail {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                 expandedTab = .agents
             }
@@ -982,7 +1136,7 @@ struct NotchPanelView: View {
                     .animation(.spring(response: 0.38, dampingFraction: 0.82), value: symmetricWingWidth)
 
                     Spacer(minLength: 0)
-                        .frame(width: shouldShowExpanded ? expandedNotchCutoutWidth : effectiveNotchW)
+                        .frame(width: shouldShowExpanded ? expandedNotchCutoutWidth : collapsedNotchGapWidth)
 
                     compactRightWingSlot(
                         expanded: shouldShowExpanded,
@@ -1105,8 +1259,8 @@ struct NotchPanelView: View {
                     } else if showIdleIndicator {
                         IdleIndicatorBar(
                             mascotSize: mascotSize,
-                            compactWingWidth: compactWingWidth,
-                            notchW: effectiveNotchW,
+                            wingWidth: idleIndicatorWingWidth,
+                            notchW: collapsedNotchGapWidth,
                             notchHeight: notchHeight,
                             hasNotch: hasNotch,
                             hovered: idleHovered,
@@ -1120,6 +1274,12 @@ struct NotchPanelView: View {
                                     } else {
                                         appState.transitionToTab(.agents)
                                     }
+                                    appState.surface = .sessionList
+                                }
+                            },
+                            onOpenMail: {
+                                withAnimation(NotchAnimation.open) {
+                                    appState.transitionToTab(.mail)
                                     appState.surface = .sessionList
                                 }
                             }
@@ -1144,6 +1304,7 @@ struct NotchPanelView: View {
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: displayMode)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showMiniPeekBanner)
             .animation(.spring(response: 0.40, dampingFraction: 0.84), value: signals.showChargingBanner)
+            .animation(.spring(response: 0.40, dampingFraction: 0.84), value: mailManager.showMailArrivalAnimation)
             .animation(.spring(response: 0.38, dampingFraction: 0.82), value: expandedTab)
             .background(panelChromeBackground)
             .offset(y: curtainOffset)
@@ -1279,6 +1440,17 @@ struct NotchPanelView: View {
                     }
                     return
                 }
+                if !hovering && mailDeferCollapseOnMouseLeave {
+                    mailDeferCollapseOnMouseLeave = false
+                    mailAutoCollapseTimer?.invalidate()
+                    mailAutoCollapseTimer = nil
+                    withAnimation(NotchAnimation.close) {
+                        if appState.surface == .sessionList && expandedTab == .mail {
+                            appState.surface = .collapsed
+                        }
+                    }
+                    return
+                }
                 if hovering {
                     if musicAutoCollapseWorkItem != nil || musicAutoCollapseTimer != nil {
                         musicAutoCollapseWorkItem?.cancel()
@@ -1286,6 +1458,11 @@ struct NotchPanelView: View {
                         musicAutoCollapseTimer?.invalidate()
                         musicAutoCollapseTimer = nil
                         musicDeferCollapseOnMouseLeave = true
+                    }
+                    if mailAutoCollapseTimer != nil {
+                        mailAutoCollapseTimer?.invalidate()
+                        mailAutoCollapseTimer = nil
+                        mailDeferCollapseOnMouseLeave = true
                     }
                     // Immediate lightweight acknowledgement; a quick pass-through
                     // only ever plays this first stage and reverses.
@@ -1361,6 +1538,14 @@ struct NotchPanelView: View {
                     musicAutoCollapseTimer?.invalidate()
                     musicAutoCollapseTimer = nil
                     musicDeferCollapseOnMouseLeave = false
+                }
+                if newTab != .mail {
+                    mailAutoCollapseTimer?.invalidate()
+                    mailAutoCollapseTimer = nil
+                    mailDeferCollapseOnMouseLeave = false
+                }
+                if newTab == .mail {
+                    mailManager.refresh()
                 }
                 if newTab == .workspace {
                     workspaceManager.resolveAndRefreshWorkspace(appState: appState)
@@ -1533,6 +1718,9 @@ struct NotchPanelView: View {
                 case .prayer:
                     PrayerExpandedCardView(manager: prayerManager)
                         .transition(tabContentTransition)
+                case .mail:
+                    CyberMailHUDView(appState: appState)
+                        .transition(tabContentTransition)
                 case .agents:
                     SessionListView(appState: appState, onlySessionId: nil)
                         .transition(tabContentTransition)
@@ -1560,6 +1748,7 @@ private struct CompactLeftWing: View {
     var wingWidth: CGFloat = 0
     var isBilateralWingsLyricActive: Bool = false
     var isDynamicIslandCompact: Bool = false
+    @ObservedObject private var l10n = L10n.shared
     private let nowPlaying = NowPlayingManager.shared
     private let signals = IslandSignals.shared
     @AppStorage(SettingsKey.sessionGroupingMode) private var groupingMode = SettingsDefaults.sessionGroupingMode
@@ -1694,8 +1883,8 @@ private struct CompactLeftWing: View {
                 // PANORAMIC NOTCH WING (Left Wing): [Icon (Mascot)] [♫] [Lirik (Current Lyric)]
                 let lyricText = nowPlaying.currentLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
                 let textToDisplay = !lyricText.isEmpty ? lyricText : (nowPlaying.lyricsLoading ? "Loading lyrics..." : (nowPlaying.title.isEmpty ? "♪ Music" : nowPlaying.title))
-                let trailingNotchBuffer: CGFloat = 14
-                let availableWidth = max(80, wingWidth > 0 ? (wingWidth - mascotSize - 34 - trailingNotchBuffer) : 180)
+                let trailingNotchBuffer: CGFloat = 10
+                let availableWidth = max(40, wingWidth > 0 ? (leftInnerBudget - mascotSize - 34 - trailingNotchBuffer) : 180)
                 let fontInfo = resolvedLyricFont
 
                 HStack(spacing: 5) {
@@ -1729,7 +1918,7 @@ private struct CompactLeftWing: View {
                     .shadow(color: Color.black.opacity(0.85), radius: 2, y: 1)
                 }
                 .padding(.trailing, trailingNotchBuffer)
-                .frame(maxWidth: max(80, wingWidth > 0 ? (wingWidth - trailingNotchBuffer) : 200), alignment: .leading)
+                .frame(maxWidth: wingWidth > 0 ? leftInnerBudget : 200, alignment: .leading)
             } else {
                 ZStack {
                     if signals.isPlaying && displayStatus == .idle && !isThinking && shownTool == nil {
@@ -1739,11 +1928,6 @@ private struct CompactLeftWing: View {
                         CAMusicGlowView(kind: .aura, mascotSize: mascotSize,
                                       animating: animationGates.allows(.music))
                             .frame(width: mascotSize + 8, height: mascotSize + 8)
-                    } else if displayStatus == .idle && !isThinking && shownTool == nil {
-                        // Slow idle glow, same treatment under Ambient Idle.
-                        CAMusicGlowView(kind: .breath, mascotSize: mascotSize,
-                                      animating: animationGates.allows(.ambientIdle))
-                            .frame(width: mascotSize + 4, height: mascotSize + 4)
                     }
 
                     MascotView(source: displaySource, status: effectiveMascotStatus, size: mascotSize)
@@ -1759,7 +1943,9 @@ private struct CompactLeftWing: View {
                 // Tool name or thinking indicator: in Balanced Twin mode, size intrinsically without shrinking feedback
                 let availableForTool: CGFloat = (isDynamicIslandCompact && !hasNotch)
                     ? 120
-                    : (wingWidth > 0 ? max(0, wingWidth - mascotSize - 20) : 110)
+                    : ((!expanded && !isBilateralWingsLyricActive && wingWidth > 0)
+                        ? max(0, leftInnerBudget - mascotSize - 12)
+                        : 110)
 
                 if let tool = shownTool, showToolStatus && showAgentDetails {
                     if availableForTool >= 14 {
@@ -1797,10 +1983,12 @@ private struct CompactLeftWing: View {
                         .help(tool)
                     }
                 } else if isThinking {
-                    if availableForTool >= 40 {
+                    let thinkingLabel = l10n["typing_thinking"]
+                    let neededForLabel = 22 + NotchWidthMetrics.estimatedLabelWidth(thinkingLabel, isPixel: isPixel)
+                    if availableForTool >= neededForLabel {
                         TypingIndicator(
                             fontSize: 9,
-                            label: L10n.shared["typing_thinking"],
+                            label: thinkingLabel,
                             bright: true,
                             color: effectiveThinkingColor,
                             showDots: true
@@ -1810,7 +1998,7 @@ private struct CompactLeftWing: View {
                             insertion: .opacity.combined(with: .scale(scale: 0.9)),
                             removal: .opacity
                         ))
-                    } else if availableForTool >= 14 {
+                    } else if availableForTool >= 18 {
                         TypingIndicator(
                             fontSize: 9,
                             label: "",
@@ -1841,12 +2029,19 @@ private struct CompactLeftWing: View {
                 }
             }
         }
-        .padding(.leading, expanded ? 10 : (isDynamicIslandCompact ? 0 : 3))
-        .padding(.trailing, expanded ? 10 : ((isDynamicIslandCompact && !hasNotch) ? 0 : 3))
+        .padding(.leading, expanded ? 10 : (isDynamicIslandCompact ? 0 : ((!isBilateralWingsLyricActive && wingWidth > 0 && wingWidth < 50) ? 1 : 3)))
+        .padding(.trailing, expanded ? 10 : ((isDynamicIslandCompact && !hasNotch) ? 0 : ((!isBilateralWingsLyricActive && wingWidth > 0 && wingWidth < 50) ? 1 : 3)))
         .fixedSize(horizontal: true, vertical: false)
         .background(GeometryReader { geo in
             Color.clear.preference(key: CompactLeftWingWidthKey.self, value: expanded ? 0 : geo.size.width)
         })
+        .frame(
+            maxWidth: (!expanded && wingWidth > 0)
+                ? leftInnerBudget
+                : nil,
+            alignment: .leading
+        )
+        .clipped()
         .onChange(of: liveTool) { _, newTool in
             lingerTimer?.invalidate()
             if let newTool {
@@ -1865,6 +2060,15 @@ private struct CompactLeftWing: View {
             let newTool = liveTool
             withAnimation(.easeInOut(duration: 0.2)) { shownTool = newTool }
         }
+    }
+
+    private var leftInnerBudget: CGFloat {
+        NotchWidthMetrics.collapsedInnerBudget(
+            wingWidth: wingWidth,
+            expanded: expanded,
+            bilateral: isBilateralWingsLyricActive,
+            hasNotch: hasNotch
+        )
     }
 }
 
@@ -1973,7 +2177,12 @@ private struct CompactRightWing: View {
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @AppStorage(SettingsKey.showAgentDetails) private var showAgentDetails = SettingsDefaults.showAgentDetails
+    @ObservedObject private var mailManager = MailManager.shared
     @State private var hoveredAction: String? = nil
+
+    private var mailAccentColor: Color {
+        AppColorTheme.accent(for: musicHUDProgressColor, isModern: islandUITheme != IslandUITheme.pixel.rawValue)
+    }
 
     private var isPixel: Bool {
         islandUITheme == IslandUITheme.pixel.rawValue
@@ -2050,6 +2259,40 @@ private struct CompactRightWing: View {
         return count
     }
 
+    private var statusBadgesWidth: CGFloat {
+        NotchWidthMetrics.statusBadgesWidth(for: appState, inQuietHours: inQuietHours)
+    }
+
+    private var badgeReserve: CGFloat {
+        statusBadgesWidth > 0 ? (statusBadgesWidth + 5) : 0
+    }
+
+    private var collapsedMaxInnerWidth: CGFloat {
+        NotchWidthMetrics.collapsedInnerBudget(
+            wingWidth: wingWidth,
+            expanded: expanded,
+            bilateral: isBilateralWingsLyricActive,
+            hasNotch: hasNotch
+        )
+    }
+
+    private var isNarrowCollapsedWing: Bool {
+        !expanded && !isBilateralWingsLyricActive && wingWidth > 0 && wingWidth < 54
+    }
+
+    private var rightInnerLeadingPadding: CGFloat {
+        isNarrowCollapsedWing ? 2 : 6
+    }
+
+    private var rightInnerTrailingPadding: CGFloat {
+        if expanded { return 10 }
+        return (isNarrowCollapsedWing || mailManager.showMailArrivalAnimation) ? 2 : 8
+    }
+
+    private var totalRightInnerPadding: CGFloat {
+        rightInnerLeadingPadding + rightInnerTrailingPadding
+    }
+
     private var maxBranchWidth: CGFloat {
         extraBadgeCount > 0 ? 54 : 76
     }
@@ -2062,14 +2305,19 @@ private struct CompactRightWing: View {
                 collapsedWingContent
             }
         }
-        .padding(.leading, expanded ? 6 : ((isDynamicIslandCompact && !hasNotch) ? 0 : 6))
-        .padding(.trailing, expanded ? 10 : (isDynamicIslandCompact ? 0 : 8))
+        .padding(.leading, (isDynamicIslandCompact && !hasNotch) ? 0 : rightInnerLeadingPadding)
+        .padding(.trailing, isDynamicIslandCompact ? 0 : rightInnerTrailingPadding)
         // Its natural width, reported so the collapsed bar can make room for
         // it clear of the notch (CompactRightWingLayout).
-        .fixedSize(horizontal: true, vertical: false)
+        .fixedSize(horizontal: !mailManager.showMailArrivalAnimation, vertical: false)
         .background(GeometryReader { geo in
             Color.clear.preference(key: CompactRightWingWidthKey.self, value: expanded ? 0 : geo.size.width)
         })
+        .frame(
+            maxWidth: (!expanded && wingWidth > 0) ? collapsedMaxInnerWidth : nil,
+            alignment: .trailing
+        )
+        .clipped()
     }
 
     @ViewBuilder
@@ -2093,7 +2341,23 @@ private struct CompactRightWing: View {
 
     @ViewBuilder
     private var collapsedWingContent: some View {
-        if signals.isPrayerPrioritized {
+        if mailManager.showMailArrivalAnimation {
+            // MAIL ARRIVAL MICRO-INTERACTION: compact sealed envelope (52pt) when idle, roller-coaster mailbox (118pt) when thinking
+            MailArrivalWingView(
+                isRetro: isPixel,
+                accentColor: mailAccentColor,
+                isCompact: !isThinking,
+                onTap: {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        mailManager.dismissMailArrival()
+                        expandedTab = .mail
+                        appState.surface = .sessionList
+                    }
+                }
+            )
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .transition(.opacity)
+        } else if signals.isPrayerPrioritized {
             // SMART PRIORITY: Prayer countdown takes active priority at T <= 15m
             PrayerCompactWingView(isHovered: shouldExpandRightWing) {
                 expandedTab = .prayer
@@ -2101,13 +2365,18 @@ private struct CompactRightWing: View {
             }
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
         } else if signals.isPlaying || nowPlaying.isPlaying {
+            let musicMaxContentWidth: CGFloat? = (!expanded && wingWidth > 0)
+                ? max(0, collapsedMaxInnerWidth - totalRightInnerPadding - badgeReserve)
+                : nil
             CyberMusicWingView(
                 nowPlaying: nowPlaying,
                 isHovered: shouldExpandRightWing,
+                isThinking: (isDynamicIslandCompact && !hasNotch) ? false : isThinking,
                 isEnlarged: isEnlarged,
                 isBilateralWingsLyricActive: isBilateralWingsLyricActive,
                 isDynamicIslandCompact: isDynamicIslandCompact,
-                wingWidth: wingWidth
+                wingWidth: wingWidth,
+                maxContentWidth: (isDynamicIslandCompact && !hasNotch) ? nil : musicMaxContentWidth
             )
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
         } else {
@@ -2123,7 +2392,11 @@ private struct CompactRightWing: View {
             }
         }
 
-        statusBadges
+        // Quiet hours & status badges are shown when not playing the mail arrival animation
+        // so MailArrivalWingView keeps the full right-wing runway.
+        if !mailManager.showMailArrivalAnimation {
+            statusBadges
+        }
     }
 
     private func dockButtonFill(isHovered: Bool) -> Color {
@@ -2363,15 +2636,8 @@ private struct CompactRightWing: View {
     @ViewBuilder
     private var standbyPill: some View {
         // "STANDBY DYNAMIC ISLAND PILL" - Interactive & Alive
-        let badgesWidth: CGFloat = {
-            var w: CGFloat = 0
-            if inQuietHours { w += 13 }
-            if appState.glanceCompletionActive { w += 13 }
-            if appState.hiddenPendingQuestionSessionId != nil || appState.followUps.hintActive || appState.status == .waitingApproval || appState.status == .waitingQuestion { w += 15 }
-            return w
-        }()
-        let availableForPill = wingWidth > 0 ? max(16, wingWidth - badgesWidth - 14) : 58
-        let showChevron = !isDynamicIslandCompact && availableForPill >= 50
+        let availableForPill = wingWidth > 0 ? max(16, collapsedMaxInnerWidth - totalRightInnerPadding - badgeReserve) : 58
+        let showChevron = !isDynamicIslandCompact && availableForPill >= 52
         let branchText: String = {
             guard let branch = gitBranch, !branch.isEmpty else { return "" }
             if let dashIdx = branch.firstIndex(of: "-") {
@@ -2380,8 +2646,9 @@ private struct CompactRightWing: View {
             }
             return branch
         }()
-        let branchSpace = max(16, availableForPill - (showChevron ? 18 : 10) - 12)
-        let maxCharsForBranch: Int = max(4, Int(branchSpace / (isPixel ? 6.0 : 5.5)))
+        let pillHorizontalPad: CGFloat = availableForPill < 36 ? 8 : 12
+        let branchSpace = max(10, availableForPill - pillHorizontalPad - (showChevron ? 22 : 12))
+        let maxCharsForBranch: Int = max(3, Int(branchSpace / (isPixel ? 6.0 : 5.5)))
 
         optionalWingPillChrome(horizontalPadding: availableForPill < 36 ? 4 : 6) {
             HStack(spacing: isDynamicIslandCompact ? 4 : 3) {
@@ -2399,7 +2666,7 @@ private struct CompactRightWing: View {
                                 .foregroundStyle(isDynamicIslandCompact ? Color(red: 0.66, green: 0.71, blue: 0.78) : Color.white.opacity(0.92))
                                 .lineLimit(1)
                                 .truncationMode(.middle)
-                                .frame(maxWidth: isDynamicIslandCompact ? 78 : max(16, availableForPill - (showChevron ? 18 : 10)))
+                                .frame(maxWidth: isDynamicIslandCompact ? 78 : branchSpace)
                         }
                     }
                 } else if let proj = projectName, !proj.isEmpty {
@@ -2416,7 +2683,7 @@ private struct CompactRightWing: View {
                                 .foregroundStyle(isDynamicIslandCompact ? Color(red: 0.66, green: 0.71, blue: 0.78) : Color.white.opacity(0.90))
                                 .lineLimit(1)
                                 .truncationMode(.middle)
-                                .frame(maxWidth: isDynamicIslandCompact ? 78 : max(16, availableForPill - (showChevron ? 18 : 10)))
+                                .frame(maxWidth: isDynamicIslandCompact ? 78 : branchSpace)
                         }
                     }
                 } else {
@@ -2932,6 +3199,7 @@ private struct HeaderNavigationMenuTabs: View {
     @ObservedObject var workspaceManager: WorkspaceMonitorManager
     var availableWidth: CGFloat = 240
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
+    @ObservedObject private var mailManager = MailManager.shared
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
@@ -3108,6 +3376,48 @@ private struct HeaderNavigationMenuTabs: View {
                     .buttonStyle(.plain)
                     .help("Prayer Schedule & Living Sky Diorama")
                 }
+
+                // MAIL TAB (MODERN)
+                if MailManager.shared.isEnabled {
+                    let isMailActive = expandedTab == .mail
+                    let showMailLabel = isMailActive && (activeLabelTab == .mail || !appState.isTabTransitioning)
+                    let mailColor = activeAccentColor
+                    Button {
+                        switchToTab(.mail)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "envelope.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                            if showMailLabel {
+                                Text("Mail")
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .lineLimit(1)
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .leading).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
+                            }
+                            if MailManager.shared.unreadCount > 0 {
+                                Text(MailManager.formatBadgeCount(MailManager.shared.unreadCount))
+                                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                                    .foregroundStyle(AppColorTheme.contrastingForeground(on: mailColor))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(Capsule().fill(mailColor))
+                            }
+                        }
+                        .foregroundStyle(isMailActive ? mailColor : Self.inactiveColor)
+                        .padding(.horizontal, isMailActive ? 8 : 6)
+                        .frame(height: 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(isMailActive ? (mailColor == .white ? Color.white.opacity(0.18) : mailColor.opacity(0.22)) : .clear)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Apple Mail (\(MailManager.shared.unreadCount) unread in 7d)")
+                }
             }
             .padding(.vertical, 2)
         } else {
@@ -3260,6 +3570,53 @@ private struct HeaderNavigationMenuTabs: View {
                     .buttonStyle(.plain)
                     .help("Prayer Schedule & Living Sky Diorama")
                 }
+
+                // MAIL PIXEL TAB
+                if MailManager.shared.isEnabled {
+                    let isMailActive = expandedTab == .mail
+                    let showMailLabel = isMailActive && (activeLabelTab == .mail || !appState.isTabTransitioning)
+                    let cyberMailColor = activeAccentColor
+                    Button {
+                        switchToTab(.mail)
+                    } label: {
+                        HStack(spacing: 4) {
+                            PixelIcon(
+                                glyph: .email,
+                                color: isMailActive ? cyberMailColor : Self.inactiveColor,
+                                pixelSize: 1.35
+                            )
+                            if showMailLabel {
+                                PixelText(
+                                    text: "MAIL",
+                                    color: cyberMailColor,
+                                    pixelSize: 1.15
+                                )
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .leading).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                ))
+                            }
+                            if MailManager.shared.unreadCount > 0 {
+                                Text(MailManager.formatBadgeCount(MailManager.shared.unreadCount))
+                                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(AppColorTheme.contrastingForeground(on: cyberMailColor))
+                                    .padding(.horizontal, 3)
+                                    .padding(.vertical, 1)
+                                    .background(cyberMailColor)
+                                    .cornerRadius(2)
+                            }
+                        }
+                        .padding(.horizontal, isMailActive ? 7 : 5)
+                        .frame(height: 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(isMailActive ? cyberMailColor.opacity(0.20) : .clear)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Apple Mail (\(MailManager.shared.unreadCount) unread in 7d)")
+                }
             }
             .padding(.vertical, 2)
         }
@@ -3383,14 +3740,22 @@ private struct SessionGroupingTabs: View {
 
 private struct IdleIndicatorBar: View {
     let mascotSize: CGFloat
-    let compactWingWidth: CGFloat
+    let wingWidth: CGFloat
     let notchW: CGFloat
     let notchHeight: CGFloat
     let hasNotch: Bool
     let hovered: Bool
     var displayMode: IslandDisplayMode = .notch
     var onExpand: (() -> Void)? = nil
+    var onOpenMail: (() -> Void)? = nil
     @AppStorage(SettingsKey.defaultSource) private var defaultSource = SettingsDefaults.defaultSource
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @ObservedObject private var mailManager = MailManager.shared
+
+    private var mailAccentColor: Color {
+        AppColorTheme.accent(for: musicHUDProgressColor, isModern: islandUITheme != IslandUITheme.pixel.rawValue)
+    }
 
     static let idlePrayerWingMinWidth: CGFloat = 124
 
@@ -3400,11 +3765,8 @@ private struct IdleIndicatorBar: View {
     }
 
     private var effectiveWingWidth: CGFloat {
-        Self.wingWidth(
-            compactWingWidth: compactWingWidth,
-            hovered: hovered,
-            prayerEnabled: PrayerTimeManager.shared.isEnabled
-        )
+        let withPrayer = PrayerTimeManager.shared.isEnabled ? max(wingWidth, Self.idlePrayerWingMinWidth) : wingWidth
+        return mailManager.showMailArrivalAnimation ? max(withPrayer, 52) : withPrayer
     }
 
     private var trailingOuterPadding: CGFloat {
@@ -3419,7 +3781,7 @@ private struct IdleIndicatorBar: View {
     var body: some View {
         let prayerManager = PrayerTimeManager.shared
         Group {
-            if displayMode == .dynamicIsland && !hasNotch {
+            if displayMode == .dynamicIsland && !hasNotch && !mailManager.showMailArrivalAnimation {
                 HStack(spacing: 10) {
                     MascotView(source: defaultSource, status: .idle, size: mascotSize)
                         .opacity(hovered ? 0.95 : 0.72)
@@ -3466,27 +3828,50 @@ private struct IdleIndicatorBar: View {
                         .contentShape(Rectangle())
                         .onTapGesture { onExpand?() }
 
-                    // Right Wing: sleek, lineless prayer pill or expand indicator
+                    // Right Wing: mail arrival badge, prayer pill, or expand indicator
                     HStack(spacing: 4) {
-                        Spacer(minLength: 0)
-                        if prayerManager.isEnabled {
-                            PrayerCompactWingView(isHovered: hovered, onExpand: onExpand)
-                                .padding(.trailing, trailingOuterPadding)
+                        if mailManager.showMailArrivalAnimation {
+                            MailArrivalWingView(
+                                isRetro: islandUITheme == IslandUITheme.pixel.rawValue,
+                                accentColor: mailAccentColor,
+                                isCompact: true,
+                                onTap: {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                        mailManager.dismissMailArrival()
+                                        (onOpenMail ?? onExpand)?()
+                                    }
+                                }
+                            )
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .transition(.opacity)
                         } else {
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: hovered ? 8 : 7.5, weight: .semibold))
-                                .foregroundStyle(Color.white.opacity(hovered ? 0.9 : 0.45))
-                                .frame(width: 18, height: 18)
-                                .background(
-                                    Circle()
-                                        .fill(Color.white.opacity(hovered ? 0.12 : 0))
-                                )
-                                .padding(.trailing, trailingOuterPadding)
+                            Spacer(minLength: 0)
+                            if prayerManager.isEnabled {
+                                PrayerCompactWingView(isHovered: hovered, onExpand: onExpand)
+                                    .padding(.trailing, trailingOuterPadding)
+                            } else {
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: hovered ? 8 : 7.5, weight: .semibold))
+                                    .foregroundStyle(Color.white.opacity(hovered ? 0.9 : 0.45))
+                                    .frame(width: 18, height: 18)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.white.opacity(hovered ? 0.12 : 0))
+                                    )
+                                    .padding(.trailing, trailingOuterPadding)
+                            }
                         }
                     }
                     .frame(width: effectiveWingWidth, alignment: .trailing)
                     .contentShape(Rectangle())
-                    .onTapGesture { onExpand?() }
+                    .onTapGesture {
+                        if mailManager.showMailArrivalAnimation {
+                            mailManager.dismissMailArrival()
+                            (onOpenMail ?? onExpand)?()
+                        } else {
+                            onExpand?()
+                        }
+                    }
                     .help(prayerManager.isEnabled ? "Prayer Times & Living Clock (Click to open Prayer tab)" : "Click to expand tabs (Agents / Workspace / Music)")
                 }
                 .frame(height: notchHeight)

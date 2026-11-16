@@ -120,8 +120,11 @@ build_mac() {
 
     ENTITLEMENTS="CodeIsland.entitlements"
 
-    # Use SIGN_ID env var, or auto-detect: prefer "Developer ID Application" for distribution,
-    # fall back to any valid identity, then ad-hoc
+    # Use SIGN_ID env var, local .signing.local override, or auto-detect:
+    # prefer "Developer ID Application" for distribution, fall back to any valid identity, then ad-hoc
+    if [ -z "${SIGN_ID:-}" ] && [ -f ".signing.local" ]; then
+        SIGN_ID=$(head -1 ".signing.local" | tr -d '\r\n')
+    fi
     if [ -z "${SIGN_ID:-}" ]; then
         SIGN_ID=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)".*/\1/' 2>/dev/null || true)
     fi

@@ -1,0 +1,20 @@
+#!/bin/sh
+# CodeIsland Local Pre-Push Verification Hook
+# Catches compiler timeouts, syntax errors, and unit test regressions before code is pushed.
+
+if ! command -v swift >/dev/null 2>&1; then
+    echo "==> [Pre-Push Hook] 'swift' not found in PATH. Skipping local SwiftPM verification."
+    exit 0
+fi
+
+echo "==> [Pre-Push Hook] Verifying build & unit tests locally..."
+if ! swift build --build-tests -q; then
+    echo ""
+    echo "❌ [Pre-Push Error] Build or unit tests failed!"
+    echo "👉 Please fix compilation or test failures locally before pushing to remote."
+    echo "💡 Run 'swift build --build-tests' to view full compiler logs."
+    exit 1
+fi
+
+echo "✅ [Pre-Push Hook] Verification passed. Proceeding with push."
+exit 0
