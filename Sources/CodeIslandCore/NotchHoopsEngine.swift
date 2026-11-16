@@ -10,6 +10,15 @@ public struct NotchHoopsEngine: Sendable {
         case gameOver
     }
 
+    public enum SoundEvent: Hashable, Sendable {
+        case launch
+        case rimOrBackboard
+        case bounce
+        case score(isSwish: Bool)
+        case miss
+        case gameOver
+    }
+
     /// Distance-based scoring zones measured from the hoop on the right.
     public enum ShotZone: String, CaseIterable, Sendable {
         case onePoint = "1P"
@@ -89,6 +98,15 @@ public struct NotchHoopsEngine: Sendable {
     public private(set) var feedbackText: String?
     public private(set) var feedbackPoints: Int = 0
     public private(set) var feedbackTimer: Double = 0
+    public private(set) var pendingSoundEvents: [SoundEvent] = []
+
+    /// Returns and clears queued sound cues emitted since the last drain.
+    public mutating func drainSoundEvents() -> [SoundEvent] {
+        guard !pendingSoundEvents.isEmpty else { return [] }
+        let events = pendingSoundEvents
+        pendingSoundEvents.removeAll(keepingCapacity: true)
+        return events
+    }
 
     private var prevBallY: Double = launchY
     private var touchedRimOrBackboard: Bool = false
@@ -132,6 +150,7 @@ public struct NotchHoopsEngine: Sendable {
         feedbackText = nil
         feedbackPoints = 0
         feedbackTimer = 0
+        pendingSoundEvents.removeAll(keepingCapacity: true)
     }
 
     /// Picks a new starting X position based on `positionMode` (random across all zones or within the chosen zone).
@@ -179,6 +198,7 @@ public struct NotchHoopsEngine: Sendable {
         feedbackText = nil
         feedbackPoints = 0
         feedbackTimer = 0
+        pendingSoundEvents.append(.launch)
         return true
     }
 
@@ -259,6 +279,9 @@ public struct NotchHoopsEngine: Sendable {
             ballY >= Self.backboardTopY &&
             ballY <= Self.backboardBottomY {
             ballX = Self.backboardX - Self.ballRadius
+            if ballVX > 25 {
+                pendingSoundEvents.append(.rimOrBackboard)
+            }
             ballVX = -abs(ballVX) * 0.65
             touchedRimOrBackboard = true
         }
@@ -286,6 +309,7 @@ public struct NotchHoopsEngine: Sendable {
             feedbackText = "+\(points)"
             feedbackPoints = points
             feedbackTimer = 1.1
+            pendingSoundEvents.append(.score(isSwish: isSwish))
         }
 
         // Side walls & ceiling containment so the ball never disappears off-screen
@@ -305,7 +329,8 @@ public struct NotchHoopsEngine: Sendable {
         if ballY + Self.ballRadius >= Self.floorY {
             ballY = Self.floorY - Self.ballRadius
             floorBounces += 1
-            ballVY = -abs(ballVY) * 0.50
+            let impactSpeed = abs(ballVY)
+            ballVY = -impactSpeed * 0.50
             ballVX *= 0.80
 
             if floorBounces >= 2 || abs(ballVY) < 55 {
@@ -318,12 +343,18 @@ public struct NotchHoopsEngine: Sendable {
                 }
 
                 if ballsRemaining > 0 {
+                    if !scoredCurrentShot {
+                        pendingSoundEvents.append(.miss)
+                    }
                     pickNextLaunchPosition()
                     phase = .ready
                 } else {
+                    pendingSoundEvents.append(.gameOver)
                     resetBall()
                     phase = .gameOver
                 }
+            } else if impactSpeed > 50 {
+                pendingSoundEvents.append(.bounce)
             }
         }
     }
@@ -348,6 +379,9 @@ public struct NotchHoopsEngine: Sendable {
             ballVX -= (1.0 + restitution) * vn * nx
             ballVY -= (1.0 + restitution) * vn * ny
             touchedRimOrBackboard = true
+            if vn < -40 {
+                pendingSoundEvents.append(.rimOrBackboard)
+            }
         }
     }
 

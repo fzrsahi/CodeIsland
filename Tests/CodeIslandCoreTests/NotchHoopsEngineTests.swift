@@ -102,4 +102,50 @@ final class NotchHoopsEngineTests: XCTestCase {
             XCTAssertEqual(result.highScore, testCase.expectedPoints)
         }
     }
+
+    func testSoundEventsEmittedOnLaunchScoreMissAndGameOver() {
+        // 1. Launch + score
+        var scoring = NotchHoopsEngine(highScore: 0, positionMode: .twoPoint, initialLaunchX: 160)
+        var scored = false
+        for dragX in stride(from: 20.0, through: 200.0, by: 5.0) {
+            for dragY in stride(from: -50.0, through: -170.0, by: -5.0) {
+                var candidate = NotchHoopsEngine(highScore: 0, positionMode: .twoPoint, initialLaunchX: 160)
+                if candidate.launch(dragDeltaX: dragX, dragDeltaY: dragY) {
+                    var events = candidate.drainSoundEvents()
+                    for _ in 0..<300 {
+                        candidate.step(dt: 1.0 / 60.0)
+                        events.append(contentsOf: candidate.drainSoundEvents())
+                        if candidate.score > 0 { break }
+                    }
+                    if candidate.score > 0 {
+                        XCTAssertEqual(events.first, .launch)
+                        XCTAssertTrue(events.contains(where: {
+                            if case .score = $0 { return true }
+                            return false
+                        }))
+                        scored = true
+                        break
+                    }
+                }
+            }
+            if scored { break }
+        }
+        XCTAssertTrue(scored)
+        XCTAssertTrue(scoring.drainSoundEvents().isEmpty)
+
+        // 2. Miss & game over
+        var missEngine = NotchHoopsEngine(positionMode: .twoPoint, initialLaunchX: 160)
+        var allMissEvents: [NotchHoopsEngine.SoundEvent] = []
+        for _ in 0..<3 {
+            XCTAssertTrue(missEngine.launch(dragDeltaX: -40, dragDeltaY: -20))
+            allMissEvents.append(contentsOf: missEngine.drainSoundEvents())
+            for _ in 0..<400 {
+                missEngine.step(dt: 1.0 / 60.0)
+                allMissEvents.append(contentsOf: missEngine.drainSoundEvents())
+                if missEngine.phase != .flying { break }
+            }
+        }
+        XCTAssertTrue(allMissEvents.contains(.miss))
+        XCTAssertTrue(allMissEvents.contains(.gameOver))
+    }
 }

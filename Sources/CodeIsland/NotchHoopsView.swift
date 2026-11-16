@@ -238,6 +238,7 @@ struct NotchHoopsView: View {
                             let dt = newDate.timeIntervalSince(previous)
                             lastTickDate = newDate
                             engine.step(dt: dt)
+                            flushSoundEvents()
                             if !engine.needsTick {
                                 lastTickDate = nil
                                 updateInteractionLock(dragging: dragTranslation != nil, phase: engine.phase)
@@ -269,6 +270,7 @@ struct NotchHoopsView: View {
                     if launched && hapticOnHover {
                         NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                     }
+                    flushSoundEvents()
                     updateInteractionLock(dragging: false, phase: engine.phase)
                 }
             )
@@ -591,6 +593,12 @@ struct NotchHoopsView: View {
 
     private func updateInteractionLock(dragging: Bool, phase: NotchHoopsEngine.Phase) {
         appState.isGameInteractionLocked = dragging || phase == .flying
+    }
+
+    private func flushSoundEvents() {
+        for event in engine.drainSoundEvents() {
+            NotchHoopsSoundPlayer.shared.play(event)
+        }
     }
 }
 

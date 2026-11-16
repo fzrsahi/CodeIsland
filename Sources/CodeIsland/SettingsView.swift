@@ -1984,6 +1984,7 @@ private struct GameSettingsPage: View {
     @AppStorage(SettingsKey.gameEnabled) private var gameEnabled = SettingsDefaults.gameEnabled
     @AppStorage(SettingsKey.notchHoopsHighScore) private var highScore = SettingsDefaults.notchHoopsHighScore
     @AppStorage(SettingsKey.notchHoopsPositionMode) private var positionMode = SettingsDefaults.notchHoopsPositionMode
+    @AppStorage(SettingsKey.notchHoopsSoundEnabled) private var soundEnabled = SettingsDefaults.notchHoopsSoundEnabled
 
     private func positionTitle(_ mode: NotchHoopsEngine.PositionMode) -> String {
         switch mode {
@@ -2018,6 +2019,8 @@ private struct GameSettingsPage: View {
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                     }
+
+                    Toggle("Sound Effects", isOn: $soundEnabled)
                 }
 
                 Section("Scoreboard") {

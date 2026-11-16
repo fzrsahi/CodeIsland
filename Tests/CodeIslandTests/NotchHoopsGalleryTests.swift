@@ -221,4 +221,16 @@ final class NotchHoopsGalleryTests: XCTestCase {
         view.isEnabled = false
         XCTAssertNil(view.hitTest(NSPoint(x: 100, y: 200)))
     }
+
+    func testSoundPlayerSynthesizesValidWaveDataForAllEvents() {
+        let events: [NotchHoopsEngine.SoundEvent] = [
+            .launch, .rimOrBackboard, .bounce, .score(isSwish: true), .score(isSwish: false), .miss, .gameOver
+        ]
+        for event in events {
+            let wav = NotchHoopsSoundPlayer.shared.wavData(for: event)
+            XCTAssertGreaterThan(wav.count, 44)
+            XCTAssertEqual(String(data: wav.prefix(4), encoding: .ascii), "RIFF")
+            XCTAssertEqual(String(data: wav.subdata(in: 8..<12), encoding: .ascii), "WAVE")
+        }
+    }
 }
