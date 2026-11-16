@@ -412,6 +412,10 @@ enum SettingsKey {
     static let agentsEnabled = "agentsEnabled"
     static let workspaceEnabled = "workspaceEnabled"
     static let musicEnabled = "musicEnabled"
+    static let gameEnabled = "gameEnabled"
+    static let notchHoopsHighScore = "notchHoopsHighScore"
+    static let notchHoopsPositionMode = "notchHoopsPositionMode"
+    static let notchHoopsSoundEnabled = "notchHoopsSoundEnabled"
 
     // Prayer & Living Diorama Clock
     static let prayerEnabled = "prayerEnabled"
@@ -628,6 +632,10 @@ struct SettingsDefaults {
     static let agentsEnabled = true
     static let workspaceEnabled = true
     static let musicEnabled = true
+    static let gameEnabled = true
+    static let notchHoopsHighScore = 0
+    static let notchHoopsPositionMode = NotchHoopsEngine.PositionMode.random.rawValue
+    static let notchHoopsSoundEnabled = true
 
     // Prayer & Living Diorama Clock
     static let prayerEnabled = false
@@ -756,6 +764,10 @@ class SettingsManager {
             SettingsKey.agentsEnabled: SettingsDefaults.agentsEnabled,
             SettingsKey.workspaceEnabled: SettingsDefaults.workspaceEnabled,
             SettingsKey.musicEnabled: SettingsDefaults.musicEnabled,
+            SettingsKey.gameEnabled: SettingsDefaults.gameEnabled,
+            SettingsKey.notchHoopsHighScore: SettingsDefaults.notchHoopsHighScore,
+            SettingsKey.notchHoopsPositionMode: SettingsDefaults.notchHoopsPositionMode,
+            SettingsKey.notchHoopsSoundEnabled: SettingsDefaults.notchHoopsSoundEnabled,
             SettingsKey.prayerCalculationMethod: SettingsDefaults.prayerCalculationMethod,
             SettingsKey.prayerHijriCalendarSource: SettingsDefaults.prayerHijriCalendarSource,
             SettingsKey.prayerHijriDayOffset: SettingsDefaults.prayerHijriDayOffset,

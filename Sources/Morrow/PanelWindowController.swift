@@ -580,7 +580,9 @@ class PanelWindowController: NSObject, NSWindowDelegate {
 
         localDragMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp]) { [weak self] event in
             guard let self, let panel = self.panel,
-                  SettingsManager.shared.allowHorizontalDrag else { return event }
+                  SettingsManager.shared.allowHorizontalDrag,
+                  self.appState.expandedTab != .game,
+                  !self.appState.isGameInteractionLocked else { return event }
 
             switch event.type {
             case .leftMouseDown:
