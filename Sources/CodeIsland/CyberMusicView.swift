@@ -407,9 +407,11 @@ struct ModernMarqueeText: View {
 struct CyberMusicWingView: View {
     @ObservedObject var nowPlaying: NowPlayingManager
     var isHovered: Bool = false
+    var isThinking: Bool = false
     var isEnlarged: Bool = false
     var isBilateralWingsLyricActive: Bool = false
     var wingWidth: CGFloat = 0
+    var maxContentWidth: CGFloat? = nil
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
@@ -417,12 +419,22 @@ struct CyberMusicWingView: View {
     @AppStorage(SettingsKey.floatingLyricFontSize) private var floatingLyricFontSize = SettingsDefaults.floatingLyricFontSize
     @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
 
-    init(nowPlaying: NowPlayingManager, isHovered: Bool = false, isEnlarged: Bool = false, isBilateralWingsLyricActive: Bool = false, wingWidth: CGFloat = 0) {
+    init(
+        nowPlaying: NowPlayingManager,
+        isHovered: Bool = false,
+        isThinking: Bool = false,
+        isEnlarged: Bool = false,
+        isBilateralWingsLyricActive: Bool = false,
+        wingWidth: CGFloat = 0,
+        maxContentWidth: CGFloat? = nil
+    ) {
         self.nowPlaying = nowPlaying
         self.isHovered = isHovered
+        self.isThinking = isThinking
         self.isEnlarged = isEnlarged
         self.isBilateralWingsLyricActive = isBilateralWingsLyricActive
         self.wingWidth = wingWidth
+        self.maxContentWidth = maxContentWidth
     }
 
     private var isModernClean: Bool {
@@ -471,16 +483,70 @@ struct CyberMusicWingView: View {
         }
     }
 
+    @ViewBuilder
+    private func compactAlbumArt(
+        size: CGFloat,
+        cornerRadius: CGFloat,
+        fallbackFill: Color,
+        fallbackIconColor: Color,
+        borderOpacity: Double = 0
+    ) -> some View {
+        if let art = nowPlaying.artworkImage {
+            Image(nsImage: art)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay {
+                    if borderOpacity > 0 {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .strokeBorder(Color.white.opacity(borderOpacity), lineWidth: 0.5)
+                    }
+                }
+        } else {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(fallbackFill)
+                .frame(width: size, height: size)
+                .overlay(
+                    Image(systemName: "music.note")
+                        .font(.system(size: isEnlarged ? 10 : 8, weight: .semibold))
+                        .foregroundStyle(fallbackIconColor)
+                )
+        }
+    }
+
+    private var isCompactNarrow: Bool {
+        !isEnlarged && !isBilateralWingsLyricActive && ((maxContentWidth ?? 999) < 42 || (wingWidth > 0 && wingWidth < 52))
+    }
+
+    /// Maximum title width permitted inside the right wing without pushing adjacent content into the notch.
+    private func resolvedTitleMaxWidth(artSize: CGFloat, spacing: CGFloat) -> CGFloat? {
+        guard isThinking || isHovered, let maxContentWidth else { return nil }
+        let spectrumWidth: CGFloat = isEnlarged ? 12 : (isCompactNarrow ? 9 : 10)
+        let horizPad: CGFloat = isCompactNarrow ? 0 : 4
+        let fixedOverhead = artSize + spectrumWidth + spacing * 2 + horizPad
+        let cap: CGFloat = isEnlarged ? 112 : 184
+        let remaining = maxContentWidth - fixedOverhead
+        guard remaining >= 24 else { return nil }
+        return min(cap, remaining)
+    }
+
     var body: some View {
-        let artSize: CGFloat = isEnlarged ? 23 : 17
-        let spectrumMaxH: CGFloat = isEnlarged ? 14.0 : 11.0
+        let narrow = isCompactNarrow
+        let artSize: CGFloat = isEnlarged ? 23 : (narrow ? 14 : 17)
+        let spectrumMaxH: CGFloat = isEnlarged ? 14.0 : (narrow ? 9.5 : 11.0)
+        let itemSpacing: CGFloat = isEnlarged ? 5 : (narrow ? 3 : 4)
+        let barWidth: CGFloat = isEnlarged ? 2.4 : (narrow ? 1.8 : 2.0)
+        let horizPadding: CGFloat = narrow ? 0 : 2
+        let titleMaxWidth = resolvedTitleMaxWidth(artSize: artSize, spacing: itemSpacing)
 
         if isBilateralWingsLyricActive {
             // BILATERAL WING MODE (Right Wing): [Upcoming Lyric] [Album Art] [Equalizer]
             let nextText = nowPlaying.nextLyricText.trimmingCharacters(in: .whitespacesAndNewlines)
             let displayUpcoming = !nextText.isEmpty ? nextText : (nowPlaying.artist.isEmpty ? "" : "— " + nowPlaying.artist)
-            let leadingNotchBuffer: CGFloat = 14
-            let availableForLyric = max(70, wingWidth > 0 ? (wingWidth - artSize - 34 - leadingNotchBuffer) : 170)
+            let leadingNotchBuffer: CGFloat = maxContentWidth != nil ? 4 : 14
+            let contentBudget = maxContentWidth ?? (wingWidth > 0 ? wingWidth : 184)
+            let availableForLyric = max(24, contentBudget - artSize - 34 - leadingNotchBuffer)
             let fontInfo = resolvedUpcomingFont
 
             HStack(alignment: .center, spacing: 5) {
@@ -495,22 +561,13 @@ struct CyberMusicWingView: View {
                     .shadow(color: Color.black.opacity(0.85), radius: 2, y: 1)
                 }
 
-                if let art = nowPlaying.artworkImage {
-                    Image(nsImage: art)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: artSize, height: artSize)
-                        .clipShape(RoundedRectangle(cornerRadius: isModernClean ? 4 : 3.5, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: isModernClean ? 4 : 3.5, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
-                        )
-                } else {
-                    RoundedRectangle(cornerRadius: isModernClean ? 4 : 3.5, style: .continuous)
-                        .fill(Color.white.opacity(0.12))
-                        .frame(width: artSize, height: artSize)
-                        .overlay(Image(systemName: "music.note").font(.system(size: 8)).foregroundStyle(.white))
-                }
+                compactAlbumArt(
+                    size: artSize,
+                    cornerRadius: isModernClean ? 4 : 3.5,
+                    fallbackFill: Color.white.opacity(0.12),
+                    fallbackIconColor: .white,
+                    borderOpacity: 0.18
+                )
 
                 ModernAudioSpectrumView(
                     barCount: 3,
@@ -525,10 +582,16 @@ struct CyberMusicWingView: View {
             .padding(.trailing, 2)
             .padding(.vertical, 1)
         } else if isModernClean {
-            // MODERN CLEAN: Langsung album cover, marquee title (saat di-hover), dan visualizer tanpa border
-            HStack(alignment: .center, spacing: isEnlarged ? 5 : 4) {
-                if isHovered && (wingWidth == 0 || wingWidth >= 75) {
-                    let titleMaxW = max(36, min(isEnlarged ? 76 : 64, wingWidth > 0 ? (wingWidth - 44) : 64))
+            // MODERN CLEAN: { [Album Cover] [Title Music (thinking/hover)] [Visualizer] }
+            HStack(alignment: .center, spacing: itemSpacing) {
+                compactAlbumArt(
+                    size: artSize,
+                    cornerRadius: isEnlarged ? 5 : 4,
+                    fallbackFill: Color.white.opacity(0.12),
+                    fallbackIconColor: Color.white.opacity(0.85)
+                )
+
+                if let titleMaxW = titleMaxWidth {
                     ModernMarqueeText(
                         text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
                         maxWidth: titleMaxW
@@ -536,58 +599,28 @@ struct CyberMusicWingView: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
 
-                if let art = nowPlaying.artworkImage {
-                    Image(nsImage: art)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: artSize, height: artSize)
-                        .clipShape(RoundedRectangle(cornerRadius: isEnlarged ? 5 : 4, style: .continuous))
-                } else {
-                    RoundedRectangle(cornerRadius: isEnlarged ? 5 : 4, style: .continuous)
-                        .fill(Color.white.opacity(0.12))
-                        .frame(width: artSize, height: artSize)
-                        .overlay(
-                            Image(systemName: "music.note")
-                                .font(.system(size: isEnlarged ? 10 : 8, weight: .semibold))
-                                .foregroundStyle(Color.white.opacity(0.85))
-                        )
-                }
-
                 ModernAudioSpectrumView(
                     barCount: 3,
                     isPlaying: nowPlaying.isPlaying,
-                    barWidth: isEnlarged ? 2.4 : 2.0,
+                    barWidth: barWidth,
                     maxHeight: spectrumMaxH,
                     color: accentColor
                 )
             }
             .fixedSize()
-            .padding(.horizontal, 2)
+            .padding(.horizontal, horizPadding)
             .padding(.vertical, 1)
         } else {
-            // RETRO CYBER: Seamless Frameless, Sharp Album Art, Marquee Monospaced Title saat hover, Dancing Spectrum
-            HStack(alignment: .center, spacing: isEnlarged ? 5 : 4) {
-                // Album Art (crisp rounded corner, no outer bounding pill)
-                if let art = nowPlaying.artworkImage {
-                    Image(nsImage: art)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: artSize, height: artSize)
-                        .clipShape(RoundedRectangle(cornerRadius: isEnlarged ? 4.5 : 3.5, style: .continuous))
-                } else {
-                    RoundedRectangle(cornerRadius: isEnlarged ? 4.5 : 3.5, style: .continuous)
-                        .fill(Color(red: 0.08, green: 0.09, blue: 0.12))
-                        .frame(width: artSize, height: artSize)
-                        .overlay(
-                            Image(systemName: "music.note")
-                                .font(.system(size: isEnlarged ? 10 : 8))
-                                .foregroundStyle(accentColor.opacity(0.85))
-                        )
-                }
+            // RETRO CYBER: { [Album Cover] [Title Music (thinking/hover)] [Dancing Spectrum] }
+            HStack(alignment: .center, spacing: itemSpacing) {
+                compactAlbumArt(
+                    size: artSize,
+                    cornerRadius: isEnlarged ? 4.5 : 3.5,
+                    fallbackFill: Color(red: 0.08, green: 0.09, blue: 0.12),
+                    fallbackIconColor: accentColor.opacity(0.85)
+                )
 
-                // Title: Marquee scrolling text in retro monospace font (vertically centered, never truncated)
-                if isHovered && (wingWidth == 0 || wingWidth >= 75) {
-                    let titleMaxW = max(36, min(isEnlarged ? 76 : 64, wingWidth > 0 ? (wingWidth - 44) : 64))
+                if let titleMaxW = titleMaxWidth {
                     ModernMarqueeText(
                         text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
                         font: .system(size: isEnlarged ? 9.5 : 8.5, weight: .bold, design: .monospaced),
@@ -597,18 +630,17 @@ struct CyberMusicWingView: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
 
-                // Equalizer: Pixel dancing spectrum using active theme accent as base
                 CyberAudioSpectrumView(
-                    barCount: isHovered ? 3 : 4,
+                    barCount: (titleMaxWidth != nil || narrow) ? 3 : 4,
                     isPlaying: nowPlaying.isPlaying,
-                    barWidth: isEnlarged ? 2.4 : 2.0,
+                    barWidth: barWidth,
                     segmentHeight: isEnlarged ? 2.0 : 1.6,
                     segmentSpacing: 0.8,
                     palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
                 )
             }
             .fixedSize()
-            .padding(.horizontal, 2)
+            .padding(.horizontal, horizPadding)
             .padding(.vertical, 1)
         }
     }
