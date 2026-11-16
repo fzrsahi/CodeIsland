@@ -11,7 +11,8 @@ Last updated: 2026-11-16, on branch `docs/#33-windows-linux-architecture`.
 | [`GLOSSARY.md`](../GLOSSARY.md) | What Source, Agent, Hook target, Core, Shell, Panel, Island mean here. Read before writing any code or issue. |
 | [`docs/adr/0001-two-cores-one-contract.md`](adr/0001-two-cores-one-contract.md) | Why there are two cores and not one. |
 | [`docs/adr/0002-tauri-v2-shell.md`](adr/0002-tauri-v2-shell.md) | Why Tauri and not mygo, and what that costs. |
-| [`docs/plan-windows-linux.md`](plan-windows-linux.md) | Module map, seams, adapters, and **§7 = the canonical phase list**. Its §0 is a document map. If any other doc disagrees with §7, §7 wins. |
+| [`docs/plan-windows-linux.md`](plan-windows-linux.md) | Module map, seams, adapters, **§7 = the canonical phase list**, **§8 = PR slicing rules**. §0 is a document map. If any other doc disagrees with §7, §7 wins. |
+| [`docs/progress-windows-linux-port.md`](progress-windows-linux-port.md) | **Live status board and checkpoint log.** Read this second, after the handoff. Update it before you stop. |
 | [Issue #33](https://github.com/fzrsahi/CodeIsland/issues/33) | Parent. **The implementation order lives in its body**, under "Urutan Implementasi", and mirrors §7. |
 | [Issue #47](https://github.com/fzrsahi/CodeIsland/issues/47) | Windows scope, work items W0–W6, acceptance W-001…W-008. |
 | [Issue #48](https://github.com/fzrsahi/CodeIsland/issues/48) | Linux scope, work items L0–L7, acceptance L-001…L-011. |
@@ -23,10 +24,21 @@ Superseded, but still useful for Wayland risk analysis and acceptance criteria: 
 
 ## State
 
-- Branch `docs/#33-windows-linux-architecture`, one commit ahead of `origin/main`. Not pushed, no PR.
-- No application code exists. `rust/` does not exist yet.
-- Phase 0 (freeze the contract) has not started.
-- Untracked and **not** part of this work: `PRODUCT.md`, `linux/CodeIsland-Linux-Development-Plan.md`.
+The live state is in [`docs/progress-windows-linux-port.md`](progress-windows-linux-port.md) — status board and checkpoint log. Do not duplicate it here; it will go stale within a day.
+
+As of this writing: branch `docs/#33-windows-linux-architecture`, not pushed, no PR, no application code, `rust/` does not exist, phase 0 not started.
+
+Untracked and **not** part of this work: `PRODUCT.md`, `linux/CodeIsland-Linux-Development-Plan.md`.
+
+## Checkpoint discipline
+
+This is the part that gets skipped and then costs a whole session.
+
+- **Update `docs/progress-windows-linux-port.md` before you stop**, even mid-task. Half-finished work with a written checkpoint is resumable; finished-looking work with none is not.
+- The log entry is three lines: *what is done*, *what is next*, *what is blocking*. The third line is the one people omit and the only one that matters when resuming.
+- Commit the progress update on the branch you are working on, not a separate one. Conflicts here are trivial.
+- Never delete a status row. Change its status, or add a row if a PR was split.
+- If you cannot answer "which phase is running, what is its gate, what blocks it" from the progress doc alone, the last checkpoint was incomplete — fix it before starting work.
 
 ## Traps
 

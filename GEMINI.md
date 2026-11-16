@@ -79,9 +79,12 @@ Port sedang berjalan dan punya dokumen sendiri. **Jangan mulai dari README, dan 
 
 **Titik masuk:** [`docs/handoff-windows-linux-port.md`](docs/handoff-windows-linux-port.md) — urutan baca, status branch, dan daftar jebakan.
 
+**Status terkini:** [`docs/progress-windows-linux-port.md`](docs/progress-windows-linux-port.md) — papan status + log checkpoint. **Update dokumen ini sebelum berhenti**, walaupun pekerjaan belum selesai. Entri log wajib tiga baris: sudah apa, berikutnya apa, blocker apa.
+
 Aturan yang mengikat:
 
 - **Fase kanonik** ada di [`docs/plan-windows-linux.md`](docs/plan-windows-linux.md) §7, identik dengan "Urutan Implementasi" di issue #33. Kalau ada dokumen lain yang daftar fasenya berbeda, dokumen itu usang.
+- **Slicing PR** ada di plan §8. Satu PR per persilangan bahasa / jenis bukti / door type. Jangan kirim satu PR raksasa.
 - `linux/CodeIsland-Linux-Development-Plan.md` (Avalonia) dan `windows/CodeIsland-Windows-Complete-Development-Plan.md` (WPF) **usang**. Masih berguna untuk acceptance criteria dan risiko Wayland; jangan ikuti fase atau pilihan teknologinya.
 - **macOS (`Sources/`) tidak disentuh** oleh port ini.
 - Kosakata: [`GLOSSARY.md`](GLOSSARY.md). **Source ≠ Agent ≠ Hook target** — 34 vs 14 vs 9, tiga konsep berbeda.

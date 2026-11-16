@@ -325,7 +325,57 @@ Gate: `windows/CodeIsland.Core.Tests` hijau; sesi Cursor tidak lagi dobel.
 
 ---
 
-## 8. Risiko
+## 8. Slicing PR
+
+`.github/pull_request_template.md` memaksa tiga hal di setiap PR: **Summary + Evidence + Merge Danger (door type)**. Itu sendiri sudah menjadi aturan slicing.
+
+**Satu PR per satu persilangan dari tiga sumbu:**
+
+| Sumbu | Kalau dilanggar |
+|---|---|
+| **Bahasa** | Swift + C# dalam satu PR = reviewer Swift harus mereview C# |
+| **Jenis bukti** | log `swift test` + log `dotnet test` = dua blok Evidence yang tidak berhubungan |
+| **Door type** | refactor reversibel + direktori top-level baru dalam satu PR = reviewer tidak bisa menilai risiko |
+
+**Aturan tambahan:** gate milik **PR terakhir** dalam satu stack. PR yang tidak bisa membuktikan gate-nya sendiri harus di-stack di belakang PR yang bisa.
+
+### Urutan PR
+
+| # | Judul | Bahasa | Door | Evidence |
+|---|---|---|---|---|
+| 1 | `docs(#33)`: ADRs, glossary, plan, handoff | md | two-way | — |
+| 2 | `test(#33)`: ekspor golden fixtures ke JSON + schema | Swift + JSON | two-way | `BridgeGoldenTests` hijau, log `swift test` |
+| 3 | `fix(#33)`: hormati `cursor_version` di Windows | **C# saja** | two-way | `windows/CodeIsland.Core.Tests` + payload sebelum/sesudah |
+| 4 | `chore(#33)`: workspace Rust, protocol, ipc, CI purity check | Rust | **one-way** (direktori top-level baru) | `cargo test` + `cargo tree -p codeisland-core` bersih |
+| 5 | `feat(#33)`: bridge untuk `claude` | Rust | two-way | conformance `fixtures/macos/*` byte-identik |
+| 6 | `feat(#33)`: vertical slice island Linux X11 | Rust + TS | **one-way** (shell pertama) | GIF + log **`E2E-1`** |
+
+PR 4 → 5 → 6 **di-stack**, karena `E2E-1` baru lulus di PR 6.
+
+Setelah fase 1, fase 2 paling mudah di-slice — **satu PR per modul**, masing-masing satu file + satu conformance test, nol UI dan nol OS:
+
+```
+feat(core): port reduceHookEvent       → conformance fixtures/neutral
+feat(core): port AttentionPolicy       → conformance
+feat(core): port GitBranchReader       → conformance
+feat(core): port MarkdownBlockParser   → conformance
+feat(core): port JSONLTailer           → conformance
+```
+
+Fase 3 ke atas: **satu PR per adapter** (nowplaying, terminal, hotkey, tray), masing-masing dengan `probe()` yang bisa dinilai sendiri.
+
+### Kenapa `cursor_version` harus PR sendiri
+
+Ia **bug fix di kode orang lain**. Kalau digabung ke PR fixtures: maintainer `windows/` harus mereview PR yang 90%-nya file Swift, bug fix yang bisa ship hari ini tertahan berminggu-minggu, dan me-revert fixtures ikut menghapus fix-nya. Sebagai PR sendiri ia bisa di-merge independen **bahkan kalau seluruh port dibatalkan**.
+
+### Ukuran
+
+- PR non-UI: jaga **≤ ~400 baris diff**. Kalau lewat, biasanya ada dua concern yang tercampur.
+- PR UI: ukuran tidak menentukan; **Evidence yang menentukan** — GIF dan log `E2E-1`.
+
+---
+
+## 9. Risiko
 
 | Risiko | Dampak | Mitigasi |
 |---|---|---|
@@ -339,7 +389,7 @@ Gate: `windows/CodeIsland.Core.Tests` hijau; sesi Cursor tidak lagi dobel.
 
 ---
 
-## 9. Yang eksplisit **tidak** dikerjakan
+## 10. Yang eksplisit **tidak** dikerjakan
 
 - FFI/UniFFI di macOS. Seam socket sudah ada.
 - Port `Sources/CodeIsland` (79.044 LOC Swift) ke Rust.
@@ -350,7 +400,7 @@ Gate: `windows/CodeIsland.Core.Tests` hijau; sesi Cursor tidak lagi dobel.
 
 ---
 
-## 10. Konsekuensi
+## 11. Konsekuensi
 
 **Positif**
 - Satu shell untuk Windows + Linux, satu core Rust, satu bridge.
