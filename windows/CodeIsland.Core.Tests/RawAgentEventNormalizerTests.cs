@@ -23,4 +23,61 @@ public sealed class RawAgentEventNormalizerTests
         Assert.Equal("opencode-session", agentEvent.SessionId);
         Assert.Equal("bash", agentEvent.ToolName);
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("claude")]
+    [InlineData("Claude")]
+    public void Normalize_CursorPayloadWithCursorVersion_DoesNotAppearAsClaude(string? sourceTag)
+    {
+        var agentEvent = RawAgentEventNormalizer.Normalize("""
+            {
+              "conversation_id": "e1247fd5-d9a0-48ef-8457-0304606b1833",
+              "generation_id": "gen-1",
+              "session_id": "e1247fd5-d9a0-48ef-8457-0304606b1833",
+              "model": "composer-2.5",
+              "hook_event_name": "stop",
+              "cursor_version": "3.25.9",
+              "status": "completed"
+            }
+            """, sourceTag, "Stop");
+
+        Assert.Equal(AgentKind.Cursor, agentEvent.Agent);
+        Assert.Equal("e1247fd5-d9a0-48ef-8457-0304606b1833", agentEvent.SessionId);
+        Assert.Equal(AgentEventType.SessionEnd, agentEvent.Type);
+    }
+
+    [Theory]
+    [InlineData("\"  \"")]
+    [InlineData("\"\"")]
+    [InlineData("null")]
+    [InlineData("123")]
+    public void Normalize_ClaudeHookWithBlankOrInvalidCursorVersion_StaysClaude(string cursorVersionJson)
+    {
+        var json = $$"""
+            {
+              "session_id": "c1a0de00-0000-4000-8000-000000000001",
+              "hook_event_name": "Stop",
+              "cursor_version": {{cursorVersionJson}}
+            }
+            """;
+
+        var agentEvent = RawAgentEventNormalizer.Normalize(json, "claude");
+
+        Assert.Equal(AgentKind.Claude, agentEvent.Agent);
+    }
+
+    [Fact]
+    public void Normalize_ExplicitNonClaudeSource_IsNotOverriddenByCursorVersion()
+    {
+        var agentEvent = RawAgentEventNormalizer.Normalize("""
+            {
+              "session_id": "codex-1",
+              "hook_event_name": "Stop",
+              "cursor_version": "3.25.9"
+            }
+            """, "codex");
+
+        Assert.Equal(AgentKind.Codex, agentEvent.Agent);
+    }
 }

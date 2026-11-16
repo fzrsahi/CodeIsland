@@ -16,10 +16,11 @@ public static class RawAgentEventNormalizer
             ?? NestedString(root, "payload", "session_id", "sessionId", "thread_id")
             ?? NestedString(root, "data", "session_id", "sessionId", "thread_id");
         var cwd = FirstString(root, "cwd", "working_directory", "workingDirectory") ?? Environment.CurrentDirectory;
+        var resolvedSource = ResolveSource(root, sourceTag);
         if (string.IsNullOrWhiteSpace(sessionId))
-            sessionId = $"{sourceTag ?? "agent"}-cwd-{StableHash(cwd):x8}";
+            sessionId = $"{resolvedSource ?? "agent"}-cwd-{StableHash(cwd):x8}";
 
-        var agent = ParseAgent(sourceTag ?? FirstString(root, "_source", "source", "agent"));
+        var agent = ParseAgent(resolvedSource);
         var type = ParseEventType(eventName, root);
         var eventId = FirstString(root, "event_id", "eventId", "tool_use_id", "toolUseId", "call_id", "callId")
             ?? $"{sessionId}:{eventName ?? type.ToString()}:{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
@@ -51,10 +52,31 @@ public static class RawAgentEventNormalizer
         };
     }
 
-    private static AgentKind ParseAgent(string? value) => value?.ToLowerInvariant() switch
+    private static string? ResolveSource(JsonElement root, string? sourceTag)
+    {
+        var declaredSource = string.IsNullOrWhiteSpace(sourceTag) ? null : sourceTag.Trim();
+        var explicitPayloadSource = FirstString(root, "_source", "agent");
+        var isClaudeHookOrUndeclared = declaredSource is null
+            || string.Equals(declaredSource, "claude", StringComparison.OrdinalIgnoreCase);
+
+        // Cursor runs imported Claude Code hooks (--source claude) with its own payload carrying cursor_version.
+        if (isClaudeHookOrUndeclared
+            && FirstString(root, "cursor_version") is not null
+            && (declaredSource is not null
+                || explicitPayloadSource is null
+                || string.Equals(explicitPayloadSource, "claude", StringComparison.OrdinalIgnoreCase)))
+        {
+            return "cursor";
+        }
+
+        return declaredSource ?? FirstString(root, "_source", "source", "agent");
+    }
+
+    private static AgentKind ParseAgent(string? value) => value?.Trim().ToLowerInvariant() switch
     {
         "claude" => AgentKind.Claude, "codex" => AgentKind.Codex, "gemini" => AgentKind.Gemini,
-        "cursor" => AgentKind.Cursor, "copilot" => AgentKind.Copilot, "trae" => AgentKind.Trae,
+        "cursor" or "cursor-cli" or "cursor-agent" or "cursorcli" or "cursoragent" => AgentKind.Cursor,
+        "copilot" => AgentKind.Copilot, "trae" => AgentKind.Trae,
         "qoder" => AgentKind.Qoder, "factory" or "droid" => AgentKind.Factory,
         "codebuddy" => AgentKind.CodeBuddy, "opencode" => AgentKind.OpenCode, "kimi" => AgentKind.Kimi,
         "cline" => AgentKind.Cline, "pi" => AgentKind.Pi, _ => AgentKind.Unknown
