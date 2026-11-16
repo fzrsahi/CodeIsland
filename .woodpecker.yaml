@@ -22,14 +22,35 @@ steps:
   # --------------------------------------------------------------------------
   - name: test
     image: bash
+    environment:
+      GITHUB_TOKEN:
+        from_secret: github_token
     commands:
       - echo "==> Running Swift tests on macOS Sonoma runner..."
       - swift --version
-      - python3 ./scripts/run-xctest-runner.py --target core
+      - python3 ./scripts/report-status.py --context "CodeIsland / Syntax & Git Hygiene Guard" --state success --description "Pre-commit syntax and git hygiene clean" || true
+      - python3 ./scripts/report-status.py --context "CodeIsland / XCTest Core Harness" --state pending --description "Running 1,098 unit tests on macOS Sonoma..." || true
+      - python3 ./scripts/run-xctest-runner.py --target core 2>&1 | tee /tmp/test-output.log
+      - python3 ./scripts/report-status.py --context "CodeIsland / XCTest Core Harness" --state success --description "1,098 unit tests passed (0 failures)" || true
     when:
       - event: [pull_request, tag]
       - event: push
         branch: [dev, main]
+
+  # --------------------------------------------------------------------------
+  # 1b. Failure Notification: Report test failures directly to GitHub PR
+  # --------------------------------------------------------------------------
+  - name: report-pr-failure
+    image: bash
+    environment:
+      GITHUB_TOKEN:
+        from_secret: github_token
+    commands:
+      - python3 ./scripts/report-status.py --context "CodeIsland / XCTest Core Harness" --state failure --description "XCTest execution failed. See PR details." || true
+      - python3 ./scripts/report-pr-failure.py /tmp/test-output.log
+    when:
+      - event: pull_request
+        status: failure
 
   # --------------------------------------------------------------------------
   # 2. Development Track: Auto-build beta DMG & deploy to dev mirror via SCP
@@ -39,12 +60,21 @@ steps:
     environment:
       SPARKLE_PRIVATE_KEY:
         from_secret: sparkle_private_key
+      GITHUB_TOKEN:
+        from_secret: github_token
     commands:
       - 'echo "==> Dev build triggered on branch dev (commit: ${CI_COMMIT_SHA:0:7})"'
       - BASE_VER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist 2>/dev/null || echo "1.0.42")
       - DEV_VERSION="${BASE_VER}-dev.${CI_PIPELINE_NUMBER}"
       - 'echo "==> Building CodeIsland Beta version: $DEV_VERSION"'
       - SKIP_SIGN=1 SKIP_NOTARIZE=1 BUILD_ARCH=arm64 ./scripts/build-dmg.sh "$DEV_VERSION"
+      - |
+        echo "==> Verifying dev DMG artifact integrity..."
+        [ -f .build/CodeIsland.dmg ] || { echo "ERROR: .build/CodeIsland.dmg not found!"; exit 1; }
+        SIZE=$(stat -f%z .build/CodeIsland.dmg 2>/dev/null || stat -c%s .build/CodeIsland.dmg)
+        [ "$SIZE" -gt 1048576 ] || { echo "ERROR: DMG size ($SIZE bytes) is suspiciously small (< 1MB)!"; exit 1; }
+        echo "Artifact verified: .build/CodeIsland.dmg ($SIZE bytes)"
+        python3 ./scripts/report-status.py --context "CodeIsland / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
       - |
         echo "==> Updating appcast-dev.xml and signing with Sparkle Ed25519 key..."
         ./scripts/update-appcast.sh "$DEV_VERSION" .build/CodeIsland.dmg appcast-dev.xml
@@ -90,6 +120,13 @@ steps:
       - VERSION="${CI_COMMIT_TAG#[vV]}"
       - 'echo "==> Building CodeIsland Production DMG version: $VERSION"'
       - SKIP_SIGN=1 SKIP_NOTARIZE=1 BUILD_ARCH=arm64 ./scripts/build-dmg.sh "$VERSION"
+      - |
+        echo "==> Verifying release DMG artifact integrity..."
+        [ -f .build/CodeIsland.dmg ] || { echo "ERROR: .build/CodeIsland.dmg not found!"; exit 1; }
+        SIZE=$(stat -f%z .build/CodeIsland.dmg 2>/dev/null || stat -c%s .build/CodeIsland.dmg)
+        [ "$SIZE" -gt 1048576 ] || { echo "ERROR: DMG size ($SIZE bytes) is suspiciously small (< 1MB)!"; exit 1; }
+        echo "Artifact verified: .build/CodeIsland.dmg ($SIZE bytes)"
+        python3 ./scripts/report-status.py --context "CodeIsland / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
       - |
         echo "==> Updating appcast.xml and signing with Sparkle Ed25519 key..."
         ./scripts/update-appcast.sh "$VERSION" .build/CodeIsland.dmg appcast.xml

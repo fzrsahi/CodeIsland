@@ -100,17 +100,18 @@ final class NotchNavigationManager {
         let gameEnabled = UserDefaults.standard.object(forKey: SettingsKey.gameEnabled) as? Bool ?? SettingsDefaults.gameEnabled
         let allTabs = ExpandedContentTab.allCases.filter { tab in
             if tab == .prayer && !PrayerTimeManager.shared.isEnabled { return false }
+            if tab == .mail && !MailManager.shared.isEnabled { return false }
             if tab == .game && !gameEnabled { return false }
             return true
         }
         guard let currentPos = allTabs.firstIndex(of: currentTab) else { return }
-        let targetIndex = currentPos + (forward ? 1 : -1)
-        guard targetIndex >= 0 && targetIndex < allTabs.count else {
+        let nextPos = currentPos + (forward ? 1 : -1)
+        guard nextPos >= 0 && nextPos < allTabs.count else {
             // Reached boundary edge: do nothing and do not trigger haptic
             return
         }
 
-        let targetTab = allTabs[targetIndex]
+        let targetTab = allTabs[nextPos]
         appState.transitionToTab(targetTab)
         let hapticOn = UserDefaults.standard.object(forKey: SettingsKey.hapticOnHover) as? Bool ?? SettingsDefaults.hapticOnHover
         if hapticOn {

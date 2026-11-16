@@ -17,6 +17,7 @@ enum SettingsPage: String, Identifiable, Hashable {
     case workspace
     case music
     case prayer
+    case mail
     case game
     // System & Tools
     case behavior
@@ -38,6 +39,7 @@ enum SettingsPage: String, Identifiable, Hashable {
         case .workspace: return "folder.fill.badge.gearshape"
         case .music: return "music.note.list"
         case .prayer: return "moon.stars.fill"
+        case .mail: return "envelope.fill"
         case .game: return "gamecontroller.fill"
         case .behavior: return "slider.horizontal.3"
         case .remote: return "network"
@@ -58,6 +60,7 @@ enum SettingsPage: String, Identifiable, Hashable {
         case .workspace: return .teal
         case .music: return Color(red: 1.0, green: 0.16, blue: 0.53)
         case .prayer: return Color(red: 0.12, green: 0.84, blue: 0.38)
+        case .mail: return Color(red: 0.25, green: 0.52, blue: 0.96)
         case .game: return .orange
         case .behavior: return .orange
         case .remote: return .mint
@@ -75,7 +78,7 @@ private struct SidebarGroup: Hashable {
 
 private let sidebarGroups: [SidebarGroup] = [
     SidebarGroup(title: "System", pages: [.general, .appearance, .mascots, .sound, .shortcuts]),
-    SidebarGroup(title: "Features & HUD", pages: [.agents, .workspace, .music, .prayer, .game]),
+    SidebarGroup(title: "Features & HUD", pages: [.agents, .workspace, .music, .prayer, .mail, .game]),
     SidebarGroup(title: "CodeIsland", pages: [.behavior, .remote, .hooks, .buddy, .about]),
 ]
 
@@ -123,6 +126,7 @@ struct SettingsView: View {
                 case .workspace: WorkspaceSettingsPage()
                 case .music: MusicSettingsPage()
                 case .prayer: PrayerSettingsPage()
+                case .mail: MailSettingsPage()
                 case .game: GameSettingsPage()
                 case .behavior: BehaviorPage(appState: appState)
                 case .remote: RemoteHostsPage()
@@ -4177,5 +4181,101 @@ private struct PrayerSettingsPage: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+    }
+}
+
+// MARK: - Mail Settings Page
+
+private struct MailSettingsPage: View {
+    @ObservedObject private var mailManager = MailManager.shared
+    @AppStorage(SettingsKey.mailIntegrationEnabled) private var mailEnabled = SettingsDefaults.mailIntegrationEnabled
+    @AppStorage(SettingsKey.mailAutoPeekNewEmail) private var autoPeek = SettingsDefaults.mailAutoPeekNewEmail
+    @AppStorage(SettingsKey.mailSoundEnabled) private var mailSoundEnabled = SettingsDefaults.mailSoundEnabled
+    @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Enable Apple Mail Integration", isOn: $mailEnabled)
+                Text("Connects CodeIsland to macOS Apple Mail.app securely via local AppleScript. Zero credentials or passwords are ever stored.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if mailEnabled {
+                Section("Notch Behavior & Sound") {
+                    Toggle("Auto-Peek on New Email", isOn: $autoPeek)
+                    Text("When a new unread email arrives, the right wing of the notch immediately plays an arrival animation with a +1 badge, then returns smoothly.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    let isRetro = (islandUITheme == IslandUITheme.pixel.rawValue)
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Sound on New Email")
+                            Text(isRetro
+                                ? "8-Bit Chiptune Mail • respects Quiet Hours & Auto-Mute"
+                                : "Classic Inbox Tri-Tone • respects Quiet Hours & Auto-Mute")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 16)
+                        Button {
+                            SoundManager.shared.previewMailArrival(isRetro: isRetro)
+                        } label: {
+                            Image(systemName: "play.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Preview Mail Sound")
+                        Toggle("", isOn: $mailSoundEnabled)
+                            .labelsHidden()
+                    }
+                }
+
+                Section("Inbox Status") {
+                    HStack {
+                        Text("Recent Unread (7d)")
+                        Spacer()
+                        Text(mailManager.totalInboxUnreadCount > mailManager.unreadCount
+                             ? "\(MailManager.formatBadgeCount(mailManager.unreadCount)) recent (\(mailManager.totalInboxUnreadCount.formatted()) total)"
+                             : "\(mailManager.unreadCount) emails")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let last = mailManager.lastRefreshed {
+                        HStack {
+                            Text("Last Refreshed")
+                            Spacer()
+                            Text(last.formatted(date: .omitted, time: .standard))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    HStack(spacing: 12) {
+                        Button {
+                            mailManager.refresh()
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Refresh Now")
+                            }
+                        }
+
+                        Button {
+                            mailManager.openMailInbox()
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "arrow.up.forward.app")
+                                Text("Open Apple Mail.app")
+                            }
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+            }
+        }
+        .formStyle(.grouped)
     }
 }

@@ -232,6 +232,7 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         withObservationTracking {
             _ = appState.sessions
             _ = appState.surface
+            _ = IslandSignals.shared.isPlaying
         } onChange: { [weak self] in
             Task { @MainActor in
                 guard let self else { return }
@@ -285,7 +286,7 @@ class PanelWindowController: NSObject, NSWindowDelegate {
         setupHorizontalDragMonitor()
         updatePosition()
         panel.orderFrontRegardless()
-        MascotAnimationGate.shared.setPanelVisible(true)
+        updateVisibility()
 
         // Screen change observer
         NotificationCenter.default.addObserver(

@@ -385,7 +385,6 @@ struct ModernWorkspaceView: View {
                         .padding(.horizontal, 24)
 
                     Button(action: {
-                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                         manager.chooseWorkspaceFolder()
                     }) {
                         HStack(spacing: 5) {
@@ -420,7 +419,6 @@ struct ModernWorkspaceView: View {
                                 .lineLimit(1)
 
                             Button(action: {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 manager.chooseWorkspaceFolder()
                             }) {
                                 Image(systemName: "arrow.triangle.2.circlepath")
@@ -496,7 +494,6 @@ struct ModernWorkspaceView: View {
                         ModernActiveAgentPill(appState: appState, cwd: manager.currentCwd)
 
                         Button(action: {
-                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                             manager.refresh(force: true)
                         }) {
                             Group {
@@ -567,7 +564,6 @@ struct ModernWorkspaceView: View {
                             }
 
                             Button(action: {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 NSWorkspace.shared.open(URL(fileURLWithPath: manager.currentCwd))
                             }) {
                                 HStack(spacing: 3.5) {
@@ -591,7 +587,6 @@ struct ModernWorkspaceView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 6) {
                                 Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                     withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                                         manager.generateAICommitMessage()
                                     }
@@ -633,7 +628,6 @@ struct ModernWorkspaceView: View {
                                 )
 
                                 Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                     manager.executeCommit(message: manager.proposedCommitMessage, push: false)
                                 }) {
                                     Text(manager.isCommitting ? "..." : "Commit")
@@ -650,7 +644,6 @@ struct ModernWorkspaceView: View {
                                 .disabled(manager.isCommitting || manager.proposedCommitMessage.isEmpty)
 
                                 Button(action: {
-                                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                     manager.executeCommit(message: manager.proposedCommitMessage, push: true)
                                 }) {
                                     HStack(spacing: 2.5) {
@@ -771,12 +764,12 @@ struct PixelRetroWorkspaceView: View {
                         .padding(.horizontal, 24)
 
                     Button(action: {
-                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                         manager.chooseWorkspaceFolder()
                     }) {
                         HStack(spacing: 6) {
-                            WorkspacePixelIcon(glyph: .folder, color: Color.black, pixelSize: 1.1)
-                            PixelText(text: "CHOOSE FOLDER", color: Color.black, pixelSize: 1.05)
+                            let buttonFg = AppColorTheme.contrastingForeground(on: accentColor)
+                            WorkspacePixelIcon(glyph: .folder, color: buttonFg, pixelSize: 1.1)
+                            PixelText(text: "CHOOSE FOLDER", color: buttonFg, pixelSize: 1.05)
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4.5)
@@ -799,7 +792,6 @@ struct PixelRetroWorkspaceView: View {
                     HStack(alignment: .center, spacing: 6) {
                         // Project Name + Switcher
                         Button(action: {
-                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                             manager.chooseWorkspaceFolder()
                         }) {
                             HStack(spacing: 5) {
@@ -904,7 +896,6 @@ struct PixelRetroWorkspaceView: View {
 
                         // Refresh Button
                         Button(action: {
-                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                             manager.refresh(force: true)
                         }) {
                             WorkspacePixelIcon(
@@ -1002,12 +993,12 @@ struct PixelRetroWorkspaceView: View {
                             }
 
                             Button(action: {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 NSWorkspace.shared.open(URL(fileURLWithPath: manager.currentCwd))
                             }) {
                                 HStack(spacing: 4) {
-                                    WorkspacePixelIcon(glyph: .folder, color: openHovered ? Color.black : accentColor, pixelSize: 1.0)
-                                    PixelText(text: "OPEN", color: openHovered ? Color.black : accentColor, pixelSize: 1.0)
+                                    let hoveredFg = AppColorTheme.contrastingForeground(on: accentColor)
+                                    WorkspacePixelIcon(glyph: .folder, color: openHovered ? hoveredFg : accentColor, pixelSize: 1.0)
+                                    PixelText(text: "OPEN", color: openHovered ? hoveredFg : accentColor, pixelSize: 1.0)
                                 }
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3.5)
@@ -1027,14 +1018,14 @@ struct PixelRetroWorkspaceView: View {
                         HStack(spacing: 5) {
                             // AI Suggest Button
                             Button(action: {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                                     manager.generateAICommitMessage()
                                 }
                             }) {
                                 HStack(spacing: 3) {
-                                    WorkspacePixelIcon(glyph: .sparkle, color: aiHovered ? Color.black : accentColor, pixelSize: 1.0)
-                                    PixelText(text: "AI", color: aiHovered ? Color.black : accentColor, pixelSize: 1.0)
+                                    let hoveredFg = AppColorTheme.contrastingForeground(on: accentColor)
+                                    WorkspacePixelIcon(glyph: .sparkle, color: aiHovered ? hoveredFg : accentColor, pixelSize: 1.0)
+                                    PixelText(text: "AI", color: aiHovered ? hoveredFg : accentColor, pixelSize: 1.0)
                                 }
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3.5)
@@ -1070,7 +1061,6 @@ struct PixelRetroWorkspaceView: View {
 
                             // Commit Button
                             Button(action: {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 manager.executeCommit(message: manager.proposedCommitMessage, push: false)
                             }) {
                                 HStack(spacing: 3) {
@@ -1104,18 +1094,18 @@ struct PixelRetroWorkspaceView: View {
 
                             // Push Button
                             Button(action: {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
                                 manager.executeCommit(message: manager.proposedCommitMessage, push: true)
                             }) {
                                 HStack(spacing: 3) {
+                                    let hoveredFg = AppColorTheme.contrastingForeground(on: accentColor)
                                     WorkspacePixelIcon(
                                         glyph: .push,
-                                        color: pushHovered ? Color.black : MinimalPixelPalette.textWhite,
+                                        color: pushHovered ? hoveredFg : MinimalPixelPalette.textWhite,
                                         pixelSize: 1.0
                                     )
                                     PixelText(
                                         text: "PUSH",
-                                        color: pushHovered ? Color.black : MinimalPixelPalette.textWhite,
+                                        color: pushHovered ? hoveredFg : MinimalPixelPalette.textWhite,
                                         pixelSize: 1.0
                                     )
                                 }
