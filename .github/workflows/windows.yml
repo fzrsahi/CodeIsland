@@ -3,9 +3,15 @@ name: Windows
 on:
   workflow_dispatch:
   push:
-    paths: ["windows/**"]
+    paths:
+      - "windows/**"
+      - "!windows/**/*.md"
+      - ".github/workflows/windows.yml"
   pull_request:
-    paths: ["windows/**"]
+    paths:
+      - "windows/**"
+      - "!windows/**/*.md"
+      - ".github/workflows/windows.yml"
 
 permissions:
   contents: read

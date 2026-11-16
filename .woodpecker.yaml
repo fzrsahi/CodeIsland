@@ -38,6 +38,37 @@ steps:
         branch: [dev, main]
 
   # --------------------------------------------------------------------------
+  # 1a. .NET core tests: CodeIsland.Core, CodeIsland.Protocol and
+  #     CodeIsland.Core.Tests are all net8.0 and use no Windows-only API, so
+  #     they run on this macOS runner. Only CodeIsland.Windows and
+  #     CodeIsland.Windows.Smoke need a Windows agent, and both are being
+  #     removed in phase 6 of the port (#33).
+  # --------------------------------------------------------------------------
+  - name: dotnet-core-tests
+    image: bash
+    environment:
+      GITHUB_TOKEN:
+        from_secret: github_token
+    commands:
+      - echo "==> Running CodeIsland.Core.Tests (.NET, portable)..."
+      - |
+        if ! command -v dotnet >/dev/null 2>&1; then
+          echo "dotnet not found on this runner."
+          echo "Install the .NET 8 SDK on the runner, or set DOTNET_ROOT if it is installed outside PATH."
+          python3 ./scripts/report-status.py --context "CodeIsland / .NET Core Tests" --state error --description "dotnet not installed on runner" || true
+          exit 1
+        fi
+      # net8.0 targets run on a newer runtime when only that one is installed.
+      - export DOTNET_ROLL_FORWARD=Major
+      - dotnet --list-sdks
+      - dotnet test windows/CodeIsland.Core.Tests/CodeIsland.Core.Tests.csproj -c Release 2>&1 | tee /tmp/dotnet-test.log
+      - python3 ./scripts/report-status.py --context "CodeIsland / .NET Core Tests" --state success --description ".NET core tests passed" || true
+    when:
+      - event: [pull_request, tag]
+      - event: push
+        branch: [dev, main]
+
+  # --------------------------------------------------------------------------
   # 1b. Failure Notification: Report test failures directly to GitHub PR
   # --------------------------------------------------------------------------
   - name: report-pr-failure
