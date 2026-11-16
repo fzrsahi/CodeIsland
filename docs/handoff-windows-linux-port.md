@@ -60,6 +60,10 @@ Each of these cost time to find. They are not in the ADRs.
 
 ## Next actions
 
-1. Write the ordering comment on #47 and #48 — the order itself is already in #33's body, but neither sub-issue states where it sits or what blocks it.
-2. Start Phase 0: export `BridgeGoldenFixtures`/`Expectations` to `fixtures/*.json`, split neutral vs per-OS, and fix `cursor_version` in `RawAgentEventNormalizer.cs`.
-3. Do not start Phase 1 (the Linux X11 vertical slice) until Phase 0's fixtures are readable outside Swift.
+The ordering comments on #47 and #48 are written. Both point at #48 for the work that starts now.
+
+1. **Phase 0** — export `BridgeGoldenFixtures`/`Expectations` to `fixtures/*.json`, split neutral vs per-OS, and fix `cursor_version` in `RawAgentEventNormalizer.cs`. Definition of done is in the #48 comment.
+2. **Phase 1** — the Linux X11 vertical slice. Do not start it until Phase 0's fixtures are readable outside Swift.
+3. **Do not start Windows** (#47). It is phase 4 and inherits a proven shell and a conformant core.
+
+If Phase 1's gate fails — no click-through, or focus is stolen — stop and report rather than starting Phase 2.
