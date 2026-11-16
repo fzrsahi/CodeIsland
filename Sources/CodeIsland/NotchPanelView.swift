@@ -1661,11 +1661,6 @@ private struct CompactLeftWing: View {
                         CAMusicGlowView(kind: .aura, mascotSize: mascotSize,
                                       animating: animationGates.allows(.music))
                             .frame(width: mascotSize + 8, height: mascotSize + 8)
-                    } else if displayStatus == .idle && !isThinking && shownTool == nil {
-                        // Slow idle glow, same treatment under Ambient Idle.
-                        CAMusicGlowView(kind: .breath, mascotSize: mascotSize,
-                                      animating: animationGates.allows(.ambientIdle))
-                            .frame(width: mascotSize + 4, height: mascotSize + 4)
                     }
 
                     MascotView(source: displaySource, status: effectiveMascotStatus, size: mascotSize)
