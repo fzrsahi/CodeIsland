@@ -102,7 +102,7 @@ final class IslandDisplayModeTests: XCTestCase {
     func testPillOuterPaddingProtectsRoundedCapsInDynamicIslandMode() {
         XCTAssertEqual(
             IslandDisplayMetrics.outerPadding(wingWidth: 40, expanded: false, bilateral: false, displayMode: .dynamicIsland),
-            10
+            13
         )
         XCTAssertEqual(
             IslandDisplayMetrics.outerPadding(wingWidth: 40, expanded: false, bilateral: false, displayMode: .notch),
@@ -116,5 +116,29 @@ final class IslandDisplayModeTests: XCTestCase {
             IslandDisplayMetrics.outerPadding(wingWidth: 80, expanded: true, bilateral: false, displayMode: .dynamicIsland),
             12
         )
+    }
+
+    func testBalancedTwinWidthRemovesHollowGapAndScalesCleanly() {
+        let idleMusicW = IslandDisplayMetrics.balancedTwinWidth(
+            leftWidth: 26,
+            rightWidth: 38,
+            outerPadding: 13,
+            dividerGap: 11,
+            hasDivider: true,
+            scalePercent: 100,
+            maxAllowedWidth: 400
+        )
+        XCTAssertEqual(idleMusicW, 113, accuracy: 0.5)
+
+        let thinkingW = IslandDisplayMetrics.balancedTwinWidth(
+            leftWidth: 86,
+            rightWidth: 44,
+            outerPadding: 13,
+            dividerGap: 11,
+            hasDivider: true,
+            scalePercent: 100,
+            maxAllowedWidth: 400
+        )
+        XCTAssertEqual(thinkingW, 179, accuracy: 0.5)
     }
 }

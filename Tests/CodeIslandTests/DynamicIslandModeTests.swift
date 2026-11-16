@@ -167,6 +167,11 @@ final class DynamicIslandModeTests: XCTestCase {
         )
         XCTAssertGreaterThanOrEqual(nonNotchThinking.topGapPt, 9.0)
         XCTAssertLessThan(nonNotchThinking.topRowWidthPt, nonNotchThinking.midRowWidthPt - 6)
+        XCTAssertGreaterThanOrEqual(
+            nonNotchThinking.midRowWidthPt,
+            148,
+            "Balanced Twin Thinking pill must keep '... thinking' visible alongside branch label"
+        )
         XCTAssertLessThan(nonNotchThinking.midRowWidthPt, 240)
 
         // Notched display comparison: Notch mode vs Dynamic Island mode preserving physical center clearance
@@ -250,6 +255,56 @@ final class DynamicIslandModeTests: XCTestCase {
         XCTAssertLessThan(toastPill.topRowWidthPt, toastPill.midRowWidthPt - 8)
     }
 
+    func testDynamicIslandIdleMusicAndNativeLyricsRenderUnifiedBalancedPillWithoutDetachedBar() throws {
+        configureMusic(artworkColor: NSColor(srgbRed: 0.0, green: 0.35, blue: 1.0, alpha: 1.0))
+
+        // Option 2 Balanced Twin (Idle + Music): tightly proportioned width, no hollow center gap
+        let idleMusic = try renderScene(
+            displayMode: .dynamicIsland,
+            hasNotch: false,
+            state: makeAgentState(status: .idle),
+            canvasWidth: 620,
+            canvasHeight: 72,
+            saveName: "after-balanced-twin-idle-music"
+        )
+        XCTAssertGreaterThanOrEqual(idleMusic.midRowWidthPt, 96)
+        XCTAssertLessThanOrEqual(
+            idleMusic.midRowWidthPt,
+            152,
+            "Option 2 Balanced Twin must avoid wide hollow gap between Mascot and Album+EQ"
+        )
+        XCTAssertTrue(idleMusic.hasBlueArtworkPixel)
+        XCTAssertTrue(idleMusic.hasAmberVisualizerPixel)
+
+        // Native Lyrics inside Dynamic Island Mode: single unified capsule (no detached sub-notch pill below)
+        NowPlayingManager.shared.lyrics = [LyricLine(id: 0, timestamp: 0, text: "Midnight neon rain on the glass")]
+        NowPlayingManager.shared.currentLyricIndex = 0
+        IslandSignals.shared.setMusic(
+            isPlaying: true,
+            showToast: false,
+            hasTitle: true,
+            hasLyrics: true,
+            title: "Midnight City",
+            artist: "M83"
+        )
+
+        let lyricPill = try renderScene(
+            displayMode: .dynamicIsland,
+            hasNotch: false,
+            state: makeAgentState(status: .idle),
+            canvasWidth: 620,
+            canvasHeight: 112,
+            showCompactLyrics: true,
+            saveName: "after-balanced-twin-lyrics"
+        )
+        XCTAssertLessThanOrEqual(
+            lyricPill.renderedHeightPt,
+            40,
+            "Dynamic Island lyrics must live inside the unified top pill without a detached sub-notch bar"
+        )
+        XCTAssertTrue(lyricPill.hasBlueArtworkPixel)
+    }
+
     func testSettingsAppearanceRendersDisplayModePicker() throws {
         suite.removePersistentDomain(forName: suiteName)
         suite.set(IslandDisplayMode.dynamicIsland.rawValue, forKey: SettingsKey.islandDisplayMode)
@@ -327,6 +382,7 @@ final class DynamicIslandModeTests: XCTestCase {
 
     private struct SceneMetrics {
         let topGapPt: CGFloat
+        let renderedHeightPt: CGFloat
         let topRowWidthPt: CGFloat
         let midRowWidthPt: CGFloat
         let bottomRowWidthPt: CGFloat
@@ -341,6 +397,7 @@ final class DynamicIslandModeTests: XCTestCase {
         state: AppState,
         canvasWidth: CGFloat,
         canvasHeight: CGFloat,
+        showCompactLyrics: Bool = false,
         saveName: String
     ) throws -> SceneMetrics {
         suite.removePersistentDomain(forName: suiteName)
@@ -348,7 +405,7 @@ final class DynamicIslandModeTests: XCTestCase {
         suite.set(IslandUITheme.modern.rawValue, forKey: SettingsKey.islandUITheme)
         suite.set(MusicHUDTheme.modernClean.rawValue, forKey: SettingsKey.musicHUDTheme)
         suite.set(MusicProgressColor.amber.rawValue, forKey: SettingsKey.musicHUDProgressColor)
-        suite.set(false, forKey: SettingsKey.showCompactLyrics)
+        suite.set(showCompactLyrics, forKey: SettingsKey.showCompactLyrics)
         suite.set(true, forKey: SettingsKey.showAgentDetails)
         suite.set(true, forKey: SettingsKey.showToolStatus)
         suite.set(100, forKey: SettingsKey.collapsedWidthScale)
@@ -450,6 +507,7 @@ final class DynamicIslandModeTests: XCTestCase {
 
         return SceneMetrics(
             topGapPt: CGFloat(firstY) / scale,
+            renderedHeightPt: CGFloat(lastY - firstY + 1) / scale,
             topRowWidthPt: topWidth,
             midRowWidthPt: midWidth,
             bottomRowWidthPt: bottomWidth,

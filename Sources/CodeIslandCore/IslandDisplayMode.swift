@@ -60,7 +60,30 @@ public enum IslandDisplayMetrics {
         return hasNotch ? max(notchWidth, scaled) : scaled
     }
 
-    /// Width of the empty resting island shell when no sessions or status wings are shown.
+    /// Tight Option 2 ("Balanced Twin") collapsed pill width on non-notch displays in Dynamic Island mode.
+    public static func balancedTwinWidth(
+        leftWidth: Double,
+        rightWidth: Double,
+        outerPadding: Double = 13.0,
+        dividerGap: Double = 11.0,
+        hasDivider: Bool = true,
+        scalePercent: Int = 100,
+        maxAllowedWidth: Double = 400.0
+    ) -> Double {
+        let dividerSpan = hasDivider ? (dividerGap * 2.0 + 1.0) : dividerGap
+        let minimumSafe = outerPadding * 2.0 + leftWidth + dividerSpan + rightWidth
+        let factor = scaleFactor(for: scalePercent)
+        let scaled: Double
+        if factor >= 1.0 {
+            scaled = minimumSafe + (factor - 1.0) * 32.0
+        } else {
+            let compacted = outerPadding * 1.6 + leftWidth + dividerSpan + rightWidth
+            scaled = compacted + (minimumSafe - compacted) * factor
+        }
+        return min(max(scaled, minimumSafe * 0.92), maxAllowedWidth)
+    }
+
+    /// Resting idle shell width used in Dynamic Island mode when no sessions or media are active.
     public static func restingWidth(
         notchWidth: Double,
         scalePercent: Int,
@@ -101,7 +124,7 @@ public enum IslandDisplayMetrics {
         displayMode: IslandDisplayMode
     ) -> Double {
         if expanded || bilateral { return 12.0 }
-        if displayMode == .dynamicIsland { return 10.0 }
+        if displayMode == .dynamicIsland { return 13.0 }
         if wingWidth < 48.0 { return 6.0 }
         if wingWidth < 70.0 { return 8.0 }
         return 10.0
