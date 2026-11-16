@@ -11,13 +11,15 @@ Last updated: 2026-11-16, on branch `docs/#33-windows-linux-architecture`.
 | [`GLOSSARY.md`](../GLOSSARY.md) | What Source, Agent, Hook target, Core, Shell, Panel, Island mean here. Read before writing any code or issue. |
 | [`docs/adr/0001-two-cores-one-contract.md`](adr/0001-two-cores-one-contract.md) | Why there are two cores and not one. |
 | [`docs/adr/0002-tauri-v2-shell.md`](adr/0002-tauri-v2-shell.md) | Why Tauri and not mygo, and what that costs. |
-| [`docs/plan-windows-linux.md`](plan-windows-linux.md) | Module map, seams, adapters, per-OS phases and gates. |
-| [Issue #33](https://github.com/fzrsahi/CodeIsland/issues/33) | Parent. **The implementation order lives in its body**, under "Urutan Implementasi". |
-| [Issue #47](https://github.com/fzrsahi/CodeIsland/issues/47) | Windows scope, phases W0–W6, acceptance W-001…W-008. |
-| [Issue #48](https://github.com/fzrsahi/CodeIsland/issues/48) | Linux scope, phases L0–L7, acceptance L-001…L-011. |
+| [`docs/plan-windows-linux.md`](plan-windows-linux.md) | Module map, seams, adapters, and **§7 = the canonical phase list**. Its §0 is a document map. If any other doc disagrees with §7, §7 wins. |
+| [Issue #33](https://github.com/fzrsahi/CodeIsland/issues/33) | Parent. **The implementation order lives in its body**, under "Urutan Implementasi", and mirrors §7. |
+| [Issue #47](https://github.com/fzrsahi/CodeIsland/issues/47) | Windows scope, work items W0–W6, acceptance W-001…W-008. |
+| [Issue #48](https://github.com/fzrsahi/CodeIsland/issues/48) | Linux scope, work items L0–L7, acceptance L-001…L-011. |
 | [`docs/research-mygo-vs-tauri.md`](research-mygo-vs-tauri.md) | Primary sources and measurements. Force-added past `.gitignore:83`; the ADRs stand without it. |
 
-Superseded but still useful for Wayland risk analysis and acceptance criteria: [`linux/CodeIsland-Linux-Development-Plan.md`](../linux/CodeIsland-Linux-Development-Plan.md). Its Avalonia sections are dead.
+`W#` and `L#` are **local work items, not a sequence**. The sequence is phases 0–6 in §7, and each phase says which local items it contains.
+
+Superseded, but still useful for Wayland risk analysis and acceptance criteria: [`linux/CodeIsland-Linux-Development-Plan.md`](../linux/CodeIsland-Linux-Development-Plan.md) and [`windows/CodeIsland-Windows-Complete-Development-Plan.md`](../windows/CodeIsland-Windows-Complete-Development-Plan.md). Both now carry a SUPERSEDED banner. Do not follow their phases or their technology choices.
 
 ## State
 
@@ -39,6 +41,8 @@ Each of these cost time to find. They are not in the ADRs.
 - **`KnownTools.All` stores paths as backslash strings** (`@".claude\settings.json"`). On Linux this silently yields a filename containing a literal backslash — detection fails with no error. Store paths as segment arrays.
 - **The C# side is not verified.** Per codegraph, `SessionSnapshot` (C#) and `KnownTools` have no covering tests. Do not treat `windows/CodeIsland.Core` as a reference implementation; it is the divergent one (`cursor_version` has 0 matches there).
 - **`windows/` is not ours.** It arrived as one squashed commit `31116ab` by an outside contributor whose README calls it "not an official Windows release". Deleting `RawAgentEventNormalizer.cs` + `SessionStateMachine.cs` (phase 6) needs their sign-off first.
+- **Three plan docs exist; only one is canonical.** `docs/plan-windows-linux.md` §7 and #33's "Urutan Implementasi" are the same list. `linux/…Development-Plan.md` (Avalonia) and `windows/…Development-Plan.md` (WPF) are superseded — useful for acceptance criteria and Wayland risks, wrong on phases and technology.
+- **There are two end-to-end gates, not one.** `E2E-1` (phase 1) is synthetic: hook JSON piped into the bridge, panel shows it, Approve travels back to stdout. `E2E-2` (phases 3 and 4) uses a real `claude` with an installed hook. `E2E-1` proves the wiring; `E2E-2` proves the product. Do not let `E2E-2` be the first time the round-trip is tested.
 
 ## Suggested skills
 

@@ -1,8 +1,30 @@
-# ADR-001 — Arsitektur Windows & Linux: Tauri v2 + Rust core
+# Rencana Arsitektur Windows & Linux — Tauri v2 + Rust core
 
-- **Status:** Diterima (2026-11-16)
-- **Konteks:** [issue #33](https://github.com/fzrsahi/CodeIsland/issues/33), [riset mygo vs Tauri](./research-mygo-vs-tauri.md), [rencana Linux](../linux/CodeIsland-Linux-Development-Plan.md), [rencana Windows](../windows/CodeIsland-Windows-Complete-Development-Plan.md)
-- **Keputusan:** Windows + Linux dibangun sebagai **satu shell Tauri v2** di atas **satu Rust core**, dihubungkan lewat **kontrak hook JSON yang dibekukan**. macOS **tidak disentuh**.
+**Status:** rencana yang berlaku (2026-11-16). Menggantikan rencana Avalonia di [`linux/`](../linux/CodeIsland-Linux-Development-Plan.md) dan rencana WPF di [`windows/`](../windows/CodeIsland-Windows-Complete-Development-Plan.md).
+
+**Keputusan yang mendasari:** Windows + Linux dibangun sebagai **satu shell Tauri v2** di atas **satu Rust core**, dihubungkan lewat **kontrak hook JSON yang dibekukan**. macOS **tidak disentuh**. Alasannya ada di [ADR-0001](adr/0001-two-cores-one-contract.md) dan [ADR-0002](adr/0002-tauri-v2-shell.md), bukan di sini.
+
+---
+
+## 0. Peta dokumen — baca ini dulu
+
+Ada beberapa dokumen dan tiga di antaranya pernah memuat daftar fase sendiri. Yang berlaku **hanya satu**: **§7 di bawah, yang identik dengan "Urutan Implementasi" di [#33](https://github.com/fzrsahi/CodeIsland/issues/33).** Kalau ada dokumen lain yang daftar fasenya berbeda, dokumen itu sudah usang.
+
+| Dokumen | Perannya | Cari di sini kalau… |
+|---|---|---|
+| [`GLOSSARY.md`](../GLOSSARY.md) | Kosakata kanonik | bingung Source vs Agent vs Hook target |
+| [`adr/0001`](adr/0001-two-cores-one-contract.md) | Keputusan: dua core | "kenapa bukan satu core?" |
+| [`adr/0002`](adr/0002-tauri-v2-shell.md) | Keputusan: Tauri | "kenapa bukan mygo / Avalonia?" |
+| **dokumen ini** | Arsitektur + **fase kanonik (§7)** | modul, seam, adapter, urutan kerja |
+| [#33](https://github.com/fzrsahi/CodeIsland/issues/33) | Urutan + alasan urutan | "kenapa Linux dulu?" |
+| [#47](https://github.com/fzrsahi/CodeIsland/issues/47) | Scope Windows, item W0–W6, acceptance W-001…W-008 | detail kerja Windows |
+| [#48](https://github.com/fzrsahi/CodeIsland/issues/48) | Scope Linux, item L0–L7, acceptance L-001…L-011 | detail kerja Linux |
+| [`handoff-windows-linux-port.md`](handoff-windows-linux-port.md) | Indeks + daftar jebakan | mulai dari mana, apa yang menipu |
+| [`research-mygo-vs-tauri.md`](research-mygo-vs-tauri.md) | Bukti primer + pengukuran | angka mentah di balik ADR |
+| [`linux/…Development-Plan.md`](../linux/CodeIsland-Linux-Development-Plan.md) | **Usang** — tapi masih berguna | acceptance L-001…L-012, analisis risiko Wayland |
+| [`windows/…Development-Plan.md`](../windows/CodeIsland-Windows-Complete-Development-Plan.md) | **Usang** | riwayat saja; pilihan WPF/.NET sudah mati |
+
+**Aturan korelasi.** `W#` dan `L#` di #47/#48 adalah **item kerja lokal, bukan urutan**. Urutan yang mengikat adalah fase 0–6 di §7. Tabel di tiap fase memetakan item lokal mana yang masuk fase mana.
 
 ---
 
@@ -200,11 +222,23 @@ Frontend mengirim rect via command setiap layout berubah. **Fallback** bila gaga
 
 ---
 
-## 7. Fase dan gate
+## 7. Fase dan gate — **daftar kanonik**
 
-Tiap fase punya gate. Jangan mulai fase berikutnya sebelum hijau.
+Sama persis dengan "Urutan Implementasi" di [#33](https://github.com/fzrsahi/CodeIsland/issues/33). Kalau keduanya berbeda, itu bug — perbaiki #33 dan dokumen ini bersamaan.
 
-### Fase A — Bekukan kontrak (3–4 hari, **tanpa Rust**)
+Tiap fase punya gate. **Jangan mulai fase berikutnya sebelum hijau.** Kolom "Item lokal" memetakan ke penomoran `W#`/`L#` di #47/#48, yang merupakan item kerja, bukan urutan.
+
+| Fase | Fokus | OS | Item lokal |
+|---|---|---|---|
+| 0 | Bekukan kontrak | — | W0 = L0 |
+| 1 | Vertical slice | Linux X11 | L1 + separuh L4 |
+| 2 | Core conformance | — | L2 = W2 |
+| 3 | Linux lengkap | Linux X11 | L3, L4, L6, L7 |
+| 4 | Windows | Windows | W1, W3, W4, W5, W7 |
+| 5 | Wayland | Linux | L5 |
+| 6 | Hapus core C# | Windows | W6 |
+
+### Fase 0 — Bekukan kontrak (3–4 hari, **tanpa Rust**)
 
 | Tugas | Gate |
 |---|---|
@@ -213,44 +247,81 @@ Tiap fase punya gate. Jangan mulai fase berikutnya sebelum hijau.
 | **Fix `cursor_version` di `RawAgentEventNormalizer.cs`** (hari ini **0 match** di `windows/`) | Test baru: hook Cursor tidak muncul sebagai `claude`; `windows/CodeIsland.Core.Tests` hijau |
 | JSON Schema untuk envelope + hook payload | Schema memvalidasi semua fixture |
 
-Fase ini memberi hasil **walau Rust dibatalkan**. Kerjakan lebih dulu, tanpa kecuali.
+Fase ini memberi hasil **walau Rust dibatalkan**. Kerjakan lebih dulu, tanpa kecuali. **Jangan menulis Rust di fase ini.**
 
-### Fase B — Bridge Rust (1–2 minggu)
+### Fase 1 — Vertical slice Linux X11 (2–3 minggu)
 
-| Tugas | Gate |
+Satu jalur tipis ujung ke ujung. **Bukan** port core.
+
+| Dibangun | Tidak dibangun |
 |---|---|
-| `codeisland-protocol` + `codeisland-ipc` (UDS/named pipe) | — |
-| `codeisland-bridge` bin: stdin → envelope → socket, stdout contract | `fixtures/macos/*.json` **byte-identik** dengan bridge Swift |
-| Deteksi proses/terminal per-OS (`_ppid`, `_term_app`, `_tty`) | `fixtures/windows/*` + `fixtures/linux/*` lulus di OS-nya |
-| Perilaku tanpa listener | exit 0 dalam <10 ms, tidak pernah memblokir CLI |
+| Workspace `rust/` + `codeisland-protocol` + `codeisland-ipc` (UDS saja) | Port `reduceHookEvent` |
+| `codeisland-bridge` untuk **satu** hook target (Claude Code) | Adapter platform, tray, hotkey, settings |
+| Satu window Tauri: frameless, transparent, always-on-top, click-through | Packaging, 33 source lainnya |
+| Reduksi trivial (session id + state) | Installer hook |
 
-**ROI tertinggi, risiko terendah.** 385 LOC → ~1.500 LOC. Langsung memberi 3-OS coverage.
+**Gate: `E2E-1`.**
 
-### Fase C — Core Rust (3–4 minggu)
+```
+hook JSON sintetis  →  bridge send --stdin  →  app  →  panel menampilkan sesi
+                                                    →  klik Approve
+                                                    →  bridge mencetak response JSON ke stdout
+```
 
-Urutan ketat: `reduceHookEvent` → `AttentionPolicy` → `GitBranchReader` → `MarkdownBlockParser` → `JSONLTailer` → `ESP32Protocol`.
+Lulus bila: response valid terhadap `fixtures/neutral/`, ujung ke ujung **<300 ms**, dan klik di area transparan menembus ke window di bawahnya.
 
-Gate: conformance test terhadap `fixtures/neutral/*.json` = **100% identik** dengan output Swift. CI menolak dependensi OS di `codeisland-core`.
+`E2E-1` sengaja sintetis — tanpa installer, tanpa CLI asli — supaya loop-nya terbukti di minggu 2, bukan minggu 9.
 
-### Fase D — Platform adapters (2–3 minggu)
+Kalau gate ini gagal, **berhenti dan laporkan**. Jangan lanjut ke fase 2 sebelum tahu apakah Tauri bisa jadi island overlay sama sekali.
 
-Gate: setiap trait punya `probe()`; tidak ada fitur yang gagal diam-diam; tabel capability tampil di Settings.
+### Fase 2 — Core conformance (3–4 minggu)
 
-### Fase E — Shell Tauri, Windows dulu (3–4 minggu)
+Urutan ketat: `reduceHookEvent` → `AttentionPolicy` → `HookEventFacts` → `GitBranchReader` → `MarkdownBlockParser` → `JSONLTailer` → `ESP32Protocol`.
 
-Gate G1–G5 (riset §5.2): click-through, panel di atas fullscreen tanpa mencuri fokus, Wayland layer-shell, p95 hook→render <300 ms, tidak ada frame >16 ms saat scroll.
+Gate: conformance terhadap `fixtures/neutral/*.json` = **100% identik** dengan output Swift. CI menolak dependensi OS di `codeisland-core` (`cargo tree -p codeisland-core`).
 
-### Fase F — Hook installer (2–3 minggu)
+### Fase 3 — Linux lengkap (3–4 minggu)
 
-6.163 LOC (`ConfigInstaller` 4.315 + `RemoteInstaller` 1.848) — JSON, JSON5, YAML, TOML, merge yang mempertahankan komentar user, untuk 34 sumber. `serde_json` + `json5` + `saphyr` + `toml_edit`.
+9 hook target → 34 source, adapter platform + `probe()`, tray, hotkey, autostart, settings, installer hook, packaging.
 
-Gate: install/uninstall **byte-idempotent** untuk 34 sumber di 3 OS; uninstall mengembalikan backup byte-for-byte.
+Gate: `L-001…L-011` (minus yang khusus Wayland) **dan `E2E-2`.**
 
-### Fase G — Migrasi C#, lalu hapus (1 minggu, **butuh izin maintainer**)
+**`E2E-2` — loop terhadap CLI asli:**
+
+```
+install hook untuk `claude`  →  jalankan `claude`  →  ia memicu PreToolUse
+   →  panel menampilkan permintaan izin  →  klik Approve
+   →  `claude` benar-benar melanjutkan tool call
+```
+
+Lulus bila: `claude` lanjut tanpa timeout, **deny juga bekerja**, dan tidak ada event dobel. `E2E-1` membuktikan kabelnya; `E2E-2` membuktikan produknya.
+
+### Fase 4 — Windows (3–4 minggu)
+
+Port shell (Win32 plumbing: `WM_NCHITTEST` → `HTTRANSPARENT`, `WS_EX_NOACTIVATE`), adapter WinRT (SMTC, UIA, BLE), named pipe, NSIS.
+
+Gate: `W-001…W-008` **dan `E2E-2`** di Windows.
+
+Yang diwarisi gratis: shell yang sudah terbukti di X11, core yang sudah conformance, logika installer yang sudah teruji.
+
+### Fase 5 — Wayland (2 minggu)
+
+Layer-shell workaround (`tauri#15913`), `wl_surface.set_input_region`, XDG Portal `GlobalShortcuts`, degradasi eksplisit di GNOME.
+
+Gate: jalan di Sway/Hyprland; di GNOME panel menjadi window biasa dan UI menyatakan **"anchoring tidak tersedia"**. Jangan disimulasikan.
+
+### Fase 6 — Migrasi C#, lalu hapus (1 minggu, **butuh izin maintainer**)
 
 `windows/` masuk sebagai commit squashed `31116ab` oleh kontributor luar yang menyebut dirinya *"not an official Windows release"*. Menghapus `RawAgentEventNormalizer.cs` + `SessionStateMachine.cs` adalah keputusan sosial sebelum keputusan teknis.
 
 Gate: `windows/CodeIsland.Core.Tests` hijau; sesi Cursor tidak lagi dobel.
+
+### Ringkasan gate end-to-end
+
+| Gate | Fase | Input | Membuktikan |
+|---|---|---|---|
+| `E2E-1` | 1 | hook JSON sintetis | kabelnya tersambung, dua arah, di satu OS |
+| `E2E-2` | 3, 4 | `claude` asli + hook terinstall | produknya bekerja terhadap CLI nyata |
 
 ---
 
