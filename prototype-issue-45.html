@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CodeIsland — Issue #45 Notification & Prayer UI Prototype</title>
+<style>
+  :root {
+    --bg-wall: linear-gradient(145deg, #dbeafe 0%, #93c5fd 45%, #3b82f6 100%);
+    --notch-bg: #000000;
+    --cyber-cyan: #00f5d4;
+    --emerald: #30d158;
+    --amber: #ffb833;
+    --magenta: #ff2987;
+    --blue-arc: #3b82f6;
+    --indigo-arc: #2563eb;
+    --pixel-chassis: #0d0f14;
+    --pixel-slot: #06070a;
+    --pixel-hi: rgba(255, 255, 255, 0.16);
+    --pixel-lo: rgba(0, 0, 0, 0.78);
+    --font-modern: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Rounded", "Helvetica Neue", sans-serif;
+    --font-mono: "SF Mono", ui-monospace, Menlo, Monaco, "Cascadia Mono", monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    font-family: var(--font-modern);
+    background: #0b0d13;
+    color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 20px 120px;
+    overflow-x: hidden;
+  }
+
+  /* Top Prototype Context Header */
+  .proto-header {
+    width: 100%;
+    max-width: 1060px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 22px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .proto-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .proto-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #94a3b8;
+  }
+  .proto-tag {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(0, 245, 212, 0.14);
+    color: var(--cyber-cyan);
+    border: 1px solid rgba(0, 245, 212, 0.3);
+  }
+  .proto-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+  }
+  .proto-sub {
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  /* State Controls Strip */
+  .state-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+  .ctrl-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: #cbd5e1;
+  }
+  .ctrl-pill label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+  .ctrl-pill select, .ctrl-pill input[type="range"] {
+    accent-color: var(--cyber-cyan);
+    background: transparent;
+    color: #f8fafc;
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+  }
+  .ctrl-pill select option {
+    background: #0f172a;
+    color: #f8fafc;
+  }
+  .seg-btn-group {
+    display: inline-flex;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+  }
+  .seg-btn {
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.16s ease;
+  }
+  .seg-btn.active {
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+  }
+  .seg-btn.active.pixel-mode {
+    background: rgba(0, 245, 212, 0.18);
+    color: var(--cyber-cyan);
+  }
+
+  /* Variant Rationale Banner */
+  .rationale-bar {
+    width: 100%;
+    max-width: 1060px;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.22);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    font-size: 12.5px;
+    color: #dbeafe;
+  }
+  .rationale-bar strong { color: #ffffff; }
+
+  /* Main Preview Stage Grid */
+  .stage-grid {
+    width: 100%;
+    max-width: 1060px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .surface-frame {
+    border-radius: 18px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .surface-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    font-size: 12px;
+    color: #94a3b8;
+  }
+  .surface-meta strong {
+    color: #f1f5f9;
+    font-size: 12.5px;
+  }
+  .surface-dim {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #94a3b8;
+  }
+
+  /* Simulated MacBook Wallpaper + Top Menu Bezel */
+  .mac-backdrop {
+    position: relative;
+    padding: 0 24px 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background:
+      radial-gradient(circle at 18% 82%, rgba(56, 189, 248, 0.42), transparent 55%),
+      radial-gradient(circle at 82% 75%, rgba(59, 130, 246, 0.40), transparent 52%),
+      linear-gradient(135deg, #f1f5f9 0%, #dbeafe 45%, #bfdbfe 100%);
+    min-height: 148px;
+  }
+  .mac-backdrop.tall {
+    min-height: 238px;
+  }
+  /* Subtle menu bar top strip (Notch mode) */
+  .mac-menubar-strip {
+    width: 100%;
+    height: 10px;
+    background: rgba(0, 0, 0, 0.96);
+    margin: 0 -24px;
+    width: calc(100% + 48px);
+    display: block;
+  }
+  .mac-backdrop.island-mode .mac-menubar-strip {
+    height: 0;
+    opacity: 0;
+  }
+  .mac-backdrop.island-mode {
+    padding-top: 14px;
+  }
+
+  /* Notch Shell with Authentic Ear Curves */
+  .island-shell {
+    position: relative;
+    background: #000000;
+    color: #ffffff;
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+    transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.25s ease;
+  }
+  .island-shell.compact-radius {
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+  }
+  .island-shell::before,
+  .island-shell::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+  }
+  .island-shell::before {
+    left: -14px;
+    background: radial-gradient(circle at 0 100%, transparent 13.5px, #000000 14px);
+  }
+  .island-shell::after {
+    right: -14px;
+    background: radial-gradient(circle at 100% 100%, transparent 13.5px, #000000 14px);
+  }
+  /* Dynamic Island Detached Mode */
+  .mac-backdrop.island-mode .island-shell {
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.55);
+  }
+  .mac-backdrop.island-mode .island-shell::before,
+  .mac-backdrop.island-mode .island-shell::after {
+    display: none;
+  }
+
+  /* Camera dot inside hardware notch */
+  .webcam-dot {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #273244, #080b10 70%);
+    opacity: 0.9;
+  }
+  .mac-backdrop.island-mode .webcam-dot { display: none; }
+
+  /* =========================================================
+     PIXEL 32-BIT DESIGN PRIMITIVES (matches Pixel16DesignSystem)
+     ========================================================= */
+  .pixel-font {
+    font-family: var(--font-mono);
+    letter-spacing: 0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .px-bevel {
+    background: var(--pixel-chassis);
+    border-top: 1.5px solid rgba(255, 255, 255, 0.18);
+    border-left: 1.5px solid rgba(255, 255, 255, 0.18);
+    border-right: 1.5px solid rgba(0, 0, 0, 0.85);
+    border-bottom: 1.5px solid rgba(0, 0, 0, 0.85);
+    border-radius: 4px;
+  }
+  .px-slot {
+    background: var(--pixel-slot);
+    border-top: 1.5px solid rgba(0, 0, 0, 0.88);
+    border-left: 1.5px solid rgba(0, 0, 0, 0.88);
+    border-right: 1.5px solid rgba(255, 255, 255, 0.14);
+    border-bottom: 1.5px solid rgba(255, 255, 255, 0.14);
+    border-radius: 4px;
+  }
+  .px-scanlines {
+    position: relative;
+  }
+  .px-top-trace {
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    right: 14px;
+    height: 2px;
+    background: var(--trace-color, var(--cyber-cyan));
+    opacity: 0.72;
+  }
+
+  /* =========================================================
+     SURFACE 1: PRAYER EXPANDED CARD (593 x 190)
+     ========================================================= */
+  .prayer-card {
+    width: 593px;
+    max-width: 100%;
+    padding: 12px 16px 10px;
+    position: relative;
+  }
+  .prayer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-top: 2px;
+  }
+  .prayer-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+  .eq-bars {
+    display: flex;
+    align-items: center;
+    gap: 2.5px;
+    height: 12px;
+  }
+  .eq-bars span {
+    width: 2.2px;
+    background: #ffffff;
+    border-radius: 2px;
+    display: block;
+  }
+  .chev-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    border: none;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .chev-btn.px {
+    border-radius: 4px;
+    background: var(--pixel-chassis);
+    border-top: 1.5px solid rgba(255,255,255,0.2);
+    border-left: 1.5px solid rgba(255,255,255,0.2);
+    border-right: 1.5px solid rgba(0,0,0,0.9);
+    border-bottom: 1.5px solid rgba(0,0,0,0.9);
+    color: var(--cyber-cyan);
+    font-family: var(--font-mono);
+  }
+  .page-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 8px;
+  }
+  .page-dots span {
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.35);
+  }
+  .page-dots span.active {
+    width: 16px;
+    background: #ffffff;
+  }
+  .page-dots.px span {
+    border-radius: 0;
+    width: 4px;
+    height: 4px;
+  }
+  .page-dots.px span.active {
+    width: 14px;
+    background: var(--cyber-cyan);
+  }
+
+  /* =========================================================
+     SURFACE 2: NOTIFICATION BANNER (440 x 100)
+     ========================================================= */
+  .notif-banner {
+    width: 440px;
+    max-width: 100%;
+    min-height: 92px;
+    padding: 18px 20px 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+  }
+
+  /* =========================================================
+     SURFACE 3: CHARGING BANNER (486 x 107)
+     ========================================================= */
+  .charge-banner {
+    width: 486px;
+    max-width: 100%;
+    min-height: 96px;
+    padding: 18px 24px 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+  }
+
+  /* =========================================================
+     FLOATING PROTOTYPE BOTTOM SWITCHER (/prototype UI.md)
+     ========================================================= */
+  .proto-switcher {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65);
+  }
+  .sw-arrow {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background 0.15s ease;
+  }
+  .sw-arrow:hover { background: rgba(255, 255, 255, 0.2); }
+  .sw-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+  }
+  .sw-key {
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: rgba(59, 130, 246, 0.24);
+    border: 1px solid rgba(96, 165, 250, 0.45);
+    color: #93c5fd;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .sw-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .sw-theme-btn {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sw-theme-btn.is-pixel {
+    background: rgba(0, 245, 212, 0.15);
+    border-color: rgba(0, 245, 212, 0.45);
+    color: var(--cyber-cyan);
+    font-family: var(--font-mono);
+  }
+  .kbd-hint {
+    font-size: 11px;
+    color: #94a3b8;
+    padding-right: 4px;
+  }
+</style>
+</head>
+<body>
+
+  <header class="proto-header">
+    <div class="proto-title-group">
+      <div class="proto-badge-row">
+        <span class="proto-tag">PROTOTYPE · ISSUE #45</span>
+        <span>Impeccable × Prototype UI Explorations</span>
+      </div>
+      <div class="proto-title">Notification &amp; Prayer Island Redesign — 3 Structural Variants</div>
+      <div class="proto-sub">Compare structural layouts in both <strong>Modern Clean</strong> and <strong>Pixel 32-bit</strong> side-by-side at 1:1 macOS Notch scale.</div>
+    </div>
+
+    <div class="state-controls">
+      <div class="ctrl-pill">
+        <label>Theme</label>
+        <div class="seg-btn-group">
+          <button class="seg-btn" id="btnModern" onclick="setTheme('modern')">Modern</button>
+          <button class="seg-btn" id="btnPixel" onclick="setTheme('pixel')">Pixel 32-bit</button>
+        </div>
+      </div>
+
+      <div class="ctrl-pill">
+        <label>Shell</label>
+        <div class="seg-btn-group">
+          <button class="seg-btn" id="btnNotch" onclick="setShell('notch')">Notch</button>
+          <button class="seg-btn" id="btnIsland" onclick="setShell('island')">Dynamic Island</button>
+        </div>
+      </div>
+
+      <div class="ctrl-pill">
+        <label>Notif</label>
+        <select id="selNotif" onchange="setNotif(this.value)">
+          <option value="messages">Messages (Nusa)</option>
+          <option value="prayer">Prayer (-10m)</option>
+          <option value="mail">Apple Mail</option>
+          <option value="agent">Agent Done</option>
+        </select>
+      </div>
+
+      <div class="ctrl-pill">
+        <label>Battery <span id="lblBatt">70%</span></label>
+        <input type="range" min="10" max="100" value="70" oninput="setBatt(this.value)" />
+      </div>
+
+      <div class="ctrl-pill">
+        <label>Hour <span id="lblHour">14:25</span></label>
+        <input type="range" min="4.5" max="20.5" step="0.1" value="14.4" oninput="setHour(this.value)" />
+      </div>
+    </div>
+  </header>
+
+  <div class="rationale-bar" id="rationaleBar"></div>
+
+  <main class="stage-grid">
+    <!-- SURFACE 1: PRAYER EXPANDED CARD -->
+    <section class="surface-frame">
+      <div class="surface-meta">
+        <div><strong>1. Prayer Expanded Card</strong> · <span id="meta1">Sun-Arc Split</span></div>
+        <span class="surface-dim">593 × 190 pt · PrayerExpandedCardView</span>
+      </div>
+      <div class="mac-backdrop tall" id="bd1">
+        <span class="mac-menubar-strip"></span>
+        <div class="island-shell" id="shell1"></div>
+      </div>
+    </section>
+
+    <!-- SURFACE 2: NOTIFICATION MINI-PEEK BANNER -->
+    <section class="surface-frame">
+      <div class="surface-meta">
+        <div><strong>2. Notification Mini-Peek Banner</strong> · <span id="meta2">3-Line Notch Drop</span></div>
+        <span class="surface-dim">440 × 100 pt · Prayer / Mail / Agent Banner</span>
+      </div>
+      <div class="mac-backdrop" id="bd2">
+        <span class="mac-menubar-strip"></span>
+        <div class="island-shell compact-radius" id="shell2"></div>
+      </div>
+    </section>
+
+    <!-- SURFACE 3: CHARGING / MAGSAFE BANNER -->
+    <section class="surface-frame">
+      <div class="surface-meta">
+        <div><strong>3. MagSafe / Charging Banner</strong> · <span id="meta3">Ring + Hero %</span></div>
+        <span class="surface-dim">486 × 107 pt · MagSafeChargingBanner</span>
+      </div>
+      <div class="mac-backdrop" id="bd3">
+        <span class="mac-menubar-strip"></span>
+        <div class="island-shell compact-radius" id="shell3"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FLOATING PROTOTYPE SWITCHER BAR -->
+  <nav class="proto-switcher" aria-label="Variant Switcher">
+    <button class="sw-arrow" onclick="stepVariant(-1)" title="Previous Variant (Left Arrow)">←</button>
+    <div class="sw-label">
+      <span class="sw-key" id="swKey">A</span>
+      <span id="swName">Faithful Notch Continuity</span>
+    </div>
+    <button class="sw-arrow" onclick="stepVariant(1)" title="Next Variant (Right Arrow)">→</button>
+    <div class="sw-divider"></div>
+    <button class="sw-theme-btn" id="swThemeBtn" onclick="toggleTheme()">
+      <span id="swThemeIcon">◐</span>
+      <span id="swThemeLabel">Modern Clean</span>
+    </button>
+    <span class="kbd-hint">← → / T</span>
+  </nav>
+
+<script>
+const VARIANTS = [
+  {
+    key: 'A',
+    name: 'Faithful Notch Continuity',
+    desc: 'Matches Issue #45 references 1:1 — zero inner card borders in Modern, 2-column glowing sun-arc for Prayer, 3-line squircle Notification, Ring + Hero % Charging. Pixel 32-bit translates every element with crisp bevels, stepped pixel arc, and bitmap-grid icons.',
+    s1: '2-Column Sun-Arc Split + Carousel Chevrons',
+    s2: 'Pure Notch Drop · Squircle + 3-Line Stack + Timestamp',
+    s3: 'Ring + Bolt · Charging / Connected · Hero %'
+  },
+  {
+    key: 'B',
+    name: 'Glance-First Telemetry',
+    desc: 'Structurally denser & action-first — Prayer uses a 2-tier Timetable Matrix (5 clickable cells + horizon rail); Notification adds quick action chips ([Open] / [Dismiss]); Charging replaces the ring with a full-width segmented power rail.',
+    s1: '2-Tier Hero Countdown + 5-Column Timetable Matrix',
+    s2: 'Compact Header + Inline Action Chips ([Open] / [×])',
+    s3: 'Full-Width Segmented Power Gauge + Time-to-Full'
+  },
+  {
+    key: 'C',
+    name: 'Living Micro-Depth',
+    desc: 'Atmosphere & spatial depth — Prayer blends a subtle phase-tinted horizon sky (ordered Bayer dither in Pixel 32-bit) into pure black; Notification uses a top micro-eyebrow ribbon + large message hero; Charging centers the % inside a Reactor Ring.',
+    s1: 'Atmospheric Horizon Arc + Centered Hero + Left Rail',
+    s2: 'Micro-Source Ribbon + Ambient Icon Glow + Hero Text',
+    s3: 'Concentric Reactor Ring (% Inside) + AC Waveform'
+  }
+];
+
+const NOTIFS = {
+  messages: {
+    source: 'Messages',
+    title: 'Nusa',
+    body: 'Hello, Nusa 1.2!',
+    time: 'now',
+    color: '#30d158',
+    pxColor: '#00e676',
+    iconType: 'chat',
+    action: 'Reply'
+  },
+  prayer: {
+    source: 'Prayer · Jakarta',
+    title: 'Maghrib in 10 min',
+    body: 'Adhan at 17:48 · Ashar ending soon',
+    time: '-10m',
+    color: '#38bdf8',
+    pxColor: '#00f5d4',
+    iconType: 'moon',
+    action: 'Qibla'
+  },
+  mail: {
+    source: 'Apple Mail · Inbox',
+    title: 'Fajar Sahi',
+    body: 'Re: CodeIsland #45 notification design review',
+    time: '2m',
+    color: '#60a5fa',
+    pxColor: '#00f5d4',
+    iconType: 'mail',
+    action: 'Open'
+  },
+  agent: {
+    source: 'Claude Code · CodeIsland',
+    title: 'Build & Tests Passed',
+    body: 'swift test — 42 suites passed in 3.4s',
+    time: 'now',
+    color: '#f59e0b',
+    pxColor: '#ffb833',
+    iconType: 'bot',
+    action: 'View'
+  }
+};
+
+const PRAYERS = [
+  { name: 'Subuh', time: '04:32', hour: 4.53 },
+  { name: 'Dzuhur', time: '11:52', hour: 11.87 },
+  { name: 'Ashar', time: '15:12', hour: 15.20 },
+  { name: 'Maghrib', time: '17:48', hour: 17.80 },
+  { name: 'Isya', time: '19:01', hour: 19.02 }
+];
+
+const state = {
+  variant: 'A',
+  theme: 'modern',
+  shell: 'notch',
+  notif: 'messages',
+  battery: 70,
+  hour: 14.42
+};
+
+// Read ?variant= & ?theme= from URL
+(function initFromQuery() {
+  const p = new URLSearchParams(window.location.search);
+  const v = (p.get('variant') || '').toUpperCase();
+  const t = (p.get('theme') || '').toLowerCase();
+  if (['A', 'B', 'C'].includes(v)) state.variant = v;
+  if (['modern', 'pixel'].includes(t)) state.theme = t;
+})();
+
+function syncURL() {
+  const url = new URL(window.location.href);
+  url.searchParams.set('variant', state.variant);
+  url.searchParams.set('theme', state.theme);
+  window.history.replaceState({}, '', url);
+}
+
+function setVariant(v) { state.variant = v; syncURL(); render(); }
+function stepVariant(dir) {
+  const idx = VARIANTS.findIndex(v => v.key === state.variant);
+  const next = (idx + dir + VARIANTS.length) % VARIANTS.length;
+  setVariant(VARIANTS[next].key);
+}
+function setTheme(t) { state.theme = t; syncURL(); render(); }
+function toggleTheme() { setTheme(state.theme === 'modern' ? 'pixel' : 'modern'); }
+function setShell(s) { state.shell = s; render(); }
+function setNotif(n) { state.notif = n; render(); }
+function setBatt(b) { state.battery = parseInt(b, 10); render(); }
+function setHour(h) { state.hour = parseFloat(h); render(); }
+
+window.addEventListener('keydown', (e) => {
+  if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); stepVariant(-1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); stepVariant(1); }
+  else if (e.key === 't' || e.key === 'T') { e.preventDefault(); toggleTheme(); }
+});
+
+function formatHHMM(h) {
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60) % 60;
+  return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+}
+
+function getNextPrayer(h) {
+  for (const p of PRAYERS) {
+    if (p.hour > h) return p;
+  }
+  return PRAYERS[0];
+}
+
+function formatCountdown(h, next) {
+  let diff = Math.round((next.hour - h) * 60);
+  if (diff < 0) diff += 24 * 60;
+  const hrs = Math.floor(diff / 60);
+  const mins = diff % 60;
+  return hrs > 0 ? `in ${hrs} h ${mins} min` : `in ${mins} min`;
+}
+
+// Crisp pixel-art SVG icons (16x16 grid, shape-rendering: crispEdges)
+function pixelIconSVG(type, color = '#00f5d4', size = 26) {
+  const maps = {
+    chat: [
+      "0000000000000000",
+      "0001111111111000",
+      "0011111111111100",
+      "0111111111111110",
+      "0111001111001110",
+      "0111111111111110",
+      "0111111111111110",
+      "0011111111111100",
+      "0001111111111000",
+      "0001110000000000",
+      "0011000000000000",
+      "0000000000000000"
+    ],
+    moon: [
+      "0000011110000000",
+      "0001111100010000",
+      "0011110000111000",
+      "0111100000010000",
+      "0111100000000000",
+      "0111100000000000",
+      "0111100000010000",
+      "0011110000000000",
+      "0001111110000000",
+      "0000011111100000"
+    ],
+    mail: [
+      "0000000000000000",
+      "0111111111111110",
+      "0110000000000110",
+      "0101000000001010",
+      "0100100000010010",
+      "0100010000100010",
+      "0100001111000010",
+      "0100000000000010",
+      "0111111111111110",
+      "0000000000000000"
+    ],
+    bot: [
+      "0000001111000000",
+      "0000000110000000",
+      "0011111111111100",
+      "0110000000000110",
+      "0110110000110110",
+      "0110110000110110",
+      "0110000000000110",
+      "0110111111110110",
+      "0011111111111100",
+      "0000110000110000"
+    ],
+    bolt: [
+      "000000111100",
+      "000001111000",
+      "000011110000",
+      "000111111110",
+      "001111111100",
+      "000001111000",
+      "000011100000",
+      "000110000000",
+      "001000000000"
+    ]
+  };
+  const grid = maps[type] || maps.chat;
+  const rows = grid.length;
+  const cols = grid[0].length;
+  let rects = '';
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      if (grid[y][x] === '1') {
+        rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${color}"/>`;
+      }
+    }
+  }
+  return `<svg width="${size}" height="${Math.round(size * rows / cols)}" viewBox="0 0 ${cols} ${rows}" shape-rendering="crispEdges">${rects}</svg>`;
+}
+
+function modernIconSVG(type, color = '#fff') {
+  if (type === 'chat') {
+    return `<svg width="26" height="26" viewBox="0 0 24 24" fill="${color}"><path d="M12 3C6.48 3 2 6.82 2 11.5c0 2.38 1.15 4.53 3.01 6.07-.18 1.38-.78 2.66-1.56 3.51-.18.19-.04.51.22.49 1.77-.15 3.55-.85 4.86-1.78 1.09.32 2.25.5 3.47.5 5.52 0 10-3.82 10-8.5S17.52 3 12 3z"/></svg>`;
+  }
+  if (type === 'moon') {
+    return `<svg width="24" height="24" viewBox="0 0 24 24" fill="${color}"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>`;
+  }
+  if (type === 'mail') {
+    return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><polyline points="3,7 12,13 21,7"/></svg>`;
+  }
+  return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="3"/><path d="M9 11h.01M15 11h.01M9 15h6"/></svg>`;
+}
+
+// Sun Arc SVG Generator (supports Modern smooth glow & Pixel 32-bit stepped arc)
+function renderSunArcSVG(hour, nextPrayer, isPixel, compact = false) {
+  const W = compact ? 360 : 285;
+  const H = compact ? 76 : 86;
+  const padX = 18;
+  const baseY = H - 8;
+  const peakY = 14;
+  const minH = 4.53;
+  const maxH = 19.02;
+  const prog = Math.max(0, Math.min(1, (hour - minH) / (maxH - minH)));
+
+  const ptAt = (t) => {
+    const x = padX + t * (W - padX * 2);
+    const y = baseY - Math.sin(t * Math.PI) * (baseY - peakY);
+    return { x, y };
+  };
+
+  if (isPixel) {
+    // 32-bit stepped pixel arc + dither sun sprite
+    const steps = 38;
+    let blocks = '';
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const p = ptAt(t);
+      const gx = Math.round(p.x / 4) * 4;
+      const gy = Math.round(p.y / 4) * 4;
+      const active = t <= prog;
+      const col = active ? (t < prog * 0.6 ? '#00f5d4' : '#38bdf8') : 'rgba(255,255,255,0.16)';
+      blocks += `<rect x="${gx}" y="${gy}" width="3.5" height="3.5" fill="${col}"/>`;
+    }
+    const sun = ptAt(prog);
+    const sx = Math.round(sun.x / 4) * 4;
+    const sy = Math.round(sun.y / 4) * 4;
+
+    let nodes = '';
+    PRAYERS.forEach(pr => {
+      const t = (pr.hour - minH) / (maxH - minH);
+      const p = ptAt(t);
+      const nx = Math.round(p.x / 4) * 4;
+      const ny = Math.round(p.y / 4) * 4;
+      const isNext = pr.name === nextPrayer.name;
+      nodes += `<rect x="${nx - 2}" y="${ny - 2}" width="6" height="6" fill="${isNext ? '#ffffff' : 'rgba(255,255,255,0.45)'}"/>`;
+    });
+
+    // 8-bit sun sprite around (sx, sy)
+    const sunSprite = `
+      <rect x="${sx-6}" y="${sy-6}" width="15" height="15" fill="rgba(255,184,51,0.22)"/>
+      <rect x="${sx-3}" y="${sy-3}" width="9" height="9" fill="#ffb833"/>
+      <rect x="${sx-1}" y="${sy-1}" width="5" height="5" fill="#fffbeb"/>
+    `;
+
+    return `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">
+      <line x1="8" y1="${baseY}" x2="${W-8}" y2="${baseY}" stroke="rgba(255,255,255,0.16)" stroke-width="1.5"/>
+      ${blocks}
+      ${nodes}
+      ${sunSprite}
+    </svg>`;
+  }
+
+  // Modern smooth Bezier/sampled curve with luminous sun orb
+  let pastPath = '';
+  let futurePath = '';
+  const segs = 48;
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs;
+    const p = ptAt(t);
+    const cmd = i === 0 ? 'M' : 'L';
+    if (t <= prog) pastPath += `${cmd}${p.x.toFixed(1)},${p.y.toFixed(1)} `;
+    if (t >= prog) futurePath += `${futurePath === '' ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)} `;
+  }
+  if (pastPath && prog > 0) {
+    const cur = ptAt(prog);
+    pastPath += `L${cur.x.toFixed(1)},${cur.y.toFixed(1)}`;
+  }
+
+  const sun = ptAt(prog);
+  let nodes = '';
+  PRAYERS.forEach(pr => {
+    const t = (pr.hour - minH) / (maxH - minH);
+    const p = ptAt(t);
+    const isNext = pr.name === nextPrayer.name;
+    nodes += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${isNext ? 3.5 : 2.6}" fill="${isNext ? '#ffffff' : 'rgba(255,255,255,0.55)'}"/>`;
+  });
+
+  return `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}">
+    <defs>
+      <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#38bdf8"/>
+        <stop offset="100%" stop-color="#6366f1"/>
+      </linearGradient>
+      <radialGradient id="sunGlow">
+        <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+        <stop offset="35%" stop-color="#fde68a" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <line x1="6" y1="${baseY}" x2="${W-6}" y2="${baseY}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+    <path d="${futurePath}" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="${pastPath}" fill="none" stroke="url(#arcGrad)" stroke-width="3" stroke-linecap="round"/>
+    ${nodes}
+    <circle cx="${sun.x.toFixed(1)}" cy="${sun.y.toFixed(1)}" r="13" fill="url(#sunGlow)"/>
+    <circle cx="${sun.x.toFixed(1)}" cy="${sun.y.toFixed(1)}" r="4.5" fill="#ffffff"/>
+  </svg>`;
+}
+
+// =========================================================
+// SURFACE 1 RENDERERS (A, B, C)
+// =========================================================
+function renderPrayerCard() {
+  const isPx = state.theme === 'pixel';
+  const next = getNextPrayer(state.hour);
+  const cd = formatCountdown(state.hour, next);
+  const timeStr = formatHHMM(state.hour);
+  const dayPct = Math.max(0.06, Math.min(1, (state.hour - 4.53) / (19.02 - 4.53)));
+
+  const headerRing = isPx
+    ? `<div style="display:flex;gap:2px;align-items:center">
+        ${[0,1,2,3].map(i => `<span style="width:4px;height:8px;background:${i < Math.round(dayPct*4) ? '#30d158' : 'rgba(255,255,255,0.16)'};display:inline-block"></span>`).join('')}
+       </div>`
+    : `<svg width="16" height="16" viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="7.5" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="2.6"/>
+        <circle cx="10" cy="10" r="7.5" fill="none" stroke="#4ade80" stroke-width="2.6"
+          stroke-dasharray="${(47.1 * dayPct).toFixed(1)} 47.1" stroke-linecap="round" transform="rotate(-90 10 10)"/>
+       </svg>`;
+
+  if (state.variant === 'A') {
+    // VARIANT A: 2-Column Sun-Arc Split (Matches Issue #45 Ref 1)
+    return `
+      <div class="prayer-card ${isPx ? 'px-scanlines pixel-font' : ''}">
+        <span class="webcam-dot"></span>
+        ${isPx ? `<div class="px-top-trace" style="--trace-color:var(--cyber-cyan)"></div>` : ''}
+        <div class="prayer-header" style="${isPx ? 'padding-top:6px' : ''}">
+          <div class="prayer-header-left">
+            <span style="font-weight:700;color:${isPx ? 'var(--cyber-cyan)' : '#fff'}">${isPx ? 'PRAYER.HUD' : 'Prayer'}</span>
+            <span style="color:rgba(255,255,255,0.5);font-size:12px">${isPx ? 'JKT' : 'Jakarta'}</span>
+            ${headerRing}
+            <span style="color:rgba(255,255,255,0.75);font-size:12px">${isPx ? '16 NOV' : 'Mon 16 Nov 2026'} <strong style="color:#fff;margin-left:4px">${timeStr}</strong></span>
+          </div>
+          <div class="eq-bars">
+            <span style="height:5px;${isPx?'border-radius:0;background:var(--cyber-cyan)':''}"></span>
+            <span style="height:10px;${isPx?'border-radius:0;background:var(--cyber-cyan)':''}"></span>
+            <span style="height:7px;${isPx?'border-radius:0;background:var(--cyber-cyan)':''}"></span>
+            <span style="height:11px;${isPx?'border-radius:0;background:var(--cyber-cyan)':''}"></span>
+            <span style="height:6px;${isPx?'border-radius:0;background:var(--cyber-cyan)':''}"></span>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="chev-btn ${isPx?'px':''}" onclick="stepVariant(-1)">‹</button>
+
+          <div style="flex:1;display:grid;grid-template-columns:195px 1px 1fr;gap:16px;align-items:center">
+            <!-- Left Hero -->
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font-size:11px;color:rgba(255,255,255,0.52);font-weight:600">${isPx ? 'NEXT_PRAYER' : 'Next'}</span>
+              <span style="font-size:25px;font-weight:800;line-height:1.08;letter-spacing:-0.02em;color:#fff">${isPx ? next.name.toUpperCase() : next.name}</span>
+              <div style="display:flex;align-items:baseline;gap:8px;margin-top:2px;font-size:13.5px;font-weight:600">
+                <span style="color:#fff">${next.time}</span>
+                <span style="color:${isPx ? 'var(--cyber-cyan)' : '#60a5fa'}">${cd}</span>
+              </div>
+              ${isPx
+                ? `<div class="px-slot" style="display:flex;gap:2px;padding:3px;margin-top:6px">
+                    ${Array.from({length:12}).map((_,i)=>`<span style="flex:1;height:5px;background:${i < Math.round(dayPct*12) ? 'var(--cyber-cyan)' : 'rgba(255,255,255,0.1)'}"></span>`).join('')}
+                   </div>`
+                : `<div style="height:5px;border-radius:999px;background:rgba(255,255,255,0.14);overflow:hidden;margin-top:6px">
+                    <div style="width:${Math.round(dayPct*100)}%;height:100%;border-radius:999px;background:linear-gradient(90deg,#38bdf8,#6366f1)"></div>
+                   </div>`
+              }
+            </div>
+
+            <!-- Divider -->
+            <div style="width:1px;height:94px;background:rgba(255,255,255,${isPx?'0.14':'0.1'})"></div>
+
+            <!-- Right Sun Arc -->
+            <div style="display:flex;flex-direction:column">
+              ${renderSunArcSVG(state.hour, next, isPx, false)}
+              <div style="display:grid;grid-template-columns:repeat(5,1fr);text-align:center;margin-top:2px">
+                ${PRAYERS.map(pr => {
+                  const isN = pr.name === next.name;
+                  return `<div style="display:flex;flex-direction:column;gap:1px;font-size:9.5px;line-height:1.2;color:${isN ? (isPx?'var(--cyber-cyan)':'#fff') : 'rgba(255,255,255,0.48)'};font-weight:${isN?'700':'500'}">
+                    <span>${isPx ? pr.name.slice(0,3).toUpperCase() : pr.name}</span>
+                    <span>${pr.time}</span>
+                  </div>`;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+
+          <button class="chev-btn ${isPx?'px':''}" onclick="stepVariant(1)">›</button>
+        </div>
+
+        <div class="page-dots ${isPx?'px':''}">
+          <span></span><span></span><span></span><span></span><span class="active"></span><span></span>
+        </div>
+      </div>
+    `;
+  }
+
+  if (state.variant === 'B') {
+    // VARIANT B: 2-Tier Hero Countdown + 5-Column Timetable Matrix
+    return `
+      <div class="prayer-card ${isPx ? 'px-scanlines pixel-font' : ''}">
+        <span class="webcam-dot"></span>
+        ${isPx ? `<div class="px-top-trace" style="--trace-color:var(--amber)"></div>` : ''}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 4px 10px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <!-- Countdown Ring -->
+            ${isPx
+              ? `<div class="px-slot" style="width:46px;height:46px;display:grid;place-items:center;color:var(--cyber-cyan);font-size:11px;font-weight:800">${Math.round(dayPct*100)}%</div>`
+              : `<div style="position:relative;width:44px;height:44px;display:grid;place-items:center">
+                  <svg width="44" height="44" viewBox="0 0 44 44" style="position:absolute;inset:0">
+                    <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="3.5"/>
+                    <circle cx="22" cy="22" r="18" fill="none" stroke="#60a5fa" stroke-width="3.5" stroke-dasharray="${(113.1*dayPct).toFixed(1)} 113.1" stroke-linecap="round" transform="rotate(-90 22 22)"/>
+                  </svg>
+                  <span style="font-size:10px;font-weight:700;color:#93c5fd">${Math.round(dayPct*100)}%</span>
+                </div>`
+            }
+            <div>
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <span style="font-size:19px;font-weight:800">${isPx ? next.name.toUpperCase() : next.name}</span>
+                <span style="font-size:15px;font-weight:700;color:${isPx?'var(--cyber-cyan)':'#60a5fa'}">${next.time}</span>
+                <span style="font-size:11.5px;color:rgba(255,255,255,0.6)">${cd}</span>
+              </div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.48);margin-top:2px">
+                Jakarta · ${timeStr} · Qibla 295° WNW
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="${isPx?'px-bevel':''}" style="padding:4px 9px;font-size:11px;font-weight:600;border-radius:${isPx?'4px':'999px'};background:${isPx?'var(--pixel-chassis)':'rgba(255,255,255,0.09)'};color:${isPx?'var(--cyber-cyan)':'#e2e8f0'}">
+              ${isPx ? 'QIBLA 295°' : 'Qibla 295°'}
+            </span>
+            <span class="${isPx?'px-bevel':''}" style="padding:4px 9px;font-size:11px;font-weight:600;border-radius:${isPx?'4px':'999px'};background:${isPx?'var(--pixel-chassis)':'rgba(255,255,255,0.09)'};color:#94a3b8">
+              ${isPx ? '[MUTE]' : 'Mute'}
+            </span>
+          </div>
+        </div>
+
+        <!-- Horizon Rail -->
+        <div style="position:relative;height:6px;margin:2px 4px 10px;background:rgba(255,255,255,0.1);border-radius:${isPx?'0':'999px'}">
+          <div style="width:${Math.round(dayPct*100)}%;height:100%;background:${isPx?'var(--cyber-cyan)':'linear-gradient(90deg,#38bdf8,#818cf8)'};border-radius:inherit"></div>
+          <div style="position:absolute;left:${Math.round(dayPct*100)}%;top:50%;transform:translate(-50%,-50%);width:${isPx?'8px':'10px'};height:${isPx?'8px':'10px'};border-radius:${isPx?'0':'50%'};background:${isPx?'var(--amber)':'#fff'};box-shadow:${isPx?'none':'0 0 10px #fde68a'}"></div>
+        </div>
+
+        <!-- 5-Column Timetable Cells -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:0 2px">
+          ${PRAYERS.map(pr => {
+            const isN = pr.name === next.name;
+            const passed = pr.hour < state.hour;
+            if (isPx) {
+              return `<div class="${isN?'px-bevel':'px-slot'}" style="padding:7px 6px;text-align:center;${isN?'border-top-color:var(--cyber-cyan);border-left-color:var(--cyber-cyan);':''}">
+                <div style="font-size:9.5px;font-weight:700;color:${isN?'var(--cyber-cyan)':passed?'rgba(255,255,255,0.35)':'rgba(255,255,255,0.72)'}">${isN?'▶ ':''}${pr.name.slice(0,4).toUpperCase()}</div>
+                <div style="font-size:12px;font-weight:800;margin-top:2px;color:${isN?'#fff':passed?'rgba(255,255,255,0.35)':'#cbd5e1'}">${pr.time}</div>
+              </div>`;
+            }
+            return `<div style="padding:7px 6px;border-radius:10px;text-align:center;background:${isN?'rgba(59,130,246,0.22)':'rgba(255,255,255,0.04)'};border:1px solid ${isN?'rgba(96,165,250,0.45)':'rgba(255,255,255,0.05)'}">
+              <div style="font-size:10px;font-weight:600;color:${isN?'#93c5fd':passed?'rgba(255,255,255,0.35)':'rgba(255,255,255,0.65)'}">${pr.name}</div>
+              <div style="font-size:12.5px;font-weight:700;margin-top:2px;color:${isN?'#fff':passed?'rgba(255,255,255,0.38)':'#e2e8f0'}">${pr.time}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // VARIANT C: Atmospheric Horizon Arc + Centered Hero + Left Micro Rail
+  const skyBg = isPx
+    ? `background: radial-gradient(circle at 65% 20%, rgba(0,245,212,0.16), transparent 55%);`
+    : `background: radial-gradient(ellipse at 60% 10%, rgba(56,189,248,0.20), rgba(37,99,235,0.08) 45%, transparent 72%);`;
+
+  return `
+    <div class="prayer-card ${isPx ? 'px-scanlines pixel-font' : ''}" style="${skyBg}border-radius:inherit">
+      <span class="webcam-dot"></span>
+      <div style="display:grid;grid-template-columns:46px 1fr;gap:12px;align-items:stretch;padding-top:4px">
+        <!-- Left Compact Dock -->
+        <div style="display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:6px 0;border-right:1px solid rgba(255,255,255,0.08)">
+          <div class="${isPx?'px-slot':''}" style="width:30px;height:30px;border-radius:${isPx?'4px':'9px'};background:${isPx?'var(--pixel-slot)':'rgba(56,189,248,0.16)'};display:grid;place-items:center">
+            ${isPx ? pixelIconSVG('moon','#00f5d4',18) : modernIconSVG('moon','#38bdf8')}
+          </div>
+          <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.55);text-align:center;line-height:1.2">JKT<br/>${timeStr}</div>
+          <button class="chev-btn ${isPx?'px':''}" style="width:22px;height:22px;font-size:10px" onclick="stepVariant(1)">›</button>
+        </div>
+
+        <!-- Right Atmospheric Arc + Hero -->
+        <div style="display:flex;flex-direction:column;justify-content:space-between">
+          <div style="position:relative">
+            ${renderSunArcSVG(state.hour, next, isPx, true)}
+            <div style="position:absolute;left:50%;top:38px;transform:translateX(-50%);text-align:center;pointer-events:none">
+              <div style="font-size:19px;font-weight:800;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.85)">${isPx ? next.name.toUpperCase() : next.name} · ${next.time}</div>
+              <div style="font-size:11px;font-weight:700;color:${isPx?'var(--cyber-cyan)':'#7dd3fc'}">${cd}</div>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;padding:4px 10px 2px;font-size:10px;color:rgba(255,255,255,0.52)">
+            ${PRAYERS.map(pr => `<span style="${pr.name===next.name?`color:${isPx?'var(--cyber-cyan)':'#fff'};font-weight:700`:''}">${isPx?pr.name.slice(0,3).toUpperCase():pr.name} ${pr.time}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// =========================================================
+// SURFACE 2 RENDERERS (A, B, C)
+// =========================================================
+function renderNotifBanner() {
+  const isPx = state.theme === 'pixel';
+  const n = NOTIFS[state.notif];
+  const accent = isPx ? n.pxColor : n.color;
+
+  if (state.variant === 'A') {
+    // VARIANT A: Pure Notch Drop (Matches Issue #45 Ref 2)
+    return `
+      <div class="notif-banner ${isPx ? 'px-scanlines pixel-font' : ''}">
+        <span class="webcam-dot"></span>
+        ${isPx ? `<div class="px-top-trace" style="--trace-color:${accent}"></div>` : ''}
+        <!-- Icon -->
+        ${isPx
+          ? `<div class="px-slot" style="width:46px;height:46px;flex-shrink:0;display:grid;place-items:center;border-color:${accent}44">
+              ${pixelIconSVG(n.iconType, accent, 26)}
+            </div>`
+          : `<div style="width:46px;height:46px;border-radius:12px;background:${accent};flex-shrink:0;display:grid;place-items:center">
+              ${modernIconSVG(n.iconType, '#ffffff')}
+            </div>`
+        }
+        <!-- 3-Line Stack -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span style="font-size:12.5px;color:rgba(255,255,255,0.55);font-weight:500">${isPx ? n.source.toUpperCase() : n.source}</span>
+            <span style="font-size:12px;color:${isPx ? accent : 'rgba(255,255,255,0.5)'};font-weight:${isPx?'700':'500'}">${isPx ? `[${n.time.toUpperCase()}]` : n.time}</span>
+          </div>
+          <div style="font-size:16px;font-weight:700;color:#ffffff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.title}</div>
+          <div style="font-size:13.5px;color:rgba(255,255,255,0.68);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.body}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (state.variant === 'B') {
+    // VARIANT B: Compact Header + Inline Action Chips
+    return `
+      <div class="notif-banner ${isPx ? 'px-scanlines pixel-font' : ''}" style="padding:16px 18px 14px">
+        <span class="webcam-dot"></span>
+        ${isPx ? `<div class="px-top-trace" style="--trace-color:${accent}"></div>` : ''}
+        <div style="position:relative;flex-shrink:0">
+          ${isPx
+            ? `<div class="px-slot" style="width:38px;height:38px;display:grid;place-items:center">${pixelIconSVG(n.iconType, accent, 22)}</div>`
+            : `<div style="width:38px;height:38px;border-radius:10px;background:${accent}26;border:1px solid ${accent}55;display:grid;place-items:center">${modernIconSVG(n.iconType, accent)}</div>`
+          }
+        </div>
+
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.52)">
+            <span style="font-weight:700;color:${accent}">${isPx ? n.source.toUpperCase() : n.source}</span>
+            <span>·</span>
+            <span>${n.time}</span>
+          </div>
+          <div style="font-size:14.5px;font-weight:700;color:#fff;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.title}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.body}</div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <button style="border:none;cursor:pointer;padding:6px 11px;border-radius:${isPx?'4px':'999px'};font-size:11.5px;font-weight:700;${isPx?`background:var(--pixel-chassis);color:${accent};border-top:1.5px solid rgba(255,255,255,0.2);border-left:1.5px solid rgba(255,255,255,0.2);border-right:1.5px solid #000;border-bottom:1.5px solid #000;font-family:var(--font-mono)`:`background:${accent};color:#052e16`}">${isPx ? n.action.toUpperCase() : n.action}</button>
+          <button style="border:none;cursor:pointer;width:26px;height:26px;border-radius:${isPx?'4px':'50%'};background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);font-size:11px;font-weight:700">✕</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // VARIANT C: Micro-Source Ribbon + Ambient Icon Glow + Hero Copy
+  return `
+    <div class="notif-banner ${isPx ? 'px-scanlines pixel-font' : ''}" style="flex-direction:column;align-items:stretch;gap:8px;padding:16px 20px 14px">
+      <span class="webcam-dot"></span>
+      <!-- Top Micro Ribbon -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08)">
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.78)">
+          <span style="width:12px;height:3px;border-radius:${isPx?'0':'2px'};background:${accent};display:inline-block"></span>
+          <span>${isPx ? `${n.source.toUpperCase()} // LIVE` : n.source}</span>
+        </div>
+        <span style="font-size:11px;color:rgba(255,255,255,0.56)">${n.time}</span>
+      </div>
+
+      <!-- Content with Ambient Radial Icon Glow -->
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:36px;height:36px;flex-shrink:0;border-radius:${isPx?'4px':'10px'};background:${isPx?'var(--pixel-slot)':`radial-gradient(circle, ${accent}38, transparent 75%)`};display:grid;place-items:center">
+          ${isPx ? pixelIconSVG(n.iconType, accent, 20) : modernIconSVG(n.iconType, accent)}
+        </div>
+        <div style="min-width:0;flex:1">
+          <div style="font-size:15.5px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.title}</div>
+          <div style="font-size:12.5px;color:rgba(255,255,255,0.66);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.body}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// =========================================================
+// SURFACE 3 RENDERERS (A, B, C)
+// =========================================================
+function renderChargingBanner() {
+  const isPx = state.theme === 'pixel';
+  const batt = state.battery;
+  const pct = Math.max(0.05, Math.min(1, batt / 100));
+  const green = batt <= 20 ? '#ff453a' : (isPx ? '#00e676' : '#30d158');
+  const statusSub = batt >= 100 ? 'Fully charged' : 'Charger connected';
+
+  if (state.variant === 'A') {
+    // VARIANT A: Ring + Bolt + 2-Line Stack + Hero % (Matches Issue #45 Ref 3)
+    const ring = isPx
+      ? `<div style="position:relative;width:48px;height:48px;display:grid;place-items:center;flex-shrink:0">
+          <svg width="48" height="48" viewBox="0 0 48 48" shape-rendering="crispEdges">
+            ${Array.from({length:12}).map((_,i) => {
+              const ang = (i / 12) * Math.PI * 2 - Math.PI / 2;
+              const x = Math.round(24 + Math.cos(ang) * 18 - 3);
+              const y = Math.round(24 + Math.sin(ang) * 18 - 3);
+              const on = i < Math.round(pct * 12);
+              return `<rect x="${x}" y="${y}" width="6" height="6" fill="${on ? green : 'rgba(255,255,255,0.14)'}"/>`;
+            }).join('')}
+          </svg>
+          <div style="position:absolute">${pixelIconSVG('bolt', '#ffffff', 14)}</div>
+        </div>`
+      : `<div style="position:relative;width:46px;height:46px;display:grid;place-items:center;flex-shrink:0">
+          <svg width="46" height="46" viewBox="0 0 46 46">
+            <circle cx="23" cy="23" r="18" fill="none" stroke="rgba(48,209,88,0.2)" stroke-width="5.5"/>
+            <circle cx="23" cy="23" r="18" fill="none" stroke="${green}" stroke-width="5.5"
+              stroke-dasharray="${(113.1 * pct).toFixed(1)} 113.1" stroke-linecap="round" transform="rotate(-90 23 23)"/>
+          </svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff" style="position:absolute">
+            <path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/>
+          </svg>
+        </div>`;
+
+    return `
+      <div class="charge-banner ${isPx ? 'px-scanlines pixel-font' : ''}">
+        <span class="webcam-dot"></span>
+        ${isPx ? `<div class="px-top-trace" style="--trace-color:${green}"></div>` : ''}
+        ${ring}
+        <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+          <span style="font-size:19px;font-weight:700;color:#fff;line-height:1.15">${isPx ? 'CHARGING' : 'Charging'}</span>
+          <span style="font-size:13.5px;color:rgba(255,255,255,0.52)">${isPx ? statusSub.toUpperCase() : statusSub}</span>
+        </div>
+        <div style="font-size:29px;font-weight:${isPx?'800':'400'};color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-0.02em">
+          ${batt}%
+        </div>
+      </div>
+    `;
+  }
+
+  if (state.variant === 'B') {
+    // VARIANT B: Full-Width Segmented Power Rail + Time-to-Full
+    const minsLeft = Math.max(0, Math.round((100 - batt) * 0.9));
+    const blocks = 20;
+    const filled = Math.round(pct * blocks);
+
+    return `
+      <div class="charge-banner ${isPx ? 'px-scanlines pixel-font' : ''}" style="flex-direction:column;align-items:stretch;gap:10px;padding:18px 22px 15px">
+        <span class="webcam-dot"></span>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="color:${green};display:grid;place-items:center">
+              ${isPx ? pixelIconSVG('bolt', green, 14) : `<svg width="16" height="16" viewBox="0 0 24 24" fill="${green}"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>`}
+            </span>
+            <span style="font-size:15px;font-weight:700;color:#fff">${isPx ? 'MAGSAFE // AC' : 'Charging'}</span>
+            <span style="font-size:12px;color:rgba(255,255,255,0.48)">· ${minsLeft === 0 ? 'Full' : `~${minsLeft}m to full`}</span>
+          </div>
+          <span style="font-size:21px;font-weight:800;color:${green};font-variant-numeric:tabular-nums">${batt}%</span>
+        </div>
+
+        ${isPx
+          ? `<div class="px-slot" style="display:flex;gap:3px;padding:4px">
+              ${Array.from({length:blocks}).map((_,i)=>`<span style="flex:1;height:10px;background:${i < filled ? green : 'rgba(255,255,255,0.1)'}"></span>`).join('')}
+             </div>`
+          : `<div style="height:10px;border-radius:999px;background:rgba(255,255,255,0.12);overflow:hidden;padding:2px">
+              <div style="width:${batt}%;height:100%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#4ade80)"></div>
+             </div>`
+        }
+      </div>
+    `;
+  }
+
+  // VARIANT C: Concentric Reactor Ring (% Inside) + AC Waveform
+  return `
+    <div class="charge-banner ${isPx ? 'px-scanlines pixel-font' : ''}" style="justify-content:space-between;padding:16px 24px 14px">
+      <span class="webcam-dot"></span>
+      <div style="display:flex;align-items:center;gap:14px">
+        ${isPx
+          ? `<div class="px-slot" style="width:52px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-color:${green}88">
+              <span style="font-size:14px;font-weight:900;color:${green}">${batt}%</span>
+              <span style="font-size:8px;color:rgba(255,255,255,0.6)">PWR</span>
+             </div>`
+          : `<div style="position:relative;width:52px;height:52px;display:grid;place-items:center">
+              <svg width="52" height="52" viewBox="0 0 52 52" style="position:absolute">
+                <circle cx="26" cy="26" r="21" fill="none" stroke="rgba(48,209,88,0.18)" stroke-width="4.5"/>
+                <circle cx="26" cy="26" r="21" fill="none" stroke="${green}" stroke-width="4.5" stroke-dasharray="${(131.9*pct).toFixed(1)} 131.9" stroke-linecap="round" transform="rotate(-90 26 26)"/>
+              </svg>
+              <span style="font-size:12.5px;font-weight:800;color:#fff">${batt}%</span>
+            </div>`
+        }
+        <div>
+          <div style="font-size:16.5px;font-weight:700;color:#fff">${isPx ? 'MAGSAFE_ONLINE' : 'MagSafe Charging'}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:2px">${statusSub} · Fast Power</div>
+        </div>
+      </div>
+
+      <!-- Subtle AC Power Pill -->
+      <div class="${isPx?'px-bevel':''}" style="display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:${isPx?'4px':'999px'};background:${isPx?'var(--pixel-chassis)':'rgba(48,209,88,0.14)'};color:${green};font-size:12px;font-weight:700">
+        ${isPx ? pixelIconSVG('bolt', green, 12) : `<svg width="13" height="13" viewBox="0 0 24 24" fill="${green}"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>`}
+        <span>${isPx ? 'AC_OK' : 'Connected'}</span>
+      </div>
+    </div>
+  `;
+}
+
+function render() {
+  const v = VARIANTS.find(x => x.key === state.variant) || VARIANTS[0];
+  const isPx = state.theme === 'pixel';
+  const isIsland = state.shell === 'island';
+
+  document.getElementById('btnModern').className = 'seg-btn' + (!isPx ? ' active' : '');
+  document.getElementById('btnPixel').className = 'seg-btn' + (isPx ? ' active pixel-mode' : '');
+  document.getElementById('btnNotch').className = 'seg-btn' + (!isIsland ? ' active' : '');
+  document.getElementById('btnIsland').className = 'seg-btn' + (isIsland ? ' active' : '');
+  document.getElementById('selNotif').value = state.notif;
+  document.getElementById('lblBatt').textContent = state.battery + '%';
+  document.getElementById('lblHour').textContent = formatHHMM(state.hour);
+
+  document.getElementById('rationaleBar').innerHTML = `
+    <div><strong>Variant ${v.key} — ${v.name}:</strong> ${v.desc}</div>
+    <div style="font-family:var(--font-mono);font-size:11px;color:#93c5fd">Mode: ${isPx ? 'Pixel 32-bit' : 'Modern Clean'} · Shell: ${isIsland ? 'Dynamic Island' : 'MacBook Notch'}</div>
+  `;
+
+  document.getElementById('meta1').textContent = v.s1;
+  document.getElementById('meta2').textContent = v.s2;
+  document.getElementById('meta3').textContent = v.s3;
+
+  ['bd1', 'bd2', 'bd3'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.toggle('island-mode', isIsland);
+  });
+
+  document.getElementById('shell1').innerHTML = renderPrayerCard();
+  document.getElementById('shell2').innerHTML = renderNotifBanner();
+  document.getElementById('shell3').innerHTML = renderChargingBanner();
+
+  document.getElementById('swKey').textContent = v.key;
+  document.getElementById('swName').textContent = v.name;
+  const themeBtn = document.getElementById('swThemeBtn');
+  themeBtn.className = 'sw-theme-btn' + (isPx ? ' is-pixel' : '');
+  document.getElementById('swThemeIcon').textContent = isPx ? '▣' : '◐';
+  document.getElementById('swThemeLabel').textContent = isPx ? 'Pixel 32-bit' : 'Modern Clean';
+}
+
+render();
+</script>
+</body>
+</html>
