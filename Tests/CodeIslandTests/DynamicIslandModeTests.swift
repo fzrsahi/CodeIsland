@@ -45,14 +45,21 @@ final class DynamicIslandModeTests: XCTestCase {
         XCTAssertEqual(SettingsDefaults.islandDisplayMode, IslandDisplayMode.notch.rawValue)
 
         UserDefaults.standard.removeObject(forKey: SettingsKey.islandDisplayMode)
+        UserDefaults.standard.removeObject(forKey: SettingsKey.dynamicIslandTopOffset)
         XCTAssertEqual(SettingsManager.shared.islandDisplayMode, .notch)
+        XCTAssertEqual(SettingsManager.shared.dynamicIslandTopOffset, 10)
 
         SettingsManager.shared.islandDisplayMode = .dynamicIsland
+        SettingsManager.shared.dynamicIslandTopOffset = 22
         XCTAssertEqual(
             UserDefaults.standard.string(forKey: SettingsKey.islandDisplayMode),
             IslandDisplayMode.dynamicIsland.rawValue
         )
         XCTAssertEqual(SettingsManager.shared.islandDisplayMode, .dynamicIsland)
+        XCTAssertEqual(SettingsManager.shared.dynamicIslandTopOffset, 22)
+
+        SettingsManager.shared.dynamicIslandTopOffset = 99
+        XCTAssertEqual(SettingsManager.shared.dynamicIslandTopOffset, 40)
     }
 
     func testPanelWindowLayoutOffsetAndWidthMetrics() {
@@ -65,6 +72,10 @@ final class DynamicIslandModeTests: XCTestCase {
         XCTAssertEqual(
             PanelWindowLayout.anchoredY(screenMaxY: screenMaxY, panelHeight: panelHeight, displayMode: .dynamicIsland, isFullscreenMode: false),
             958
+        )
+        XCTAssertEqual(
+            PanelWindowLayout.anchoredY(screenMaxY: screenMaxY, panelHeight: panelHeight, displayMode: .dynamicIsland, isFullscreenMode: false, topOffset: 24),
+            944
         )
         XCTAssertEqual(
             PanelWindowLayout.anchoredY(screenMaxY: screenMaxY, panelHeight: panelHeight, displayMode: .dynamicIsland, isFullscreenMode: true),

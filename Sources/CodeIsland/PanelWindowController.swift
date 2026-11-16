@@ -8,11 +8,13 @@ enum PanelWindowLayout {
         screenMaxY: CGFloat,
         panelHeight: CGFloat,
         displayMode: IslandDisplayMode,
-        isFullscreenMode: Bool
+        isFullscreenMode: Bool,
+        topOffset: Double = DynamicIslandTopOffset.defaultValue
     ) -> CGFloat {
         screenMaxY - panelHeight - CGFloat(IslandDisplayMetrics.floatingYOffset(
             displayMode: displayMode,
-            isFullscreenMode: isFullscreenMode
+            isFullscreenMode: isFullscreenMode,
+            customTopOffset: topOffset
         ))
     }
 }
@@ -591,7 +593,8 @@ class PanelWindowController: NSObject, NSWindowDelegate {
             screenMaxY: screen.frame.maxY,
             panelHeight: panelHeight,
             displayMode: SettingsManager.shared.islandDisplayMode,
-            isFullscreenMode: appState.isFullscreenMode
+            isFullscreenMode: appState.isFullscreenMode,
+            topOffset: SettingsManager.shared.dynamicIslandTopOffset
         )
     }
 

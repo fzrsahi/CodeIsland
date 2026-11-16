@@ -27,6 +27,12 @@ final class IslandDisplayModeTests: XCTestCase {
         XCTAssertEqual(IslandDisplayMetrics.floatingYOffset(displayMode: .notch, isFullscreenMode: true), 10)
         XCTAssertEqual(IslandDisplayMetrics.floatingYOffset(displayMode: .dynamicIsland, isFullscreenMode: false), 10)
         XCTAssertEqual(IslandDisplayMetrics.floatingYOffset(displayMode: .dynamicIsland, isFullscreenMode: true), 10)
+
+        // Custom top offset clamps cleanly to 0...40pt when Dynamic Island or Fullscreen is active
+        XCTAssertEqual(IslandDisplayMetrics.floatingYOffset(displayMode: .dynamicIsland, isFullscreenMode: false, customTopOffset: 24), 24)
+        XCTAssertEqual(IslandDisplayMetrics.floatingYOffset(displayMode: .dynamicIsland, isFullscreenMode: false, customTopOffset: -5), 0)
+        XCTAssertEqual(IslandDisplayMetrics.floatingYOffset(displayMode: .dynamicIsland, isFullscreenMode: false, customTopOffset: 80), 40)
+        XCTAssertEqual(IslandDisplayMetrics.floatingYOffset(displayMode: .notch, isFullscreenMode: false, customTopOffset: 24), 0)
     }
 
     func testCenterGapCollapsesDeadSpaceInDynamicIslandOnNonNotchScreens() {

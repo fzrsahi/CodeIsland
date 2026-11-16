@@ -341,6 +341,7 @@ enum SettingsKey {
 
     // Display
     static let islandDisplayMode = "islandDisplayMode"          // IslandDisplayMode raw value: "notch" | "dynamicIsland"
+    static let dynamicIslandTopOffset = "dynamicIslandTopOffset" // Distance in pt below top screen edge (0–40)
     static let maxPanelHeight = "maxPanelHeight"
     static let maxVisibleSessions = "maxVisibleSessions"
     static let sessionListDensity = "sessionListDensity"  // SessionListDensity raw value: "comfortable" | "compact"
@@ -527,6 +528,7 @@ struct SettingsDefaults {
     static let sessionTimeout = 30
 
     static let islandDisplayMode = IslandDisplayMode.notch.rawValue
+    static let dynamicIslandTopOffset = DynamicIslandTopOffset.defaultValue
     static let maxPanelHeight = 560
     static let maxVisibleSessions = 5
     static let sessionListDensity = SessionListDensity.comfortable.rawValue
@@ -864,6 +866,16 @@ class SettingsManager {
     var islandDisplayMode: IslandDisplayMode {
         get { IslandDisplayMode.resolved(from: defaults.string(forKey: SettingsKey.islandDisplayMode)) }
         set { defaults.set(newValue.rawValue, forKey: SettingsKey.islandDisplayMode) }
+    }
+
+    var dynamicIslandTopOffset: Double {
+        get {
+            guard defaults.object(forKey: SettingsKey.dynamicIslandTopOffset) != nil else {
+                return SettingsDefaults.dynamicIslandTopOffset
+            }
+            return DynamicIslandTopOffset.clamp(defaults.double(forKey: SettingsKey.dynamicIslandTopOffset))
+        }
+        set { defaults.set(DynamicIslandTopOffset.clamp(newValue), forKey: SettingsKey.dynamicIslandTopOffset) }
     }
 
     var notchHeightMode: NotchHeightMode {

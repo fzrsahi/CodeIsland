@@ -30,9 +30,22 @@ public enum NotchWidthScale {
     }
 }
 
+/// Bounds for the Dynamic Island's vertical distance from the top edge of the screen.
+public enum DynamicIslandTopOffset {
+    public static let min: Double = 0.0
+    public static let max: Double = 40.0
+    public static let step: Double = 1.0
+    public static let defaultValue: Double = 10.0
+
+    public static func clamp(_ offset: Double) -> Double {
+        guard offset.isFinite else { return defaultValue }
+        return Swift.max(min, Swift.min(offset, max))
+    }
+}
+
 /// Platform-agnostic geometry calculations shared by display-mode rendering and window positioning.
 public enum IslandDisplayMetrics {
-    public static let floatingPillTopGap: Double = 10.0
+    public static let floatingPillTopGap: Double = DynamicIslandTopOffset.defaultValue
     private static let dynamicIslandCenterBaseGap: Double = 16.0
 
     private static func scaleFactor(for scalePercent: Int) -> Double {
@@ -40,8 +53,14 @@ public enum IslandDisplayMetrics {
     }
 
     /// Vertical distance below the top screen edge where the panel sits.
-    public static func floatingYOffset(displayMode: IslandDisplayMode, isFullscreenMode: Bool) -> Double {
-        (displayMode == .dynamicIsland || isFullscreenMode) ? floatingPillTopGap : 0.0
+    public static func floatingYOffset(
+        displayMode: IslandDisplayMode,
+        isFullscreenMode: Bool,
+        customTopOffset: Double = floatingPillTopGap
+    ) -> Double {
+        (displayMode == .dynamicIsland || isFullscreenMode)
+            ? DynamicIslandTopOffset.clamp(customTopOffset)
+            : 0.0
     }
 
     /// Center cutout / gap width reserved between left and right collapsed wings.

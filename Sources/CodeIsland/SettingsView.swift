@@ -1499,6 +1499,7 @@ private struct AppearancePage: View {
     @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.islandDisplayMode) private var islandDisplayModeRaw = SettingsDefaults.islandDisplayMode
+    @AppStorage(SettingsKey.dynamicIslandTopOffset) private var dynamicIslandTopOffset = SettingsDefaults.dynamicIslandTopOffset
     @AppStorage(SettingsKey.collapsedWidthScale) private var collapsedWidthScale = SettingsDefaults.collapsedWidthScale
     @AppStorage(SettingsKey.notchHeightMode) private var notchHeightModeRaw = SettingsDefaults.notchHeightMode
     @AppStorage(SettingsKey.customNotchHeight) private var customNotchHeight = SettingsDefaults.customNotchHeight
@@ -1510,6 +1511,13 @@ private struct AppearancePage: View {
         Binding(
             get: { IslandDisplayMode.resolved(from: islandDisplayModeRaw) },
             set: { islandDisplayModeRaw = $0.rawValue }
+        )
+    }
+
+    private var dynamicIslandTopOffsetBinding: Binding<Double> {
+        Binding(
+            get: { DynamicIslandTopOffset.clamp(dynamicIslandTopOffset) },
+            set: { dynamicIslandTopOffset = DynamicIslandTopOffset.clamp($0) }
         )
     }
 
@@ -1620,6 +1628,27 @@ private struct AppearancePage: View {
                     Text(l10n["display_mode_desc"])
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    if islandDisplayMode.wrappedValue == .dynamicIsland {
+                        HStack {
+                            Text(l10n["dynamic_island_top_offset"])
+                            Spacer()
+                            Text("\(Int(dynamicIslandTopOffsetBinding.wrappedValue.rounded()))pt")
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                        .padding(.top, 4)
+                        Slider(
+                            value: dynamicIslandTopOffsetBinding,
+                            in: DynamicIslandTopOffset.min...DynamicIslandTopOffset.max,
+                            step: DynamicIslandTopOffset.step
+                        )
+                        .accessibilityLabel(Text(l10n["dynamic_island_top_offset"]))
+                        .accessibilityValue(Text("\(Int(dynamicIslandTopOffsetBinding.wrappedValue.rounded()))pt"))
+                        Text(l10n["dynamic_island_top_offset_desc"])
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
