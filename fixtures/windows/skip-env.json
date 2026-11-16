@@ -1,0 +1,30 @@
+{
+  "expectation" : {
+    "forwarded" : null,
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "codex"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+      "CODEISLAND_SKIP" : "1"
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"session_id\":\"s\",\"hook_event_name\":\"Stop\"}"
+  },
+  "name" : "skip-env",
+  "scope" : "windows"
+}

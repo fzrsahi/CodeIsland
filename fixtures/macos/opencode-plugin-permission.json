@@ -1,0 +1,49 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_env" : {
+        "TERM_PROGRAM" : "ghostty"
+      },
+      "_ppid" : "$PID0",
+      "_server_port" : 4096,
+      "_source" : "opencode",
+      "_tty" : "/dev/ttys009",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "PermissionRequest",
+      "session_id" : "opencode-ses_1",
+      "tool_input" : {
+        "command" : "rm -rf build"
+      },
+      "tool_name" : "Bash"
+    },
+    "status" : 0,
+    "stdout" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}"
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "home/.opencode/bin/opencode"
+      }
+    ],
+    "arguments" : [
+
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}",
+    "stdin" : "{\"hook_event_name\":\"PermissionRequest\",\"session_id\":\"opencode-ses_1\",\"_source\":\"opencode\",\"_ppid\":4242,\"_env\":{\"TERM_PROGRAM\":\"ghostty\"},\"_tty\":\"/dev/ttys009\",\"_server_port\":4096,\"cwd\":\"/Users/golden/project\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"rm -rf build\"}}"
+  },
+  "name" : "opencode-plugin-permission",
+  "scope" : "macos"
+}

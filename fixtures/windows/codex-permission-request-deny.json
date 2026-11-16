@@ -1,0 +1,49 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "codex",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "PermissionRequest",
+      "session_id" : "019a0000-0000-7000-8000-000000000007",
+      "tool_input" : {
+        "command" : [
+          "rm",
+          "-rf",
+          "build"
+        ]
+      },
+      "tool_name" : "shell"
+    },
+    "status" : 0,
+    "stdout" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied on the island\"}}}"
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "opt/homebrew/bin/codex"
+      }
+    ],
+    "arguments" : [
+      "--source",
+      "codex"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied on the island\"}}}",
+    "stdin" : "{\"session_id\":\"019a0000-0000-7000-8000-000000000007\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PermissionRequest\",\"tool_name\":\"shell\",\"tool_input\":{\"command\":[\"rm\",\"-rf\",\"build\"]}}"
+  },
+  "name" : "codex-permission-request-deny",
+  "scope" : "windows"
+}

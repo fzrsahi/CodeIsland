@@ -1,0 +1,60 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_cursor_payload_digest" : "04d112b6484faa502ceacc9a4a59c4fb18ca320f6d8439733f31c5c19c47eb9e",
+      "_ppid" : "$PID0",
+      "_source" : "cursor",
+      "command" : "swift test",
+      "conversation_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+      "cursor_version" : "3.25.9",
+      "cwd" : "",
+      "generation_id" : "gen-1",
+      "hook_event_name" : "beforeShellExecution",
+      "model" : "composer-2.5",
+      "session_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+      "transcript_path" : "/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl",
+      "user_email" : null,
+      "workspace_roots" : [
+        "/Users/golden/project"
+      ]
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "Applications/Cursor.app/Contents/Frameworks/Cursor Helper (Plugin).app/Contents/MacOS/Cursor Helper (Plugin)"
+      },
+      {
+        "arguments" : [
+
+        ],
+        "path" : "Applications/Cursor.app/Contents/MacOS/Cursor"
+      }
+    ],
+    "arguments" : [
+      "--source",
+      "cursor",
+      "--event",
+      "beforeShellExecution"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"conversation_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"generation_id\":\"gen-1\",\"session_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"model\":\"composer-2.5\",\"hook_event_name\":\"beforeShellExecution\",\"cursor_version\":\"3.25.9\",\"workspace_roots\":[\"/Users/golden/project\"],\"user_email\":null,\"transcript_path\":\"/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl\",\"command\":\"swift test\",\"cwd\":\"\"}"
+  },
+  "name" : "cursor-native-before-shell",
+  "scope" : "linux"
+}

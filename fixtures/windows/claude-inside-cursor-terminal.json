@@ -1,0 +1,59 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "claude",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "UserPromptSubmit",
+      "prompt" : "hello",
+      "session_id" : "c1a0de00-0000-4000-8000-00000000000c"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "home/.local/share/claude/versions/2.1.294"
+      },
+      {
+        "arguments" : [
+
+        ],
+        "path" : "bin/zsh"
+      },
+      {
+        "arguments" : [
+
+        ],
+        "path" : "Applications/Cursor.app/Contents/Frameworks/Cursor Helper (Plugin).app/Contents/MacOS/Cursor Helper (Plugin)"
+      },
+      {
+        "arguments" : [
+
+        ],
+        "path" : "Applications/Cursor.app/Contents/MacOS/Cursor"
+      }
+    ],
+    "arguments" : [
+
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-00000000000c\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"hello\"}"
+  },
+  "name" : "claude-inside-cursor-terminal",
+  "scope" : "windows"
+}

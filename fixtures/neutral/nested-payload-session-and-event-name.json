@@ -1,0 +1,37 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "cwd" : "/Users/golden/project",
+      "eventName" : "Stop",
+      "hook_event_name" : "Stop",
+      "payload" : {
+        "sessionId" : "nested-session-1"
+      },
+      "session_id" : "nested-session-1"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"eventName\":\"Stop\",\"payload\":{\"sessionId\":\"nested-session-1\"},\"cwd\":\"/Users/golden/project\"}"
+  },
+  "name" : "nested-payload-session-and-event-name",
+  "scope" : "neutral"
+}

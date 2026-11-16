@@ -1,0 +1,47 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "kimi",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "UserPromptSubmit",
+      "prompt" : [
+        {
+          "text" : "Explain this",
+          "type" : "text"
+        }
+      ],
+      "session_id" : "session_kimi_1"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "home/.kimi-code/bin/kimi"
+      }
+    ],
+    "arguments" : [
+      "--source",
+      "kimi"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"session_kimi_1\",\"cwd\":\"/Users/golden/project\",\"prompt\":[{\"type\":\"text\",\"text\":\"Explain this\"}]}"
+  },
+  "name" : "kimi-user-prompt",
+  "scope" : "macos"
+}

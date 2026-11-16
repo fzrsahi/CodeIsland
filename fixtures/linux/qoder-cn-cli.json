@@ -1,0 +1,42 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "qoder-cli",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "UserPromptSubmit",
+      "prompt" : "你好",
+      "session_id" : "qoder-3"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "home/.qoder-cn/bin/qoderclicn-1.1.5"
+      }
+    ],
+    "arguments" : [
+      "--source",
+      "qoder-cli"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"session_id\":\"qoder-3\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"你好\"}"
+  },
+  "name" : "qoder-cn-cli",
+  "scope" : "linux"
+}

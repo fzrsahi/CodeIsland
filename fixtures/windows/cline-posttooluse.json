@@ -1,0 +1,47 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : 0,
+      "_source" : "cline",
+      "cwd" : "$ROOT/work",
+      "hook_event_name" : "PostToolUse",
+      "hookName" : "PostToolUse",
+      "postToolUse" : {
+        "parameters" : {
+          "path" : "a.txt"
+        },
+        "result" : "ok",
+        "success" : true,
+        "toolName" : "read_file"
+      },
+      "session_id" : "1761120000001",
+      "taskId" : "1761120000001",
+      "tool_name" : "read_file"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "cline"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"hookName\":\"PostToolUse\",\"taskId\":\"1761120000001\",\"postToolUse\":{\"toolName\":\"read_file\",\"parameters\":{\"path\":\"a.txt\"},\"result\":\"ok\",\"success\":true}}"
+  },
+  "name" : "cline-posttooluse",
+  "scope" : "windows"
+}

@@ -1,0 +1,41 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_source" : "gemini",
+      "cwd" : "$ROOT/work",
+      "hook_event_name" : "AfterTool",
+      "session_id" : "gemini-5",
+      "tool_name" : "run_shell_command",
+      "tool_response" : {
+        "output" : "ok"
+      }
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "gemini",
+      "--event",
+      "AfterTool"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"allow\"}}}",
+    "stdin" : "{\"session_id\":\"gemini-5\",\"hook_event_name\":\"AfterTool\",\"tool_name\":\"run_shell_command\",\"tool_response\":{\"output\":\"ok\"}}"
+  },
+  "name" : "gemini-aftertool",
+  "scope" : "neutral"
+}

@@ -1,0 +1,30 @@
+{
+  "expectation" : {
+    "forwarded" : null,
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "codex"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : false,
+    "reply" : "{}",
+    "stdin" : "{\"session_id\":\"s\",\"hook_event_name\":\"Stop\"}"
+  },
+  "name" : "island-not-running",
+  "scope" : "windows"
+}

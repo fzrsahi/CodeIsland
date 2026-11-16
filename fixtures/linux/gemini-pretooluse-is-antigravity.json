@@ -1,0 +1,46 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "gemini",
+      "conversationId" : "agy-conv-0",
+      "cwd" : "$ROOT/work",
+      "hook_event_name" : "PreToolUse",
+      "session_id" : "agy-conv-0",
+      "stepIdx" : 2,
+      "toolCall" : {
+        "args" : {
+          "AbsolutePath" : "/Users/golden/project/a.txt"
+        },
+        "name" : "view_file"
+      }
+    },
+    "status" : 0,
+    "stdout" : "{\"decision\":\"ask\"}"
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "gemini",
+      "--event",
+      "PreToolUse"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"conversationId\":\"agy-conv-0\",\"stepIdx\":2,\"toolCall\":{\"name\":\"view_file\",\"args\":{\"AbsolutePath\":\"/Users/golden/project/a.txt\"}}}"
+  },
+  "name" : "gemini-pretooluse-is-antigravity",
+  "scope" : "linux"
+}

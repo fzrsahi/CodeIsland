@@ -1,0 +1,42 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "grok",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "Stop",
+      "hookEventName" : "Stop",
+      "session_id" : "grok-sess-2",
+      "sessionId" : "grok-sess-2",
+      "toolName" : "bash"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "grok"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+      "GROK_HOME" : "$ROOT/grokhome",
+      "GROK_HOOK_EVENT" : "Stop",
+      "GROK_SESSION_ID" : "grok-sess-2",
+      "GROK_WORKSPACE_ROOT" : "/Users/golden/project"
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"toolName\":\"bash\"}"
+  },
+  "name" : "grok-env-only",
+  "scope" : "windows"
+}

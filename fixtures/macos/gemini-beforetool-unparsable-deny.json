@@ -1,0 +1,42 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "gemini",
+      "cwd" : "$ROOT/work",
+      "hook_event_name" : "BeforeTool",
+      "session_id" : "gemini-2",
+      "tool_input" : {
+        "file_path" : "x"
+      },
+      "tool_name" : "write_file"
+    },
+    "status" : 0,
+    "stdout" : "{\"decision\":\"deny\"}"
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "gemini",
+      "--event",
+      "BeforeTool"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "not json but \"behavior\":\"deny\" anyway",
+    "stdin" : "{\"session_id\":\"gemini-2\",\"hook_event_name\":\"BeforeTool\",\"tool_name\":\"write_file\",\"tool_input\":{\"file_path\":\"x\"}}"
+  },
+  "name" : "gemini-beforetool-unparsable-deny",
+  "scope" : "macos"
+}

@@ -1,0 +1,44 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_source" : "google-antigravity",
+      "conversationId" : "agy-conv-3",
+      "cwd" : "$ROOT/work",
+      "hook_event_name" : "PermissionRequest",
+      "session_id" : "agy-conv-3",
+      "toolCall" : {
+        "args" : {
+          "CommandLine" : "rm -rf dist"
+        },
+        "name" : "run_command"
+      }
+    },
+    "status" : 0,
+    "stdout" : "{\"decision\":\"allow\"}"
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "google-antigravity",
+      "--event",
+      "PermissionRequest"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"always\"}}}",
+    "stdin" : "{\"conversationId\":\"agy-conv-3\",\"toolCall\":{\"name\":\"run_command\",\"args\":{\"CommandLine\":\"rm -rf dist\"}}}"
+  },
+  "name" : "agy-permission-always",
+  "scope" : "neutral"
+}

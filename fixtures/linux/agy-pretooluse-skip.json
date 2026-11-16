@@ -1,0 +1,32 @@
+{
+  "expectation" : {
+    "forwarded" : null,
+    "status" : 0,
+    "stdout" : "{\"decision\":\"ask\"}"
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "google-antigravity",
+      "--event",
+      "PreToolUse"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+      "CODEISLAND_SKIP" : "1"
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"conversationId\":\"agy-conv-5\"}"
+  },
+  "name" : "agy-pretooluse-skip",
+  "scope" : "linux"
+}

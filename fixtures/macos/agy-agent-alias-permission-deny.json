@@ -1,0 +1,42 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "agy",
+      "conversationId" : "agy-conv-4",
+      "cwd" : "$ROOT/work",
+      "hook_event_name" : "PermissionRequest",
+      "session_id" : "agy-conv-4",
+      "toolCall" : {
+        "name" : "run_command"
+      }
+    },
+    "status" : 0,
+    "stdout" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied on the island\"}}}"
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "agy",
+      "--event",
+      "PermissionRequest"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"Denied on the island\"}}}",
+    "stdin" : "{\"conversationId\":\"agy-conv-4\",\"toolCall\":{\"name\":\"run_command\"}}"
+  },
+  "name" : "agy-agent-alias-permission-deny",
+  "scope" : "macos"
+}

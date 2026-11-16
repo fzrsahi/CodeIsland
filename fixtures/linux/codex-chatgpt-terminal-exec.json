@@ -1,0 +1,48 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "codex",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "Stop",
+      "session_id" : "019a0000-0000-7000-8000-000000000004"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+          "exec",
+          "ls"
+        ],
+        "path" : "Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "arguments" : [
+
+        ],
+        "path" : "Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+      }
+    ],
+    "arguments" : [
+      "--source",
+      "codex"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"session_id\":\"019a0000-0000-7000-8000-000000000004\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Stop\"}"
+  },
+  "name" : "codex-chatgpt-terminal-exec",
+  "scope" : "linux"
+}

@@ -1,0 +1,43 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "google-antigravity",
+      "conversationId" : "agy-conv-2",
+      "cwd" : "$ROOT/work",
+      "hook_event_name" : "PreToolUse",
+      "session_id" : "agy-conv-2",
+      "toolCall" : {
+        "args" : {
+          "CommandLine" : "ls"
+        },
+        "name" : "run_command"
+      }
+    },
+    "status" : 0,
+    "stdout" : "{\"decision\":\"ask\"}"
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "google-antigravity"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"hook_event_name\":\"PreToolUse\",\"conversationId\":\"agy-conv-2\",\"toolCall\":{\"name\":\"run_command\",\"args\":{\"CommandLine\":\"ls\"}}}"
+  },
+  "name" : "agy-event-on-stdin",
+  "scope" : "linux"
+}

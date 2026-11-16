@@ -1,0 +1,41 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "kiro",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "agentSpawn",
+      "session_id" : "kiro-ppid-$PID0"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "home/.local/bin/kiro-cli"
+      }
+    ],
+    "arguments" : [
+      "--source",
+      "kiro"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"hook_event_name\":\"agentSpawn\",\"cwd\":\"/Users/golden/project\"}"
+  },
+  "name" : "kiro-agent-spawn-fallback-session",
+  "scope" : "windows"
+}

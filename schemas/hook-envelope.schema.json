@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeisland.dev/schemas/hook-envelope.schema.json",
+  "title": "CodeIsland Hook & IPC Envelope",
+  "description": "Versioned IPC and edge envelopes across CodeIsland cores.",
+  "oneOf": [
+    { "$ref": "#/$defs/edgePayload" },
+    { "$ref": "#/$defs/ipcEnvelopeV1" },
+    { "$ref": "#/$defs/windowsProtocolEnvelope" }
+  ],
+  "$defs": {
+    "edgeFacts": {
+      "type": "object",
+      "required": ["v"],
+      "additionalProperties": true,
+      "properties": {
+        "v": { "type": "integer", "minimum": 1 },
+        "source": { "type": "string" },
+        "event": { "type": "string" },
+        "cwd": { "type": "string" },
+        "tty": { "type": "string" },
+        "stdin_sha256": { "type": "string", "pattern": "^[0-9a-fA-F]+$" },
+        "waits": { "type": "boolean" },
+        "host": {
+          "type": "object",
+          "required": ["id"],
+          "additionalProperties": true,
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" }
+          }
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "tmux_client_tty": { "type": "string" },
+        "ppid": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "edgePayload": {
+      "type": "object",
+      "required": ["_edge"],
+      "additionalProperties": true,
+      "properties": {
+        "_edge": { "$ref": "#/$defs/edgeFacts" }
+      }
+    },
+    "ipcEnvelopeV1": {
+      "type": "object",
+      "required": ["v", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "v": { "type": "integer", "const": 1 },
+        "payload": { "$ref": "hook-payload.schema.json" }
+      }
+    },
+    "windowsProtocolEnvelope": {
+      "type": "object",
+      "required": ["protocolVersion", "event"],
+      "additionalProperties": false,
+      "properties": {
+        "protocolVersion": { "type": "integer", "const": 1 },
+        "event": {
+          "type": "object",
+          "required": ["eventId", "sessionId", "agent", "type", "timestamp"],
+          "additionalProperties": false,
+          "properties": {
+            "eventId": { "type": "string", "minLength": 1 },
+            "sessionId": { "type": "string", "minLength": 1 },
+            "agent": {
+              "type": "string",
+              "enum": [
+                "unknown",
+                "claude",
+                "codex",
+                "gemini",
+                "cursor",
+                "copilot",
+                "trae",
+                "qoder",
+                "factory",
+                "code_buddy",
+                "open_code",
+                "kimi",
+                "cline",
+                "pi"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "session_start",
+                "session_end",
+                "tool_start",
+                "tool_end",
+                "permission_request",
+                "question",
+                "message",
+                "error",
+                "heartbeat"
+              ]
+            },
+            "timestamp": { "type": "string", "format": "date-time", "minLength": 1 },
+            "workingDirectory": { "type": ["string", "null"] },
+            "title": { "type": ["string", "null"] },
+            "text": { "type": ["string", "null"] },
+            "toolName": { "type": ["string", "null"] },
+            "payload": {},
+            "processId": { "type": ["integer", "null"] },
+            "terminalKind": { "type": ["string", "null"] }
+          }
+        }
+      }
+    }
+  }
+}

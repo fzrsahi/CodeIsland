@@ -1,0 +1,43 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "copilot",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "sessionStart",
+      "initialPrompt" : "hi",
+      "session_id" : "copilot-sess-1",
+      "sessionId" : "copilot-sess-1",
+      "source" : "new",
+      "timestamp" : 1761120000000,
+      "toolArgs" : "not json"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "copilot",
+      "--event",
+      "sessionStart"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"sessionId\":\"copilot-sess-1\",\"timestamp\":1761120000000,\"cwd\":\"/Users/golden/project\",\"source\":\"new\",\"initialPrompt\":\"hi\",\"toolArgs\":\"not json\"}"
+  },
+  "name" : "copilot-session-start-with-id",
+  "scope" : "windows"
+}

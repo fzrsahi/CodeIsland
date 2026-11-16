@@ -1,0 +1,48 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "traecli",
+      "agent_id" : "a1",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "pre_tool_use",
+      "session_id" : "traecli-1",
+      "tool_input" : {
+        "command" : "ls"
+      },
+      "tool_name" : "RunCommand"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "home/.local/bin/coco"
+      }
+    ],
+    "arguments" : [
+      "--source",
+      "traecli",
+      "--event",
+      "pre_tool_use"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"session_id\":\"traecli-1\",\"hook_event_name\":\"pre_tool_use\",\"tool_name\":\"RunCommand\",\"tool_input\":{\"command\":\"ls\"},\"cwd\":\"/Users/golden/project\",\"agent_id\":\"a1\"}"
+  },
+  "name" : "traecli-pre-tool-use",
+  "scope" : "windows"
+}

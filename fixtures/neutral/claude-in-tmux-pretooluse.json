@@ -1,0 +1,48 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_source" : "claude",
+      "_tmux" : "/tmp/ci-golden-no-tmux/tmux-501/default,4242,0",
+      "_tmux_pane" : "%7",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "PreToolUse",
+      "session_id" : "c1a0de00-0000-4000-8000-000000000008",
+      "tool_input" : {
+        "file_path" : "/Users/golden/project/README.md"
+      },
+      "tool_name" : "Read",
+      "tool_use_id" : "toolu_01"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "home/.local/bin/claude"
+      }
+    ],
+    "arguments" : [
+
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+      "TERM_PROGRAM" : "tmux",
+      "TMUX" : "/tmp/ci-golden-no-tmux/tmux-501/default,4242,0",
+      "TMUX_PANE" : "%7"
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-000000000008\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"/Users/golden/project/README.md\"},\"tool_use_id\":\"toolu_01\"}"
+  },
+  "name" : "claude-in-tmux-pretooluse",
+  "scope" : "neutral"
+}

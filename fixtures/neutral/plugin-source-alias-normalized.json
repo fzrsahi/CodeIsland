@@ -1,0 +1,39 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_source" : "antigravity",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "Stop",
+      "session_id" : "ag-1"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "home/.local/share/claude/versions/2.1.294"
+      }
+    ],
+    "arguments" : [
+
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"session_id\":\"ag-1\",\"_source\":\"Anti-Gravity\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Stop\"}"
+  },
+  "name" : "plugin-source-alias-normalized",
+  "scope" : "neutral"
+}

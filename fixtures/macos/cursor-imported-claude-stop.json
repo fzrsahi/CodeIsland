@@ -1,0 +1,52 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_cursor_payload_digest" : "24c312ff5564a75b3f38e5a21d784262a8d5c03f98ff53994b21e5577ed7aa5b",
+      "_ppid" : "$PID0",
+      "_source" : "cursor",
+      "conversation_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+      "cursor_version" : "3.25.9",
+      "cwd" : "$ROOT/work",
+      "generation_id" : "gen-1",
+      "hook_event_name" : "stop",
+      "loop_count" : 0,
+      "model" : "composer-2.5",
+      "session_id" : "e1247fd5-d9a0-48ef-8457-0304606b1833",
+      "status" : "completed",
+      "transcript_path" : "/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl",
+      "user_email" : null,
+      "workspace_roots" : [
+        "/Users/golden/project"
+      ]
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "Applications/Cursor.app/Contents/Frameworks/Cursor Helper (Plugin).app/Contents/MacOS/Cursor Helper (Plugin)"
+      }
+    ],
+    "arguments" : [
+
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"conversation_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"generation_id\":\"gen-1\",\"session_id\":\"e1247fd5-d9a0-48ef-8457-0304606b1833\",\"model\":\"composer-2.5\",\"hook_event_name\":\"stop\",\"cursor_version\":\"3.25.9\",\"workspace_roots\":[\"/Users/golden/project\"],\"user_email\":null,\"transcript_path\":\"/Users/golden/.cursor/projects/Users-golden-project/agent-transcripts/e1247fd5-d9a0-48ef-8457-0304606b1833/e1247fd5-d9a0-48ef-8457-0304606b1833.jsonl\",\"status\":\"completed\",\"loop_count\":0}"
+  },
+  "name" : "cursor-imported-claude-stop",
+  "scope" : "macos"
+}

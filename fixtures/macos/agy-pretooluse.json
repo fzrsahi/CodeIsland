@@ -1,0 +1,53 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "google-antigravity",
+      "conversationId" : "agy-conv-1",
+      "cwd" : "$ROOT/work",
+      "hook_event_name" : "PreToolUse",
+      "session_id" : "agy-conv-1",
+      "stepIdx" : 1,
+      "toolCall" : {
+        "args" : {
+          "CommandLine" : "npm test"
+        },
+        "name" : "run_command"
+      },
+      "transcript_path" : "/Users/golden/.gemini/antigravity/brain/agy-conv-1/transcript.jsonl",
+      "transcriptPath" : "/Users/golden/.gemini/antigravity/brain/agy-conv-1/transcript.jsonl"
+    },
+    "status" : 0,
+    "stdout" : "{\"decision\":\"ask\"}"
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "home/.local/bin/agy"
+      }
+    ],
+    "arguments" : [
+      "--source",
+      "google-antigravity",
+      "--event",
+      "PreToolUse"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"conversationId\":\"agy-conv-1\",\"stepIdx\":1,\"toolCall\":{\"name\":\"run_command\",\"args\":{\"CommandLine\":\"npm test\"}},\"transcriptPath\":\"/Users/golden/.gemini/antigravity/brain/agy-conv-1/transcript.jsonl\"}"
+  },
+  "name" : "agy-pretooluse",
+  "scope" : "macos"
+}

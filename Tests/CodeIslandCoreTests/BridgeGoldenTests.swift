@@ -75,6 +75,90 @@ final class BridgeGoldenTests: XCTestCase {
         print("bridge golden: \(identical)/\(BridgeGoldenFixtures.all.count) fixtures byte-identical to \(referencePath)")
     }
 
+    func testExportedJSONFixturesMatchSwiftGoldenSuite() throws {
+        if let exportDir = ProcessInfo.processInfo.environment["CODEISLAND_GOLDEN_EXPORT_JSON"] {
+            try BridgeGoldenJSONExporter.exportAll(to: URL(fileURLWithPath: exportDir, isDirectory: true))
+            throw XCTSkip("exported \(BridgeGoldenFixtures.all.count) fixtures per scope to \(exportDir)")
+        }
+
+        let fixturesRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("fixtures", isDirectory: true)
+
+        for scope in BridgeGoldenJSONExporter.Scope.allCases {
+            let scopeDir = fixturesRoot.appendingPathComponent(scope.rawValue, isDirectory: true)
+            let files = try FileManager.default.contentsOfDirectory(at: scopeDir, includingPropertiesForKeys: nil)
+                .filter { $0.pathExtension == "json" }
+                .map { $0.deletingPathExtension().lastPathComponent }
+            XCTAssertEqual(
+                Set(files),
+                Set(BridgeGoldenFixtures.all.map(\.name)),
+                "\(scope.rawValue): exported fixture file set must match BridgeGoldenFixtures.all"
+            )
+        }
+
+        for fixture in BridgeGoldenFixtures.all {
+            let expected = try XCTUnwrap(
+                BridgeGoldenExpectations.all[fixture.name],
+                "\(fixture.name): missing recorded expectation"
+            )
+
+            var neutralPayloadsByScope: [BridgeGoldenJSONExporter.Scope: String?] = [:]
+            for scope in BridgeGoldenJSONExporter.Scope.allCases {
+                let fileURL = fixturesRoot
+                    .appendingPathComponent(scope.rawValue, isDirectory: true)
+                    .appendingPathComponent("\(fixture.name).json")
+                let data = try Data(contentsOf: fileURL)
+                let doc = try XCTUnwrap(
+                    try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                    "\(scope.rawValue)/\(fixture.name): root must be JSON object"
+                )
+
+                XCTAssertEqual(doc["name"] as? String, fixture.name)
+                XCTAssertEqual(doc["scope"] as? String, scope.rawValue)
+
+                let expectationObj = try XCTUnwrap(doc["expectation"] as? [String: Any])
+                XCTAssertEqual(expectationObj["stdout"] as? String, expected.stdout, "\(scope.rawValue)/\(fixture.name): stdout")
+                XCTAssertEqual((expectationObj["status"] as? NSNumber)?.int32Value, expected.status, "\(scope.rawValue)/\(fixture.name): status")
+
+                let expectedDoc = try BridgeGoldenJSONExporter.fixtureDocument(
+                    fixture: fixture,
+                    expectation: expected,
+                    scope: scope
+                )
+                let expectedCanonical = try BridgeGoldenJSONExporter.canonicalJSONString(expectedDoc)
+                let actualCanonical = try BridgeGoldenJSONExporter.canonicalJSONString(doc)
+                XCTAssertEqual(actualCanonical, expectedCanonical, "\(scope.rawValue)/\(fixture.name): exported JSON mismatch")
+
+                if let fwdObj = expectationObj["forwarded"] as? [String: Any] {
+                    if scope == .macos, let expectedRaw = expected.forwarded {
+                        XCTAssertEqual(
+                            try BridgeGoldenJSONExporter.canonicalJSONString(fwdObj),
+                            expectedRaw,
+                            "macos/\(fixture.name): byte-identical forwarded payload"
+                        )
+                    }
+                    let stripped = fwdObj.filter { !BridgeGoldenJSONExporter.osTelemetryKeys.contains($0.key) }
+                    neutralPayloadsByScope[scope] = try BridgeGoldenJSONExporter.canonicalJSONString(stripped)
+                } else {
+                    XCTAssertTrue(expectationObj["forwarded"] is NSNull, "\(scope.rawValue)/\(fixture.name): forwarded must be object or null")
+                    neutralPayloadsByScope[scope] = nil
+                }
+            }
+
+            let neutralProjection = neutralPayloadsByScope[.neutral] ?? nil
+            for scope in [BridgeGoldenJSONExporter.Scope.macos, .linux, .windows] {
+                XCTAssertEqual(
+                    neutralPayloadsByScope[scope] ?? nil,
+                    neutralProjection,
+                    "\(fixture.name): \(scope.rawValue) neutral projection must match neutral/"
+                )
+            }
+        }
+    }
+
     private func record(from bridge: URL, to path: String) throws {
         var lines: [String] = []
         for fixture in BridgeGoldenFixtures.all {

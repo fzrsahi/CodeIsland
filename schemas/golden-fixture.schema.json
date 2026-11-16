@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeisland.dev/schemas/golden-fixture.schema.json",
+  "title": "CodeIsland Golden Fixture",
+  "description": "Exported bridge golden fixture and expectation for cross-platform conformance.",
+  "type": "object",
+  "required": ["name", "scope", "input", "expectation"],
+  "additionalProperties": false,
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "scope": {
+      "type": "string",
+      "enum": ["neutral", "macos", "linux", "windows"]
+    },
+    "input": {
+      "type": "object",
+      "required": [
+        "arguments",
+        "environment",
+        "stdin",
+        "ancestors",
+        "bundle_identifiers",
+        "reply",
+        "files",
+        "has_socket"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "arguments": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "stdin": { "type": "string" },
+        "ancestors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "arguments"],
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "arguments": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "bundle_identifiers": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "reply": { "type": "string" },
+        "files": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "has_socket": { "type": "boolean" }
+      }
+    },
+    "expectation": {
+      "type": "object",
+      "required": ["forwarded", "stdout", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "forwarded": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "hook-payload.schema.json" }
+          ]
+        },
+        "stdout": { "type": "string" },
+        "status": { "type": "integer" }
+      }
+    }
+  }
+}

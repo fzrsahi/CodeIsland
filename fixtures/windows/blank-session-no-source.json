@@ -1,0 +1,35 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "cwd" : "/x",
+      "hook_event_name" : "Stop",
+      "session_id" : "   ",
+      "sessionId" : ""
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"hook_event_name\":\"Stop\",\"session_id\":\"   \",\"sessionId\":\"\",\"cwd\":\"/x\"}"
+  },
+  "name" : "blank-session-no-source",
+  "scope" : "windows"
+}

@@ -1,0 +1,42 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "droid",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "SessionStart",
+      "session_id" : "droid-1",
+      "source" : "startup"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "home/.local/bin/droid"
+      }
+    ],
+    "arguments" : [
+      "--source",
+      "droid"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"session_id\":\"droid-1\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}"
+  },
+  "name" : "droid-session-start",
+  "scope" : "macos"
+}

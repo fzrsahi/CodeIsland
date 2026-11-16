@@ -1,0 +1,41 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_source" : "qoder-cli",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "PreToolUse",
+      "session_id" : "qoder-2",
+      "tool_name" : "Bash"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "opt/homebrew/bin/qodercli"
+      }
+    ],
+    "arguments" : [
+      "--source",
+      "qoder"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"session_id\":\"qoder-2\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Bash\"}"
+  },
+  "name" : "qoder-cli-promoted",
+  "scope" : "neutral"
+}

@@ -1,0 +1,44 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_claude_desktop_session" : "local_0f3c2a1b-1111-4222-8333-944455556666",
+      "_ppid" : "$PID0",
+      "_source" : "claude",
+      "_term_bundle" : "com.anthropic.claudefordesktop",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "UserPromptSubmit",
+      "prompt" : "Add a test",
+      "session_id" : "c1a0de00-0000-4000-8000-00000000000a"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "Applications/Claude.app/Contents/Resources/app/claude-code/claude"
+      }
+    ],
+    "arguments" : [
+
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+      "__CFBundleIdentifier" : "com.anthropic.claudefordesktop",
+      "CLAUDE_CODE_HOST_SESSION_ID" : "local_0f3c2a1b-1111-4222-8333-944455556666"
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-00000000000a\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"Add a test\"}"
+  },
+  "name" : "claude-desktop-code-tab",
+  "scope" : "macos"
+}

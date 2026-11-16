@@ -1,0 +1,39 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_source" : "hermes",
+      "cwd" : "/Users/golden/project",
+      "extra" : {
+        "completed" : true,
+        "platform" : "telegram"
+      },
+      "hook_event_name" : "on_session_end",
+      "session_id" : "20261009_101151_eafbd2"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "hermes"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"hook_event_name\":\"on_session_end\",\"session_id\":\"20261009_101151_eafbd2\",\"cwd\":\"/Users/golden/project\",\"extra\":{\"completed\":true,\"platform\":\"telegram\"}}"
+  },
+  "name" : "hermes-no-home",
+  "scope" : "neutral"
+}

@@ -1,0 +1,42 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_ppid" : "$PID0",
+      "_source" : "claude",
+      "cwd" : "/Users/golden/project",
+      "hook_event_name" : "Notification",
+      "message" : "Claude is waiting for your input",
+      "notification_type" : "idle_prompt",
+      "session_id" : "c1a0de00-0000-4000-8000-000000000006"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+      {
+        "arguments" : [
+
+        ],
+        "path" : "home/.local/share/claude/versions/2.1.294"
+      }
+    ],
+    "arguments" : [
+
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{\"ignored\":true}",
+    "stdin" : "{\"session_id\":\"c1a0de00-0000-4000-8000-000000000006\",\"cwd\":\"/Users/golden/project\",\"hook_event_name\":\"Notification\",\"message\":\"Claude is waiting for your input\",\"notification_type\":\"idle_prompt\"}"
+  },
+  "name" : "claude-notification-plain",
+  "scope" : "macos"
+}

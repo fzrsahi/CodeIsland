@@ -1,0 +1,43 @@
+{
+  "expectation" : {
+    "forwarded" : {
+      "_hermes_home" : "/srv/hermes",
+      "_source" : "hermes",
+      "cwd" : "/Users/golden/project",
+      "extra" : {
+
+      },
+      "hook_event_name" : "pre_tool_call",
+      "session_id" : "20261009_101151_eafbd1",
+      "tool_input" : {
+        "command" : "ls"
+      },
+      "tool_name" : "terminal"
+    },
+    "status" : 0,
+    "stdout" : ""
+  },
+  "input" : {
+    "ancestors" : [
+
+    ],
+    "arguments" : [
+      "--source",
+      "hermes"
+    ],
+    "bundle_identifiers" : {
+
+    },
+    "environment" : {
+      "HERMES_HOME" : "  /srv/hermes  "
+    },
+    "files" : {
+
+    },
+    "has_socket" : true,
+    "reply" : "{}",
+    "stdin" : "{\"hook_event_name\":\"pre_tool_call\",\"tool_name\":\"terminal\",\"tool_input\":{\"command\":\"ls\"},\"session_id\":\"20261009_101151_eafbd1\",\"cwd\":\"/Users/golden/project\",\"extra\":{}}"
+  },
+  "name" : "hermes-absolute-home",
+  "scope" : "neutral"
+}
