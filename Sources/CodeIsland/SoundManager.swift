@@ -32,6 +32,9 @@ class SoundManager {
     /// into the same rate limit); one error jingle per burst is the signal.
     private var turnFailureDebouncer = SoundDebouncer(window: 60)
 
+    /// Suppresses repeated mail chimes when multiple unread messages arrive in a single burst.
+    private var mailArrivalDebouncer = SoundDebouncer(window: 3)
+
     /// Where a *decided* event sound goes. Production plays it; a test installs
     /// a recorder and asserts on the names it receives.
     ///
@@ -61,6 +64,31 @@ class SoundManager {
                 soundCache[entry.sound] = sound
             }
         }
+        for mailSound in ["modern_mail", "8bit_mail"] {
+            if let sound = loadSound(mailSound) {
+                soundCache[mailSound] = sound
+            }
+        }
+    }
+
+    /// Resolves the built-in mail arrival WAV resource name for the active Island UI theme.
+    nonisolated static func mailSoundName(forUITheme rawTheme: String) -> String {
+        rawTheme == IslandUITheme.pixel.rawValue ? "8bit_mail" : "modern_mail"
+    }
+
+    /// Plays the theme-appropriate new mail chime when Mail sounds are enabled,
+    /// not deferred by Quiet Hours / lock-screen auto-mute, and outside the 3s burst window.
+    func playMailArrivalSound(now: Date = Date()) {
+        let enabled = defaults.object(forKey: SettingsKey.mailSoundEnabled) as? Bool ?? SettingsDefaults.mailSoundEnabled
+        guard enabled, !isEventSoundDeferred else { return }
+        guard mailArrivalDebouncer.shouldPlay(key: "mail", now: now) else { return }
+        let rawTheme = defaults.string(forKey: SettingsKey.islandUITheme) ?? SettingsDefaults.islandUITheme
+        emit(Self.mailSoundName(forUITheme: rawTheme))
+    }
+
+    /// Previews the mail arrival chime for the requested theme regardless of Quiet Hours or burst cooldown.
+    func previewMailArrival(isRetro: Bool) {
+        play(isRetro ? "8bit_mail" : "modern_mail")
     }
 
     /// A sound cue that has not been through `AttentionPolicy.settle`: the
@@ -212,7 +240,10 @@ class SoundManager {
             return
         }
         if sound.isPlaying { sound.stop() }
-        sound.volume = SoundVolumeCurve.amplitude(forPercent: defaults.integer(forKey: SettingsKey.soundVolume))
+        let rawVolume = defaults.object(forKey: SettingsKey.soundVolume) == nil
+            ? SettingsDefaults.soundVolume
+            : defaults.integer(forKey: SettingsKey.soundVolume)
+        sound.volume = SoundVolumeCurve.amplitude(forPercent: rawVolume)
         sound.play()
     }
 
