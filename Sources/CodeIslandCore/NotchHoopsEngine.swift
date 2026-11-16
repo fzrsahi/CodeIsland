@@ -111,6 +111,7 @@ public struct NotchHoopsEngine: Sendable {
     private var prevBallY: Double = launchY
     private var touchedRimOrBackboard: Bool = false
     private var scoredCurrentShot: Bool = false
+    private var wentBehindBackboard: Bool = false
     private var floorBounces: Int = 0
 
     public init(highScore: Int = 0, positionMode: PositionMode = .random, initialLaunchX: Double? = nil) {
@@ -194,6 +195,7 @@ public struct NotchHoopsEngine: Sendable {
         prevBallY = ballY
         touchedRimOrBackboard = false
         scoredCurrentShot = false
+        wentBehindBackboard = false
         floorBounces = 0
         feedbackText = nil
         feedbackPoints = 0
@@ -273,16 +275,24 @@ public struct NotchHoopsEngine: Sendable {
         ballY += ballVY * dt
         ballRotation += (ballVX * dt) / Self.ballRadius
 
-        // Backboard collision
+        // Backboard collision (front vs back so a ball behind the board never teleports in front)
         if ballX + Self.ballRadius >= Self.backboardX &&
             ballX - Self.ballRadius <= Self.backboardX + 6 &&
-            ballY >= Self.backboardTopY &&
-            ballY <= Self.backboardBottomY {
-            ballX = Self.backboardX - Self.ballRadius
-            if ballVX > 25 {
-                pendingSoundEvents.append(.rimOrBackboard)
+            ballY + Self.ballRadius >= Self.backboardTopY &&
+            ballY - Self.ballRadius <= Self.backboardBottomY {
+            if ballX < Self.backboardX + 3 {
+                ballX = Self.backboardX - Self.ballRadius
+                if ballVX > 25 {
+                    pendingSoundEvents.append(.rimOrBackboard)
+                }
+                ballVX = -abs(ballVX) * 0.65
+            } else {
+                ballX = Self.backboardX + 6 + Self.ballRadius
+                if ballVX < -25 {
+                    pendingSoundEvents.append(.rimOrBackboard)
+                }
+                ballVX = abs(ballVX) * 0.65
             }
-            ballVX = -abs(ballVX) * 0.65
             touchedRimOrBackboard = true
         }
 
@@ -290,8 +300,13 @@ public struct NotchHoopsEngine: Sendable {
         collideWithRimPost(postX: Self.rimCenterX - Self.rimHalfWidth, postY: Self.rimY)
         collideWithRimPost(postX: Self.rimCenterX + Self.rimHalfWidth, postY: Self.rimY)
 
+        if ballX - Self.ballRadius > Self.backboardX {
+            wentBehindBackboard = true
+        }
+
         // Hoop-through scoring detection (crossing rimY downward inside the rim opening)
         if !scoredCurrentShot &&
+            !wentBehindBackboard &&
             ballVY > 0 &&
             prevBallY <= Self.rimY &&
             ballY >= Self.rimY &&
@@ -318,7 +333,9 @@ public struct NotchHoopsEngine: Sendable {
             ballVX = abs(ballVX) * 0.65
         } else if ballX + Self.ballRadius >= Self.courtWidth {
             ballX = Self.courtWidth - Self.ballRadius
-            ballVX = -abs(ballVX) * 0.65
+            // Dampen right-wall rebound behind the backboard so overshoots drop out instead of bouncing back over the rim
+            ballVX = -abs(ballVX) * 0.20
+            wentBehindBackboard = true
         }
         if ballY - Self.ballRadius <= 2 {
             ballY = Self.ballRadius + 2

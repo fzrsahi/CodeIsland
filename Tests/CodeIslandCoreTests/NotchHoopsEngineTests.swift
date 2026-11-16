@@ -148,4 +148,18 @@ final class NotchHoopsEngineTests: XCTestCase {
         XCTAssertTrue(allMissEvents.contains(.miss))
         XCTAssertTrue(allMissEvents.contains(.gameOver))
     }
+
+    func testOvershootBehindBackboardCannotBounceBackAndScore() {
+        // Strong high-right swipe from 1P spot overshoots over the backboard to the right wall
+        var engine = NotchHoopsEngine(highScore: 0, positionMode: .onePoint, initialLaunchX: 225)
+        XCTAssertTrue(engine.launch(dragDeltaX: 160, dragDeltaY: -180))
+
+        for _ in 0..<400 {
+            engine.step(dt: 1.0 / 60.0)
+            if engine.phase != .flying { break }
+        }
+
+        XCTAssertEqual(engine.score, 0)
+        XCTAssertEqual(engine.ballsRemaining, NotchHoopsEngine.maxBalls - 1)
+    }
 }
