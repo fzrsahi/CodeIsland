@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import CodeIslandCore
 
 /// Retro pixel-art basketball mini-game ("Notch Hoops // Arena") for the expanded notch `.game` tab.
@@ -8,6 +9,7 @@ struct NotchHoopsView: View {
     var appState: AppState
 
     @AppStorage(SettingsKey.notchHoopsHighScore) private var storedHighScore = SettingsDefaults.notchHoopsHighScore
+    @AppStorage(SettingsKey.notchHoopsPositionMode) private var storedPositionMode = SettingsDefaults.notchHoopsPositionMode
     @AppStorage(SettingsKey.hapticOnHover) private var hapticOnHover = SettingsDefaults.hapticOnHover
     @ObservedObject private var animationGate = MascotAnimationGate.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -58,6 +60,10 @@ struct NotchHoopsView: View {
         .padding(.bottom, 10)
         .onAppear {
             engine.highScore = max(engine.highScore, storedHighScore)
+            if let mode = NotchHoopsEngine.PositionMode(rawValue: storedPositionMode),
+               engine.positionMode != mode {
+                engine.positionMode = mode
+            }
             lastTickDate = nil
         }
         .onDisappear {
@@ -67,6 +73,17 @@ struct NotchHoopsView: View {
         .onChange(of: engine.highScore) { _, newValue in
             if newValue > storedHighScore {
                 storedHighScore = newValue
+            }
+        }
+        .onChange(of: storedHighScore) { _, newValue in
+            if newValue == 0 {
+                engine.highScore = 0
+            }
+        }
+        .onChange(of: storedPositionMode) { _, newValue in
+            if let mode = NotchHoopsEngine.PositionMode(rawValue: newValue),
+               engine.positionMode != mode {
+                engine.positionMode = mode
             }
         }
         .onChange(of: engine.phase) { _, newPhase in
@@ -143,6 +160,7 @@ struct NotchHoopsView: View {
                     let selected = engine.positionMode == mode
                     Button {
                         engine.positionMode = mode
+                        storedPositionMode = mode.rawValue
                     } label: {
                         Text(mode.rawValue)
                             .font(.system(size: 9, weight: selected ? .bold : .medium, design: .monospaced))
@@ -230,6 +248,31 @@ struct NotchHoopsView: View {
                 courtCanvas
             }
 
+            CourtGestureOverlay(
+                isEnabled: engine.phase == .ready,
+                onDragChanged: { translation in
+                    guard engine.phase == .ready else { return }
+                    dragTranslation = translation
+                    updateInteractionLock(dragging: true, phase: engine.phase)
+                },
+                onDragEnded: { translation in
+                    dragTranslation = nil
+                    guard engine.phase == .ready else {
+                        updateInteractionLock(dragging: false, phase: engine.phase)
+                        return
+                    }
+                    lastTickDate = Date()
+                    let launched = engine.launch(
+                        dragDeltaX: Double(translation.width),
+                        dragDeltaY: Double(translation.height)
+                    )
+                    if launched && hapticOnHover {
+                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                    }
+                    updateInteractionLock(dragging: false, phase: engine.phase)
+                }
+            )
+
             if engine.phase == .gameOver {
                 VStack(spacing: 6) {
                     Text("GAME OVER")
@@ -261,31 +304,6 @@ struct NotchHoopsView: View {
         .frame(height: 250)
         .background(Self.crtBg)
         .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 4)
-                .onChanged { value in
-                    guard engine.phase == .ready else { return }
-                    dragTranslation = value.translation
-                    updateInteractionLock(dragging: true, phase: engine.phase)
-                }
-                .onEnded { value in
-                    let translation = value.translation
-                    dragTranslation = nil
-                    guard engine.phase == .ready else {
-                        updateInteractionLock(dragging: false, phase: engine.phase)
-                        return
-                    }
-                    lastTickDate = Date()
-                    let launched = engine.launch(
-                        dragDeltaX: Double(translation.width),
-                        dragDeltaY: Double(translation.height)
-                    )
-                    if launched && hapticOnHover {
-                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                    }
-                    updateInteractionLock(dragging: false, phase: engine.phase)
-                }
-        )
     }
 
     // MARK: - Pixel-Art Court Canvas
@@ -573,5 +591,66 @@ struct NotchHoopsView: View {
 
     private func updateInteractionLock(dragging: Bool, phase: NotchHoopsEngine.Phase) {
         appState.isGameInteractionLocked = dragging || phase == .flying
+    }
+}
+
+/// AppKit mouse-drag overlay so court swipes work reliably on the first click/drag inside the nonactivating notch panel.
+struct CourtGestureOverlay: NSViewRepresentable {
+    var isEnabled: Bool
+    var onDragChanged: (CGSize) -> Void
+    var onDragEnded: (CGSize) -> Void
+
+    func makeNSView(context: Context) -> DragTrackingNSView {
+        let view = DragTrackingNSView()
+        view.isEnabled = isEnabled
+        view.onDragChanged = onDragChanged
+        view.onDragEnded = onDragEnded
+        return view
+    }
+
+    func updateNSView(_ nsView: DragTrackingNSView, context: Context) {
+        nsView.isEnabled = isEnabled
+        nsView.onDragChanged = onDragChanged
+        nsView.onDragEnded = onDragEnded
+    }
+
+    final class DragTrackingNSView: NSView {
+        var isEnabled: Bool = true
+        var onDragChanged: ((CGSize) -> Void)?
+        var onDragEnded: ((CGSize) -> Void)?
+        private var dragStart: NSPoint?
+
+        override var isFlipped: Bool { true }
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+        override func hitTest(_ point: NSPoint) -> NSView? {
+            guard isEnabled, bounds.contains(point) else { return nil }
+            return self
+        }
+
+        override func mouseDown(with event: NSEvent) {
+            guard isEnabled else {
+                super.mouseDown(with: event)
+                return
+            }
+            window?.makeKey()
+            dragStart = convert(event.locationInWindow, from: nil)
+        }
+
+        override func mouseDragged(with event: NSEvent) {
+            guard isEnabled, let start = dragStart else { return }
+            let current = convert(event.locationInWindow, from: nil)
+            let delta = CGSize(width: current.x - start.x, height: current.y - start.y)
+            guard hypot(delta.width, delta.height) >= 4 else { return }
+            onDragChanged?(delta)
+        }
+
+        override func mouseUp(with event: NSEvent) {
+            guard let start = dragStart else { return }
+            dragStart = nil
+            let current = convert(event.locationInWindow, from: nil)
+            let delta = CGSize(width: current.x - start.x, height: current.y - start.y)
+            onDragEnded?(delta)
+        }
     }
 }

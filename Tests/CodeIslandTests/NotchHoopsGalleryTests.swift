@@ -35,6 +35,16 @@ final class NotchHoopsGalleryTests: XCTestCase {
         let staticCG = try OffscreenRender.hosted(staticView, size: size, appearance: .darkAqua)
         try OffscreenRender.writePNG(staticCG, to: "\(outDir)/arena-ready.png")
 
+        let settingsView = SettingsView(appState: state, initialPage: .game)
+        let settingsCG = try OffscreenRender.hosted(
+            settingsView,
+            size: CGSize(width: 660, height: 540),
+            appearance: .darkAqua,
+            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
+            passes: 5
+        )
+        try OffscreenRender.writePNG(settingsCG, to: "\(outDir)/settings-game.png")
+
         // 2. Render 30fps video frames across 3PT -> 2PT -> 1PT random turns!
         let turns: [(mode: NotchHoopsEngine.PositionMode, launchX: Double)] = [
             (.threePoint, 85),
@@ -138,5 +148,77 @@ final class NotchHoopsGalleryTests: XCTestCase {
             }
         }
         return (90, -110)
+    }
+
+    func testCourtGestureOverlayDeliversUpwardSwipeDelta() throws {
+        _ = NSApplication.shared
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 250),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        let view = CourtGestureOverlay.DragTrackingNSView(frame: NSRect(x: 0, y: 0, width: 400, height: 250))
+        view.isEnabled = true
+        window.contentView = view
+
+        var changedDeltas: [CGSize] = []
+        var endedDelta: CGSize?
+        view.onDragChanged = { changedDeltas.append($0) }
+        view.onDragEnded = { endedDelta = $0 }
+
+        XCTAssertTrue(view.isFlipped)
+        XCTAssertTrue(view.acceptsFirstMouse(for: nil))
+        XCTAssertIdentical(view.hitTest(NSPoint(x: 100, y: 200)), view)
+
+        // Start at bottom-left in view coords (y=200 in flipped), drag up-right (y=110 in flipped -> dy = -90)
+        // In window coords (unflipped), flipped y=200 is window y=50, flipped y=110 is window y=140.
+        let downEvent = try XCTUnwrap(NSEvent.mouseEvent(
+            with: .leftMouseDown,
+            location: NSPoint(x: 100, y: 50),
+            modifierFlags: [],
+            timestamp: 1.0,
+            windowNumber: window.windowNumber,
+            context: nil,
+            eventNumber: 1,
+            clickCount: 1,
+            pressure: 1.0
+        ))
+        let dragEvent = try XCTUnwrap(NSEvent.mouseEvent(
+            with: .leftMouseDragged,
+            location: NSPoint(x: 190, y: 140),
+            modifierFlags: [],
+            timestamp: 1.1,
+            windowNumber: window.windowNumber,
+            context: nil,
+            eventNumber: 2,
+            clickCount: 1,
+            pressure: 1.0
+        ))
+        let upEvent = try XCTUnwrap(NSEvent.mouseEvent(
+            with: .leftMouseUp,
+            location: NSPoint(x: 190, y: 140),
+            modifierFlags: [],
+            timestamp: 1.2,
+            windowNumber: window.windowNumber,
+            context: nil,
+            eventNumber: 3,
+            clickCount: 1,
+            pressure: 0.0
+        ))
+
+        view.mouseDown(with: downEvent)
+        view.mouseDragged(with: dragEvent)
+        view.mouseUp(with: upEvent)
+
+        XCTAssertEqual(changedDeltas.count, 1)
+        XCTAssertEqual(Double(changedDeltas[0].width), 90, accuracy: 0.5)
+        XCTAssertEqual(Double(changedDeltas[0].height), -90, accuracy: 0.5)
+        XCTAssertEqual(Double(endedDelta?.width ?? 0), 90, accuracy: 0.5)
+        XCTAssertEqual(Double(endedDelta?.height ?? 0), -90, accuracy: 0.5)
+
+        // Disabled overlay should not intercept hit testing
+        view.isEnabled = false
+        XCTAssertNil(view.hitTest(NSPoint(x: 100, y: 200)))
     }
 }

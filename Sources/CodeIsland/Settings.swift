@@ -414,6 +414,7 @@ enum SettingsKey {
     static let musicEnabled = "musicEnabled"
     static let gameEnabled = "gameEnabled"
     static let notchHoopsHighScore = "notchHoopsHighScore"
+    static let notchHoopsPositionMode = "notchHoopsPositionMode"
 
     // Prayer & Living Diorama Clock
     static let prayerEnabled = "prayerEnabled"
@@ -627,6 +628,7 @@ struct SettingsDefaults {
     static let musicEnabled = true
     static let gameEnabled = true
     static let notchHoopsHighScore = 0
+    static let notchHoopsPositionMode = NotchHoopsEngine.PositionMode.random.rawValue
 
     // Prayer & Living Diorama Clock
     static let prayerEnabled = false
@@ -751,6 +753,7 @@ class SettingsManager {
             SettingsKey.musicEnabled: SettingsDefaults.musicEnabled,
             SettingsKey.gameEnabled: SettingsDefaults.gameEnabled,
             SettingsKey.notchHoopsHighScore: SettingsDefaults.notchHoopsHighScore,
+            SettingsKey.notchHoopsPositionMode: SettingsDefaults.notchHoopsPositionMode,
             SettingsKey.prayerCalculationMethod: SettingsDefaults.prayerCalculationMethod,
             SettingsKey.prayerHijriCalendarSource: SettingsDefaults.prayerHijriCalendarSource,
             SettingsKey.prayerHijriDayOffset: SettingsDefaults.prayerHijriDayOffset,

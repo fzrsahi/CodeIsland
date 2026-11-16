@@ -54,6 +54,7 @@ final class L10n: ObservableObject {
         "agents": "Agents",
         "workspace": "Workspace",
         "music": "Music",
+        "game": "Notch Hoops",
         "remote": "Remote",
         "hooks": "Hooks",
         "about": "About",
