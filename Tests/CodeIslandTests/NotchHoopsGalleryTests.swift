@@ -88,6 +88,22 @@ final class NotchHoopsGalleryTests: XCTestCase {
                 frameIndex += 1
             }
         }
+
+        // 3. Render overshoot pass-through evidence frames (no invisible wall bounce behind backboard)
+        let overshootDir = "\(outDir)/overshoot-frames"
+        try fm.createDirectory(atPath: overshootDir, withIntermediateDirectories: true)
+        var overshootEngine = NotchHoopsEngine(highScore: 12, positionMode: .onePoint, initialLaunchX: 225)
+        _ = overshootEngine.launch(dragDeltaX: 180, dragDeltaY: -120)
+        var overIdx = 0
+        for _ in 0..<120 {
+            overshootEngine.step(dt: 1.0 / 30.0)
+            let view = arenaContainer(state: state, engine: overshootEngine, drag: nil)
+                .frame(width: size.width, height: size.height)
+            let cg = try OffscreenRender.hosted(view, size: size, appearance: .darkAqua)
+            try OffscreenRender.writePNG(cg, to: String(format: "%@/frame-%04d.png", overshootDir, overIdx))
+            overIdx += 1
+            if !overshootEngine.needsTick { break }
+        }
     }
 
     private func arenaContainer(

@@ -327,19 +327,18 @@ public struct NotchHoopsEngine: Sendable {
             pendingSoundEvents.append(.score(isSwish: isSwish))
         }
 
-        // Side walls & ceiling containment so the ball never disappears off-screen
-        if ballX - Self.ballRadius <= 0 {
-            ballX = Self.ballRadius
-            ballVX = abs(ballVX) * 0.65
-        } else if ballX + Self.ballRadius >= Self.courtWidth {
-            ballX = Self.courtWidth - Self.ballRadius
-            // Dampen right-wall rebound behind the backboard so overshoots drop out instead of bouncing back over the rim
-            ballVX = -abs(ballVX) * 0.20
-            wentBehindBackboard = true
-        }
+        // Ceiling containment so high arcs stay visible; no invisible side walls
+        // since the CRT view is wider than `courtWidth` (balls overshooting past
+        // the backboard should fly through naturally and resolve as a miss).
         if ballY - Self.ballRadius <= 2 {
             ballY = Self.ballRadius + 2
             ballVY = abs(ballVY) * 0.55
+        }
+
+        // Out-of-bounds beyond the visible wide CRT frame -> resolve turn cleanly
+        if ballX < -110 || ballX > Self.courtWidth + 110 {
+            resolveTurn()
+            return
         }
 
         // Court floor bounce & turn resolution
@@ -351,28 +350,32 @@ public struct NotchHoopsEngine: Sendable {
             ballVX *= 0.80
 
             if floorBounces >= 2 || abs(ballVY) < 55 {
-                if !scoredCurrentShot {
-                    streak = 0
-                    ballsRemaining = max(0, ballsRemaining - 1)
-                    feedbackText = "MISS"
-                    feedbackPoints = 0
-                    feedbackTimer = 0.85
-                }
-
-                if ballsRemaining > 0 {
-                    if !scoredCurrentShot {
-                        pendingSoundEvents.append(.miss)
-                    }
-                    pickNextLaunchPosition()
-                    phase = .ready
-                } else {
-                    pendingSoundEvents.append(.gameOver)
-                    resetBall()
-                    phase = .gameOver
-                }
+                resolveTurn()
             } else if impactSpeed > 50 {
                 pendingSoundEvents.append(.bounce)
             }
+        }
+    }
+
+    private mutating func resolveTurn() {
+        if !scoredCurrentShot {
+            streak = 0
+            ballsRemaining = max(0, ballsRemaining - 1)
+            feedbackText = "MISS"
+            feedbackPoints = 0
+            feedbackTimer = 0.85
+        }
+
+        if ballsRemaining > 0 {
+            if !scoredCurrentShot {
+                pendingSoundEvents.append(.miss)
+            }
+            pickNextLaunchPosition()
+            phase = .ready
+        } else {
+            pendingSoundEvents.append(.gameOver)
+            resetBall()
+            phase = .gameOver
         }
     }
 

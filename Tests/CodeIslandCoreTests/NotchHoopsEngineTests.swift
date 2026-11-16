@@ -186,4 +186,26 @@ final class NotchHoopsEngineTests: XCTestCase {
         }
         XCTAssertTrue(foundBankScore)
     }
+
+    func testOvershootPastBackboardPassesThroughWithoutInvisibleWallBounce() {
+        var engine = NotchHoopsEngine(highScore: 0, positionMode: .onePoint, initialLaunchX: 225)
+        XCTAssertTrue(engine.launch(dragDeltaX: 180, dragDeltaY: -120))
+
+        var maxBallX = engine.ballX
+        var keptPositiveVelocityPastBackboard = true
+        for _ in 0..<400 {
+            engine.step(dt: 1.0 / 60.0)
+            if engine.phase != .flying { break }
+            maxBallX = max(maxBallX, engine.ballX)
+            if engine.ballX > NotchHoopsEngine.backboardX + 6 && engine.ballVX <= 0 {
+                keptPositiveVelocityPastBackboard = false
+            }
+        }
+
+        XCTAssertGreaterThan(maxBallX, NotchHoopsEngine.courtWidth)
+        XCTAssertTrue(keptPositiveVelocityPastBackboard)
+        XCTAssertEqual(engine.score, 0)
+        XCTAssertEqual(engine.phase, .ready)
+        XCTAssertEqual(engine.ballsRemaining, NotchHoopsEngine.maxBalls - 1)
+    }
 }
