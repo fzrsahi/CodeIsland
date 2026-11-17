@@ -2561,10 +2561,6 @@ struct ModernCleanMusicHUDContentView: View {
                             maxHeight: 12.0,
                             color: (MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme).color
                         )
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .background(Color.white.opacity(0.06))
-                        .clipShape(Capsule())
                     }
                     .frame(height: 26)
                 }

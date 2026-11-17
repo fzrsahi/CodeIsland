@@ -3325,7 +3325,7 @@ private struct HeaderNavigationMenuTabs: View {
                             Image(systemName: "folder.fill")
                                 .font(.system(size: 11, weight: .semibold))
                             if showWorkLabel {
-                                Text("Workspace")
+                                Text("Work")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
                                     .transition(.asymmetric(
