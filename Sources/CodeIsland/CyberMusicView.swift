@@ -445,6 +445,7 @@ struct CyberMusicWingView: View {
     var isDynamicIslandCompact: Bool = false
     var wingWidth: CGFloat = 0
     var maxContentWidth: CGFloat? = nil
+    var mascotSize: CGFloat = 24
     @AppStorage(SettingsKey.musicHUDTheme) private var musicHUDTheme = SettingsDefaults.musicHUDTheme
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
@@ -460,7 +461,8 @@ struct CyberMusicWingView: View {
         isBilateralWingsLyricActive: Bool = false,
         isDynamicIslandCompact: Bool = false,
         wingWidth: CGFloat = 0,
-        maxContentWidth: CGFloat? = nil
+        maxContentWidth: CGFloat? = nil,
+        mascotSize: CGFloat = 24
     ) {
         self.nowPlaying = nowPlaying
         self.isHovered = isHovered
@@ -470,6 +472,7 @@ struct CyberMusicWingView: View {
         self.isDynamicIslandCompact = isDynamicIslandCompact
         self.wingWidth = wingWidth
         self.maxContentWidth = maxContentWidth
+        self.mascotSize = mascotSize
     }
 
     private var isModernClean: Bool {
@@ -551,7 +554,7 @@ struct CyberMusicWingView: View {
     }
 
     private var isCompactNarrow: Bool {
-        !isEnlarged && !isBilateralWingsLyricActive && ((maxContentWidth ?? 999) < 42 || (wingWidth > 0 && wingWidth < 52))
+        !isEnlarged && !isBilateralWingsLyricActive && ((maxContentWidth ?? 999) < 32 || (wingWidth > 0 && wingWidth < 42))
     }
 
     /// Maximum title width permitted inside the right wing without pushing adjacent content into the notch.
@@ -568,10 +571,11 @@ struct CyberMusicWingView: View {
 
     var body: some View {
         let narrow = isCompactNarrow
-        let artSize: CGFloat = isEnlarged ? 23 : (narrow ? 14 : (isDynamicIslandCompact ? 19 : 17))
-        let spectrumMaxH: CGFloat = isEnlarged ? 14.0 : (narrow ? 9.5 : 11.0)
-        let itemSpacing: CGFloat = isDynamicIslandCompact ? 7 : (isEnlarged ? 5 : (narrow ? 3 : 4))
-        let barWidth: CGFloat = isEnlarged ? 2.4 : (narrow ? 1.8 : 2.0)
+        let matchedArtSize = min(24, max(20, mascotSize - 2))
+        let artSize: CGFloat = isEnlarged ? 24 : (narrow ? 15 : (isDynamicIslandCompact ? 20 : matchedArtSize))
+        let spectrumMaxH: CGFloat = isEnlarged ? 15.5 : (narrow ? 10.5 : (isDynamicIslandCompact ? 13.0 : 15.5))
+        let itemSpacing: CGFloat = isDynamicIslandCompact ? 7 : (isEnlarged ? 5 : (narrow ? 3 : 5))
+        let barWidth: CGFloat = isEnlarged ? 2.4 : (narrow ? 1.9 : 2.4)
         let horizPadding: CGFloat = (narrow || isDynamicIslandCompact) ? 0 : 2
         let titleMaxWidth = resolvedTitleMaxWidth(artSize: artSize, spacing: itemSpacing)
 
@@ -598,7 +602,7 @@ struct CyberMusicWingView: View {
 
                 compactAlbumArt(
                     size: artSize,
-                    cornerRadius: isModernClean ? 4 : 3.5,
+                    cornerRadius: isModernClean ? 5 : 4,
                     fallbackFill: Color.white.opacity(0.12),
                     fallbackIconColor: .white,
                     borderOpacity: 0.18
@@ -607,7 +611,7 @@ struct CyberMusicWingView: View {
                 ModernAudioSpectrumView(
                     barCount: 3,
                     isPlaying: nowPlaying.isPlaying,
-                    barWidth: 2.0,
+                    barWidth: barWidth,
                     maxHeight: spectrumMaxH,
                     color: accentColor
                 )
@@ -621,7 +625,7 @@ struct CyberMusicWingView: View {
             HStack(alignment: .center, spacing: itemSpacing) {
                 compactAlbumArt(
                     size: artSize,
-                    cornerRadius: (isEnlarged || isDynamicIslandCompact) ? 5 : 4,
+                    cornerRadius: (isEnlarged || isDynamicIslandCompact) ? 5 : 4.5,
                     fallbackFill: Color.white.opacity(0.12),
                     fallbackIconColor: Color.white.opacity(0.85),
                     borderOpacity: isDynamicIslandCompact ? 0.22 : 0.0
@@ -630,8 +634,10 @@ struct CyberMusicWingView: View {
                 if let titleMaxW = titleMaxWidth {
                     ModernMarqueeText(
                         text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
-                        maxWidth: titleMaxW
+                        maxWidth: titleMaxW,
+                        centerShortText: true
                     )
+                    .frame(height: artSize)
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
 
@@ -651,7 +657,7 @@ struct CyberMusicWingView: View {
             HStack(alignment: .center, spacing: itemSpacing) {
                 compactAlbumArt(
                     size: artSize,
-                    cornerRadius: (isEnlarged || isDynamicIslandCompact) ? 4.5 : 3.5,
+                    cornerRadius: (isEnlarged || isDynamicIslandCompact) ? 4.5 : 4,
                     fallbackFill: Color(red: 0.08, green: 0.09, blue: 0.12),
                     fallbackIconColor: accentColor.opacity(0.85),
                     borderOpacity: isDynamicIslandCompact ? 0.20 : 0.0
@@ -662,8 +668,10 @@ struct CyberMusicWingView: View {
                         text: nowPlaying.title.isEmpty ? "Music" : nowPlaying.title,
                         font: .system(size: isEnlarged ? 9.5 : 8.5, weight: .bold, design: .monospaced),
                         color: .white,
-                        maxWidth: titleMaxW
+                        maxWidth: titleMaxW,
+                        centerShortText: true
                     )
+                    .frame(height: artSize)
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
 
@@ -671,8 +679,8 @@ struct CyberMusicWingView: View {
                     barCount: (titleMaxWidth != nil || narrow || isDynamicIslandCompact) ? 3 : 4,
                     isPlaying: nowPlaying.isPlaying,
                     barWidth: barWidth,
-                    segmentHeight: isEnlarged ? 2.0 : 1.6,
-                    segmentSpacing: 0.8,
+                    segmentHeight: (isEnlarged || !narrow) ? 2.1 : 1.5,
+                    segmentSpacing: narrow ? 0.8 : 0.9,
                     palette: RetroSpectrumPalette.forThemeKey(musicHUDProgressColor)
                 )
             }

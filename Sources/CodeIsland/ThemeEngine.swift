@@ -26,6 +26,36 @@ public enum AppColorTheme {
         }
     }
 
+    /// Secondary adaptive accent (uses playing album's secondary color when album sync is active, otherwise Amber).
+    @MainActor
+    public static func secondaryAccent(for colorKey: String) -> Color {
+        let syncAlbum = UserDefaults.standard.bool(forKey: SettingsKey.syncThemeWithAlbumArt)
+        let pc = MusicProgressColor(rawValue: colorKey) ?? .theme
+        if (syncAlbum || pc == .album)
+            && NowPlayingManager.shared.isPlaying
+            && NowPlayingManager.shared.artworkImage != nil {
+            return readableOnDark(NowPlayingManager.shared.albumPalette.secondary)
+        }
+        return Color(red: 1.0, green: 0.72, blue: 0.20)
+    }
+
+    /// Ensures dark album colors stay legible against the pure black notch surface.
+    nonisolated public static func readableOnDark(_ color: Color, minimumLuminance: CGFloat = 0.22) -> Color {
+        guard relativeLuminance(of: color) < minimumLuminance else { return color }
+        let nsColor = NSColor(color).usingColorSpace(.sRGB) ?? NSColor(color)
+        var hue: CGFloat = 0
+        var sat: CGFloat = 0
+        var bri: CGFloat = 0
+        var alpha: CGFloat = 1
+        nsColor.getHue(&hue, saturation: &sat, brightness: &bri, alpha: &alpha)
+        return Color(
+            hue: Double(hue),
+            saturation: Double(min(sat, 0.75)),
+            brightness: Double(max(bri, 0.78)),
+            opacity: Double(alpha)
+        )
+    }
+
     /// Computes WCAG relative luminance (0.0 = black, 1.0 = white) in sRGB space.
     nonisolated public static func relativeLuminance(of color: Color) -> CGFloat {
         let nsColor = NSColor(color).usingColorSpace(.sRGB) ?? NSColor(color)
