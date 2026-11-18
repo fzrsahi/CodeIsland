@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Automated GitHub PR Failure Reporting for CodeIsland CI/CD.
+Automated GitHub PR Failure Reporting for Morrow CI/CD.
 Extracts relevant compiler/test failure logs and posts or updates
 a single sticky comment on the GitHub Pull Request thread.
 """
@@ -12,7 +12,7 @@ import argparse
 import urllib.request
 import urllib.error
 
-MARKER = "<!-- codeisland-ci-status -->"
+MARKER = "<!-- morrow-ci-status -->"
 
 def make_request(url, method="GET", headers=None, data=None):
     req = urllib.request.Request(url, method=method, data=data)
@@ -63,7 +63,7 @@ def upsert_pr_comment(repo, pr_number, token, body):
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "CodeIsland-CI-Notifier",
+        "User-Agent": "Morrow-CI-Notifier",
         "Content-Type": "application/json"
     }
 
@@ -106,7 +106,7 @@ def upsert_pr_comment(repo, pr_number, token, body):
 def main():
     parser = argparse.ArgumentParser(description="Report CI failure directly to GitHub PR")
     parser.add_argument("log_file", help="Path to build or test output log")
-    parser.add_argument("--repo", default=os.environ.get("CI_REPO", "fzrsahi/CodeIsland"), help="Repository (owner/repo)")
+    parser.add_argument("--repo", default=os.environ.get("CI_REPO", "fzrsahi/morrow"), help="Repository (owner/repo)")
     parser.add_argument("--pr", default=os.environ.get("CI_COMMIT_PULL_REQUEST"), help="Pull Request number")
     parser.add_argument("--commit", default=os.environ.get("CI_COMMIT_SHA", ""), help="Commit SHA")
     parser.add_argument("--pipeline", default=os.environ.get("CI_PIPELINE_NUMBER", ""), help="Pipeline number")

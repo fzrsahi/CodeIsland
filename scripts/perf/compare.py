@@ -123,7 +123,7 @@ def parse_sample(path):
             start = i
             break
     if start is None:
-        return {"mainThreadBusyPct": None, "busyByImage": [], "topCodeIsland": []}
+        return {"mainThreadBusyPct": None, "busyByImage": [], "topMorrow": []}
     total = int(LINE.match(lines[start].lstrip()).group(2)) if LINE.match(lines[start].lstrip()) else 0
     base_indent = len(lines[start]) - len(lines[start].lstrip())
 
@@ -136,7 +136,7 @@ def parse_sample(path):
         name, image = frame_name(m.group(3))
         nodes.append((depth, int(m.group(2)), name, image))
     if not total:
-        return {"mainThreadBusyPct": None, "busyByImage": [], "topCodeIsland": []}
+        return {"mainThreadBusyPct": None, "busyByImage": [], "topMorrow": []}
 
     # Tree from indentation: parent index, own (self) samples, and whether the
     # node sits inside the outermost run-loop wait.
@@ -172,7 +172,7 @@ def parse_sample(path):
             key = image or "?"
             by_image[key] = by_image.get(key, 0) + own[idx]
         # Inclusive time, counted once per recursion chain.
-        if image == "CodeIsland" and name not in ancestor_names[idx] and not name.startswith("CodeIsland_main"):
+        if (image == "Morrow" or image == "CodeIsland") and name not in ancestor_names[idx] and not name.startswith("CodeIsland_main"):
             inclusive[name] = inclusive.get(name, 0) + count
 
     def top(d, label):
@@ -184,7 +184,7 @@ def parse_sample(path):
     return {
         "mainThreadBusyPct": round(100.0 * (total - idle) / total, 1),
         "busyByImage": top(by_image, "image"),
-        "topCodeIsland": top(inclusive, "function"),
+        "topMorrow": top(inclusive, "function"),
     }
 
 
@@ -216,7 +216,7 @@ def summarize(run_dir):
     sample = parse_sample(os.path.join(run_dir, "sample.txt"))
     result["mainThreadBusyPct"] = sample["mainThreadBusyPct"]
     result["busyByImage"] = sample["busyByImage"]
-    result["topCodeIsland"] = sample["topCodeIsland"]
+    result["topMorrow"] = sample["topMorrow"]
     result["footprintStartMB"] = mem["footprintStartMB"]
     result["footprintEndMB"] = mem["footprintEndMB"]
     result["footprintPeakMB"] = mem["footprintPeakMB"]
@@ -246,7 +246,7 @@ def median_runs(runs):
     }
     mid = sorted(runs, key=lambda r: r["cpu"])[len(runs) // 2]
     out["busyByImage"] = mid.get("busyByImage", [])
-    out["topCodeIsland"] = mid.get("topCodeIsland", [])
+    out["topMorrow"] = mid.get("topMorrow", [])
     return out
 
 
@@ -343,7 +343,7 @@ def report(args):
             print("%-34s %10s %10s  %s" % (label, fmt(value), fmt(bval), ", ".join(status)))
         for title, key, field in (
             ("main thread busy time by image (self)", "busyByImage", "image"),
-            ("hottest CodeIsland functions, main thread (inclusive)", "topCodeIsland", "function"),
+            ("hottest CodeIsland functions, main thread (inclusive)", "topMorrow", "function"),
         ):
             if m.get(key):
                 print("  %s:" % title)

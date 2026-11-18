@@ -2,24 +2,24 @@
 
 Code Island Buddy 是 Code Island 的 Apple 设备端，包括 iPhone、Dynamic Island / StandBy、Apple Watch app 和 watchOS widget。
 
-它的目标不是做一个新的聊天客户端，而是把 Mac 上 CodeIsland 当前看到的 agent 状态同步到随身设备：你可以在 iPhone 灵动岛和 Apple Watch 上看当前会话、工具调用、最近动态，并在需要时回到 Mac 继续处理。
+它的目标不是做一个新的聊天客户端，而是把 Mac 上 Morrow 当前看到的 agent 状态同步到随身设备：你可以在 iPhone 灵动岛和 Apple Watch 上看当前会话、工具调用、最近动态，并在需要时回到 Mac 继续处理。
 
 > [!NOTE]
-> 当前代码仍然放在 `ios/CodeIslandCompanion/` Xcode 工程里。这个目录是 Code Island Buddy 的产品说明与截图目录，方便像 `android-watch/` 一样单独阅读和展示。
+> 当前代码仍然放在 `ios/MorrowCompanion/` Xcode 工程里。这个目录是 Code Island Buddy 的产品说明与截图目录，方便像 `android-watch/` 一样单独阅读和展示。
 
 ## 代码位置
 
 | 路径 | 作用 |
 | --- | --- |
-| `ios/CodeIslandCompanion/CodeIslandCompanion/` | iPhone app 主体 |
-| `ios/CodeIslandCompanion/CodeIslandCompanionWidget/` | iPhone Live Activity、Dynamic Island、StandBy UI |
-| `ios/CodeIslandCompanion/CodeIslandWatchApp/` | Apple Watch app |
-| `ios/CodeIslandCompanion/CodeIslandWatchWidget/` | watchOS Widget / Smart Stack 展示 |
-| `ios/CodeIslandCompanion/Shared/` | ActivityKit、Watch、iPhone 共用模型与 mascot 视图 |
-| `ios/CodeIslandCompanion/project.yml` | XcodeGen 工程定义 |
-| `Sources/CodeIsland/AppleCompanionPublisher.swift` | Mac 端 iPhone Buddy 状态发布 |
-| `Sources/CodeIsland/AppleCompanionBluetoothPeripheral.swift` | Mac 端 BLE 后台摘要通道 |
-| `Sources/CodeIslandCore/AppleCompanionPayload.swift` | Mac / iPhone / Watch 共用协议模型 |
+| `ios/MorrowCompanion/MorrowCompanion/` | iPhone app 主体 |
+| `ios/MorrowCompanion/MorrowCompanionWidget/` | iPhone Live Activity、Dynamic Island、StandBy UI |
+| `ios/MorrowCompanion/MorrowWatchApp/` | Apple Watch app |
+| `ios/MorrowCompanion/MorrowWatchWidget/` | watchOS Widget / Smart Stack 展示 |
+| `ios/MorrowCompanion/Shared/` | ActivityKit、Watch、iPhone 共用模型与 mascot 视图 |
+| `ios/MorrowCompanion/project.yml` | XcodeGen 工程定义 |
+| `Sources/Morrow/AppleCompanionPublisher.swift` | Mac 端 iPhone Buddy 状态发布 |
+| `Sources/Morrow/AppleCompanionBluetoothPeripheral.swift` | Mac 端 BLE 后台摘要通道 |
+| `Sources/MorrowCore/AppleCompanionPayload.swift` | Mac / iPhone / Watch 共用协议模型 |
 | `scripts/smoke-companion-ui.sh` | iPhone UI smoke 截图测试 |
 | `scripts/smoke-companion-watch-ui.sh` | Apple Watch UI smoke 截图测试 |
 
@@ -35,7 +35,7 @@ Code Island Buddy 是 Code Island 的 Apple 设备端，包括 iPhone、Dynamic 
 
 ## 当前能力
 
-- iPhone 通过本地网络发现 Mac 上的 CodeIsland。
+- iPhone 通过本地网络发现 Mac 上的 Morrow。
 - iPhone 通过 MultipeerConnectivity 接收完整状态并发送操作命令。
 - iPhone 通过 CoreBluetooth 接收轻量状态摘要，辅助后台 Live Activity 更新。
 - Live Activity 展示 Dynamic Island、锁屏、StandBy 形态。
@@ -47,7 +47,7 @@ Code Island Buddy 是 Code Island 的 Apple 设备端，包括 iPhone、Dynamic 
 当前方案刻意保持轻量，不依赖 APNs，也不需要部署后端。
 
 ```text
-Mac CodeIsland
+Mac Morrow
   ├─ MultipeerConnectivity：前台完整状态、最近动态、操作命令
   └─ CoreBluetooth BLE：后台轻量状态摘要
 
@@ -72,14 +72,14 @@ Live Activity、Dynamic Island 和 StandBy 只负责展示状态。它们不会�
 
 ## 使用方式
 
-1. 在 Mac 上运行这个 fork 里的 CodeIsland。
-2. 打开 CodeIsland 设置，进入 `Buddy`，开启 iPhone Buddy 广播。
-3. 在 Xcode 打开 `ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj`。
+1. 在 Mac 上运行这个 fork 里的 Morrow。
+2. 打开 Morrow 设置，进入 `Buddy`，开启 iPhone Buddy 广播。
+3. 在 Xcode 打开 `ios/MorrowCompanion/MorrowCompanion.xcodeproj`。
 4. 在 `Signing & Capabilities` 里给 iPhone app、Widget、Watch app、Watch Widget 都选择你的 Apple Developer Team。
-5. 选择 `CodeIslandCompanion` scheme 和你的 iPhone，点击 Run。
+5. 选择 `MorrowCompanion` scheme 和你的 iPhone，点击 Run。
 6. iPhone 首次启动时允许本地网络、蓝牙、通知权限。
 7. 在 iPhone 里选择发现到的 Mac，连接后状态会自动同步。
-8. 如果有配对 Apple Watch，iPhone app 安装后 Watch app 会作为随附 app 可安装；调试时也可以在 Xcode 选择 `CodeIslandWatchApp` scheme 直接跑到 Watch。
+8. 如果有配对 Apple Watch，iPhone app 安装后 Watch app 会作为随附 app 可安装；调试时也可以在 Xcode 选择 `MorrowWatchApp` scheme 直接跑到 Watch。
 
 ## 演示模式
 

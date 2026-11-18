@@ -17,7 +17,7 @@
 #   --soak-scenario S   scenario for --soak (default stress)
 #   --out DIR           where raw files go (default .build/perf/<timestamp>)
 #
-# Each run launches the app isolated (CODEISLAND_ISOLATED=1, its own hook
+# Each run launches the app isolated (MORROW_ISOLATED=1 CODEISLAND_ISOLATED=1, its own hook
 # socket, no hooks, no discovery) with --preview <scenario>, settings pinned on
 # the command line (argument domain, nothing written to the app's defaults),
 # warms up, then measures a 60 s window (CPU time, two top samples, memory,
@@ -29,7 +29,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
-BUNDLE_ID="com.codeisland.app"
+BUNDLE_ID="com.morrow.app"
 BASELINE="scripts/perf/baseline.json"
 MEASURE_SECONDS=60
 SAMPLE_SECONDS=10
@@ -37,7 +37,7 @@ SAMPLE_SECONDS=10
 SUITE="quick"
 SCENARIOS=()
 BUILD=1
-APP=".build/release/CodeIsland.app"
+APP=".build/release/Morrow.app"
 KEEP_INSTALLED=0
 UPDATE_BASELINE=0
 RUNS=""
@@ -173,7 +173,7 @@ if [[ "$BUILD" == 1 ]]; then
   log "Building release app (./build.sh)…"
   ./build.sh >&2
 fi
-EXE="$APP/Contents/MacOS/CodeIsland"
+EXE="$APP/Contents/MacOS/Morrow"
 [[ -x "$EXE" ]] || die "no app at $APP (build it, or pass --app)"
 
 OUT_DIR="${OUT_DIR:-.build/perf/$(date +%Y%m%d-%H%M%S)}"
@@ -209,15 +209,15 @@ if [[ "$KEEP_INSTALLED" == 0 ]]; then
     [[ -n "$pid" ]] || continue
     exe="$(ps -o comm= -p "$pid" 2>/dev/null || true)"
     [[ "$exe" == *.app/Contents/MacOS/CodeIsland ]] && RELAUNCH+=("${exe%/Contents/MacOS/CodeIsland}")
-  done < <(pgrep -x CodeIsland || true)
+  done < <((pgrep -x Morrow || pgrep -x CodeIsland) || true)
   if [[ ${#RELAUNCH[@]} -gt 0 ]]; then
     log "Quitting the running CodeIsland (relaunched at the end; --keep-installed skips this)"
     for _ in 1 2 3 4 5; do
-      pgrep -x CodeIsland >/dev/null || break
+      (pgrep -x Morrow || pgrep -x CodeIsland) >/dev/null || break
       osascript -e "tell application id \"$BUNDLE_ID\" to quit" >/dev/null 2>&1 || true
       sleep 2
     done
-    pgrep -x CodeIsland >/dev/null && die "a CodeIsland is still running; quit it and retry"
+    (pgrep -x Morrow || pgrep -x CodeIsland) >/dev/null && die "a CodeIsland is still running; quit it and retry"
   fi
 fi
 
@@ -279,9 +279,9 @@ launch() {  # launch <scenario> <run dir>
     extra_env=("CFFIXED_USER_HOME=$DISCOVERY_HOME" "CODEISLAND_PERF_DISCOVERY=1")
     start_discovery_writer
   fi
-  env CODEISLAND_ISOLATED=1 \
-  CODEISLAND_SOCKET_PATH="/tmp/codeisland-bench-$$.sock" \
-  CODEISLAND_PERF_COUNTERS="$dir/counters.json" \
+  env MORROW_ISOLATED=1 CODEISLAND_ISOLATED=1 \
+  MORROW_SOCKET_PATH="/tmp/morrow-bench-$$.sock" CODEISLAND_SOCKET_PATH="/tmp/codeisland-bench-$$.sock" \
+  MORROW_PERF_COUNTERS="$dir/counters.json" \
   "${extra_env[@]+"${extra_env[@]}"}" \
     "$EXE" "${args[@]}" "${pinned[@]}" >"$dir/app.log" 2>&1 &
   BENCH_PID=$!

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GitHub Release Asset Uploader for CodeIsland CI/CD.
+GitHub Release Asset Uploader for Morrow CI/CD.
 Uploads build artifacts (DMG, SHA256SUMS.txt, appcast.xml) to GitHub Releases using standard library.
 """
 
@@ -24,7 +24,7 @@ def get_or_create_release(repo, tag, token):
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "CodeIsland-CI-Uploader"
+        "User-Agent": "Morrow-CI-Uploader"
     }
 
     # 1. Try to fetch existing release
@@ -63,7 +63,7 @@ def upload_assets(repo, tag, files, token):
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "CodeIsland-CI-Uploader"
+        "User-Agent": "Morrow-CI-Uploader"
     }
 
     existing_assets = {a["name"]: a["id"] for a in release.get("assets", [])}
