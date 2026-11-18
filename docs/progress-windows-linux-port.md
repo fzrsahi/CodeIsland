@@ -1,76 +1,80 @@
 # Progress — Windows & Linux port
 
-**Status:** fase 0 belum mulai. Tidak ada kode aplikasi.
-**Checkpoint terakhir:** 2026-11-16 — PR docs dibuka, belum di-push, belum ada PR.
+**Status:** fase 0 — PR #49–#52 terbuka, dua perlu revisi. Belum ada kode Rust.
+**Checkpoint terakhir:** 2026-11-18 — review arsitektur, revisi dokumen pasca-rebrand Morrow.
 **Fase kanonik:** [`plan-windows-linux.md`](plan-windows-linux.md) §7. Kalau dokumen ini berbeda dengan §7, §7 yang benar.
 
 ---
 
 ## Kalau kamu baru masuk, jawab tiga ini dulu
 
-1. **Fase mana yang sedang berjalan?** → lihat kolom Status di papan di bawah.
-2. **Apa gate-nya?** → §7 plan, atau tabel gate di bawah.
+1. **Fase mana yang sedang berjalan?** → kolom Status di papan di bawah.
+2. **Apa gate-nya?** → §7 plan, atau kolom Gate.
 3. **Apa yang memblokir?** → entri teratas di Log Checkpoint.
-
-Jangan mulai bekerja sebelum ketiganya jelas. Kalau tidak jelas, itu sendiri berarti checkpoint terakhir kurang lengkap — lengkapi dulu.
 
 ---
 
 ## Cara pakai dokumen ini
 
-- **Update setelah setiap PR dibuka, di-merge, atau gagal** — bukan hanya saat selesai.
-- **Update juga saat berhenti**, walaupun pekerjaannya setengah jadi. Justru itu gunanya.
-- **Jangan hapus baris.** Ubah kolom Status, atau tambah baris baru kalau PR-nya dipecah.
-- **Log Checkpoint bersifat append-only, terbaru di atas.** Formatnya tiga baris: *sudah apa*, *berikutnya apa*, *blocker apa*.
-- Commit perubahan dokumen ini **di branch yang sedang dikerjakan**, bukan branch terpisah. Konflik di sini biasanya sepele.
+- Update setelah setiap PR dibuka, di-merge, atau gagal — dan saat berhenti.
+- Jangan hapus baris. Ubah Status, atau tambah baris kalau PR dipecah.
+- Log Checkpoint append-only, terbaru di atas, tiga baris: *sudah*, *berikutnya*, *blocker*.
 
 ---
 
 ## Papan status
 
-Status: `belum` · `sedang` · `PR dibuka` · `merged` · `gagal` · `dilewati`
+Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` · `dilewati`
 
 | Fase | PR | Isi | Status | Gate |
 |---|---|---|---|---|
-| — | 1 | `docs(#33)`: ADRs, glossary, plan, handoff | `PR dibuka` | — |
-| 0 | 2 | `test(#33)`: ekspor golden fixtures ke JSON + schema | `belum` | `BridgeGoldenTests` hijau; schema memvalidasi semua fixture |
-| 0 | 3 | `fix(#33)`: hormati `cursor_version` di Windows | `belum` | `windows/CodeIsland.Core.Tests` hijau; hook Cursor tidak muncul sebagai `claude` |
-| 1 | 4 | `chore(#33)`: workspace Rust, protocol, ipc, CI purity check | `belum` | `cargo test`; `cargo tree -p codeisland-core` bersih |
-| 1 | 5 | `feat(#33)`: bridge untuk `claude` | `belum` | `fixtures/macos/*` byte-identik dengan bridge Swift |
-| 1 | 6 | `feat(#33)`: vertical slice island Linux X11 | `belum` | **`E2E-1`** — dua arah, <300 ms |
-| 2 | 7–11 | `feat(core)`: reducer, attention, git, markdown, jsonl | `belum` | 100% fixture netral identik dengan Swift |
-| 3 | 12+ | Linux lengkap: adapter, installer, packaging | `belum` | `L-001…L-011` + **`E2E-2`** |
+| — | #49 | `docs(#33)`: ADR, glossary, plan, handoff | `PR dibuka` | — |
+| 0 | #50 | `test(#33)`: ekspor golden fixtures ke JSON + schema | `revisi` | `BridgeGoldenTests` hijau; schema memvalidasi semua fixture |
+| 0 | #51 | `fix(#33)`: hormati `cursor_version` di Windows | `PR dibuka` (keputusan precedence `--source claude`) | `windows/Morrow.Core.Tests` hijau |
+| 0 | #52 | `ci(#33)`: test .NET di Woodpecker | `revisi` | test gagal = pipeline merah |
+| 0 | — | `fix`: endpoint plugin pasca-rebrand (plan §12) | `belum` | test plugin memakai default asli |
+| 0.5 | — | `chore`: layout monorepo (plan §4) | `belum` | `swift test` + DMG hijau, nol perubahan perilaku |
+| 0.5 | — | kontrak endpoint (plan §3.1) | `belum` | satu dokumen; semua edge mengikuti |
+| 0.5 | — | eksperimen Opsi E (Swift core di Linux) | `belum` | kill criteria ADR-0001 → ADR-0003 atau bukti Rust |
+| 1 | — | `chore(#33)`: workspace Rust, protocol, ipc, CI purity | `belum` | `cargo test`; `cargo tree -p morrow-core` bersih |
+| 1 | — | `feat(#33)`: bridge untuk `claude` | `belum` | conformance fixtures |
+| 1 | — | `feat(#33)`: vertical slice island Linux X11 | `belum` | **`E2E-1`** — dua arah, <300 ms, tight-fit, tidak mencuri fokus |
+| 2 | — | ekspor fixture reducer + `AttentionPolicy` | `belum` | fixture terbaca lintas bahasa |
+| 2 | — | `feat(core)`: intake, reducer, attention, git, markdown, jsonl | `belum` | 100% fixture netral identik |
+| 3 | — | Linux lengkap: adapter, installer, packaging | `belum` | `L-001…L-011` + **`E2E-2`** |
 | 4 | — | Windows | `belum` | `W-001…W-008` + **`E2E-2`** |
-| 5 | — | Wayland | `belum` | Sway/Hyprland jalan; GNOME menyatakan tidak didukung |
-| 6 | — | Hapus core C# | `belum` | Windows tests hijau; **butuh izin maintainer `windows/`** |
-
-PR 4 → 5 → 6 di-stack. Lihat plan §8 untuk aturan slicing.
+| 5 | — | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
+| 6 | — | Hapus core C# | `belum` | test Windows hijau; **izin maintainer `windows/`** |
 
 ---
 
 ## Gate end-to-end
 
-| Gate | Fase | Input | Membuktikan |
-|---|---|---|---|
-| `E2E-1` | 1 | hook JSON sintetis, tanpa installer, tanpa CLI asli | kabelnya tersambung **dua arah** di satu OS |
-| `E2E-2` | 3, 4 | `claude` asli dengan hook terinstall | produknya bekerja terhadap CLI nyata |
-
-`E2E-1` sengaja sintetis supaya round-trip terbukti di minggu 2, bukan minggu 9.
+| Gate | Fase | Input | Membuktikan | Dinilai di |
+|---|---|---|---|---|
+| `E2E-1` | 1 | hook JSON sintetis | kabel tersambung dua arah | Xvfb (smoke) → host Debian X11 (final) |
+| `E2E-2` | 3, 4 | `claude` asli + hook terinstall | produk bekerja terhadap CLI nyata | host Debian; Windows QEMU/hardware |
 
 ---
 
 ## Log Checkpoint
 
+### 2026-11-18 — review arsitektur + revisi dokumen
+
+- **Sudah:** merge `origin/main` (rebrand Morrow) ke branch docs; rename `codeisland-*` → `morrow-*` dan path `Sources/MorrowCore`, `windows/Morrow.*`; ADR-0001 diamandemen (premis "mustahil satu core" dikoreksi, Opsi E + kill criteria); ADR-0002 dikoreksi (HTTRANSPARENT salah, tauri#15913 tidak di-merge, Tauri tidak diasumsikan lebih hemat dari .NET); plan: kontrak endpoint §3.1, layout monorepo §4, scope app-held §5.1, tabel adapter lengkap §5.2, strategi tight-fit §6, Fase 0.5, packaging §9, regresi socket §12; handoff: trap `HookIntake` dibalik, tabel "siapa mengerjakan apa"; rencana Linux lama diarsipkan ke `docs/archive/`.
+- **Berikutnya:** revisi #50 dan #52; PR fix endpoint plugin; PR monorepo; eksperimen Opsi E.
+- **Blocker:** keputusan precedence `--source claude` di #51; runner Linux (agent docker) untuk Woodpecker (#70); belum ada mesin X11 nyata untuk gate `E2E-1`.
+
 ### 2026-11-16 — dokumen arsitektur
 
-- **Sudah:** riset mygo vs Tauri, verifikasi klaim issue #33 ke codebase, ADR-0001 (dua core), ADR-0002 (Tauri), `GLOSSARY.md`, plan + §7 fase kanonik + §8 slicing PR, handoff, sub-issue #47 dan #48 + komentar urutan, #33 body diperbarui dengan urutan + gate E2E.
-- **Berikutnya:** push branch `docs/#33-windows-linux-architecture`, buka PR, lalu mulai fase 0 PR 2 (ekspor fixtures).
-- **Blocker:** tidak ada. Catatan: `docs/research-mygo-vs-tauri.md` di-force-add melewati `.gitignore:83`; kalau aturan itu harus berlaku, `git rm --cached` sebelum merge.
+- **Sudah:** riset mygo vs Tauri, verifikasi klaim issue #33, ADR-0001, ADR-0002, `GLOSSARY.md`, plan §7/§8, handoff, sub-issue #47/#48.
+- **Berikutnya:** push branch, buka PR, mulai fase 0.
+- **Blocker:** tidak ada.
 
 ---
 
-## Fakta lingkungan yang memengaruhi progress
+## Fakta lingkungan
 
-- Mesin dev macOS arm64. `go` 1.27.0, `rustc` 1.98.0 terpasang.
-- **Tidak ada mesin Windows atau Linux.** Semua klaim perilaku Windows/Linux di dokumen adalah turunan dokumentasi, bukan pengukuran. Ini berarti fase 1 butuh mesin Linux (VM/container/hardware) sebelum gate `E2E-1` bisa dinilai.
-- CI: `.github/workflows/` punya macOS XCTest + `windows.yml`. Belum ada job Linux — fase 1 perlu menambahkannya.
+- Mesin dev macOS arm64. Swift 6.4.2, `rustc` 1.98.0, Docker CLI + Colima.
+- **Tidak ada desktop Windows/Linux** di mesin dev. Gate perilaku dinilai di host Debian (#70) dan Windows QEMU.
+- CI: Woodpecker, runner macOS (`local`). GitHub Actions tidak tersedia (billing). Belum ada lane Linux.
