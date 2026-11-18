@@ -1,12 +1,12 @@
 # Hook edge protocol
 
 An *edge* is whatever sits between an AI coding agent's hook and the island:
-`codeisland-bridge` on the Mac, the Python remote hook on SSH hosts, the
+`morrow-bridge` on the Mac, the Python remote hook on SSH hosts, the
 plugins (OpenCode, pi, Oh My Pi, OpenClaw), the community Windows bridge.
 
 What a hook *means* — which agent sent it, which session, whether the agent
 waits for an answer and in what form — is decided in one place:
-`HookIntake` (`Sources/CodeIslandCore/HookIntake.swift`). The bridge runs it
+`HookIntake` (`Sources/MorrowCore/HookIntake.swift`). The bridge runs it
 itself. An edge that cannot run Swift sends the **facts** it observed instead,
 and the island runs HookIntake on them when the payload arrives. A provider
 quirk is then fixed once, in HookIntake, for every edge.
@@ -14,8 +14,8 @@ quirk is then fixed once, in HookIntake, for every edge.
 ## Transport
 
 - One Unix-domain stream connection per hook invocation, to
-  `$CODEISLAND_SOCKET_PATH`, else `/tmp/codeisland-<uid>.sock` (on a remote
-  host, the path the installer forwarded: `/tmp/codeisland-<uid>/island.sock`).
+  `$MORROW_SOCKET_PATH`, else `/tmp/morrow-<uid>.sock` (on a remote
+  host, the path the installer forwarded: `/tmp/morrow-<uid>/island.sock`).
 - On a remote host that socket sits in a folder of the SSH user's own,
   which the island makes on the host, as that user, before anything is
   forwarded there: 0700 — 0711 where agents run as other users, who may then
@@ -27,10 +27,10 @@ quirk is then fixed once, in HookIntake, for every edge.
   — and, where agents run as other users, made 0666 without following a
   symlink, before anything is installed; a folder or a socket that fails
   closes the tunnel, and the host says why. A hook command an older install
-  wrote names `/tmp/codeisland-<uid>.sock`, and an agent started before the
+  wrote names `/tmp/morrow-<uid>.sock`, and an agent started before the
   reinstall still runs it. The remote hook on the host is the one the
   newest island installed, and only such an island listens in the folder:
-  for that command it tries `/tmp/codeisland-<uid>/island.sock` first, and
+  for that command it tries `/tmp/morrow-<uid>/island.sock` first, and
   the old path only where no island answers in the folder (nothing there,
   or the socket a finished tunnel left behind), for an older island that
   still forwards to it. Whatever else still listens at the old path — the
@@ -54,9 +54,9 @@ quirk is then fixed once, in HookIntake, for every edge.
   gives a Unix socket's peer credentials no API).
 - **The socket names the host, not the payload.** On the Mac, each remote
   host's forward ends at a socket the island bound for that host alone
-  (`codeisland-hosts/h-<digest>.sock` in the user's own temporary folder,
+  (`morrow-hosts/h-<digest>.sock` in the user's own temporary folder,
   `/var/folders/…/T/`, which only the Mac's user can enter and nobody can
-  make first; an island on a `$CODEISLAND_SOCKET_PATH` of its own keeps them
+  make first; an island on a `$MORROW_SOCKET_PATH` of its own keeps them
   in `<that path without .sock>-hosts/`), never at the main socket. Every
   request arriving there is filed under that host: its `_remote_host_id`,
   `_remote_host_name` and `_edge.host` are replaced with the host's own
@@ -167,7 +167,7 @@ What the island does with an `_` field in a remote edge's payload:
 | `stdin_sha256` | hex string | SHA-256 of the stdin bytes exactly as the agent wrote them. Cursor runs two hooks per step with one stdin; the digest lets the island keep one (#377). |
 | `waits` | bool | Whether this edge waits for the answer (see below). The island never holds a hook nobody waits on. |
 | `host` | `{id, name}` | The machine the edge runs on: the id and name the island gave it (`CODEISLAND_REMOTE_HOST_ID` / `_NAME`). The island replaces it with the host whose socket the request arrived on before HookIntake reads it, and refuses a request with `host` on the main socket. Every edge that sends facts runs on another machine — on the Mac, the bridge reads its own facts and the plugins send their own interpretation — so whatever `host` says, or if it is missing or malformed, HookIntake tracks no pid for the hook and reads no home or file of the Mac to interpret it. |
-| `env` | object | Only the variables in `HookIntake.environmentKeys` (terminal and multiplexer ids, `GROK_*`, `HERMES_HOME`, `CODEISLAND_SKIP`). Never anything else. Terminal ids of another machine are no use on the Mac: the remote hook sends no `env`. |
+| `env` | object | Only the variables in `HookIntake.environmentKeys` (terminal and multiplexer ids, `GROK_*`, `HERMES_HOME`, `MORROW_SKIP`). Never anything else. Terminal ids of another machine are no use on the Mac: the remote hook sends no `env`. |
 | `tmux_client_tty` | string | `tmux display-message -p -t $TMUX_PANE '#{client_tty}'`, if the edge ran it. |
 
 Never send the argv of ancestor processes or more environment than listed,
@@ -205,7 +205,7 @@ wires no Antigravity hook.
 
 From the facts and the stdin, in this order (HookIntake is normative):
 
-1. Dropped: `CODEISLAND_SKIP` set; inside Grok (`GROK_SESSION_ID` /
+1. Dropped: `MORROW_SKIP` set; inside Grok (`GROK_SESSION_ID` /
    `GROK_HOOK_EVENT`), any hook but Grok's own.
 2. A non-blank `cursor_version` marks a hook Cursor ran: source `cursor`
    (or `cursor-cli` under cursor-agent) unless a source is declared, never
@@ -236,14 +236,14 @@ From the facts and the stdin, in this order (HookIntake is normative):
 - A payload without `_edge` is its edge's own interpretation and is taken as
   it is: hooks installed before this protocol keep working unchanged.
 - The Mac's end of a host's forward moved to the host's own socket, and the
-  remote end from `/tmp/codeisland-<uid>.sock` into the SSH user's folder
-  (`/tmp/codeisland-<uid>/island.sock`). Each connect reinstalls the remote
+  remote end from `/tmp/morrow-<uid>.sock` into the SSH user's folder
+  (`/tmp/morrow-<uid>/island.sock`). Each connect reinstalls the remote
   hook and rewrites every hook command; an agent started before that still
   runs a command naming the old path, which the reinstalled hook takes to
   the folder (*Transport*). What a remote hook of any version names as its
   host is replaced by the socket's.
 - An island reads another `v` for the fields it knows.
-- Do not pipe facts through `codeisland-bridge`: it observes its own and
+- Do not pipe facts through `morrow-bridge`: it observes its own and
   drops an `_edge` it finds in its stdin.
 
 ## Older islands
@@ -283,6 +283,6 @@ The Windows port runs its own island, so it cannot hand facts to HookIntake.
 It should follow the same rules — in particular rule 2 (Cursor runs Claude
 Code's hooks; without it, Cursor's events show as Claude and every step that
 both configs wire arrives twice) and the waiting rule above. The golden
-fixtures in `Tests/CodeIslandCoreTests/BridgeGoldenFixtures.swift`, with the
+fixtures in `Tests/MorrowCoreTests/BridgeGoldenFixtures.swift`, with the
 output recorded in `BridgeGoldenExpectations.swift`, are worked examples for
 every agent the bridge serves.

@@ -1,0 +1,199 @@
+name: MorrowCompanion
+options:
+  bundleIdPrefix: top.fengye
+  deploymentTarget:
+    iOS: "17.0"
+    watchOS: "10.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: "6SLN844AVD"
+    CODE_SIGN_STYLE: Automatic
+    CURRENT_PROJECT_VERSION: "4"
+    MARKETING_VERSION: "1.0.0"
+targets:
+  MorrowCompanion:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: MorrowCompanion
+      - path: Shared
+      - path: ../../Sources/Morrow/AiWorkView.swift
+      - path: ../../Sources/Morrow/AntiGravityView.swift
+      - path: ../../Sources/Morrow/BuddyView.swift
+      - path: ../../Sources/Morrow/ClineView.swift
+      - path: ../../Sources/Morrow/CopilotView.swift
+      - path: ../../Sources/Morrow/CursorView.swift
+      - path: ../../Sources/Morrow/DexView.swift
+      - path: ../../Sources/Morrow/DroidView.swift
+      - path: ../../Sources/Morrow/GeminiView.swift
+      - path: ../../Sources/Morrow/HermesView.swift
+      - path: ../../Sources/Morrow/KimiView.swift
+      - path: ../../Sources/Morrow/MascotMotion.swift
+      - path: ../../Sources/Morrow/MascotTimeline.swift
+      - path: ../../Sources/Morrow/OpenCodeView.swift
+      - path: ../../Sources/Morrow/PixelCharacterView.swift
+      - path: ../../Sources/Morrow/QoderView.swift
+      - path: ../../Sources/Morrow/QwenView.swift
+      - path: ../../Sources/Morrow/StepFunView.swift
+      - path: ../../Sources/Morrow/TraeView.swift
+      - path: ../../Sources/Morrow/WorkBuddyView.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: top.fengye.MorrowCompanion
+        INFOPLIST_FILE: MorrowCompanion/Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+    dependencies:
+      - target: MorrowCompanionWidget
+        embed: true
+      - target: MorrowWatchApp
+        embed: true
+      - sdk: AppIntents.framework
+      - sdk: WatchConnectivity.framework
+  MorrowCompanionWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: MorrowCompanionWidget
+      - path: Shared
+      - path: ../../Sources/Morrow/AiWorkView.swift
+      - path: ../../Sources/Morrow/AntiGravityView.swift
+      - path: ../../Sources/Morrow/BuddyView.swift
+      - path: ../../Sources/Morrow/ClineView.swift
+      - path: ../../Sources/Morrow/CopilotView.swift
+      - path: ../../Sources/Morrow/CursorView.swift
+      - path: ../../Sources/Morrow/DexView.swift
+      - path: ../../Sources/Morrow/DroidView.swift
+      - path: ../../Sources/Morrow/GeminiView.swift
+      - path: ../../Sources/Morrow/HermesView.swift
+      - path: ../../Sources/Morrow/KimiView.swift
+      - path: ../../Sources/Morrow/MascotMotion.swift
+      - path: ../../Sources/Morrow/MascotTimeline.swift
+      - path: ../../Sources/Morrow/OpenCodeView.swift
+      - path: ../../Sources/Morrow/PixelCharacterView.swift
+      - path: ../../Sources/Morrow/QoderView.swift
+      - path: ../../Sources/Morrow/QwenView.swift
+      - path: ../../Sources/Morrow/StepFunView.swift
+      - path: ../../Sources/Morrow/TraeView.swift
+      - path: ../../Sources/Morrow/WorkBuddyView.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: top.fengye.MorrowCompanion.Widget
+        INFOPLIST_FILE: MorrowCompanionWidget/Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+        SKIP_INSTALL: YES
+  MorrowWatchApp:
+    type: application
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: MorrowWatchApp
+      - path: MorrowCompanion/CompanionModels.swift
+      - path: Shared/CompanionDisplayText.swift
+      - path: Shared/SharedMascotView.swift
+      - path: Shared/WatchStateStore.swift
+      - path: Shared/L10n.swift
+      - path: ../../Sources/Morrow/AiWorkView.swift
+      - path: ../../Sources/Morrow/AntiGravityView.swift
+      - path: ../../Sources/Morrow/BuddyView.swift
+      - path: ../../Sources/Morrow/ClineView.swift
+      - path: ../../Sources/Morrow/CopilotView.swift
+      - path: ../../Sources/Morrow/CursorView.swift
+      - path: ../../Sources/Morrow/DexView.swift
+      - path: ../../Sources/Morrow/DroidView.swift
+      - path: ../../Sources/Morrow/GeminiView.swift
+      - path: ../../Sources/Morrow/HermesView.swift
+      - path: ../../Sources/Morrow/KimiView.swift
+      - path: ../../Sources/Morrow/MascotMotion.swift
+      - path: ../../Sources/Morrow/MascotTimeline.swift
+      - path: ../../Sources/Morrow/OpenCodeView.swift
+      - path: ../../Sources/Morrow/PixelCharacterView.swift
+      - path: ../../Sources/Morrow/QoderView.swift
+      - path: ../../Sources/Morrow/QwenView.swift
+      - path: ../../Sources/Morrow/StepFunView.swift
+      - path: ../../Sources/Morrow/TraeView.swift
+      - path: ../../Sources/Morrow/WorkBuddyView.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: top.fengye.MorrowCompanion.watchkitapp
+        INFOPLIST_FILE: MorrowWatchApp/Info.plist
+        CODE_SIGN_ENTITLEMENTS: MorrowWatchApp/MorrowWatchApp.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+    dependencies:
+      - target: MorrowWatchWidget
+        embed: true
+      - sdk: WatchConnectivity.framework
+  MorrowWatchWidget:
+    type: app-extension
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: MorrowWatchWidget
+      - path: MorrowCompanion/CompanionModels.swift
+      - path: Shared/CompanionDisplayText.swift
+      - path: Shared/SharedMascotView.swift
+      - path: Shared/WatchStateStore.swift
+      - path: Shared/L10n.swift
+      - path: ../../Sources/Morrow/AiWorkView.swift
+      - path: ../../Sources/Morrow/AntiGravityView.swift
+      - path: ../../Sources/Morrow/BuddyView.swift
+      - path: ../../Sources/Morrow/ClineView.swift
+      - path: ../../Sources/Morrow/CopilotView.swift
+      - path: ../../Sources/Morrow/CursorView.swift
+      - path: ../../Sources/Morrow/DexView.swift
+      - path: ../../Sources/Morrow/DroidView.swift
+      - path: ../../Sources/Morrow/GeminiView.swift
+      - path: ../../Sources/Morrow/HermesView.swift
+      - path: ../../Sources/Morrow/KimiView.swift
+      - path: ../../Sources/Morrow/MascotMotion.swift
+      - path: ../../Sources/Morrow/MascotTimeline.swift
+      - path: ../../Sources/Morrow/OpenCodeView.swift
+      - path: ../../Sources/Morrow/PixelCharacterView.swift
+      - path: ../../Sources/Morrow/QoderView.swift
+      - path: ../../Sources/Morrow/QwenView.swift
+      - path: ../../Sources/Morrow/StepFunView.swift
+      - path: ../../Sources/Morrow/TraeView.swift
+      - path: ../../Sources/Morrow/WorkBuddyView.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: top.fengye.MorrowCompanion.watchkitapp.Widget
+        INFOPLIST_FILE: MorrowWatchWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: MorrowWatchWidget/MorrowWatchWidget.entitlements
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+        SKIP_INSTALL: YES
+  MorrowCompanionUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: MorrowCompanionUITests
+      - path: MorrowCompanion/StandByLayout.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: top.fengye.MorrowCompanionUITests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: MorrowCompanion
+        TARGETED_DEVICE_FAMILY: "1,2"
+    dependencies:
+      - target: MorrowCompanion
+schemes:
+  MorrowCompanion:
+    build:
+      targets:
+        MorrowCompanion: all
+        MorrowCompanionWidget: all
+        MorrowWatchApp: all
+        MorrowWatchWidget: all
+        MorrowCompanionUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - MorrowCompanionUITests

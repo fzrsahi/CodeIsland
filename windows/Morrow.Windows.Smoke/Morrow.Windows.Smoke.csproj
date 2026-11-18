@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Morrow.Windows\Morrow.Windows.csproj" />
+    <ProjectReference Include="..\Morrow.Core\Morrow.Core.csproj" />
+    <ProjectReference Include="..\Morrow.Ipc\Morrow.Ipc.csproj" />
+    <ProjectReference Include="..\Morrow.Bluetooth\Morrow.Bluetooth.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CodeIsland Granular GitHub Status Reporter
+Morrow Granular GitHub Status Reporter
 Zero-dependency CLI tool to publish granular commit statuses to the GitHub REST API.
 Enables multi-check branch protection rules without relying on GitHub Actions.
 """
@@ -58,7 +58,7 @@ def post_status(repo, sha, context, state, description=None, target_url=None, to
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github.v3+json",
             "Content-Type": "application/json",
-            "User-Agent": "CodeIsland-CI",
+            "User-Agent": "Morrow-CI",
         },
         method="POST",
     )
@@ -81,18 +81,18 @@ def post_status(repo, sha, context, state, description=None, target_url=None, to
 
 def main():
     parser = argparse.ArgumentParser(description="Report granular commit status to GitHub")
-    parser.add_argument("--context", required=True, help="Status context name (e.g. 'CodeIsland / XCTest')")
+    parser.add_argument("--context", required=True, help="Status context name (e.g. 'Morrow / XCTest')")
     parser.add_argument("--state", required=True, choices=["pending", "success", "failure", "error"], help="Check state")
     parser.add_argument("--description", help="Short summary text (max 140 chars)")
     parser.add_argument("--url", help="Target URL (e.g. CI pipeline link)")
-    parser.add_argument("--repo", help="GitHub repo owner/name (defaults to CI_REPO or fzrsahi/CodeIsland)")
+    parser.add_argument("--repo", help="GitHub repo owner/name (defaults to CI_REPO or fzrsahi/morrow)")
     parser.add_argument("--sha", help="Commit SHA (defaults to CI_COMMIT_SHA)")
     parser.add_argument("--token", help="GitHub API personal access token")
     parser.add_argument("--strict", action="store_true", help="Exit non-zero if status update fails")
 
     args = parser.parse_args()
 
-    repo = args.repo or os.environ.get("CI_REPO") or "fzrsahi/CodeIsland"
+    repo = args.repo or os.environ.get("CI_REPO") or "fzrsahi/morrow"
     sha = args.sha or os.environ.get("CI_COMMIT_SHA")
     if not sha or len(sha) < 40:
         # Resolve to full 40-char SHA if short or absent

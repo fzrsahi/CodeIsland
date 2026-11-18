@@ -1,5 +1,5 @@
 #!/bin/sh
-# CodeIsland Local Pre-Commit Verification Hook
+# Morrow Local Pre-Commit Verification Hook
 # Fast (< 0.5s) guard for staged files: syntax parsing, conflict markers, and oversized assets.
 
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
