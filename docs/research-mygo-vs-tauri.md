@@ -1,7 +1,7 @@
 # mygo vs Tauri — Riset Performa untuk Porting CodeIsland ke Windows & Linux
 
 > Tanggal riset: 2026-11-16
-> Konteks: [issue #33](https://github.com/fzrsahi/CodeIsland/issues/33) — "[ARCH] Riset & Peluang Rewrite ke Rust untuk Native Support Windows & Linux"
+> Konteks: [issue #33](https://github.com/fzrsahi/Morrow/issues/33) — "[ARCH] Riset & Peluang Rewrite ke Rust untuk Native Support Windows & Linux". Produk ini bernama CodeIsland saat riset ditulis; sejak 2026-11-16 bernama **Morrow** (`Sources/MorrowCore`, crate `morrow-*`).
 > Repo yang diriset: [`egoist/mygo`](https://github.com/egoist/mygo) @ `v0.9.1` (2026-11-15), [`tauri-apps/tauri`](https://github.com/tauri-apps/tauri) v2
 > **Batasan:** tidak ada mesin Windows/Linux di lingkungan riset ini. Semua klaim perilaku Windows/Linux di bawah berasal dari dokumentasi primer + issue tracker, **bukan** pengukuran sendiri. Yang benar-benar diukur di sini hanya satu: biaya spawn binary bridge (macOS).
 
@@ -314,6 +314,8 @@ Issue menetapkan dua hal sekaligus: (1) macOS tetap SwiftUI + Swift core, (2) sa
 ---
 
 # Bagian 9 — Arsitektur yang dieksekusi
+
+> **USANG (2026-11-18).** Bagian ini merekomendasikan core Go + mygo native UI dan "Windows dulu". Keputusan yang berlaku berbeda: shell **Tauri v2** ([ADR-0002](adr/0002-tauri-v2-shell.md)), core **Rust** atau Swift sidecar menurut eksperimen Opsi E ([ADR-0001](adr/0001-two-cores-one-contract.md)), dan **Linux X11 dulu** ([plan §7](plan-windows-linux.md)). Bagian 1–8 tetap berlaku sebagai bukti primer. Spike 5 gate di §5.2 diserap ke gate `E2E-1` Fase 1 untuk Tauri saja, bukan sebagai perbandingan dua framework.
 
 ## 9.1 Prinsip
 

@@ -20,12 +20,20 @@ swiftpm_release_build() {
     local arch="$1"
     local bin_dir
     bin_dir=$(swift build "${SWIFTPM_RELEASE_FLAGS[@]}" --arch "$arch" --show-bin-path) || return 1
-    rm -rf "$bin_dir/CodeIsland" "$bin_dir/codeisland-bridge" "$bin_dir/CodeIsland_CodeIsland.bundle"
+    rm -rf "$bin_dir/Morrow" "$bin_dir/CodeIsland" "$bin_dir/morrow-bridge" "$bin_dir/codeisland-bridge" "$bin_dir/Morrow_Morrow.bundle" "$bin_dir/CodeIsland_CodeIsland.bundle"
     swift build "${SWIFTPM_RELEASE_FLAGS[@]}" --arch "$arch" >&2 || return 1
-    swiftpm_check_release_binary "$bin_dir/CodeIsland" "$arch" || return 1
-    swiftpm_check_release_binary "$bin_dir/codeisland-bridge" "$arch" || return 1
-    if [ ! -d "$bin_dir/CodeIsland_CodeIsland.bundle" ]; then
-        echo "ERROR: the $arch build left no CodeIsland_CodeIsland.bundle in $bin_dir" >&2
+    if [ -f "$bin_dir/Morrow" ]; then
+        swiftpm_check_release_binary "$bin_dir/Morrow" "$arch" || return 1
+    else
+        swiftpm_check_release_binary "$bin_dir/CodeIsland" "$arch" || return 1
+    fi
+    if [ -f "$bin_dir/morrow-bridge" ]; then
+        swiftpm_check_release_binary "$bin_dir/morrow-bridge" "$arch" || return 1
+    else
+        swiftpm_check_release_binary "$bin_dir/codeisland-bridge" "$arch" || return 1
+    fi
+    if [ ! -d "$bin_dir/Morrow_Morrow.bundle" ] && [ ! -d "$bin_dir/CodeIsland_CodeIsland.bundle" ]; then
+        echo "ERROR: the $arch build left no resource bundle in $bin_dir" >&2
         return 1
     fi
     echo "$bin_dir"

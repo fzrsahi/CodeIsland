@@ -19,20 +19,20 @@ foreach ($target in @($staging, $bridgeStaging)) {
 New-Item -ItemType Directory -Path $staging -Force | Out-Null
 New-Item -ItemType Directory -Path $bridgeStaging -Force | Out-Null
 
-dotnet publish (Join-Path $root "CodeIsland.Windows\CodeIsland.Windows.csproj") `
+dotnet publish (Join-Path $root "Morrow.Windows\Morrow.Windows.csproj") `
     -c $Configuration -r $Runtime --self-contained false -o $staging
 if ($LASTEXITCODE -ne 0) { throw "Desktop publish failed with exit code $LASTEXITCODE" }
 
-dotnet publish (Join-Path $root "CodeIsland.Bridge\CodeIsland.Bridge.csproj") `
+dotnet publish (Join-Path $root "Morrow.Bridge\Morrow.Bridge.csproj") `
     -c $Configuration -r $Runtime --self-contained false -o $bridgeStaging
 if ($LASTEXITCODE -ne 0) { throw "Bridge publish failed with exit code $LASTEXITCODE" }
 
-foreach ($name in @("CodeIsland.Bridge.exe", "CodeIsland.Bridge.dll", "CodeIsland.Bridge.deps.json", "CodeIsland.Bridge.runtimeconfig.json")) {
+foreach ($name in @("Morrow.Bridge.exe", "Morrow.Bridge.dll", "Morrow.Bridge.deps.json", "Morrow.Bridge.runtimeconfig.json")) {
     Copy-Item -LiteralPath (Join-Path $bridgeStaging $name) -Destination (Join-Path $staging $name) -Force
 }
 
 $version = "0.2.1"
-$zip = Join-Path $artifacts "CodeIsland-Windows-$version-$Runtime.zip"
+$zip = Join-Path $artifacts "Morrow-Windows-$version-$Runtime.zip"
 if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
 Compress-Archive -Path (Join-Path $staging "*") -DestinationPath $zip -CompressionLevel Optimal
 $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Hot-restart dev loop for CodeIsland:
+# Hot-restart dev loop for Morrow:
 # - Watches source changes
 # - Builds once per change batch
 # - Restarts app only after successful build
@@ -11,12 +11,12 @@ set -euo pipefail
 #   scripts/dev-hot-restart.sh --debounce 1.0 --paths "Sources,Tests,Package.swift"
 #   scripts/dev-hot-restart.sh --build-cmd "swift build"
 #   scripts/dev-hot-restart.sh --with-tests
-#   scripts/dev-hot-restart.sh --socket-path /tmp/codeisland-dev.sock
-#   scripts/dev-hot-restart.sh --isolated --socket-path /tmp/codeisland-dev.sock
+#   scripts/dev-hot-restart.sh --socket-path /tmp/morrow-dev.sock
+#   scripts/dev-hot-restart.sh --isolated --socket-path /tmp/morrow-dev.sock
 
 DEBOUNCE="0.8"
 WATCH_PATHS="Sources,Tests,Package.swift"
-APP_PATH=".build/debug/CodeIsland"
+APP_PATH=".build/debug/Morrow"
 BUILD_CMD="swift build"
 WITH_TESTS=0
 SOCKET_PATH=""
@@ -26,24 +26,24 @@ print_usage() {
   cat <<'EOF'
 Usage: scripts/dev-hot-restart.sh [options]
 
-Watch source changes, build once per change batch, and restart CodeIsland app only when build succeeds.
+Watch source changes, build once per change batch, and restart Morrow app only when build succeeds.
 If build fails, current app keeps running.
 
 Examples:
   scripts/dev-hot-restart.sh --debounce 1.0 --paths "Sources,Tests,Package.swift"
   scripts/dev-hot-restart.sh --build-cmd "swift build"
   scripts/dev-hot-restart.sh --with-tests
-  scripts/dev-hot-restart.sh --socket-path /tmp/codeisland-dev.sock
-  scripts/dev-hot-restart.sh --isolated --socket-path /tmp/codeisland-dev.sock
+  scripts/dev-hot-restart.sh --socket-path /tmp/morrow-dev.sock
+  scripts/dev-hot-restart.sh --isolated --socket-path /tmp/morrow-dev.sock
 
 Options:
   --paths <csv>          Watch paths (default: Sources,Tests,Package.swift)
   --debounce <seconds>   Debounce window (default: 0.8)
-  --app-path <path>      Executable path (default: .build/debug/CodeIsland)
+  --app-path <path>      Executable path (default: .build/debug/Morrow)
   --build-cmd <command>  Build command (default: swift build)
   --with-tests           Run swift test after successful build before restart
-  --socket-path <path>   Set CODEISLAND_SOCKET_PATH when launching app
-  --isolated             Set CODEISLAND_ISOLATED=1: install no hooks, discover no
+  --socket-path <path>   Set MORROW_SOCKET_PATH when launching app
+  --isolated             Set MORROW_ISOLATED=1: install no hooks, discover no
                          sessions, connect no remote host (needs --socket-path)
   --help                 Show this help message
 EOF
@@ -112,23 +112,23 @@ parse_args() {
   done
 }
 
-# The CodeIsland processes running this script's build ($APP_PATH): the one
+# The Morrow processes running this script's build ($APP_PATH): the one
 # it launched last, or one an earlier run of it left behind. `comm` is the
 # path the process was started from, as given, so the installed app
-# (/Applications/CodeIsland.app/...) or any other copy is never one of them.
+# (/Applications/Morrow.app/...) or any other copy is never one of them.
 own_app_pids() {
   local pid
-  for pid in $(pgrep -x "CodeIsland" || true); do
+  for pid in $(pgrep -x "Morrow" || pgrep -x "CodeIsland" || true); do
     if [[ "$(ps -ww -o comm= -p "$pid" 2>/dev/null)" == "$APP_PATH" ]]; then
       printf '%s\n' "$pid"
     fi
   done
 }
 
-# Every other CodeIsland: the installed app, another build.
+# Every other Morrow / CodeIsland: the installed app, another build.
 other_app_pids() {
   local pid
-  for pid in $(pgrep -x "CodeIsland" || true); do
+  for pid in $(pgrep -x "Morrow" || pgrep -x "CodeIsland" || true); do
     if [[ "$(ps -ww -o comm= -p "$pid" 2>/dev/null)" != "$APP_PATH" ]]; then
       printf '%s\n' "$pid"
     fi
@@ -136,7 +136,7 @@ other_app_pids() {
 }
 
 # Stops this build before the next launch, and nothing else: the installed
-# CodeIsland keeps running (a SIGTERM would kill it without saving its
+# Morrow keeps running (a SIGTERM would kill it without saving its
 # sessions or closing its SSH tunnels). Next to it, the build needs a
 # socket of its own (--socket-path, --isolated).
 quit_app() {
@@ -144,7 +144,7 @@ quit_app() {
   existing_pids="$(own_app_pids)"
   [[ -z "$existing_pids" ]] && return 0
 
-  log "Stopping existing CodeIsland process(es): $existing_pids"
+  log "Stopping existing Morrow process(es): $existing_pids"
   local pid
   for pid in $existing_pids; do
     kill -TERM "$pid" >/dev/null 2>&1 || true
@@ -182,7 +182,7 @@ quit_app() {
     sleep 0.1
   done
 
-  fail "Existing CodeIsland process(es) still alive after SIGKILL; aborting restart"
+  fail "Existing Morrow process(es) still alive after SIGKILL; aborting restart"
 }
 
 launch_app() {
@@ -191,17 +191,17 @@ launch_app() {
   fi
   if [[ "$ISOLATED" == "1" ]]; then
     [[ -n "$SOCKET_PATH" ]] || fail "--isolated needs --socket-path"
-    log "Launching isolated app with CODEISLAND_SOCKET_PATH=$SOCKET_PATH"
-    CODEISLAND_ISOLATED=1 CODEISLAND_SOCKET_PATH="$SOCKET_PATH" "$APP_PATH" &
+    log "Launching isolated app with MORROW_SOCKET_PATH=$SOCKET_PATH"
+    MORROW_ISOLATED=1 MORROW_SOCKET_PATH="$SOCKET_PATH" CODEISLAND_ISOLATED=1 CODEISLAND_SOCKET_PATH="$SOCKET_PATH" "$APP_PATH" &
   elif [[ -n "$SOCKET_PATH" ]]; then
-    log "Launching app with CODEISLAND_SOCKET_PATH=$SOCKET_PATH"
-    CODEISLAND_SOCKET_PATH="$SOCKET_PATH" "$APP_PATH" &
+    log "Launching app with MORROW_SOCKET_PATH=$SOCKET_PATH"
+    MORROW_SOCKET_PATH="$SOCKET_PATH" CODEISLAND_SOCKET_PATH="$SOCKET_PATH" "$APP_PATH" &
   else
     # A second island on the default socket quits at launch.
     local others
     others="$(other_app_pids)"
     if [[ -n "$others" ]]; then
-      log "Not launching: another CodeIsland (pid ${others//$'\n'/ }) serves the default socket, and this build would quit at once. Quit it, or restart this script with --socket-path <path>."
+      log "Not launching: another Morrow instance (pid ${others//$'\n'/ }) serves the default socket, and this build would quit at once. Quit it, or restart this script with --socket-path <path>."
       return 1
     fi
     log "Launching app: $APP_PATH"

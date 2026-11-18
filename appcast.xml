@@ -3,9 +3,9 @@
      xmlns:dc="http://purl.org/dc/elements/1.1/"
      version="2.0">
   <channel>
-    <title>CodeIsland</title>
-    <link>https://raw.githubusercontent.com/wxtsky/CodeIsland/main/appcast.xml</link>
-    <description>Most recent CodeIsland updates</description>
+    <title>Morrow</title>
+    <link>https://codeisland.azhr.cloud/appcast.xml</link>
+    <description>Most recent Morrow updates</description>
     <language>en</language>
     <item>
       <title>Version 1.0.40</title>

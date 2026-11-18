@@ -44,10 +44,10 @@ def generate_runner_source(tests_by_class, output_path):
         "// Generated standalone XCTest runner harness",
         "import Foundation",
         "import XCTest",
-        "@testable import CodeIslandCore",
-        "@testable import CodeIslandCoreTests",
-        "@testable import CodeIsland",
-        "@testable import CodeIslandTests",
+        "@testable import MorrowCore",
+        "@testable import MorrowCoreTests",
+        "@testable import Morrow",
+        "@testable import MorrowTests",
         "",
         "@main",
         "struct RunnerMain {",
@@ -121,7 +121,11 @@ def main():
     for root, dirs, files in os.walk(build_dir):
         if "Objects.LinkFileList" in files and "PackageTests" in root:
             linkfile = os.path.join(root, "Objects.LinkFileList")
-        if "CodeIslandPackageTests.xctest" in dirs:
+        if "MorrowPackageTests.xctest" in dirs:
+            candidate = os.path.join(root, "MorrowPackageTests.xctest/Contents/MacOS/MorrowPackageTests")
+            if os.path.isfile(candidate):
+                bundle_bin = candidate
+        elif "CodeIslandPackageTests.xctest" in dirs:
             candidate = os.path.join(root, "CodeIslandPackageTests.xctest/Contents/MacOS/CodeIslandPackageTests")
             if os.path.isfile(candidate):
                 bundle_bin = candidate
@@ -131,7 +135,7 @@ def main():
         sys.exit(1)
 
     if not bundle_bin or not os.path.isfile(bundle_bin):
-        print("ERROR: CodeIslandPackageTests binary not found in .build.", file=sys.stderr)
+        print("ERROR: MorrowPackageTests / CodeIslandPackageTests binary not found in .build.", file=sys.stderr)
         sys.exit(1)
 
     debug_dir = os.path.dirname(os.path.dirname(linkfile))
@@ -145,9 +149,9 @@ def main():
     # 3. Discover test methods via symbol table
     target_modules = []
     if args.target in ["all", "core"]:
-        target_modules.append("CodeIslandCoreTests")
+        target_modules.extend(["MorrowCoreTests", "CodeIslandCoreTests"])
     if args.target in ["all", "app"]:
-        target_modules.append("CodeIslandTests")
+        target_modules.extend(["MorrowTests", "CodeIslandTests"])
 
     tests_by_class = discover_tests_from_binary(bundle_bin, target_modules, args.filter)
     total_classes = len(tests_by_class)
@@ -158,10 +162,10 @@ def main():
         print("Warning: No matching test cases found.")
         sys.exit(0)
 
-    runner_swift = "/tmp/codeisland_runner_main.swift"
-    runner_bundle_dir = os.path.join(debug_dir, "CodeIslandCLTRunner.xctest", "Contents", "MacOS")
+    runner_swift = "/tmp/morrow_runner_main.swift"
+    runner_bundle_dir = os.path.join(debug_dir, "MorrowCLTRunner.xctest", "Contents", "MacOS")
     os.makedirs(runner_bundle_dir, exist_ok=True)
-    runner_bin = os.path.join(runner_bundle_dir, "codeisland-test-runner")
+    runner_bin = os.path.join(runner_bundle_dir, "morrow-test-runner")
     generate_runner_source(tests_by_class, runner_swift)
 
     # Collect include & modulemap flags for C dependencies (CYaml)

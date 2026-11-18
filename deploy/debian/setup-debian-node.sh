@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ==============================================================================
-# One-Click Setup Script for CodeIsland Distribution Node (Debian)
+# One-Click Setup Script for Morrow Distribution Node (Debian)
 # ==============================================================================
 
 if [[ $EUID -ne 0 ]]; then
@@ -10,7 +10,7 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-WEB_ROOT="/var/www/codeisland-updates"
+WEB_ROOT="/var/www/morrow-updates"
 SCRIPTS_DIR="$WEB_ROOT/scripts"
 CONF_DIR="/etc/webhook"
 CONF_FILE="$CONF_DIR/webhook.json"
@@ -26,8 +26,8 @@ mkdir -p "$SCRIPTS_DIR"
 mkdir -p "$CONF_DIR"
 
 # Copy deployment script
-cp "$SCRIPT_SRC/deploy-codeisland.sh" "$SCRIPTS_DIR/deploy-codeisland.sh"
-chmod +x "$SCRIPTS_DIR/deploy-codeisland.sh"
+cp "$SCRIPT_SRC/deploy-morrow.sh" "$SCRIPTS_DIR/deploy-morrow.sh"
+chmod +x "$SCRIPTS_DIR/deploy-morrow.sh"
 
 # Initialize base appcast.xml if not present
 if [[ ! -f "$WEB_ROOT/appcast.xml" ]]; then
@@ -38,8 +38,8 @@ if [[ ! -f "$WEB_ROOT/appcast.xml" ]]; then
      xmlns:dc="http://purl.org/dc/elements/1.1/"
      version="2.0">
   <channel>
-    <title>CodeIsland Updates</title>
-    <description>Official CodeIsland update feed</description>
+    <title>Morrow Updates</title>
+    <description>Official Morrow update feed</description>
     <language>en</language>
   </channel>
 </rss>
@@ -56,8 +56,8 @@ GENERATED_SECRET=$(head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head 
 cat > "$CONF_FILE" <<EOF
 [
   {
-    "id": "deploy-codeisland",
-    "execute-command": "$SCRIPTS_DIR/deploy-codeisland.sh",
+    "id": "deploy-morrow",
+    "execute-command": "$SCRIPTS_DIR/deploy-morrow.sh",
     "command-working-directory": "$WEB_ROOT",
     "response-message": "Deployment job received and executing",
     "include-command-output-in-response": true,
@@ -96,10 +96,10 @@ EOF
 chown root:www-data "$CONF_FILE"
 chmod 640 "$CONF_FILE"
 
-echo "==> 4. Configuring and starting codeisland-webhook systemd service ..."
-cat > /etc/systemd/system/codeisland-webhook.service <<EOF
+echo "==> 4. Configuring and starting morrow-webhook systemd service ..."
+cat > /etc/systemd/system/morrow-webhook.service <<EOF
 [Unit]
-Description=CodeIsland Webhook Receiver Daemon
+Description=Morrow Webhook Receiver Daemon
 After=network.target
 
 [Service]
@@ -115,7 +115,7 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable --now codeisland-webhook.service
+systemctl enable --now morrow-webhook.service
 
 echo ""
 echo "=========================================================================="
@@ -123,7 +123,7 @@ echo "SETUP COMPLETED SUCCESSFULLY"
 echo "=========================================================================="
 echo "Configuration Details:"
 echo "- Web Root Directory : $WEB_ROOT"
-echo "- Webhook Endpoint   : http://127.0.0.1:9000/hooks/deploy-codeisland"
+echo "- Webhook Endpoint   : http://127.0.0.1:9000/hooks/deploy-morrow"
 echo "- WEBHOOK_SECRET     : $GENERATED_SECRET"
 echo ""
 echo "NEXT STEPS ON GITHUB:"

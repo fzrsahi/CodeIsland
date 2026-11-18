@@ -1,6 +1,6 @@
 <h1 align="center">
-  <img src="logo.png" width="56" height="56" alt="CodeIsland logo" valign="middle">&nbsp;
-  CodeIsland
+  <img src="logo.png" width="56" height="56" alt="Morrow logo" valign="middle">&nbsp;
+  Morrow
 </h1>
 
 <p align="center">
@@ -9,10 +9,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/fzrsahi/CodeIsland/releases/latest"><img src="https://img.shields.io/github/v/release/fzrsahi/CodeIsland?style=flat-square&color=4c8bf5&label=release" alt="Latest release"></a>
+  <a href="https://github.com/fzrsahi/morrow/releases/latest"><img src="https://img.shields.io/github/v/release/fzrsahi/morrow?style=flat-square&color=4c8bf5&label=release" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-111111?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/fzrsahi/CodeIsland?style=flat-square&color=8250df" alt="MIT license"></a>
-  <a href="https://github.com/fzrsahi/CodeIsland/stargazers"><img src="https://img.shields.io/github/stars/fzrsahi/CodeIsland?style=flat-square&color=e3b341" alt="GitHub stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/fzrsahi/morrow?style=flat-square&color=8250df" alt="MIT license"></a>
+  <a href="https://github.com/fzrsahi/morrow/stargazers"><img src="https://img.shields.io/github/stars/fzrsahi/morrow?style=flat-square&color=e3b341" alt="GitHub stars"></a>
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/readme-hero.png" width="760" alt="CodeIsland expanded from the MacBook notch, showing Claude Code, Codex, Cursor and Gemini CLI sessions">
+  <img src="docs/images/readme-hero.png" width="760" alt="Morrow expanded from the MacBook notch, showing Claude Code, Codex, Cursor and Gemini CLI sessions">
 </p>
 
 ## New Features in this Edition
@@ -65,9 +65,9 @@
 </tr>
 </table>
 
-## Why CodeIsland?
+## Why Morrow?
 
-Coding agents spend a lot of time either working or waiting on you — and you only find out by switching to their window. CodeIsland turns the notch into a live status bar for all of them: which session is thinking, which one needs an approval, which one just finished. Approve the tool call or answer the question right there, or click once to jump to the exact terminal tab.
+Coding agents spend a lot of time either working or waiting on you — and you only find out by switching to their window. Morrow turns the notch into a live status bar for all of them: which session is thinking, which one needs an approval, which one just finished. Approve the tool call or answer the question right there, or click once to jump to the exact terminal tab.
 
 It works with **30+ AI coding tools**, installs its hooks for you, and keeps everything on your Mac.
 
@@ -159,14 +159,14 @@ It works with **30+ AI coding tools**, installs its hooks for you, and keeps eve
 <td align="center"><img src="docs/images/mascots/pi.gif" width="48" alt=""><br><sub><b>Pi / Oh My Pi</b></sub></td>
 <td align="center"><img src="docs/images/mascots/hermes.gif" width="48" alt=""><br><sub><b>Hermes</b></sub></td>
 <td align="center"><img src="docs/images/mascots/openclaw.gif" width="48" alt=""><br><sub><b>OpenClaw</b></sub></td>
-<td align="center"><img src="Sources/CodeIsland/Resources/cli-icons/antigravity.png" width="40" alt=""><br><sub><b>Google Antigravity</b></sub></td>
+<td align="center"><img src="Sources/Morrow/Resources/cli-icons/antigravity.png" width="40" alt=""><br><sub><b>Google Antigravity</b></sub></td>
 </tr>
 <tr>
 <td align="center"><img src="docs/images/mascots/kiro.gif" width="48" alt=""><br><sub><b>Kiro CLI</b></sub></td>
 <td align="center"><img src="docs/images/mascots/stepfun.gif" width="48" alt=""><br><sub><b>StepFun</b></sub></td>
 <td align="center"><img src="docs/images/mascots/workbuddy.gif" width="48" alt=""><br><sub><b>WorkBuddy</b></sub></td>
-<td align="center"><img src="Sources/CodeIsland/Resources/cli-icons/minimax.png" width="40" alt=""><br><sub><b>MiniMax Code CLI</b></sub></td>
-<td align="center"><img src="Sources/CodeIsland/Resources/cli-icons/dsh.png" width="40" alt=""><br><sub><b>DeepSeek Harness</b></sub></td>
+<td align="center"><img src="Sources/Morrow/Resources/cli-icons/minimax.png" width="40" alt=""><br><sub><b>MiniMax Code CLI</b></sub></td>
+<td align="center"><img src="Sources/Morrow/Resources/cli-icons/dsh.png" width="40" alt=""><br><sub><b>DeepSeek Harness</b></sub></td>
 <td align="center"><img src="docs/images/mascots/aiwork.gif" width="48" alt=""><br><sub><b>AiWork</b></sub></td>
 </tr>
 <tr>
@@ -188,7 +188,7 @@ It works with **30+ AI coding tools**, installs its hooks for you, and keeps eve
 
 <br>
 
-CodeIsland writes these for you on launch (and repairs them if they drift); each can be switched off in **Settings → Hooks**.
+Morrow writes these for you on launch (and repairs them if they drift); each can be switched off in **Settings → Hooks**.
 
 | Tool | Installed into |
 |------|----------------|
@@ -197,22 +197,22 @@ CodeIsland writes these for you on launch (and repairs them if they drift); each
 | Gemini CLI | `~/.gemini/settings.json` |
 | Google Antigravity | `~/.gemini/config/hooks.json` |
 | Cursor / Cursor CLI | `~/.cursor/hooks.json` |
-| Grok CLI | `~/.grok/hooks/codeisland.json` |
+| Grok CLI | `~/.grok/hooks/morrow.json` |
 | Qoder (IDE and Qoder App) / Qoder CN / QoderWork | `~/.qoder/`, `~/.qoder-cn/`, `~/.qoderwork/` `settings.json` |
 | Trae / Trae CN | `~/.trae/hooks.json`, `~/.trae-cn/hooks.json` (turn on global hooks in Trae) |
 | Trae CLI / Trae CLI Next | `~/.trae/traecli.yaml`, `~/.trae/cli/hooks.json` |
 | Factory, CodeBuddy, StepFun, WorkBuddy, Qwen Code | `~/.<tool>/settings.json` |
-| Copilot CLI | `~/.copilot/hooks/codeisland.json` |
+| Copilot CLI | `~/.copilot/hooks/morrow.json` |
 | Kimi Code CLI | `~/.kimi-code/config.toml` (or legacy `~/.kimi/`) |
-| Kiro CLI | `~/.kiro/agents/codeisland.json` — launch with `kiro --agent codeisland` |
+| Kiro CLI | `~/.kiro/agents/morrow.json` — launch with `kiro --agent morrow` |
 | Hermes | `~/.hermes/config.yaml` — [approve the hooks once](#hermes) |
 | ZCode | `~/.zcode/cli/config.json` |
-| MiniMax Code CLI | plugin at `~/.minimax/plugins/codeisland/` (honours `$MINIMAX_DATA_DIR`) |
+| MiniMax Code CLI | plugin at `~/.minimax/plugins/morrow/` (honours `$MINIMAX_DATA_DIR`) |
 | Cline | `~/Documents/Cline/Hooks` |
-| OpenCode | plugin at `~/.config/opencode/plugins/codeisland.js` |
-| MiMo Code / Xiaomi MiMo | plugin at `~/.config/mimocode/plugins/codeisland.js` — [see below](#mimo) |
-| Pi / Oh My Pi | extension at `~/.pi/agent/extensions/codeisland.ts` / `~/.omp/agent/extensions/codeisland.ts` |
-| OpenClaw | plugin at `~/.openclaw/codeisland-plugin/` |
+| OpenCode | plugin at `~/.config/opencode/plugins/morrow.js` |
+| MiMo Code / Xiaomi MiMo | plugin at `~/.config/mimocode/plugins/morrow.js` — [see below](#mimo) |
+| Pi / Oh My Pi | extension at `~/.pi/agent/extensions/morrow.ts` / `~/.omp/agent/extensions/morrow.ts` |
+| OpenClaw | plugin at `~/.openclaw/morrow-plugin/` |
 | DeepSeek Harness | [dsh-island](https://github.com/cdxiaodong/dsh-island) plugin — see [below](#deepseek-harness) |
 | AiWork | nothing to install — read from AiWork's local daemon |
 
@@ -224,13 +224,13 @@ CodeIsland writes these for you on launch (and repairs them if they drift); each
 
 ```bash
 brew tap wxtsky/tap
-brew install --cask codeisland
+brew install --cask morrow
 ```
 
 ### Manual download
 
-1. Download `CodeIsland.dmg` from the [latest release](https://github.com/wxtsky/CodeIsland/releases/latest)
-2. Drag `CodeIsland.app` into Applications
+1. Download `Morrow.dmg` from the [latest release](https://github.com/fzrsahi/morrow/releases/latest)
+2. Drag `Morrow.app` into Applications
 3. Launch it — hooks are installed automatically for every AI tool it detects
 
 The app is signed and notarized, and keeps itself up to date through Sparkle.
@@ -243,7 +243,7 @@ The app is signed and notarized, and keeps itself up to date through Sparkle.
 2. Open the app on the same Wi-Fi to pair; connected devices are listed under the toggle.
 3. When macOS asks, allow **both** Local Network and Bluetooth. Local Network carries full snapshots while the app is open; Bluetooth carries the compact summaries that keep the Live Activity and the Watch fresh once it's in the background.
 
-The companion source lives in this repository under `ios/CodeIslandCompanion` and `apple-companion`.
+The companion source lives in this repository under `ios/MorrowCompanion` and `apple-companion`.
 
 ### Hardware Buddy (ESP32)
 
@@ -257,9 +257,9 @@ A small ESP32 screen on your desk, driven over Bluetooth: it sleeps when your ag
 
 <br>
 
-Codex won't run a hook it hasn't been shown. After installing, Codex prints `1 hook needs review before it can run.` — run `/hooks`, review the CodeIsland entries and trust them. Until you do, Codex silently ignores them, which looks exactly like CodeIsland not supporting Codex. Codex stores a hash per trusted hook in `~/.codex/config.toml` under `[hooks.state]`, so if a CodeIsland update rewrites `~/.codex/hooks.json`, review them once more.
+Codex won't run a hook it hasn't been shown. After installing, Codex prints `1 hook needs review before it can run.` — run `/hooks`, review the Morrow entries and trust them. Until you do, Codex silently ignores them, which looks exactly like Morrow not supporting Codex. Codex stores a hash per trusted hook in `~/.codex/config.toml` under `[hooks.state]`, so if a Morrow update rewrites `~/.codex/hooks.json`, review them once more.
 
-Codex Auto Review stays with Codex. When a turn runs under Auto Review, CodeIsland hands its permission requests back to Codex without approving or denying them. It takes the turn's reviewer from the session's local rollout (`turn_context`), so a choice made in the Codex desktop permission menu counts, and falls back to `approvals_reviewer` in `config.toml`. Turns set to human review, and questions, still come to the island.
+Codex Auto Review stays with Codex. When a turn runs under Auto Review, Morrow hands its permission requests back to Codex without approving or denying them. It takes the turn's reviewer from the session's local rollout (`turn_context`), so a choice made in the Codex desktop permission menu counts, and falls back to `approvals_reviewer` in `config.toml`. Turns set to human review, and questions, still come to the island.
 
 While a Codex turn runs, the collapsed bar shows the agent's latest public output when no tool is active. Hidden reasoning, encrypted content, tool results and internal subagent messages are never displayed.
 
@@ -280,7 +280,7 @@ A single JS plugin talks to the socket directly — no bridge binary. The same f
 
 <br>
 
-MiMo Code is an OpenCode 1.x fork, and the Xiaomi MiMo desktop app runs it as its engine, so both load the OpenCode plugin from `~/.config/mimocode/plugins/` — CodeIsland writes it there labelled as MiMo and leaves `mimocode.json` alone. MiMo reads plugins when its engine starts, so restart the app (or `mimo`) once after the plugin is installed. Approvals and questions can be answered on the island or in MiMo, whichever comes first. Clicking a desktop session brings Xiaomi MiMo to the front; the app's `xiaomi-mimo://` links only join shared sessions, so there is no way to open one specific conversation.
+MiMo Code is an OpenCode 1.x fork, and the Xiaomi MiMo desktop app runs it as its engine, so both load the OpenCode plugin from `~/.config/mimocode/plugins/` — Morrow writes it there labelled as MiMo and leaves `mimocode.json` alone. MiMo reads plugins when its engine starts, so restart the app (or `mimo`) once after the plugin is installed. Approvals and questions can be answered on the island or in MiMo, whichever comes first. Clicking a desktop session brings Xiaomi MiMo to the front; the app's `xiaomi-mimo://` links only join shared sessions, so there is no way to open one specific conversation.
 
 </details>
 
@@ -290,7 +290,7 @@ MiMo Code is an OpenCode 1.x fork, and the Xiaomi MiMo desktop app runs it as it
 
 <br>
 
-Hermes asks before it runs a hook it hasn't seen, once per hook. The next time you start `hermes` in a terminal, answer `y` to each CodeIsland entry (`codeisland-bridge --source hermes`; on an SSH host, the `codeisland-remote-hook.py` ones). Hermes running without a terminal — the gateway service, the desktop app — can't ask, so it skips a hook nobody approved, which looks like CodeIsland not seeing those sessions. Approve them in a terminal once (the approval is kept per Hermes home, so it covers the gateway and the desktop app too), or set `hooks_auto_accept: true` in `~/.hermes/config.yaml`. A CodeIsland update that adds a hook asks again for the new one.
+Hermes asks before it runs a hook it hasn't seen, once per hook. The next time you start `hermes` in a terminal, answer `y` to each Morrow entry (`morrow-bridge --source hermes`; on an SSH host, the `morrow-remote-hook.py` ones). Hermes running without a terminal — the gateway service, the desktop app — can't ask, so it skips a hook nobody approved, which looks like Morrow not seeing those sessions. Approve them in a terminal once (the approval is kept per Hermes home, so it covers the gateway and the desktop app too), or set `hooks_auto_accept: true` in `~/.hermes/config.yaml`. A Morrow update that adds a hook asks again for the new one.
 
 Gateway chats (Telegram, Discord, Slack, WhatsApp, email and the rest, and the API server) get cards too, but they don't pop a completion card or play a sound, and an idle one goes after 10 minutes. A card goes when its session ends: `/new`, quitting `hermes`, closing a desktop conversation, or the gateway shutting down. Session titles are read from Hermes's own `state.db`, read-only.
 
@@ -302,7 +302,7 @@ Gateway chats (Telegram, Discord, Slack, WhatsApp, email and the rest, and the A
 
 <br>
 
-DSH is plugin-native, so CodeIsland installs nothing. The [dsh-island](https://github.com/cdxiaodong/dsh-island) plugin listens to DSH's built-in events and writes them to CodeIsland's socket:
+DSH is plugin-native, so Morrow installs nothing. The [dsh-island](https://github.com/cdxiaodong/dsh-island) plugin listens to DSH's built-in events and writes them to Morrow's socket:
 
 ```bash
 dsh plugin --profile <profile> add github:cdxiaodong/dsh-island
@@ -324,7 +324,7 @@ Antigravity's `PreToolUse` hook can refuse a tool call but can't approve one, so
 
 <br>
 
-Add a host in **Settings → Remote**. CodeIsland installs a small helper and the hooks on the server (merged into your existing config, never replacing it), and forwards events back over SSH. An optional working-directory filter keeps other people's sessions off your island on shared machines. If a tool shows `skipped`, the status line says why — usually its config directory doesn't exist on that host yet.
+Add a host in **Settings → Remote**. Morrow installs a small helper and the hooks on the server (merged into your existing config, never replacing it), and forwards events back over SSH. An optional working-directory filter keeps other people's sessions off your island on shared machines. If a tool shows `skipped`, the status line says why — usually its config directory doesn't exist on that host yet.
 
 </details>
 
@@ -334,7 +334,7 @@ Add a host in **Settings → Remote**. CodeIsland installs a small helper and th
 
 <br>
 
-Cowork runs inside Claude Desktop's sandbox, where hooks never fire, so CodeIsland reads the session files Claude Desktop keeps on your Mac instead (`~/Library/Application Support/Claude/local-agent-mode-sessions/`, read-only — nothing is installed or written there). Cowork conversations get a card with their title, live status, the running tool, the latest reply and a completion sound; a pending permission request lights up as waiting. Approvals are still answered in Claude Desktop — click the card to open that conversation. Only sessions active in the last few minutes appear, so old ones never come back as ghost cards. Toggle it under **Settings → Hooks → Claude Desktop**.
+Cowork runs inside Claude Desktop's sandbox, where hooks never fire, so Morrow reads the session files Claude Desktop keeps on your Mac instead (`~/Library/Application Support/Claude/local-agent-mode-sessions/`, read-only — nothing is installed or written there). Cowork conversations get a card with their title, live status, the running tool, the latest reply and a completion sound; a pending permission request lights up as waiting. Approvals are still answered in Claude Desktop — click the card to open that conversation. Only sessions active in the last few minutes appear, so old ones never come back as ghost cards. Toggle it under **Settings → Hooks → Claude Desktop**.
 
 </details>
 
@@ -352,15 +352,15 @@ Cowork runs inside Claude Desktop's sandbox, where hooks never fire, so CodeIsla
 
 ```
 AI tool (Claude Code / Codex / Gemini / Cursor / …)
-  └─ hook fires ─→ codeisland-bridge (native Swift binary)
-                     └─ Unix socket /tmp/codeisland-<uid>.sock
-                          └─ CodeIsland updates the notch in real time
+  └─ hook fires ─→ morrow-bridge (native Swift binary)
+                     └─ Unix socket /tmp/morrow-<uid>.sock
+                          └─ Morrow updates the notch in real time
                                └─ optional: iPhone / Watch / ESP32 Buddy, push, webhook
 ```
 
-CodeIsland installs lightweight hooks into each tool's own config. When the tool fires an event — session start, tool call, permission request, question, stop — the bridge forwards it as JSON over a local Unix socket, and the island updates instantly. For events that wait on you, the answer travels back the same way.
+Morrow installs lightweight hooks into each tool's own config. When the tool fires an event — session start, tool call, permission request, question, stop — the bridge forwards it as JSON over a local Unix socket, and the island updates instantly. For events that wait on you, the answer travels back the same way.
 
-**Privacy:** events never leave your Mac unless you opt in. The only network requests CodeIsland makes are Sparkle update checks, plus — only if you turn them on — Claude plan-limit lookups (sent to `api.anthropic.com` with your own Claude Code login), webhook forwarding to the URL you configure, and pushes to the services you set up.
+**Privacy:** events never leave your Mac unless you opt in. The only network requests Morrow makes are Sparkle update checks, plus — only if you turn them on — Claude plan-limit lookups (sent to `api.anthropic.com` with your own Claude Code login), webhook forwarding to the URL you configure, and pushes to the services you set up.
 
 ## Settings
 
@@ -392,15 +392,15 @@ Every shortcut can be rebound in **Settings → Shortcuts**, where you can also 
 Requires **macOS 14+** and **Swift 5.9+**.
 
 ```bash
-git clone git@github.com:fzrsahi/CodeIsland.git
-cd CodeIsland
+git clone git@github.com:fzrsahi/morrow.git
+cd morrow
 
 # Development: debug build + launch
-swift build && ./.build/debug/CodeIsland
+swift build && ./.build/debug/Morrow
 
 # Release: universal binary (Apple Silicon + Intel)
 ./build.sh
-open .build/release/CodeIsland.app
+open .build/release/Morrow.app
 
 # Tests
 swift test
@@ -422,11 +422,11 @@ We welcome contributions from everyone! Please check out [CONTRIBUTING.md](CONTR
 
 ## Star history
 
-<a href="https://star-history.dera.page/#wxtsky/CodeIsland&type=date&legend=bottom-right">
+<a href="https://star-history.dera.page/#fzrsahi/morrow&type=date&legend=bottom-right">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=wxtsky/CodeIsland&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=wxtsky/CodeIsland&type=date&legend=top-left" />
-    <img alt="Star history chart" src="https://star-history.dera.page/svg?repos=wxtsky/CodeIsland&type=date&legend=top-left" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=fzrsahi/morrow&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=fzrsahi/morrow&type=date&legend=top-left" />
+    <img alt="Star history chart" src="https://star-history.dera.page/svg?repos=fzrsahi/morrow&type=date&legend=top-left" />
   </picture>
 </a>
 

@@ -73,9 +73,9 @@ Ketika user memberitahu bahwa PR sudah di-merge:
 
 ---
 
-## 3. Port Windows/Linux — baca ini sebelum menyentuh `rust/`, `docs/`, atau `windows/`
+## 3. Port Windows/Linux — baca ini sebelum menyentuh `shared/`, `docs/`, `linux/`, atau `windows/`
 
-Port sedang berjalan dan punya dokumen sendiri. **Jangan mulai dari README, dan jangan mulai dari `windows/CodeIsland.*`** — kode C# di sana divergen dari protokol normatif.
+Port sedang berjalan dan punya dokumen sendiri. **Jangan mulai dari README, dan jangan mulai dari `windows/Morrow.*`** — kode C# di sana divergen dari protokol normatif.
 
 **Titik masuk:** [`docs/handoff-windows-linux-port.md`](docs/handoff-windows-linux-port.md) — urutan baca, status branch, dan daftar jebakan.
 
@@ -85,6 +85,6 @@ Aturan yang mengikat:
 
 - **Fase kanonik** ada di [`docs/plan-windows-linux.md`](docs/plan-windows-linux.md) §7, identik dengan "Urutan Implementasi" di issue #33. Kalau ada dokumen lain yang daftar fasenya berbeda, dokumen itu usang.
 - **Slicing PR** ada di plan §8. Satu PR per persilangan bahasa / jenis bukti / door type. Jangan kirim satu PR raksasa.
-- `linux/CodeIsland-Linux-Development-Plan.md` (Avalonia) dan `windows/CodeIsland-Windows-Complete-Development-Plan.md` (WPF) **usang**. Masih berguna untuk acceptance criteria dan risiko Wayland; jangan ikuti fase atau pilihan teknologinya.
-- **macOS (`Sources/`) tidak disentuh** oleh port ini.
+- [`docs/archive/linux-avalonia-plan.md`](docs/archive/linux-avalonia-plan.md) (Avalonia) dan `windows/Morrow-Windows-Complete-Development-Plan.md` (WPF) **usang**. Masih berguna untuk acceptance criteria dan risiko Wayland; jangan ikuti fase atau pilihan teknologinya.
+- **macOS (`Sources/`) tidak disentuh** oleh port ini, kecuali PR layout monorepo (plan §4) dan fix kontrak endpoint (plan §3.1, §12).
 - Kosakata: [`GLOSSARY.md`](GLOSSARY.md). **Source ≠ Agent ≠ Hook target** — 34 vs 14 vs 9, tiga konsep berbeda.

@@ -1,4 +1,4 @@
-# CodeIsland
+# Morrow
 
 A macOS overlay that watches AI coding agents and shows what they are doing in the notch. Being ported to Windows and Linux.
 
@@ -15,7 +15,7 @@ The product identity a user recognises, shown with its own mascot and name. One 
 _Avoid_: source, tool, vendor
 
 **Hook target**:
-A CLI whose config file CodeIsland can write a hook into, and therefore the only kind of source that can produce events at all. Nine today, against 34 known sources.
+A CLI whose config file Morrow can write a hook into, and therefore the only kind of source that can produce events at all. Nine today, against 34 known sources.
 _Avoid_: tool, integration, plugin
 
 ### What flows
@@ -62,6 +62,18 @@ _Avoid_: UI, view layer, client
 A concrete implementation of a platform interface: reading Now Playing, activating a terminal, registering a hotkey. Every adapter reports whether it is supported before it is used.
 _Avoid_: provider, driver, integration
 
+**Capability**:
+What an adapter's `probe()` reports: supported, degraded (with a reason), or unsupported (with a reason). The UI shows it; a feature never fails silently.
+_Avoid_: feature flag, availability
+
+**Endpoint**:
+The address a bridge or plugin sends envelopes to: a Unix socket path on macOS and Linux, a named pipe on Windows. Resolved by one rule that is part of the contract, and only trusted after the peer is verified to be this user.
+_Avoid_: socket (too narrow), port, channel
+
+**Tight-fit window**:
+A panel window sized to the island's current bounds, so clicks outside the island reach the app underneath without any click-through API.
+_Avoid_: click-through window, overlay window
+
 ### What the user sees
 
 **Island**:
@@ -79,5 +91,5 @@ _Avoid_: island, panel
 ### What is shared
 
 **Contract**:
-The frozen hook-event schema, envelope schema, and golden fixtures that both cores must satisfy. The only thing that may not drift.
+The frozen hook-event schema, envelope schema, golden fixtures, and endpoint rules that both cores and every edge must satisfy. The only thing that may not drift.
 _Avoid_: spec, protocol (the protocol is one part of the contract)
