@@ -146,7 +146,7 @@ private struct ModernCleanMailHUDContentView: View {
                 // Minimal Modern Refresh Icon Button
                 ModernRefreshButton(mailManager: mailManager, color: themeColor)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 18)
             .padding(.top, 4)
 
             // Content List, Loading Skeleton, or Empty State
@@ -340,7 +340,7 @@ private struct RetroCyberMailHUDContentView: View {
                 // 8-bit Pixel Refresh Button (Discrete 90° Step Rotation)
                 PixelRefreshButton(mailManager: mailManager, color: themeColor)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 18)
             .padding(.top, 4)
 
             // Content List, Loading, or Empty State
