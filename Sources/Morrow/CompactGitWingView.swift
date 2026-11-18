@@ -64,6 +64,7 @@ struct CompactGitStandbyWingView: View {
     var isDynamicIslandCompact: Bool = false
     var onTap: (() -> Void)? = nil
 
+    @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
@@ -84,8 +85,8 @@ struct CompactGitStandbyWingView: View {
     private var isAlbumColorActive: Bool {
         let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
         return (syncThemeWithAlbumArt || pc == .album)
-            && NowPlayingManager.shared.isPlaying
-            && NowPlayingManager.shared.artworkImage != nil
+            && nowPlaying.isPlaying
+            && nowPlaying.artworkImage != nil
     }
 
     private var cleanColor: Color {

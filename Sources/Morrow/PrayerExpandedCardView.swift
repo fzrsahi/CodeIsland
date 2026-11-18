@@ -24,6 +24,14 @@ public struct PrayerExpandedCardView: View {
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
 
+    private var pixelAccent: Color {
+        _ = syncThemeWithAlbumArt
+        _ = nowPlaying.albumPalette
+        return AppColorTheme.readableOnDark(
+            AppColorTheme.accent(for: musicHUDProgressColor, isModern: false)
+        )
+    }
+
     private var accentColor: Color {
         if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
             return nowPlaying.albumPalette.primary
@@ -281,145 +289,11 @@ public struct PrayerExpandedCardView: View {
     }
 
     // MARK: - ==========================================
-    // MARK: 2. PIXEL RETRO - COMPACT RIBBON (120pt)
+    // MARK: 2. PIXEL 32-BIT - UNIFIED HORIZON ARC
     // MARK: - ==========================================
 
     private var compactPixelDashboard: some View {
-        let upcoming = manager.upcomingPrayer
-        let schedule = manager.todaySchedule
-        let phase = manager.currentPhase
-        let deg = manager.qiblaDegrees
-        let dirShort = manager.qiblaCompassDirection
-        let dirFull = manager.qiblaCompassDirectionFull
-
-        return ZStack(alignment: .topLeading) {
-            // Background: Living 8-bit Stepped Pixel Sky & Mosque Skyline
-            DioramaSkyView(
-                hour: manager.currentFractionalHour,
-                hijriDay: manager.hijriDay,
-                sunriseHour: manager.sunriseHour,
-                sunsetHour: manager.sunsetHour,
-                pixel: true,
-                skyline: true,
-                skylineHeight: 0.28
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-            LinearGradient(
-                colors: [
-                    Color.black.opacity(0.18),
-                    Color.black.opacity(0.48),
-                    Color.black.opacity(0.88)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .allowsHitTesting(false)
-
-            // Foreground Content
-            VStack(spacing: 6) {
-                // Top Floating Header & Info Row
-                HStack(alignment: .center, spacing: 7) {
-                    HStack(spacing: 4) {
-                        Image(systemName: phase.systemImage)
-                            .font(.system(size: 8, weight: .bold))
-                        Text(phase.displayName.uppercased())
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    }
-                    .foregroundStyle(Color.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2.5)
-                    .pixel16Bevel(
-                        raised: false,
-                        cornerRadius: 3.5,
-                        fillColor: Pixel16Palette.slot.opacity(0.70)
-                    )
-
-                    Text("\(manager.gregorianDateString.uppercased()) // \(manager.cityName.uppercased())")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.85))
-                        .lineLimit(1)
-
-                    Spacer(minLength: 4)
-
-                    // Next Prayer Spotlight Badge (Seamless 16-Bit Telemetry - Zero Ugly Nested Stroke Boxes)
-                    if let next = upcoming {
-                        let diffMins = manager.minutesUntilNextPrayer
-                        HStack(spacing: 5) {
-                            Text(next.prayer.displayName.uppercased())
-                                .font(.system(size: 8.5, weight: .black, design: .monospaced))
-                                .foregroundStyle(Pixel16Palette.textWhite)
-
-                            Text(manager.formattedPrayerTime(next.date))
-                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                .foregroundStyle(accentColor)
-
-                            Text(diffMins <= 0 ? "[NOW]" : "[-\(manager.formattedCountdown)]")
-                                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Pixel16Palette.textMuted)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2.5)
-                        .pixel16Bevel(
-                            raised: false,
-                            cornerRadius: 3.5,
-                            fillColor: Pixel16Palette.slot.opacity(0.70)
-                        )
-                    }
-
-                    // Compact Pixel Qibla Dial (Seamless 16-Bit Recessed Inset)
-                    HStack(spacing: 4) {
-                        ZStack {
-                            Circle()
-                                .fill(Pixel16Palette.slot.opacity(0.80))
-                                .frame(width: 17, height: 17)
-
-                            VStack(spacing: 0) {
-                                Image(systemName: "triangle.fill")
-                                    .font(.system(size: 4, weight: .bold))
-                                    .foregroundStyle(accentColor)
-                                Rectangle()
-                                    .fill(accentColor)
-                                    .frame(width: 1.0, height: 5.5)
-                                Spacer()
-                            }
-                            .frame(height: 14)
-                            .rotationEffect(.degrees(deg))
-                        }
-                        .frame(width: 17, height: 17)
-
-                        Text("QIBLA: \(Int(deg))° \(dirShort)")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.white.opacity(0.90))
-
-                        Text("🕋")
-                            .font(.system(size: 7))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2.5)
-                    .pixel16Bevel(
-                        raised: false,
-                        cornerRadius: 3.5,
-                        fillColor: Pixel16Palette.slot.opacity(0.70)
-                    )
-                    .help("Qibla Direction: \(Int(deg))° \(dirFull) towards Kaaba")
-                }
-                .padding(.horizontal, 14)
-                .padding(.top, 8)
-
-                Spacer(minLength: 2)
-
-                // Timeline Ribbon
-                if let sched = schedule {
-                    timelineRibbon(sched: sched, isPixelTheme: true)
-                        .padding(.horizontal, 10)
-                        .padding(.bottom, 6)
-                }
-            }
-        }
-        .frame(height: 120)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        unifiedHorizonDashboard(isPixelTheme: true)
     }
 
     // MARK: - ==========================================
@@ -594,133 +468,290 @@ public struct PrayerExpandedCardView: View {
     }
 
     // MARK: - ==========================================
-    // MARK: 4. MODERN CLEAN - COMPACT RIBBON (120pt)
+    // MARK: 4. MODERN CLEAN - UNIFIED HORIZON ARC
     // MARK: - ==========================================
 
     private var compactModernDashboard: some View {
+        unifiedHorizonDashboard(isPixelTheme: false)
+    }
+
+    @ViewBuilder
+    private func unifiedHorizonDashboard(isPixelTheme: Bool) -> some View {
         let upcoming = manager.upcomingPrayer
         let schedule = manager.todaySchedule
-        let phase = manager.currentPhase
-        let deg = manager.qiblaDegrees
-        let dirShort = manager.qiblaCompassDirection
-        let dirFull = manager.qiblaCompassDirectionFull
+        let activeAccent = isPixelTheme ? pixelAccent : Color(red: 0.35, green: 0.78, blue: 0.98)
+        let prayers = schedule?.fivePrayers ?? []
 
-        return ZStack(alignment: .topLeading) {
-            DioramaSkyView(
-                hour: manager.currentFractionalHour,
-                hijriDay: manager.hijriDay,
-                sunriseHour: manager.sunriseHour,
-                sunsetHour: manager.sunsetHour,
-                pixel: false,
-                skyline: true,
-                skylineHeight: 0.28
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-            LinearGradient(
+        ZStack {
+            // Subtle phase-tinted radial ambient glow fading seamlessly into pure notch black
+            RadialGradient(
                 colors: [
-                    Color.black.opacity(0.18),
-                    Color.black.opacity(0.48),
-                    Color.black.opacity(0.88)
+                    activeAccent.opacity(isPixelTheme ? 0.14 : 0.16),
+                    activeAccent.opacity(0.03),
+                    Color.clear
                 ],
-                startPoint: .top,
-                endPoint: .bottom
+                center: UnitPoint(x: 0.5, y: 0.12),
+                startRadius: 10,
+                endRadius: 240
             )
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .allowsHitTesting(false)
 
-            VStack(spacing: 6) {
-                // Top Row
-                HStack(alignment: .center, spacing: 8) {
-                    HStack(spacing: 4) {
-                        Image(systemName: phase.systemImage)
-                            .font(.system(size: 8.5, weight: .bold))
-                        Text(phase.displayName)
-                            .font(.system(size: 8.5, weight: .bold, design: .rounded))
+            VStack(spacing: 4) {
+                // Subtle top corner context (single focus canvas, no side dock)
+                HStack {
+                    if isPixelTheme {
+                        PixelText(
+                            text: "PRAYER · \(manager.cityName.uppercased())",
+                            color: Color.white.opacity(0.55),
+                            pixelSize: 1.1
+                        )
+                    } else {
+                        Text("Prayer · \(manager.cityName)")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color.white.opacity(0.52))
                     }
-                    .foregroundStyle(Color.white)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.black.opacity(0.50)))
 
-                    Text("\(manager.gregorianDateString) · \(manager.cityName)")
-                        .font(.system(size: 8.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color.white.opacity(0.88))
-                        .lineLimit(1)
+                    Spacer()
 
-                    Spacer(minLength: 4)
+                    TimelineView(.periodic(from: .now, by: 30)) { context in
+                        let hm = Self.shortClockText(at: context.date, timeZone: manager.timeZone)
+                        if isPixelTheme {
+                            PixelText(text: hm, color: Color.white.opacity(0.68), pixelSize: 1.15)
+                        } else {
+                            Text(hm)
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(Color.white.opacity(0.58))
+                        }
+                    }
+                }
+                .padding(.horizontal, 6)
 
-                    // Next Prayer Spotlight Badge
+                // Sun-Arc Canvas + Centered Next Prayer Hero
+                ZStack {
+                    horizonSunArcCanvas(
+                        prayers: prayers,
+                        upcoming: upcoming,
+                        isPixelTheme: isPixelTheme,
+                        activeAccent: activeAccent
+                    )
+                    .frame(height: 82)
+
                     if let next = upcoming {
                         let diffMins = manager.minutesUntilNextPrayer
-                        HStack(spacing: 4.5) {
-                            Text(next.prayer.displayName)
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color.white)
+                        let countdown = diffMins <= 0 ? (isPixelTheme ? "NOW" : "Now") : "in \(manager.formattedCountdown)"
+                        let heroTitle = "\(next.prayer.displayName) · \(manager.formattedPrayerTime(next.date))"
 
-                            Text(manager.formattedPrayerTime(next.date))
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
-                                .foregroundStyle(accentColor)
+                        VStack(spacing: 4) {
+                            Spacer(minLength: 26)
+                            if isPixelTheme {
+                                PixelText(text: heroTitle.uppercased(), color: .white, pixelSize: 1.85)
+                                PixelText(text: countdown.uppercased(), color: activeAccent, pixelSize: 1.15)
+                            } else {
+                                Text(heroTitle)
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white)
+                                    .shadow(color: Color.black.opacity(0.85), radius: 6, y: 1)
 
-                            Text(diffMins <= 0 ? "Now" : "-\(manager.formattedCountdown)")
-                                .font(.system(size: 8, weight: .bold, design: .rounded))
-                                .foregroundStyle(accentColor)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Capsule().fill(accentColor.opacity(0.20)))
-                        }
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(Color.black.opacity(0.50)))
-                    }
-
-                    // Compact Modern Qibla Dial
-                    HStack(spacing: 4.5) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.black.opacity(0.50))
-                                .frame(width: 18, height: 18)
-
-                            VStack(spacing: 0) {
-                                Image(systemName: "location.north.fill")
-                                    .font(.system(size: 4.5, weight: .bold))
-                                    .foregroundStyle(accentColor)
-                                Rectangle()
-                                    .fill(accentColor)
-                                    .frame(width: 1.0, height: 6)
-                                Spacer()
+                                Text(countdown)
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(activeAccent)
                             }
-                            .frame(height: 15)
-                            .rotationEffect(.degrees(deg))
                         }
-                        .frame(width: 18, height: 18)
-
-                        Text("Qibla \(Int(deg))° \(dirShort)")
-                            .font(.system(size: 8.5, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color.white.opacity(0.95))
-
-                        Text("🕋")
-                            .font(.system(size: 7.5))
                     }
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.black.opacity(0.50)))
-                    .help("Qibla Direction: \(Int(deg))° \(dirFull) towards Kaaba")
                 }
-                .padding(.horizontal, 14)
-                .padding(.top, 8)
 
-                Spacer(minLength: 2)
-
-                if let sched = schedule {
-                    timelineRibbon(sched: sched, isPixelTheme: false)
-                        .padding(.horizontal, 10)
-                        .padding(.bottom, 6)
+                // Bottom 5-Prayer Baseline
+                if !prayers.isEmpty {
+                    HStack(spacing: 0) {
+                        ForEach(prayers, id: \.prayer) { item in
+                            let isNext = item.prayer == upcoming?.prayer
+                            let timeText = manager.formattedPrayerTime(item.date)
+                            VStack(spacing: 2) {
+                                if isPixelTheme {
+                                    PixelText(
+                                        text: String(item.prayer.displayName.prefix(3)).uppercased(),
+                                        color: isNext ? activeAccent : Color.white.opacity(0.50),
+                                        pixelSize: 1.1
+                                    )
+                                    PixelText(
+                                        text: timeText,
+                                        color: isNext ? .white : Color.white.opacity(0.45),
+                                        pixelSize: 1.05
+                                    )
+                                } else {
+                                    Text("\(item.prayer.displayName) \(timeText)")
+                                        .font(.system(size: 10.5, weight: isNext ? .bold : .medium, design: .rounded))
+                                        .monospacedDigit()
+                                        .foregroundStyle(isNext ? .white : Color.white.opacity(0.50))
+                                        .lineLimit(1)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding(.top, 2)
                 }
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
         }
-        .frame(height: 120)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .frame(height: 150)
+    }
+
+    private static func shortClockText(at date: Date, timeZone: TimeZone) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let c = calendar.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
+    }
+
+    private func horizonSunArcCanvas(
+        prayers: [(prayer: PrayerType, date: Date)],
+        upcoming: (prayer: PrayerType, date: Date)?,
+        isPixelTheme: Bool,
+        activeAccent: Color
+    ) -> some View {
+        let minH = fractionalHour(from: prayers.first?.date) ?? max(4.0, manager.sunriseHour - 1.2)
+        let maxH = fractionalHour(from: prayers.last?.date) ?? max(minH + 10.0, manager.sunsetHour + 1.2)
+        let span = max(1.0, maxH - minH)
+        let prog = max(0.0, min(1.0, (manager.currentFractionalHour - minH) / span))
+
+        return Canvas { ctx, size in
+            let padX: CGFloat = 22
+            let baseY = size.height - 8
+            let peakY: CGFloat = 12
+            let usableW = max(1, size.width - padX * 2)
+
+            func pointAt(_ t: Double) -> CGPoint {
+                let x = padX + CGFloat(t) * usableW
+                let y = baseY - CGFloat(sin(t * .pi)) * (baseY - peakY)
+                return CGPoint(x: x, y: y)
+            }
+
+            // Horizon baseline
+            var baseLine = Path()
+            baseLine.move(to: CGPoint(x: 10, y: baseY))
+            baseLine.addLine(to: CGPoint(x: size.width - 10, y: baseY))
+            ctx.stroke(baseLine, with: .color(Color.white.opacity(isPixelTheme ? 0.16 : 0.12)), lineWidth: 1)
+
+            if isPixelTheme {
+                // Continuous 2pt stepped pixel curve (no gaps or sparse blocks)
+                let step: CGFloat = 2.0
+                var prevGy: CGFloat? = nil
+                var x = padX
+                while x <= size.width - padX {
+                    let t = Double((x - padX) / usableW)
+                    let rawY = baseY - CGFloat(sin(t * .pi)) * (baseY - peakY)
+                    let gy = (rawY / step).rounded() * step
+                    let active = t <= prog
+                    let col = active ? activeAccent : Color.white.opacity(0.16)
+
+                    if let prev = prevGy, abs(gy - prev) > step {
+                        let dir: CGFloat = gy > prev ? step : -step
+                        var yy = prev + dir
+                        while (dir > 0 && yy < gy) || (dir < 0 && yy > gy) {
+                            ctx.fill(Path(CGRect(x: x, y: yy, width: step, height: step)), with: .color(col))
+                            yy += dir
+                        }
+                    }
+                    ctx.fill(Path(CGRect(x: x, y: gy, width: 2.2, height: 2.2)), with: .color(col))
+                    prevGy = gy
+                    x += step
+                }
+
+                // Prayer milestone nodes
+                for item in prayers {
+                    if let h = fractionalHour(from: item.date) {
+                        let t = max(0.0, min(1.0, (h - minH) / span))
+                        let p = pointAt(t)
+                        let nx = (p.x / 2).rounded() * 2
+                        let ny = (p.y / 2).rounded() * 2
+                        let isNext = item.prayer == upcoming?.prayer
+                        ctx.fill(
+                            Path(CGRect(x: nx - 2, y: ny - 2, width: 4.5, height: 4.5)),
+                            with: .color(isNext ? activeAccent : Color.white.opacity(0.48))
+                        )
+                    }
+                }
+
+                // 32-bit circular stepped pixel sun sprite
+                let sun = pointAt(prog)
+                let sx = (sun.x / 2).rounded() * 2
+                let sy = (sun.y / 2).rounded() * 2
+                ctx.fill(Path(CGRect(x: sx - 5, y: sy - 3, width: 10, height: 6)), with: .color(Color.yellow.opacity(0.22)))
+                ctx.fill(Path(CGRect(x: sx - 3, y: sy - 5, width: 6, height: 10)), with: .color(Color.yellow.opacity(0.22)))
+                ctx.fill(Path(CGRect(x: sx - 3, y: sy - 1.5, width: 6, height: 3)), with: .color(Color(red: 0.98, green: 0.75, blue: 0.14)))
+                ctx.fill(Path(CGRect(x: sx - 1.5, y: sy - 3, width: 3, height: 6)), with: .color(Color(red: 0.98, green: 0.75, blue: 0.14)))
+                ctx.fill(Path(CGRect(x: sx - 1.5, y: sy - 1.5, width: 3, height: 3)), with: .color(.white))
+            } else {
+                // Smooth Modern Bezier-sampled curve
+                let segs = 64
+                var pastPath = Path()
+                var futurePath = Path()
+                var startedPast = false
+                var startedFuture = false
+                for i in 0...segs {
+                    let t = Double(i) / Double(segs)
+                    let p = pointAt(t)
+                    if t <= prog {
+                        if !startedPast { pastPath.move(to: p); startedPast = true } else { pastPath.addLine(to: p) }
+                    }
+                    if t >= prog {
+                        if !startedFuture { futurePath.move(to: p); startedFuture = true } else { futurePath.addLine(to: p) }
+                    }
+                }
+                if startedPast {
+                    pastPath.addLine(to: pointAt(prog))
+                }
+
+                ctx.stroke(futurePath, with: .color(Color.white.opacity(0.16)), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                ctx.stroke(
+                    pastPath,
+                    with: .linearGradient(
+                        Gradient(colors: [Color(red: 0.22, green: 0.74, blue: 0.97), Color(red: 0.23, green: 0.51, blue: 0.96)]),
+                        startPoint: CGPoint(x: padX, y: baseY),
+                        endPoint: CGPoint(x: size.width - padX, y: peakY)
+                    ),
+                    style: StrokeStyle(lineWidth: 2.8, lineCap: .round)
+                )
+
+                for item in prayers {
+                    if let h = fractionalHour(from: item.date) {
+                        let t = max(0.0, min(1.0, (h - minH) / span))
+                        let p = pointAt(t)
+                        let isNext = item.prayer == upcoming?.prayer
+                        let r: CGFloat = isNext ? 3.5 : 2.3
+                        ctx.fill(
+                            Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2)),
+                            with: .color(isNext ? .white : Color.white.opacity(0.50))
+                        )
+                    }
+                }
+
+                // Luminous sun orb
+                let sun = pointAt(prog)
+                let glowRect = CGRect(x: sun.x - 11, y: sun.y - 11, width: 22, height: 22)
+                ctx.fill(
+                    Path(ellipseIn: glowRect),
+                    with: .radialGradient(
+                        Gradient(colors: [.white, Color(red: 0.99, green: 0.90, blue: 0.54).opacity(0.85), Color.clear]),
+                        center: sun,
+                        startRadius: 1,
+                        endRadius: 11
+                    )
+                )
+                ctx.fill(Path(ellipseIn: CGRect(x: sun.x - 4, y: sun.y - 4, width: 8, height: 8)), with: .color(.white))
+            }
+        }
+    }
+
+    private func fractionalHour(from date: Date?) -> Double? {
+        guard let date else { return nil }
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = manager.timeZone
+        let c = cal.dateComponents([.hour, .minute], from: date)
+        return Double(c.hour ?? 0) + Double(c.minute ?? 0) / 60.0
     }
 
     // MARK: - ==========================================

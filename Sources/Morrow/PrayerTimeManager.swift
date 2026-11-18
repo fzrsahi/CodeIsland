@@ -569,6 +569,10 @@ public final class PrayerTimeManager: ObservableObject {
     }
 
     private func presentBanner(title: String, subtitle: String) {
+        SystemMonitorManager.shared.dismissChargingBanner()
+        if let appState, appState.surface.isExpanded {
+            appState.surface = .collapsed
+        }
         miniPeekBannerTitle = title
         miniPeekBannerSubtitle = subtitle
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {

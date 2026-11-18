@@ -1725,7 +1725,10 @@ private struct AppearancePage: View {
                     Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
                         GridRow {
                             Button(action: {
-                                SystemMonitorManager.shared.triggerChargingBanner()
+                                SystemMonitorManager.shared.triggerChargingBanner(
+                                    previewState: .charging(kind: .magSafe, watts: 140, timeToFullMinutes: 28),
+                                    previewBatteryLevel: 70
+                                )
                             }) {
                                 HStack(spacing: 6) {
                                     Image(systemName: "battery.100.bolt")
@@ -1747,6 +1750,82 @@ private struct AppearancePage: View {
                                         .font(.system(size: 11, weight: .bold))
                                         .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
                                     Text("Test Prayer Reminder")
+                                        .font(.system(size: 11, weight: .medium))
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3.5)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+
+                        GridRow {
+                            Button(action: {
+                                SystemMonitorManager.shared.triggerChargingBanner(
+                                    previewState: .charging(kind: .usbC, watts: 67, timeToFullMinutes: 41),
+                                    previewBatteryLevel: 64
+                                )
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "cable.connector")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(Color(red: 0.19, green: 0.82, blue: 0.35))
+                                    Text("Test USB-C Charging")
+                                        .font(.system(size: 11, weight: .medium))
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3.5)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button(action: {
+                                SystemMonitorManager.shared.triggerChargingBanner(
+                                    previewState: .chargingOnHold(kind: .usbC, watts: 20),
+                                    previewBatteryLevel: 90
+                                )
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "pause.circle.fill")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(Color(red: 1.0, green: 0.72, blue: 0.20))
+                                    Text("Test Charging On Hold")
+                                        .font(.system(size: 11, weight: .medium))
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3.5)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+
+                        GridRow {
+                            Button(action: {
+                                SystemMonitorManager.shared.triggerChargingBanner(
+                                    previewState: .fullyCharged(kind: .magSafe),
+                                    previewBatteryLevel: 100
+                                )
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(Color(red: 0.19, green: 0.82, blue: 0.35))
+                                    Text("Test Fully Charged")
+                                        .font(.system(size: 11, weight: .medium))
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3.5)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button(action: {
+                                SystemMonitorManager.shared.triggerChargingBanner(
+                                    previewState: .lowBattery,
+                                    previewBatteryLevel: 15
+                                )
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "battery.25")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(Color(red: 1.0, green: 0.27, blue: 0.23))
+                                    Text("Test Low Battery")
                                         .font(.system(size: 11, weight: .medium))
                                 }
                                 .padding(.horizontal, 6)
