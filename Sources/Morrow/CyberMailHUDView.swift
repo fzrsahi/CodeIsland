@@ -150,7 +150,7 @@ private struct ModernCleanMailHUDContentView: View {
             .padding(.top, 4)
 
             // Content List, Loading Skeleton, or Empty State
-            if mailManager.recentMails.isEmpty && (!mailManager.hasCompletedInitialBaseline || (mailManager.isRefreshing && mailManager.unreadCount > 0)) {
+            if mailManager.recentMails.isEmpty && (!mailManager.hasCompletedInitialBaseline || mailManager.unreadCount > 0) {
                 loadingSkeletonView
             } else if mailManager.recentMails.isEmpty {
                 emptyInboxView
@@ -344,7 +344,7 @@ private struct RetroCyberMailHUDContentView: View {
             .padding(.top, 4)
 
             // Content List, Loading, or Empty State
-            if mailManager.recentMails.isEmpty && (!mailManager.hasCompletedInitialBaseline || (mailManager.isRefreshing && mailManager.unreadCount > 0)) {
+            if mailManager.recentMails.isEmpty && (!mailManager.hasCompletedInitialBaseline || mailManager.unreadCount > 0) {
                 retroLoadingView
             } else if mailManager.recentMails.isEmpty {
                 retroEmptyView

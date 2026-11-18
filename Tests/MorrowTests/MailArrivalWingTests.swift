@@ -352,4 +352,44 @@ final class MailArrivalWingTests: XCTestCase {
         XCTAssertEqual(item.relativeDateText(now: received.addingTimeInterval(26 * 3600)), "yesterday")
         XCTAssertEqual(item.relativeDateText(now: received.addingTimeInterval(3 * 86400)), "3d ago")
     }
+
+    func testSyncedUnreadCountMatchesRecentItemsInvariant() {
+        // When parsed items is empty on a settled matching epoch, unreadCount must clear to 0
+        // (never stay stuck at 28 while body shows All Caught Up).
+        XCTAssertEqual(
+            MailManager.resolveSyncedUnreadCount(
+                parsedRecentCount: 28,
+                parsedItemsCount: 0,
+                currentUnreadCount: 28,
+                epochMatched: true,
+                hasCompletedBaseline: true
+            ),
+            0
+        )
+
+        // With parsed items present, use max(parsedRecentCount, parsedItemsCount).
+        XCTAssertEqual(
+            MailManager.resolveSyncedUnreadCount(
+                parsedRecentCount: 12,
+                parsedItemsCount: 6,
+                currentUnreadCount: 0,
+                epochMatched: true,
+                hasCompletedBaseline: true
+            ),
+            12
+        )
+
+        // When an optimistic arrival jump bumped epoch while refresh was in flight, keep currentUnreadCount
+        // until the queued follow-up refresh lands.
+        XCTAssertEqual(
+            MailManager.resolveSyncedUnreadCount(
+                parsedRecentCount: 0,
+                parsedItemsCount: 0,
+                currentUnreadCount: 1,
+                epochMatched: false,
+                hasCompletedBaseline: true
+            ),
+            1
+        )
+    }
 }

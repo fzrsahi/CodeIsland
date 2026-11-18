@@ -526,7 +526,6 @@ public final class MailManager: ObservableObject {
     }
 
     private func handleObservedUnreadCount(_ count: Int, triggerDetailFetch: Bool) {
-        unreadObservationEpoch += 1
         let isSettled = hasCompletedInitialBaseline && Date() >= baselineSettledAt
         let jump = Self.evaluateUnreadCountJump(
             newCount: count,
@@ -546,6 +545,7 @@ public final class MailManager: ObservableObject {
         }
 
         if jump.shouldTrigger {
+            unreadObservationEpoch += 1
             pendingCountTriggeredArrivals += 1
             unreadCount += 1
             let placeholder = MailItem(
@@ -716,6 +716,26 @@ public final class MailManager: ObservableObject {
         return (newCount > prev, newCount)
     }
 
+    /// Keeps 7-day `unreadCount` consistent with `recentMails` when parsing a `refresh()` snapshot.
+    nonisolated public static func resolveSyncedUnreadCount(
+        parsedRecentCount: Int?,
+        parsedItemsCount: Int,
+        currentUnreadCount: Int,
+        epochMatched: Bool,
+        hasCompletedBaseline: Bool
+    ) -> Int {
+        guard epochMatched || !hasCompletedBaseline else {
+            return currentUnreadCount
+        }
+        guard parsedItemsCount > 0 else {
+            return 0
+        }
+        if let recentCount = parsedRecentCount {
+            return max(recentCount, parsedItemsCount)
+        }
+        return parsedItemsCount
+    }
+
     /// Evaluates whether the latest unread item represents a brand-new email arrival after the initial baseline
     public static func evaluateArrival(
         topItem: MailItem?,
@@ -790,13 +810,13 @@ public final class MailManager: ObservableObject {
             }
         }
 
-        if let recentCount = parsedRecentCount {
-            if startedAtEpoch == self.unreadObservationEpoch || !self.hasCompletedInitialBaseline {
-                self.unreadCount = max(recentCount, parsedItems.count)
-            }
-        } else {
-            self.unreadCount = parsedItems.count
-        }
+        self.unreadCount = Self.resolveSyncedUnreadCount(
+            parsedRecentCount: parsedRecentCount,
+            parsedItemsCount: parsedItems.count,
+            currentUnreadCount: self.unreadCount,
+            epochMatched: startedAtEpoch == self.unreadObservationEpoch,
+            hasCompletedBaseline: self.hasCompletedInitialBaseline
+        )
 
         // Detect new mail arrival strictly AFTER initial baseline has completed and settled.
         let hadCompletedBaseline = self.hasCompletedInitialBaseline
