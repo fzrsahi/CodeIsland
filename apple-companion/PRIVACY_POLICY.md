@@ -53,4 +53,4 @@ This policy may be updated as the app changes. Material changes should be reflec
 
 For questions, open an issue at:
 
-https://github.com/fzrsahi/CodeIsland/issues
+https://github.com/fzrsahi/morrow/issues

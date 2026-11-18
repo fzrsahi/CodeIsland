@@ -7,14 +7,14 @@ set -euo pipefail
 # Arguments passed by webhook:
 #   $1: version (e.g. 1.0.41)
 #   $2: tag (e.g. v1.0.41)
-#   $3: repository (optional, default: fzrsahi/Morrow)
+#   $3: repository (optional, default: fzrsahi/morrow)
 #   $4: expected_sha256 (optional)
 # ==============================================================================
 
 VERSION="${1:-}"
 VERSION="${VERSION#[vV]}"
 TAG="${2:-v$VERSION}"
-REPO="${3:-fzrsahi/Morrow}"
+REPO="${3:-fzrsahi/morrow}"
 EXPECTED_SHA="${4:-}"
 
 WEB_ROOT="/var/www/morrow-updates"

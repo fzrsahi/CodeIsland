@@ -50,7 +50,7 @@ fi
 # ---------------------------------------------------------------------------
 # Collect fields for the <enclosure> tag
 # ---------------------------------------------------------------------------
-DOWNLOAD_URL="${SPARKLE_DOWNLOAD_URL:-https://github.com/fzrsahi/CodeIsland/releases/download/v${VERSION}/Morrow.dmg}"
+DOWNLOAD_URL="${SPARKLE_DOWNLOAD_URL:-https://github.com/fzrsahi/morrow/releases/download/v${VERSION}/Morrow.dmg}"
 PUB_DATE="$(LC_TIME=en_US.UTF-8 date -u "+%a, %d %b %Y %H:%M:%S +0000")"
 LENGTH="$(stat -f%z "$DMG_PATH")"
 MIN_OS="14.0"
@@ -75,7 +75,7 @@ fi
 # ---------------------------------------------------------------------------
 NEW_ITEM="    <item>
       <title>Version ${VERSION}</title>
-      <link>https://github.com/fzrsahi/CodeIsland/releases/tag/v${VERSION}</link>
+      <link>https://github.com/fzrsahi/morrow/releases/tag/v${VERSION}</link>
       <sparkle:version>${VERSION}</sparkle:version>
       <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>${MIN_OS}</sparkle:minimumSystemVersion>

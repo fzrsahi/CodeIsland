@@ -120,13 +120,13 @@ Initial public release. Adds iPhone, Dynamic Island, Lock Screen, StandBy, Apple
 Support URL:
 
 ```text
-https://github.com/fzrsahi/CodeIsland
+https://github.com/fzrsahi/morrow
 ```
 
 Marketing URL:
 
 ```text
-https://github.com/fzrsahi/CodeIsland
+https://github.com/fzrsahi/morrow
 ```
 
 Privacy Policy URL:

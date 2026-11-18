@@ -2,7 +2,7 @@
 
 > 把 macOS 灵动岛上的 AI Coding Agent 状态动画，搬到一颗放在桌上的 ESP32 小屏幕上。
 
-Buddy 是 [Morrow](https://github.com/fzrsahi/CodeIsland) 的硬件外设功能。Mac 上运行的 Morrow 通过蓝牙低功耗（BLE）把当前 AI Coding Agent（Claude / Codex / Gemini / Cursor / Copilot / Trae / Qoder / Factory / CodeBuddy / OpenCode / Kimi / …）的工作状态实时推送给 ESP32，ESP32 在 1.47 寸彩屏上播放对应的像素吉祥物动画：
+Buddy 是 [Morrow](https://github.com/fzrsahi/morrow) 的硬件外设功能。Mac 上运行的 Morrow 通过蓝牙低功耗（BLE）把当前 AI Coding Agent（Claude / Codex / Gemini / Cursor / Copilot / Trae / Qoder / Factory / CodeBuddy / OpenCode / Kimi / …）的工作状态实时推送给 ESP32，ESP32 在 1.47 寸彩屏上播放对应的像素吉祥物动画：
 
 - **空闲（idle）→ Sleep 场景**：吉祥物闭眼休眠
 - **处理中（processing / running）→ Work 场景**：吉祥物在敲代码
@@ -43,8 +43,8 @@ Buddy 目前只适配下面这一款开发板，零售价约 60 CNY，淘宝上�
 ## 2. 拉取代码
 
 ```bash
-git clone https://github.com/fzrsahi/CodeIsland.git
-cd CodeIsland/hardware
+git clone https://github.com/fzrsahi/morrow.git
+cd morrow/hardware
 ```
 
 `hardware/` 目录关键文件：
@@ -139,7 +139,7 @@ ESP32-C6 需要 **Arduino-ESP32 v3.0 或更高**。
 
 ## 9. 与 macOS 端 Morrow 配对
 
-1. 启动 [Morrow](https://github.com/fzrsahi/CodeIsland) 主程序（需为支持 ESP32 桥接的版本）。
+1. 启动 [Morrow](https://github.com/fzrsahi/morrow) 主程序（需为支持 ESP32 桥接的版本）。
 2. 打开 **Preferences → ESP32 / Buddy** 面板，启用桥接开关。
 3. 首次连接时 macOS 会请求蓝牙权限，授权后等待扫描到 `Buddy-XXXXXX`，点击连接。
 4. Buddy 屏幕出现 `Pair?` 后，短按 **BOOT** 确认配对；如果不想配对，长按 **BOOT** 拒绝。

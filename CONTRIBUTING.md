@@ -19,8 +19,8 @@ This document provides guidelines and an overview of the codebase to help you ge
 
 1. Clone the repository:
    ```bash
-   git clone git@github.com:fzrsahi/Morrow.git
-   cd Morrow
+   git clone git@github.com:fzrsahi/morrow.git
+   cd morrow
    ```
 
 2. Build and run locally:
@@ -161,4 +161,4 @@ The CI pipeline publishes granular commit status checks to the GitHub REST API, 
 
 ## 📄 License
 Morrow is licensed under the [MIT License](LICENSE).
-Original upstream project by [wxtsky](https://github.com/wxtsky/Morrow).
+Original upstream project: [wxtsky/CodeIsland](https://github.com/wxtsky/CodeIsland) by [@wxtsky](https://github.com/wxtsky).

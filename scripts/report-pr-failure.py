@@ -106,7 +106,7 @@ def upsert_pr_comment(repo, pr_number, token, body):
 def main():
     parser = argparse.ArgumentParser(description="Report CI failure directly to GitHub PR")
     parser.add_argument("log_file", help="Path to build or test output log")
-    parser.add_argument("--repo", default=os.environ.get("CI_REPO", "fzrsahi/CodeIsland"), help="Repository (owner/repo)")
+    parser.add_argument("--repo", default=os.environ.get("CI_REPO", "fzrsahi/morrow"), help="Repository (owner/repo)")
     parser.add_argument("--pr", default=os.environ.get("CI_COMMIT_PULL_REQUEST"), help="Pull Request number")
     parser.add_argument("--commit", default=os.environ.get("CI_COMMIT_SHA", ""), help="Commit SHA")
     parser.add_argument("--pipeline", default=os.environ.get("CI_PIPELINE_NUMBER", ""), help="Pipeline number")

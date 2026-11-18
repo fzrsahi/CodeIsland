@@ -9,12 +9,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wxtsky/Morrow/releases/latest"><img src="https://img.shields.io/github/v/release/wxtsky/Morrow?style=flat-square&color=4c8bf5&label=release" alt="最新版本"></a>
-  <a href="https://github.com/wxtsky/Morrow/releases"><img src="https://img.shields.io/github/downloads/wxtsky/Morrow/total?style=flat-square&color=2ea44f" alt="下载量"></a>
+  <a href="https://github.com/fzrsahi/morrow/releases/latest"><img src="https://img.shields.io/github/v/release/fzrsahi/morrow?style=flat-square&color=4c8bf5&label=release" alt="最新版本"></a>
+  <a href="https://github.com/fzrsahi/morrow/releases"><img src="https://img.shields.io/github/downloads/fzrsahi/morrow/total?style=flat-square&color=2ea44f" alt="下载量"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-111111?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+">
   <a href="https://apps.apple.com/us/app/code-island-buddy/id6773881129"><img src="https://img.shields.io/badge/iPhone%20%26%20Watch-Buddy-0d96f6?style=flat-square&logo=appstore&logoColor=white" alt="App Store 上的 Code Island Buddy"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/wxtsky/Morrow?style=flat-square&color=8250df" alt="MIT 许可证"></a>
-  <a href="https://github.com/wxtsky/Morrow/stargazers"><img src="https://img.shields.io/github/stars/wxtsky/Morrow?style=flat-square&color=e3b341" alt="GitHub stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/fzrsahi/morrow?style=flat-square&color=8250df" alt="MIT 许可证"></a>
+  <a href="https://github.com/fzrsahi/morrow/stargazers"><img src="https://img.shields.io/github/stars/fzrsahi/morrow?style=flat-square&color=e3b341" alt="GitHub stars"></a>
 </p>
 
 <p align="center">
@@ -195,7 +195,7 @@ brew install --cask morrow
 
 ### 手动下载
 
-1. 从 [最新 Release](https://github.com/wxtsky/Morrow/releases/latest) 下载 `Morrow.dmg`
+1. 从 [最新 Release](https://github.com/fzrsahi/morrow/releases/latest) 下载 `Morrow.dmg`
 2. 把 `Morrow.app` 拖进「应用程序」
 3. 启动后，会自动为检测到的所有 AI 工具安装 hook
 
@@ -358,8 +358,8 @@ Morrow 往每个工具自己的配置里装一个轻量 hook。工具触发事�
 需要 **macOS 14+** 和 **Swift 5.9+**。
 
 ```bash
-git clone https://github.com/wxtsky/Morrow.git
-cd Morrow
+git clone https://github.com/fzrsahi/morrow.git
+cd morrow
 
 # 开发：debug 构建并启动（Buddy 蓝牙需要用下面打包出的 .app）
 swift build && ./.build/debug/Morrow
@@ -379,15 +379,16 @@ swift test
 
 ## 致谢
 
-灵感来自 [@farouqaldori](https://github.com/farouqaldori) 的 [claude-island](https://github.com/farouqaldori/claude-island)，感谢把 AI Agent 状态放进 macOS 刘海这个最初的想法。也感谢所有贡献集成、修复和问题反馈的朋友。
+- 上游原始项目：[wxtsky/CodeIsland](https://github.com/wxtsky/CodeIsland) 由 [@wxtsky](https://github.com/wxtsky) 开发 — 感谢创建这一开创性的刘海智能体状态栏。
+- 灵感来自 [@farouqaldori](https://github.com/farouqaldori) 的 [claude-island](https://github.com/farouqaldori/claude-island)，感谢把 AI Agent 状态放进 macOS 刘海这个最初的想法。也感谢所有贡献集成、修复和问题反馈的朋友。
 
 ## Star History
 
-<a href="https://star-history.dera.page/#wxtsky/Morrow&type=date&legend=bottom-right">
+<a href="https://star-history.dera.page/#fzrsahi/morrow&type=date&legend=bottom-right">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=wxtsky/Morrow&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=wxtsky/Morrow&type=date&legend=top-left" />
-    <img alt="Star History 图表" src="https://star-history.dera.page/svg?repos=wxtsky/Morrow&type=date&legend=top-left" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=fzrsahi/morrow&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=fzrsahi/morrow&type=date&legend=top-left" />
+    <img alt="Star History 图表" src="https://star-history.dera.page/svg?repos=fzrsahi/morrow&type=date&legend=top-left" />
   </picture>
 </a>
 

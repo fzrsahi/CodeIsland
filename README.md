@@ -9,10 +9,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/fzrsahi/Morrow/releases/latest"><img src="https://img.shields.io/github/v/release/fzrsahi/Morrow?style=flat-square&color=4c8bf5&label=release" alt="Latest release"></a>
+  <a href="https://github.com/fzrsahi/morrow/releases/latest"><img src="https://img.shields.io/github/v/release/fzrsahi/morrow?style=flat-square&color=4c8bf5&label=release" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-111111?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/fzrsahi/Morrow?style=flat-square&color=8250df" alt="MIT license"></a>
-  <a href="https://github.com/fzrsahi/Morrow/stargazers"><img src="https://img.shields.io/github/stars/fzrsahi/Morrow?style=flat-square&color=e3b341" alt="GitHub stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/fzrsahi/morrow?style=flat-square&color=8250df" alt="MIT license"></a>
+  <a href="https://github.com/fzrsahi/morrow/stargazers"><img src="https://img.shields.io/github/stars/fzrsahi/morrow?style=flat-square&color=e3b341" alt="GitHub stars"></a>
 </p>
 
 <p align="center">
@@ -229,7 +229,7 @@ brew install --cask morrow
 
 ### Manual download
 
-1. Download `Morrow.dmg` from the [latest release](https://github.com/wxtsky/Morrow/releases/latest)
+1. Download `Morrow.dmg` from the [latest release](https://github.com/fzrsahi/morrow/releases/latest)
 2. Drag `Morrow.app` into Applications
 3. Launch it — hooks are installed automatically for every AI tool it detects
 
@@ -392,8 +392,8 @@ Every shortcut can be rebound in **Settings → Shortcuts**, where you can also 
 Requires **macOS 14+** and **Swift 5.9+**.
 
 ```bash
-git clone git@github.com:fzrsahi/Morrow.git
-cd Morrow
+git clone git@github.com:fzrsahi/morrow.git
+cd morrow
 
 # Development: debug build + launch
 swift build && ./.build/debug/Morrow
@@ -417,16 +417,16 @@ We welcome contributions from everyone! Please check out [CONTRIBUTING.md](CONTR
 
 ## Acknowledgments
 
-- Upstream original project: [wxtsky/Morrow](https://github.com/wxtsky/Morrow) by [@wxtsky](https://github.com/wxtsky) — thanks for creating the foundational notch agent tracker.
+- Upstream original project: [wxtsky/CodeIsland](https://github.com/wxtsky/CodeIsland) by [@wxtsky](https://github.com/wxtsky) — thanks for creating the foundational notch agent tracker.
 - Inspired by [claude-island](https://github.com/farouqaldori/claude-island) by [@farouqaldori](https://github.com/farouqaldori).
 
 ## Star history
 
-<a href="https://star-history.dera.page/#wxtsky/Morrow&type=date&legend=bottom-right">
+<a href="https://star-history.dera.page/#fzrsahi/morrow&type=date&legend=bottom-right">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=wxtsky/Morrow&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=wxtsky/Morrow&type=date&legend=top-left" />
-    <img alt="Star history chart" src="https://star-history.dera.page/svg?repos=wxtsky/Morrow&type=date&legend=top-left" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=fzrsahi/morrow&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=fzrsahi/morrow&type=date&legend=top-left" />
+    <img alt="Star history chart" src="https://star-history.dera.page/svg?repos=fzrsahi/morrow&type=date&legend=top-left" />
   </picture>
 </a>
 

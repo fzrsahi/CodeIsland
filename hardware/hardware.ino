@@ -87,7 +87,7 @@ static char bleDeviceName[BLE_DEVICE_NAME_LEN] = "Buddy";
 #define PAIR_REJECT_DELAY_MS   500UL
 #define SUPER_LONG_PRESS_MS    3000
 
-// QR code for https://github.com/fzrsahi/CodeIsland (version 3, ECC M, border 2).
+// QR code for https://github.com/fzrsahi/morrow (version 3, ECC M, border 2).
 #define MORROW_QR_SIZE 33
 #define MORROW_QR_SCALE 4
 static const char MORROW_QR[MORROW_QR_SIZE][MORROW_QR_SIZE + 1] PROGMEM = {

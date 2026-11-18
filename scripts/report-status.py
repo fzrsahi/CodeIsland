@@ -85,14 +85,14 @@ def main():
     parser.add_argument("--state", required=True, choices=["pending", "success", "failure", "error"], help="Check state")
     parser.add_argument("--description", help="Short summary text (max 140 chars)")
     parser.add_argument("--url", help="Target URL (e.g. CI pipeline link)")
-    parser.add_argument("--repo", help="GitHub repo owner/name (defaults to CI_REPO or fzrsahi/CodeIsland)")
+    parser.add_argument("--repo", help="GitHub repo owner/name (defaults to CI_REPO or fzrsahi/morrow)")
     parser.add_argument("--sha", help="Commit SHA (defaults to CI_COMMIT_SHA)")
     parser.add_argument("--token", help="GitHub API personal access token")
     parser.add_argument("--strict", action="store_true", help="Exit non-zero if status update fails")
 
     args = parser.parse_args()
 
-    repo = args.repo or os.environ.get("CI_REPO") or "fzrsahi/CodeIsland"
+    repo = args.repo or os.environ.get("CI_REPO") or "fzrsahi/morrow"
     sha = args.sha or os.environ.get("CI_COMMIT_SHA")
     if not sha or len(sha) < 40:
         # Resolve to full 40-char SHA if short or absent

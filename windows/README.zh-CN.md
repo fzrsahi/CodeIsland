@@ -1,6 +1,6 @@
 # Morrow for Windows
 
-面向 Windows 的实时 AI 编程智能体状态面板，改编自 [wxtsky/Morrow](https://github.com/wxtsky/Morrow)。
+面向 Windows 的实时 AI 编程智能体状态面板，改编自 [wxtsky/CodeIsland](https://github.com/wxtsky/CodeIsland)。
 
 [安装](#安装) · [功能](#功能) · [支持的工具](#支持的工具) · [源码构建](#源码构建) · [English](README.md)
 
@@ -14,7 +14,7 @@ Morrow for Windows 是一款置顶显示的紧凑型 AI 编程智能体状态面
 
 软件采用纯黑色像素风 Windows 灵动岛界面。双击可以在完整会话列表与极简状态条之间切换，也可以将界面拖到任意屏幕边缘，或在多个显示器之间移动。当收到权限申请、问题或错误事件时，缩小界面会自动展开，避免遗漏重要交互。
 
-本项目改编自 macOS 平台的 [Morrow](https://github.com/wxtsky/Morrow)，是独立实现的 Windows 移植版本，并非上游项目的官方 Windows 发行版。
+本项目改编自 macOS 平台的 [CodeIsland](https://github.com/wxtsky/CodeIsland)，是独立实现的 Windows 移植版本，并非上游项目的官方 Windows 发行版。
 
 ## 功能
 
@@ -146,9 +146,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-release.
 
 ## 致谢
 
-本项目改编自 [wxtsky/Morrow](https://github.com/wxtsky/Morrow)。原项目率先将 AI 编程智能体的实时状态带入 macOS 刘海区域，为本 Windows 移植版提供了产品概念、交互方式、像素风视觉方向和开源实现参考。
+本项目改编自 [wxtsky/CodeIsland](https://github.com/wxtsky/CodeIsland)。原项目率先将 AI 编程智能体的实时状态带入 macOS 刘海区域，为本 Windows 移植版提供了产品概念、交互方式、像素风视觉方向和开源实现参考。
 
-特别感谢 [@wxtsky](https://github.com/wxtsky) 以及所有上游贡献者。若你正在使用或继续开发本项目，也请关注并支持原始 Morrow 项目。
+特别感谢 [@wxtsky](https://github.com/wxtsky) 以及所有上游贡献者。若你正在使用或继续开发本项目，也请关注并支持原始 CodeIsland 项目。
 
 ## 许可证
 

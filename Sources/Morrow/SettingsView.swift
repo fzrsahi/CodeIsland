@@ -3273,8 +3273,8 @@ private struct AboutPage: View {
                 }
 
                 HStack(spacing: 12) {
-                    aboutLink("GitHub", icon: "chevron.left.forwardslash.chevron.right", url: "https://github.com/wxtsky/CodeIsland")
-                    aboutLink("Issues", icon: "ladybug", url: "https://github.com/wxtsky/CodeIsland/issues")
+                    aboutLink("GitHub", icon: "chevron.left.forwardslash.chevron.right", url: "https://github.com/fzrsahi/morrow")
+                    aboutLink("Issues", icon: "ladybug", url: "https://github.com/fzrsahi/morrow/issues")
                     aboutLink(
                         String(format: l10n["release_notes_for_version"], AppVersion.current),
                         icon: "doc.text",

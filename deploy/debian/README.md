@@ -13,7 +13,7 @@ Morrow operates a zero-cost, self-hosted build and distribution pipeline:
 
 ```mermaid
 flowchart TD
-    subgraph GitHub["GitHub Remote: fzrsahi/Morrow"]
+    subgraph GitHub["GitHub Remote: fzrsahi/morrow"]
         E_PR["Event: pull_request"]
         E_DEV["Event: push to dev"]
         E_MAIN["Event: push to main"]
@@ -64,7 +64,7 @@ flowchart TD
 sequenceDiagram
     autonumber
     actor Dev as Developer
-    participant Git as GitHub (fzrsahi/Morrow)
+    participant Git as GitHub (fzrsahi/morrow)
     participant WP as AWS Woodpecker Server
     participant Run as Local macOS Runner
     participant Web as AWS Debian Node
@@ -167,7 +167,7 @@ ingress:
 
 ## 4. Secret Configuration (Woodpecker CI)
 
-Secrets are securely maintained in Woodpecker Server (`https://ci-morrow.azhr.cloud/fzrsahi/Morrow/settings/secrets`):
+Secrets are securely maintained in Woodpecker Server (`https://ci-morrow.azhr.cloud/fzrsahi/morrow/settings/secrets`):
 
 | Secret Name | Description | Scope |
 |---|---|---|

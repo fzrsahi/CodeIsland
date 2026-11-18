@@ -1,6 +1,6 @@
 # Morrow for Windows
 
-Real-time AI coding agent status panel for Windows, adapted from [wxtsky/Morrow](https://github.com/wxtsky/Morrow).
+Real-time AI coding agent status panel for Windows, adapted from [wxtsky/CodeIsland](https://github.com/wxtsky/CodeIsland).
 
 [Installation](#installation) · [Features](#features) · [Supported Tools](#supported-tools) · [Build](#build-from-source) · [简体中文](README.zh-CN.md)
 
@@ -14,7 +14,7 @@ Morrow for Windows is a compact, always-on-top status panel for AI coding agents
 
 The interface is designed around a pure-black, pixel-style Windows island. Double-click to collapse it into a minimal status strip, drag it to any screen edge, or move it between monitors. Interactive requests automatically expand the panel so they are not missed.
 
-This is a Windows adaptation of the original macOS [Morrow](https://github.com/wxtsky/Morrow). It is an independent port and is not an official Windows release of the upstream project.
+This is a Windows adaptation of the original macOS [CodeIsland](https://github.com/wxtsky/CodeIsland). It is an independent port and is not an official Windows release of the upstream project.
 
 ## Features
 
@@ -147,7 +147,7 @@ The generated package and SHA-256 manifest are written to `artifacts/`.
 
 ## Acknowledgments
 
-This project is adapted from [wxtsky/Morrow](https://github.com/wxtsky/Morrow), which created the original real-time AI coding agent panel for the macOS notch. Many thanks to [@wxtsky](https://github.com/wxtsky) and all upstream contributors for the product concept, interaction model, pixel-art direction, and open-source implementation that made this Windows port possible.
+This project is adapted from [wxtsky/CodeIsland](https://github.com/wxtsky/CodeIsland), which created the original real-time AI coding agent panel for the macOS notch. Many thanks to [@wxtsky](https://github.com/wxtsky) and all upstream contributors for the product concept, interaction model, pixel-art direction, and open-source implementation that made this Windows port possible.
 
 Please visit and support the original project if you use or build on this adaptation.
 
