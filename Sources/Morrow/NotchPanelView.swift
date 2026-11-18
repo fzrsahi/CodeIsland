@@ -557,23 +557,11 @@ struct NotchPanelView: View {
         return max(148, mascotSize + chipWidth + 32)
     }
 
-    /// Whether the collapsed notched bar should size left and right wings independently.
-    /// Scoped to idle states (Git standby, idle Music, Prayer) where the left wing only holds the mascot,
-    /// while active/thinking/waiting/quota states preserve symmetric centering around the notch.
+    /// Strict symmetric wings invariant: across idle, thinking, and HUD/expanded states,
+    /// left and right wings must keep identical widths so the hardware notch stays centered
+    /// without horizontal shifting.
     private var usesAsymmetricNotchWings: Bool {
-        let isToolActive = showToolStatus && showAgentDetails && appState.currentTool != nil
-        return hasNotch
-            && appState.status == .idle
-            && !isThinking
-            && !isToolActive
-            && !hasQuotaChip
-            && !shouldShowExpanded
-            && !isBilateralWingsLyricActive
-            && !isDynamicIslandInlineLyrics
-            && !isBalancedTwinNonNotch
-            && !isToastOnly
-            && !(signals.showChargingBanner && !appState.surface.isExpanded)
-            && !(signals.showMiniPeekBanner && !appState.surface.isExpanded)
+        false
     }
 
     private var collapsedWidthScaleFactor: CGFloat {
@@ -632,7 +620,11 @@ struct NotchPanelView: View {
             }
             return min(musicBaseline, cap)
         }
-        // Standby / Minimal Git-only right wing:
+        // Standby / Git right wing:
+        // Strict width lock during Thinking: never expand the notch beyond the left wing's Thinking width.
+        if isThinking {
+            return effectiveNaturalLeftWidth + badgeReserve
+        }
         let standbyBaseline = min(
             CompactGitStatusModel.estimatedBaselineWidth(
                 isGitRepo: workspaceManager.isGitRepo,
@@ -757,14 +749,9 @@ struct NotchPanelView: View {
         return min(hoveredWidth, maxWing)
     }
 
-    /// Idle-indicator left wing stays snug around the mascot on notched displays instead of stretching for Prayer.
+    /// Idle-indicator left wing strictly matches the right wing width so notched displays remain symmetric.
     private var idleLeftIndicatorWingWidth: CGFloat {
-        let canAsymmetricIdle = hasNotch
-            && !isToastOnly
-            && !mailManager.showMailArrivalAnimation
-            && !(signals.showChargingBanner && !appState.surface.isExpanded)
-            && !(signals.showMiniPeekBanner && !appState.surface.isExpanded)
-        return canAsymmetricIdle ? idleBaseMascotWingWidth : idleIndicatorWingWidth
+        idleIndicatorWingWidth
     }
 
     /// Idle-indicator wing width that scales across 0%–200% Island Width when no sessions are active.
@@ -2709,10 +2696,15 @@ private struct CompactRightWing: View {
 
     @ViewBuilder
     private var standbyPill: some View {
+        let wideMaxWidth: CGFloat? = (!expanded && wingWidth > 0)
+            ? max(0, collapsedMaxInnerWidth - totalRightInnerPadding - badgeReserve)
+            : nil
         CompactGitStandbyWingView(
             workspaceManager: workspaceManager,
             appState: appState,
             isDynamicIslandCompact: isDynamicIslandCompact,
+            isWideMode: isThinking && (!isDynamicIslandCompact || hasNotch),
+            maxContentWidth: wideMaxWidth,
             onTap: {
                 withAnimation(NotchAnimation.open) {
                     expandedTab = workspaceManager.isGitRepo ? .workspace : .agents
