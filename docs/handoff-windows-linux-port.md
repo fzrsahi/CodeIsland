@@ -36,6 +36,7 @@ The dev machine is macOS arm64 only. Work is split by what can be proven where.
 | Tauri shell build + X11 smoke (Xvfb + `xdotool`) | Linux container | dev machine |
 | **`E2E-1` / `E2E-2` final gate on X11 and Wayland** | real Linux desktop | collaborator with the Debian host (#70) |
 | Windows plumbing, WebView2 focus, SMTC, NSIS, signing | Windows 10/11 (QEMU on the Debian host, or hardware) | collaborator |
+| Pipeline, runner, deploy (upload EC2 / GitHub Releases) | server CI | pemilik #70 — repo menyediakan skrip `test`/`package`/`manifest` (plan §8.1) |
 | Removing the C# core (Phase 6) | — | needs sign-off from the `windows/` maintainer |
 
 Every PR that needs another machine ships a script that runs its gate and prints the evidence block for the PR, so the collaborator runs one command and pastes the output.
@@ -64,6 +65,8 @@ Every PR that needs another machine ships a script that runs its gate and prints
 - **The audio visualizer needs no audio capture** (`CAMusicVisuals.swift:22-31`).
 - **`KnownTools.All` stores paths as backslash strings.** On Linux this silently yields a filename with a literal backslash. Store paths as segments.
 - **`windows/` is not ours.** One squashed commit `31116ab` by an outside contributor. Phase 6 needs their sign-off.
+- **Windows Authenticode signing is skipped for the beta** (#70). The Tauri updater's Ed25519 signature is still mandatory and unrelated. Free GA paths: Microsoft Store MSIX or SignPath Foundation (plan §9).
+- **The Windows VM is not a per-PR runner.** Linux compiles `#[cfg(windows)]` code with `cargo xwin check` and runs portable tests; the VM builds releases and judges the Phase 4 gates (plan §9).
 - **Two end-to-end gates, not one.** `E2E-1` (synthetic, Phase 1) proves the wiring; `E2E-2` (real `claude`, Phases 3–4) proves the product.
 
 ## Suggested skills
@@ -85,7 +88,7 @@ Every PR that needs another machine ships a script that runs its gate and prints
 
 ## Next actions
 
-1. Revise and merge Phase 0: #49 (this), #50 (exporter path, neutral rules, validator), #51 (decide `--source claude` precedence), #52 (drop `windows.yml`, `pipefail`, Morrow names).
+1. Revise and merge Phase 0: #49 (this), #50 (exporter path, neutral rules, validator), #51 (reworked: Claude hook without `--source`, Swift precedence), #52 (drop `windows.yml`, `pipefail`, Morrow names).
 2. Fix the plugin endpoint regression in its own PR ([#78](https://github.com/fzrsahi/Morrow/issues/78)) — it is a live macOS bug.
 3. Phase 0.5: monorepo move PR, endpoint contract, Option E experiment → ADR-0003 or ADR-0001 evidence.
 4. Phase 1 vertical slice, with the gate script handed to the collaborator for the real X11 run.

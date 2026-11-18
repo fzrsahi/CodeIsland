@@ -30,7 +30,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 |---|---|---|---|---|
 | — | #49 | `docs(#33)`: ADR, glossary, plan, handoff | `PR dibuka` | — |
 | 0 | #50 | `test(#33)`: ekspor golden fixtures ke JSON + schema | `revisi` | `BridgeGoldenTests` hijau; schema memvalidasi semua fixture |
-| 0 | #51 | `fix(#33)`: hormati `cursor_version` di Windows | `PR dibuka` (keputusan precedence `--source claude`) | `windows/Morrow.Core.Tests` hijau |
+| 0 | #51 | `fix(#33)`: atribusi hook Claude yang dijalankan Cursor di Windows (opsi 2) | `PR dibuka` | `windows/Morrow.Core.Tests` hijau |
 | 0 | #52 | `ci(#33)`: test .NET di Woodpecker | `revisi` | test gagal = pipeline merah |
 | 0 | — | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `belum` | test plugin memakai default asli |
 | 0.5 | — | `chore`: layout monorepo (plan §4) | `belum` | `swift test` + DMG hijau, nol perubahan perilaku |
@@ -58,6 +58,12 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 ---
 
 ## Log Checkpoint
+
+### 2026-11-18 (lanjutan 2) — #51 dirombak, masukan #70 diserap
+
+- **Sudah:** #51 opsi 2 — hook Claude Windows tanpa `--source`, precedence C# = Swift, installer 0.2.2 memicu repair; 23/23 test + self-test Hooks.Cli hijau, 7 test baru merah di kode lama. Masukan #70: signing Windows dilewati untuk beta (jalur gratis Store MSIX / SignPath sebelum GA), VM Windows hanya untuk build rilis + gate, kontrak skrip CI (plan §8.1).
+- **Berikutnya:** revisi #50 dan #52; PR fix #78; Fase 0.5.
+- **Blocker:** belum ada mesin Windows untuk memverifikasi #51 dengan Cursor asli (masuk gate #47).
 
 ### 2026-11-18 (lanjutan) — issue dirapikan
 

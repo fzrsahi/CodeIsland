@@ -360,7 +360,7 @@ Gate: 100% fixture netral identik dengan output Swift; `Clock` dan `CustomSource
 
 ### Fase 4 — Windows (3–4 minggu)
 
-Window plumbing Win32 (§6), adapter WinRT, named pipe dengan verifikasi peer (§3.1), NSIS + signing. Gate: `W-001…W-009` **dan `E2E-2`** di Windows.
+Window plumbing Win32 (§6), adapter WinRT, named pipe dengan verifikasi peer (§3.1), NSIS (Authenticode opsional untuk beta, §9). Gate: `W-001…W-009` **dan `E2E-2`** di Windows.
 
 ### Fase 5 — Wayland (2 minggu)
 
@@ -397,6 +397,18 @@ Template PR memaksa **Summary + Evidence + Merge Danger (door type)**. Satu PR p
 
 PR 5 → 6 → 7 di-stack. Non-UI ≤ ~400 baris diff; UI dinilai dari Evidence.
 
+### 8.1 Kontrak skrip CI (pembagian dengan #70)
+
+Pipeline dan deploy dipegang pemilik #70. Repo menyediakan skrip dengan antarmuka tetap, sehingga pipeline tidak perlu tahu detail build tiap platform:
+
+| Skrip | Input | Output | Exit code |
+|---|---|---|---|
+| `<platform>/ci/test.sh` | — | log di `dist/<platform>/test.log` | 0 = semua lulus; ≠0 = gagal (`set -euo pipefail`, tidak boleh ditutupi `\| tee`) |
+| `<platform>/ci/package.sh <version>` | versi semver | artefak di `dist/<platform>/` + `SHA256SUMS` | 0 = artefak lengkap dan terverifikasi |
+| `shared/ci/manifest.sh <version>` | `dist/*` | `dist/latest.json` (Tauri) dan `dist/appcast.xml` (Sparkle), divalidasi sebelum ditulis | 0 = manifest valid |
+
+`<platform>` = `macos`, `linux`, `windows`. Rahasia (Sparkle, Tauri updater, signing) hanya lewat env dari secret store CI; skrip tidak menyimpan atau mencetaknya. Deploy (upload ke EC2 / GitHub Releases) bukan bagian repo — ia hanya membaca `dist/`. Sebelum PR monorepo, skrip ini sementara berada di `scripts/ci/<platform>-{test,package}.sh`.
+
 ---
 
 ## 9. Packaging & distribusi
@@ -421,9 +433,30 @@ Arsitektur: x86_64 dulu; aarch64 bila ada runner. Build di Ubuntu 22.04 (glibc 2
 
 ### Windows
 
-- **NSIS per-user** (tanpa admin), `installMode: passive`. MSI opsional.
-- **Signing:** Azure Artifact Signing (≈ $9,99/bulan; individu hanya US/Kanada, organisasi US/CA/EU/UK). EV tidak lagi melewati SmartScreen; reputasi tetap dibangun. Ada laporan reset reputasi setelah rotasi CA Maret 2026 — anggap belum stabil. Rahasia signing hanya di secret store CI.
+- **NSIS per-user** (tanpa admin), `installMode: passive`. MSI tidak dipakai (hanya bisa dibangun di Windows).
+- **Signing Authenticode: dilewati untuk beta** (keputusan #70). Konsekuensinya: SmartScreen menampilkan "Windows protected your PC" sampai user memilih *More info → Run anyway*, dan beberapa antivirus lebih curiga pada installer tak bertanda tangan. Ini didokumentasikan di halaman unduhan dan README Windows.
+- **Jalur gratis untuk rilis stabil** (pilih salah satu sebelum GA):
+
+  | Opsi | Biaya | Syarat / konsekuensi |
+  |---|---|---|
+  | Microsoft Store (MSIX) | gratis — akun developer individu dan perusahaan tanpa biaya; Microsoft menandatangani ulang paket setelah sertifikasi ([MS Learn](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options)) | Tauri tidak menghasilkan MSIX bawaan → perlu langkah packaging tambahan. App MSIX full-trust: tulis ke `%LOCALAPPDATA%` bisa ter-virtualisasi, jadi bridge disalin ke `%USERPROFILE%\.morrow\bin\` agar path di config hook CLI stabil. Update lewat Store, bukan `tauri-plugin-updater` |
+  | SignPath Foundation | gratis untuk proyek OSS ([signpath.org](https://signpath.org/)) | Repo publik + lisensi MIT memenuhi syarat dasar; butuh rilis yang sudah ada, tanpa kode proprietary, MFA untuk semua anggota, dan build otomatis yang asalnya diverifikasi SignPath. **Belum dicek** apakah Woodpecker didukung untuk verifikasi asal build |
+  | Azure Artifact Signing | ≈ $9,99/bulan | Tidak gratis; individu hanya US/Kanada |
+
+- **Tanda tangan updater ≠ Authenticode.** `tauri-plugin-updater` tetap wajib ditandatangani kunci Ed25519 (`TAURI_SIGNING_PRIVATE_KEY`). Ini gratis dan tidak bisa dimatikan, tidak terkait signing Windows.
 - `tauri-plugin-notification` di Windows **hanya bekerja untuk app ter-install** — uji dengan build NSIS, bukan `tauri dev`.
+
+### Build dan test Windows tanpa VM (keputusan #70)
+
+| Pekerjaan | Di host Linux (tanpa VM) | Butuh Windows (VM on-demand / hardware) |
+|---|---|---|
+| Test C# portabel (`windows/Morrow.Core.Tests`, `net8.0`) | ✅ | — |
+| Crate Rust portabel (`morrow-protocol`, `morrow-core`, `morrow-hooks`) | ✅ `cargo test` | — |
+| Kode `#[cfg(windows)]` (`morrow-ipc` pipe, `morrow-platform` WinRT) | ✅ compile saja: `cargo xwin check/clippy --target x86_64-pc-windows-msvc` | ✅ menjalankan test-nya |
+| Installer NSIS | ⚠️ cross-build mungkin, tapi dokumentasi Tauri menyebutnya *last resort* dan jarang diuji ([Tauri docs](https://v2.tauri.app/distribute/windows-installer/)) | ✅ build rilis direkomendasikan di sini |
+| Gate W-001…W-009, `E2E-2`, smoke install-and-launch | ❌ (WebView2, fokus, click-through, SMTC, named pipe butuh Windows asli) | ✅ |
+
+Jadi VM **tidak** dijalankan per PR. Ia dijalankan saat build rilis (tag) dan saat menilai gate Fase 4 — selalu dengan smoke install-and-launch, bukan hanya compile.
 
 ### Update feed
 
@@ -443,6 +476,8 @@ Arsitektur: x86_64 dulu; aarch64 bila ada runner. Build di Ubuntu 22.04 (glibc 2
 | Dua core (Swift + Rust) menyimpang | **Tinggi** | Kontrak + fixtures + kontrak endpoint; setiap fix provider update fixture dulu |
 | Endpoint IPC divergen antar edge (sudah terjadi, §12) | Tinggi | Kontrak endpoint §3.1; test plugin memakai default asli |
 | Pipe Windows bisa di-squat | Sedang | Verifikasi peer §3.1 |
+| Installer Windows tanpa Authenticode (beta) | Sedang | Peringatan SmartScreen didokumentasikan; jalur gratis (Store MSIX / SignPath) dipilih sebelum GA |
+| Cross-build NSIS dari Linux rapuh | Sedang | Build rilis di VM Windows; Linux hanya compile-check per PR |
 | Memori webview | Sedang | Diukur W4/L4; window Settings dibuat lazy |
 | Governance `windows/` | Sedang | Selesaikan sebelum Fase 6 |
 | Tidak ada mesin Windows/Linux di mesin dev | Sedang | Container + Xvfb untuk build/smoke; gate nyata di host Debian (#70) dan QEMU Windows |
