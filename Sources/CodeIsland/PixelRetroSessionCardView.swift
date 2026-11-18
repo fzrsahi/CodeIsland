@@ -29,7 +29,7 @@ struct PixelRetroSessionCardView: View {
     @AppStorage(SettingsKey.showProjectName) private var showProjectName = SettingsDefaults.showProjectName
     @AppStorage(SettingsKey.aiMessageLines) private var aiMessageLines = SettingsDefaults.aiMessageLines
 
-    @ObservedObject private var nowPlaying = NowPlayingManager.shared
+    private let signals = IslandSignals.shared
     @State private var deleteHovered = false
 
     private var cardStatus: SessionCardStatus { SessionCardStatus(session) }
@@ -52,22 +52,9 @@ struct PixelRetroSessionCardView: View {
 
     /// Single unified 16-bit accent: Laser Cyan #00F5D4 or Adaptive Album art primary
     private var accentColor: Color {
-        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
-            return nowPlaying.albumPalette.primary
-        }
-        let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
-        switch pc {
-        case .album:
-            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
-                return nowPlaying.albumPalette.primary
-            }
-            return Pixel16Palette.cyan
-        case .theme, .cyan: return Pixel16Palette.cyan
-        case .white: return Pixel16Palette.textWhite
-        case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
-        case .green: return Color(red: 0.12, green: 0.84, blue: 0.38)
-        case .amber: return Pixel16Palette.amber
-        }
+        _ = signals.isPlaying
+        _ = signals.musicTitle
+        return AppColorTheme.accent(for: musicHUDProgressColor, isModern: false)
     }
 
     /// 16-bit status color hierarchy

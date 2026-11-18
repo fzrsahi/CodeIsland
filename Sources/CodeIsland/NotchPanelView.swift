@@ -5551,7 +5551,7 @@ private struct SessionListView: View {
     @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
-    @ObservedObject private var nowPlaying = NowPlayingManager.shared
+    private let signals = IslandSignals.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Natural height of the session cards, scrolling or not.
     @State private var contentHeight: CGFloat = 0
@@ -5560,22 +5560,9 @@ private struct SessionListView: View {
     @State private var thawTask: Task<Void, Never>?
 
     private var accentColor: Color {
-        if (syncThemeWithAlbumArt || musicHUDProgressColor == "album") && nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
-            return nowPlaying.albumPalette.primary
-        }
-        let pc = MusicProgressColor(rawValue: musicHUDProgressColor) ?? .theme
-        switch pc {
-        case .album:
-            if nowPlaying.isPlaying && nowPlaying.artworkImage != nil {
-                return nowPlaying.albumPalette.primary
-            }
-            return Color(red: 0.0, green: 0.96, blue: 0.83)
-        case .theme, .cyan: return Color(red: 0.0, green: 0.96, blue: 0.83)
-        case .white: return .white
-        case .pink: return Color(red: 1.0, green: 0.16, blue: 0.53)
-        case .green: return Color(red: 0.12, green: 0.84, blue: 0.38)
-        case .amber: return Color(red: 1.0, green: 0.72, blue: 0.20)
-        }
+        _ = signals.isPlaying
+        _ = signals.musicTitle
+        return AppColorTheme.accent(for: musicHUDProgressColor, isModern: !isPixelRetro)
     }
 
     private var isPixelRetro: Bool {
@@ -6976,14 +6963,14 @@ private struct SessionCard: View {
         .modifier(ReplyLinks())
         .contentShape(Rectangle())
         .gesture(
-            DragGesture(minimumDistance: 15)
+            DragGesture(minimumDistance: 24)
                 .onChanged { value in
-                    if value.translation.width > 0 {
+                    if value.translation.width > 0 && abs(value.translation.width) > abs(value.translation.height) * 1.5 {
                         dragOffset = value.translation.width
                     }
                 }
                 .onEnded { value in
-                    if value.translation.width > 80 {
+                    if dragOffset > 80 {
                         withAnimation(.easeOut(duration: 0.18)) {
                             dragOffset = 350
                         }
@@ -6991,7 +6978,7 @@ private struct SessionCard: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
                             appState.removeSession(sessionId)
                         }
-                    } else {
+                    } else if dragOffset > 0 {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                             dragOffset = 0
                         }
@@ -7009,7 +6996,7 @@ private struct SessionCard: View {
             }
         }
         .onTapGesture { handleSessionClick() }
-        .onHover { h in withAnimation(NotchAnimation.micro) { hovering = h } }
+        .onHover { hovering = $0 }
         .onDisappear {
             jumpValidationTask?.cancel()
             jumpValidationTask = nil
