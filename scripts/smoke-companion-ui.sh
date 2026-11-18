@@ -5,10 +5,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 SIM_NAME="${1:-iPhone 17 Pro}"
-PROJECT="ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj"
-SCHEME="CodeIslandCompanion"
+PROJECT="ios/MorrowCompanion/MorrowCompanion.xcodeproj"
+SCHEME="MorrowCompanion"
 DERIVED_DATA="$ROOT/.build/CompanionUISmokeDerivedData"
-BUNDLE_ID="top.fengye.CodeIslandCompanion"
+BUNDLE_ID="top.fengye.MorrowCompanion"
 MODES=(idle interrupted question long)
 
 UDID="$(
@@ -30,7 +30,7 @@ xcodebuild \
   -derivedDataPath "$DERIVED_DATA" \
   build
 
-APP="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/CodeIslandCompanion.app"
+APP="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/MorrowCompanion.app"
 if [[ ! -d "$APP" ]]; then
   printf 'Built app was not found at %s\n' "$APP" >&2
   exit 1
@@ -43,7 +43,7 @@ xcrun simctl install "$UDID" "$APP"
 for mode in "${MODES[@]}"; do
   SCREENSHOT="$ROOT/.build/companion-ui-${mode}.png"
   xcrun simctl terminate "$UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
-  xcrun simctl launch "$UDID" "$BUNDLE_ID" -CodeIslandCompanionMockState "$mode" >/dev/null
+  xcrun simctl launch "$UDID" "$BUNDLE_ID" -MorrowCompanionMockState "$mode" >/dev/null
   sleep 2
   xcrun simctl io "$UDID" screenshot "$SCREENSHOT"
   printf 'Companion UI smoke screenshot (%s): %s\n' "$mode" "$SCREENSHOT"

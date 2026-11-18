@@ -20,9 +20,9 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$REPO_ROOT/.build"
 RELEASE_DIR="$BUILD_DIR/release"
 STAGING_DIR="$BUILD_DIR/dmg-staging"
-APP_DIR="$STAGING_DIR/CodeIsland.app"
+APP_DIR="$STAGING_DIR/Morrow.app"
 CONTENTS_DIR="$APP_DIR/Contents"
-OUTPUT_DMG="$BUILD_DIR/CodeIsland.dmg"
+OUTPUT_DMG="$BUILD_DIR/Morrow.dmg"
 BUILD_ARCH="${BUILD_ARCH:-universal}"
 
 case "$BUILD_ARCH" in
@@ -34,7 +34,7 @@ case "$BUILD_ARCH" in
         ;;
 esac
 
-echo "==> Building CodeIsland ${VERSION} (${BUILD_ARCH})"
+echo "==> Building Morrow ${VERSION} (${BUILD_ARCH})"
 
 cd "$REPO_ROOT"
 source "$REPO_ROOT/scripts/swiftpm-release.sh"
@@ -54,17 +54,32 @@ mkdir -p "$CONTENTS_DIR/Resources"
 case "$BUILD_ARCH" in
     universal)
         # Create universal binaries
+        lipo -create "$ARM_DIR/Morrow" "$X86_DIR/Morrow" \
+             -output "$CONTENTS_DIR/MacOS/Morrow" 2>/dev/null || \
         lipo -create "$ARM_DIR/CodeIsland" "$X86_DIR/CodeIsland" \
-             -output "$CONTENTS_DIR/MacOS/CodeIsland"
+             -output "$CONTENTS_DIR/MacOS/Morrow"
+        lipo -create "$ARM_DIR/morrow-bridge" "$X86_DIR/morrow-bridge" \
+             -output "$CONTENTS_DIR/Helpers/morrow-bridge" 2>/dev/null || \
         lipo -create "$ARM_DIR/codeisland-bridge" "$X86_DIR/codeisland-bridge" \
-             -output "$CONTENTS_DIR/Helpers/codeisland-bridge"
+             -output "$CONTENTS_DIR/Helpers/morrow-bridge"
+        ln -sf "morrow-bridge" "$CONTENTS_DIR/Helpers/codeisland-bridge"
         ;;
     arm64)
-        cp "$ARM_DIR/CodeIsland" "$CONTENTS_DIR/MacOS/CodeIsland"
-        cp "$ARM_DIR/codeisland-bridge" "$CONTENTS_DIR/Helpers/codeisland-bridge"
+        if [ -f "$ARM_DIR/Morrow" ]; then
+            cp "$ARM_DIR/Morrow" "$CONTENTS_DIR/MacOS/Morrow"
+        else
+            cp "$ARM_DIR/CodeIsland" "$CONTENTS_DIR/MacOS/Morrow"
+        fi
+        if [ -f "$ARM_DIR/morrow-bridge" ]; then
+            cp "$ARM_DIR/morrow-bridge" "$CONTENTS_DIR/Helpers/morrow-bridge"
+            ln -sf "morrow-bridge" "$CONTENTS_DIR/Helpers/codeisland-bridge"
+        else
+            cp "$ARM_DIR/codeisland-bridge" "$CONTENTS_DIR/Helpers/codeisland-bridge"
+            ln -sf "codeisland-bridge" "$CONTENTS_DIR/Helpers/morrow-bridge"
+        fi
         ;;
 esac
-chmod +x "$CONTENTS_DIR/MacOS/CodeIsland" "$CONTENTS_DIR/Helpers/codeisland-bridge"
+chmod +x "$CONTENTS_DIR/MacOS/Morrow" "$CONTENTS_DIR/Helpers/"*
 
 # Write Info.plist (use the root Info.plist as base, update version)
 CURRENT_VER=$(defaults read "$REPO_ROOT/Info.plist" CFBundleShortVersionString)
@@ -99,7 +114,11 @@ fi
 # unsigned bundles. Keep a checked-in fallback so CI artifacts do not regress to
 # the generic app icon if actool changes its AppIcon.icon output behavior.
 if [ ! -s "$CONTENTS_DIR/Resources/AppIcon.icns" ]; then
-    if [ -s "$REPO_ROOT/Sources/CodeIsland/Resources/AppIcon.icns" ]; then
+    if [ -s "$REPO_ROOT/Sources/Morrow/Resources/AppIcon.icns" ]; then
+        cp "$REPO_ROOT/Sources/Morrow/Resources/AppIcon.icns" \
+            "$CONTENTS_DIR/Resources/AppIcon.icns"
+        echo "==> Copied fallback AppIcon.icns"
+    elif [ -s "$REPO_ROOT/Sources/CodeIsland/Resources/AppIcon.icns" ]; then
         cp "$REPO_ROOT/Sources/CodeIsland/Resources/AppIcon.icns" \
             "$CONTENTS_DIR/Resources/AppIcon.icns"
         echo "==> Copied fallback AppIcon.icns"
@@ -109,10 +128,12 @@ if [ ! -s "$CONTENTS_DIR/Resources/AppIcon.icns" ]; then
     fi
 fi
 
-# Copy the SPM resource bundle into Contents/Resources/ — putting it at the .app
-# root breaks Developer ID signing with "unsealed contents present in the bundle
-# root". Bundle.module already checks resourceURL, so this layout loads fine.
-cp -R "$ARM_DIR/CodeIsland_CodeIsland.bundle" "$CONTENTS_DIR/Resources/"
+# Copy the SPM resource bundle into Contents/Resources/
+if [ -d "$ARM_DIR/Morrow_Morrow.bundle" ]; then
+    cp -R "$ARM_DIR/Morrow_Morrow.bundle" "$CONTENTS_DIR/Resources/"
+elif [ -d "$ARM_DIR/CodeIsland_CodeIsland.bundle" ]; then
+    cp -R "$ARM_DIR/CodeIsland_CodeIsland.bundle" "$CONTENTS_DIR/Resources/"
+fi
 
 # ---------------------------------------------------------------------------
 # Embed Sparkle.framework. The default release build keeps Sparkle universal;
@@ -145,8 +166,8 @@ echo "==> Embedded Sparkle.framework from $SPARKLE_SRC"
 # /Frameworks explicitly. Changing the load commands invalidates any prior
 # signature — we re-sign below.
 install_name_tool -add_rpath "@executable_path/../Frameworks" \
-    "$CONTENTS_DIR/MacOS/CodeIsland"
-echo "==> Added @executable_path/../Frameworks rpath to CodeIsland binary"
+    "$CONTENTS_DIR/MacOS/Morrow"
+echo "==> Added @executable_path/../Frameworks rpath to Morrow binary"
 
 echo "==> App bundle assembled at $APP_DIR"
 
@@ -184,7 +205,7 @@ adhoc_sign_app_for_local_permissions() {
     done
 
     codesign --force --options runtime \
-        --entitlements "$REPO_ROOT/CodeIsland.entitlements" \
+        --entitlements "$REPO_ROOT/Morrow.entitlements" \
         --sign - \
         "$APP_DIR"
 }
@@ -224,7 +245,7 @@ elif security find-identity -v -p codesigning | grep -q "$(printf '%s' "$SIGN_ID
     # Finally, sign the main bundle. Entitlements only on the top-level app —
     # Sparkle components have their own entitlements baked into their signatures.
     codesign --force --options runtime --timestamp \
-        --entitlements "$REPO_ROOT/CodeIsland.entitlements" \
+        --entitlements "$REPO_ROOT/Morrow.entitlements" \
         --sign "$SIGN_IDENTITY" \
         "$APP_DIR"
 
@@ -244,12 +265,12 @@ rm -f "$OUTPUT_DMG"
 
 if command -v create-dmg >/dev/null 2>&1; then
     create-dmg \
-        --volname "CodeIsland ${VERSION}" \
+        --volname "Morrow ${VERSION}" \
         --window-pos 200 120 \
         --window-size 600 400 \
         --icon-size 100 \
-        --icon "CodeIsland.app" 175 190 \
-        --hide-extension "CodeIsland.app" \
+        --icon "Morrow.app" 175 190 \
+        --hide-extension "Morrow.app" \
         --app-drop-link 425 190 \
         --no-internet-enable \
         --sandbox-safe \
@@ -259,7 +280,7 @@ else
     echo "==> create-dmg not found — using hdiutil fallback"
     ln -sfn /Applications "$STAGING_DIR/Applications"
     hdiutil create \
-        -volname "CodeIsland ${VERSION}" \
+        -volname "Morrow ${VERSION}" \
         -srcfolder "$STAGING_DIR" \
         -format UDZO \
         -ov \
@@ -278,11 +299,11 @@ if [ "$APP_SIGNED" = true ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Notarize + staple. Uses the "CodeIsland" keychain profile by default
-# (xcrun notarytool store-credentials CodeIsland ...). Skippable via
+# Notarize + staple. Uses the "Morrow" keychain profile by default
+# (xcrun notarytool store-credentials Morrow ...). Skippable via
 # SKIP_NOTARIZE=1 for local dev builds. Override with NOTARY_PROFILE=....
 # ---------------------------------------------------------------------------
-NOTARY_PROFILE="${NOTARY_PROFILE:-CodeIsland}"
+NOTARY_PROFILE="${NOTARY_PROFILE:-Morrow}"
 if [ "${SKIP_NOTARIZE:-0}" = "1" ]; then
     echo "==> SKIP_NOTARIZE=1 — release DMG is not notarized"
 elif [ "$APP_SIGNED" != true ]; then

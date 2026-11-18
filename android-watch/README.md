@@ -1,8 +1,8 @@
-# CodeIsland Buddy Watch
+# Morrow Buddy Watch
 
 English | [简体中文](README.zh-CN.md)
 
-Wear OS companion app that mirrors the `hardware/Buddy` protocol used by CodeIsland.
+Wear OS companion app that mirrors the `hardware/Buddy` protocol used by Morrow.
 
 ## Features
 
@@ -14,7 +14,7 @@ Wear OS companion app that mirrors the `hardware/Buddy` protocol used by CodeIsl
 
 ## Protocol Compatibility
 
-This app follows the same contract as `Sources/CodeIslandCore/ESP32Protocol.swift`:
+This app follows the same contract as `Sources/MorrowCore/ESP32Protocol.swift`:
 
 - Service UUID: `0000beef-0000-1000-8000-00805f9b34fb`
 - Write char: `0000beef-0001-1000-8000-00805f9b34fb`

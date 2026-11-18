@@ -1,8 +1,8 @@
-# CodeIsland Buddy Watch
+# Morrow Buddy Watch
 
 [English](README.md) | 简体中文
 
-这是 CodeIsland 的 Wear OS 手表端实现，兼容仓库中 `hardware/Buddy` 使用的 BLE 协议。
+这是 Morrow 的 Wear OS 手表端实现，兼容仓库中 `hardware/Buddy` 使用的 BLE 协议。
 
 ## 功能
 
@@ -14,7 +14,7 @@
 
 ## 协议兼容
 
-该应用与 `Sources/CodeIslandCore/ESP32Protocol.swift` 保持一致：
+该应用与 `Sources/MorrowCore/ESP32Protocol.swift` 保持一致：
 
 - Service UUID：`0000beef-0000-1000-8000-00805f9b34fb`
 - Write Characteristic：`0000beef-0001-1000-8000-00805f9b34fb`
