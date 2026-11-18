@@ -9,7 +9,7 @@ final class CompactGitWingLayoutTests: XCTestCase {
         XCTAssertEqual(CompactGitStatusModel.state(isGitRepo: true, aheadCount: 2, changedCount: 0), .ahead(2))
         XCTAssertEqual(
             CompactGitStatusModel.state(isGitRepo: true, aheadCount: 2, changedCount: 4),
-            .aheadAndModified(ahead: 2, modified: 4)
+            .modified(4)
         )
         XCTAssertEqual(CompactGitStatusModel.state(isGitRepo: true, aheadCount: -1, changedCount: -2), .clean)
     }
@@ -21,9 +21,8 @@ final class CompactGitWingLayoutTests: XCTestCase {
         let both = CompactGitStatusModel.estimatedBaselineWidth(isGitRepo: true, aheadCount: 2, changedCount: 3)
 
         XCTAssertLessThanOrEqual(clean, 48)
-        XCTAssertLessThan(mod, both)
-        XCTAssertLessThan(ahead, both)
-        XCTAssertLessThanOrEqual(both, 72)
+        XCTAssertEqual(both, mod)
+        XCTAssertLessThanOrEqual(ahead, 48)
     }
 
     func testCenterShiftLocksHardwareNotchAtZero() {
@@ -52,5 +51,35 @@ final class CompactGitWingLayoutTests: XCTestCase {
             CompactNotchWingGeometry.centerShift(leftWidth: left, rightWidth: right, hasNotch: true, asymmetricEnabled: false),
             0
         )
+    }
+
+    func testStrictSymmetricWingWidthsAcrossIdleThinkingAndHUD() {
+        let states: [(name: String, leftNatural: CGFloat, rightNatural: CGFloat)] = [
+            ("idle", 42, 68),
+            ("thinking", 132, 64),
+            ("hud", 250, 250),
+        ]
+
+        for state in states {
+            let symmetricWidth = CompactNotchWingGeometry.strictSymmetricWingWidth(
+                leftWidth: state.leftNatural,
+                rightWidth: state.rightNatural
+            )
+            XCTAssertEqual(
+                symmetricWidth,
+                max(state.leftNatural, state.rightNatural),
+                "Expected strict symmetric wing width for \(state.name)"
+            )
+            XCTAssertEqual(
+                CompactNotchWingGeometry.centerShift(
+                    leftWidth: symmetricWidth,
+                    rightWidth: symmetricWidth,
+                    hasNotch: true,
+                    asymmetricEnabled: false
+                ),
+                0,
+                "Expected zero horizontal shift for symmetric \(state.name) state"
+            )
+        }
     }
 }
