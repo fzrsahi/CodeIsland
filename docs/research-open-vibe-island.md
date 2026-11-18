@@ -4,7 +4,7 @@
 > 我方 HEAD：`257778b`（v1.0.24，准备发 v1.0.25）
 > 对方 HEAD：`Octane0411/open-vibe-island` main，最近一次 force pull `2026-04-30 09:55`
 > 对方协议：GPL v3（copyleft，不能 `git cp` 进我们 MIT 仓库）
-> **研究原则**：只读代码看思路，按 vibe-notch 的 `CodeIsland*` 命名 / 三模块布局重写。具体出处见 `memory/feedback_no_verbatim_copy_from_competitors.md`
+> **研究原则**：只读代码看思路，按 vibe-notch 的 `Morrow*` 命名 / 三模块布局重写。具体出处见 `memory/feedback_no_verbatim_copy_from_competitors.md`
 
 ---
 
@@ -18,13 +18,13 @@
 
 ## 1. 项目档案
 
-| 维度 | vibe-notch (CodeIsland) | open-vibe-island | 差异 |
+| 维度 | vibe-notch (Morrow) | open-vibe-island | 差异 |
 |---|---|---|---|
 | License | MIT | GPL v3 | 我们更宽松（商业可闭源 fork） |
-| Swift Package targets | 3：CodeIsland / CodeIslandCore / CodeIslandBridge | 4：OpenIslandApp / OpenIslandCore / OpenIslandHooks / OpenIslandSetup | 对方多一个独立 Setup CLI |
+| Swift Package targets | 3：Morrow / MorrowCore / MorrowBridge | 4：OpenIslandApp / OpenIslandCore / OpenIslandHooks / OpenIslandSetup | 对方多一个独立 Setup CLI |
 | 主状态类 | `AppState`（~3950 行单体） | `AppModel`（`@Observable`，配合 `SessionState.apply` reducer） | 对方更细，我们已 backlog 拆分 |
 | 状态 reducer | `SessionSnapshot.reduceEvent` | `SessionState.apply` | 形态相同，命名不同 |
-| Hook 二进制 | `codeisland-bridge` | `OpenIslandHooks` (Swift) + `open-island-hooks.py` (远程) | 对方多 Python 远程版 |
+| Hook 二进制 | `morrow-bridge` | `OpenIslandHooks` (Swift) + `open-island-hooks.py` (远程) | 对方多 Python 远程版 |
 | 自动更新 | Sparkle 2 + Homebrew cask | Sparkle 2 only | 我们多一条 brew 通道 |
 | 移动端 / 周边 | Android Watch（gradle 项目） + ESP32 桌面摆件 | iOS App + Apple Watch | **完全互补**：我们手腕侧覆盖 Wear OS，对方覆盖 watchOS |
 
@@ -103,10 +103,10 @@ Apple Watch App (OpenIslandWatch)
  └ HapticManager
 ```
 
-**我们的实施思路**（不抄代码，按 CodeIsland 命名）：
-- `Sources/CodeIslandCore/WatchHTTPEndpoint.swift`：复用 NWListener 实现轻量 HTTP / SSE，注册 Bonjour `_codeisland._tcp`。手写 HTTP/1.1 解析（NWListener 给的是 raw TCP）。
-- `Sources/CodeIslandCore/WatchNotificationRelay.swift`：监听 `AppState.refreshDerivedState` 时的 `summary.status` 变化，过滤出三类事件 push 出去。
-- iOS app 用独立 Xcode project（`ios/CodeIslandMobile.xcodeproj`），SPM 不便混 iOS。`OpenIslandShared` 那种共享 framework 我们用 `CodeIslandCore` 跨平台编（macOS 14+ / iOS 17+）。
+**我们的实施思路**（不抄代码，按 Morrow 命名）：
+- `Sources/MorrowCore/WatchHTTPEndpoint.swift`：复用 NWListener 实现轻量 HTTP / SSE，注册 Bonjour `_morrow._tcp`。手写 HTTP/1.1 解析（NWListener 给的是 raw TCP）。
+- `Sources/MorrowCore/WatchNotificationRelay.swift`：监听 `AppState.refreshDerivedState` 时的 `summary.status` 变化，过滤出三类事件 push 出去。
+- iOS app 用独立 Xcode project（`ios/MorrowMobile.xcodeproj`），SPM 不便混 iOS。`OpenIslandShared` 那种共享 framework 我们用 `MorrowCore` 跨平台编（macOS 14+ / iOS 17+）。
 - 配对码用 6 位（对方 4 位偏短）。token 持久化在 Keychain。
 - **trade-off**：iOS 后台 SSE 长连接经常被系统断开，需要重连逻辑 + 评估 Background Modes。
 - **关键坑**：iOS 14+ 局域网权限要 `NSLocalNetworkUsageDescription` + `NSBonjourServices`。
@@ -133,7 +133,7 @@ Apple Watch App (OpenIslandWatch)
 | `otherHooksDetected`（共存的第三方 hook） | info | — |
 
 **我们的实施思路**：
-- 新建 `Sources/CodeIslandCore/HookHealthCheck.swift`（不是 `Sources/CodeIsland`，因为要复用到 bridge）。
+- 新建 `Sources/MorrowCore/HookHealthCheck.swift`（不是 `Sources/Morrow`，因为要复用到 bridge）。
 - 在 `ConfigInstaller` 旁边加 `HookHealthReport`，每个 source（claude / codex / cursor / opencode / gemini / kimi / qoder / qwen / factory / codebuddy / trae / stepfun / ...）都有一份。
 - Settings UI 加一个"Health"面板，红绿灯 + 修复按钮。我们已有 Plugin Sub-Sessions 面板（#123），加在那附近。
 - **额外发现**：对方 `containsClaudeIslandHook` 检查 `claude-island-state.py` 残骸——我们之前清过 vibe-island 残骸（HANDOFF v1.0.22 段），这个思路可以推广，做一个"已知遗留 hook 黑名单"持续显示在 health 面板。
@@ -158,7 +158,7 @@ enum AgentHookIntent: String { case untouched, installed, uninstalled }
 - 单一来源真相：UserDefaults，注入式 default suite 方便测试。
 
 **我们的实施思路**：
-- 新建 `Sources/CodeIsland/AgentIntentStore.swift`。
+- 新建 `Sources/Morrow/AgentIntentStore.swift`。
 - `AgentIdentifier` 我们要列全 17+ 个 source（不是对方的 11 个）。
 - 我们目前 `Settings.swift` 里已经有部分 default 控制，需要把"是否安装某 hook"统一到 IntentStore，避免 setting / disk / actual install 三个真相。
 - onboarding：我们目前没有显式 onboarding 流程，可以借这次加一个简化的"首次启动 → 选用哪些 agent"。
@@ -176,7 +176,7 @@ enum AgentHookIntent: String { case untouched, installed, uninstalled }
 - `ClaudeStatusLineInstallationManager`：托管 `~/.claude/settings.json` 的 statusLine.command，写入 `~/.open-island/bin/open-island-statusline`，已有自定义 statusLine 时**拒绝覆盖**（保护用户配置）。
 
 **我们的实施思路**：
-- 新建 `Sources/CodeIslandCore/ClaudeUsage.swift` + `Sources/CodeIslandCore/CodexUsage.swift`。
+- 新建 `Sources/MorrowCore/ClaudeUsage.swift` + `Sources/MorrowCore/CodexUsage.swift`。
 - statusLine bridge 二进制可以用 shell script 而不是另起一个 Swift target，开销更小。
 - 灵动岛上不要默认显示（避免干扰），放进 settings → 展开面板可见。
 - **trade-off**：Codex 的 5h/7d 窗口只有 ChatGPT Plus / Pro 用户有，免费版会 404。
@@ -194,7 +194,7 @@ enum AgentHookIntent: String { case untouched, installed, uninstalled }
 - 把 marker 之后的部分 `+` → `/` 还原为分支名（git worktree 默认把 `/` 在路径里替换成 `+`）
 
 **我们的实施思路**：
-- 新建 `Sources/CodeIslandCore/WorkspaceNameResolver.swift`。
+- 新建 `Sources/MorrowCore/WorkspaceNameResolver.swift`。
 - 集成到 `SessionSnapshot` 的 cwd → workspace 派生逻辑（应该在 `deriveSessionSummary` 附近）。
 - 卡片标题逻辑：`"\(projectName) (\(branch))"`。
 - **trade-off**：用户自定义 worktree 路径不带 `worktrees/` marker 时回退到 lastPathComponent。
@@ -215,11 +215,11 @@ enum AgentHookIntent: String { case untouched, installed, uninstalled }
 
 **我们的实施思路**：
 - 新建 `scripts/remote-setup.sh`：参数 `user@host`，scp `open-island-hooks.py` + 写远程 `~/.claude/settings.json`。
-- 新建 `scripts/codeisland-hooks.py`（命名跟项目一致）：从 stdin 读 hook payload，连本地（forwarded）socket，超时即 fail-open。
+- 新建 `scripts/morrow-hooks.py`（命名跟项目一致）：从 stdin 读 hook payload，连本地（forwarded）socket，超时即 fail-open。
 - 在 `docs/` 下新建 `ssh-remote-setup.md`，把 UID / sshd_config / 排错全列清楚。
 - Settings UI 的 Remote 面板加一个"复制远程安装命令到剪贴板"按钮。
 - **trade-off**：Python 3.6+ 几乎到处都有，但 Alpine 容器要装 `python3` package。
-- **关键坑**：socket 路径默认 `/tmp/codeisland-$(id -u).sock`，远程端要 `OPEN_ISLAND_SOCKET_PATH` 等价的 env var 覆写。
+- **关键坑**：socket 路径默认 `/tmp/morrow-$(id -u).sock`，远程端要 `OPEN_ISLAND_SOCKET_PATH` 等价的 env var 覆写。
 
 ---
 
@@ -237,7 +237,7 @@ enum AgentHookIntent: String { case untouched, installed, uninstalled }
 
 **我们的实施思路**：
 - 在 `TerminalActivator.swift` 加分支。每个终端用对应的 env var 探测 + CLI command 跳转。
-- Hook payload 端：bridge 已经收 env vars（`Sources/CodeIslandBridge/main.swift` 的 ancestry/effectiveSource 块），需要把 `CMUX_*` / `ZELLIJ_*` / `KITTY_*` 等带过去。
+- Hook payload 端：bridge 已经收 env vars（`Sources/MorrowBridge/main.swift` 的 ancestry/effectiveSource 块），需要把 `CMUX_*` / `ZELLIJ_*` / `KITTY_*` 等带过去。
 - **趋势**：tmux 的 socket 多服务器场景（`-L socketname`）我们目前 `tmuxEnv` 字段已经记了，但 `TerminalActivator` 是否消费它要核对。
 - **trade-off**：每加一种终端就多一份维护负担，先按 GitHub issue 的呼声排序（cmux > tmux > zellij > kaku/wezterm）。
 
@@ -250,8 +250,8 @@ enum AgentHookIntent: String { case untouched, installed, uninstalled }
 **价值**：自动化 / CI / 远程部署 / Homebrew formula 安装后处理。我们目前所有 hook 安装都在主 app 里，命令行无法操作。
 
 **我们的实施思路**：
-- 新建 SPM target `CodeIslandSetup`，复用 `CodeIslandCore.ConfigInstaller`。
-- 跟现有 `codeisland-bridge` 一起打到 DMG `Contents/Helpers/` 里，brew formula 安装时 symlink 到 `/usr/local/bin/codeisland-setup`。
+- 新建 SPM target `MorrowSetup`，复用 `MorrowCore.ConfigInstaller`。
+- 跟现有 `morrow-bridge` 一起打到 DMG `Contents/Helpers/` 里，brew formula 安装时 symlink 到 `/usr/local/bin/morrow-setup`。
 - **trade-off**：增加一个 helper binary 要重新过 codesign / notarize 流程，记得在 `scripts/build-dmg.sh` 加。
 
 ---
@@ -291,7 +291,7 @@ enum AgentHookIntent: String { case untouched, installed, uninstalled }
 3. **Android Watch**：跟对方 Apple Watch 完美互补。
 4. **sub-agent 折叠（#148）**：`CLIProcessResolver.resolvedSessionPID` 用 ancestry 最 root —— 对方似乎还会在 Cursor sub-agent 时刷出多张卡。
 5. **`tool_use_id` 并发不误删（#147）**：`AppState+ToolUseCache` 五个方法 + `pendingToolUses` cache。对方代码里没看到等价 surgical drain，可能仍有这个 bug。
-6. **诊断 log 体系**：subsystem `com.codeisland`，所有 deny 路径都打 `permission deny reason=...`。Console.app 一抓就定位。
+6. **诊断 log 体系**：subsystem `com.morrow`，所有 deny 路径都打 `permission deny reason=...`。Console.app 一抓就定位。
 7. **Sparkle + Homebrew cask 双发布通道**：Homebrew 用户的 `UpdateChecker.start()` 自动禁用 Sparkle 更新（避免双更新冲突）。
 8. **Hook 事件 ring buffer + diagnostics 导出（#103）**：用户报 bug 时一键导出近期事件。
 9. **Plugin Sub-Sessions UI 设置（#123）**：separate / merge / hide 三档。
@@ -333,7 +333,7 @@ enum AgentHookIntent: String { case untouched, installed, uninstalled }
 
 1. **GPL v3 vs MIT 不兼容**——直接 `git cp` 进我们仓库会传染 GPL，所有用户失去商业闭源 fork 权。
 2. **社区识别成本**——逐行搬运在 issue / fork 比对里很容易被发现，损害项目声誉。
-3. **命名要按 vibe-notch 风格**：`CodeIsland*` 前缀、`AppState`（不是 `AppModel`）、`SessionSnapshot`（不是 `SessionState`）、`HookEvent`（不是 `AgentEvent`）。
+3. **命名要按 vibe-notch 风格**：`Morrow*` 前缀、`AppState`（不是 `AppModel`）、`SessionSnapshot`（不是 `SessionState`）、`HookEvent`（不是 `AgentEvent`）。
 4. **算法 / 协议参考公开规范**——SSE 用 W3C HTML Living Standard，Bonjour 用 RFC 6762/6763，HTTP/1.1 解析按 RFC 9112，不引用对方源码。
 5. **真要参考某段必须的逻辑**（比如 Warp SQLite schema），在 commit message 注明"参考 open-vibe-island 的思路，按本项目风格重写"，不隐藏来源也不直接搬运。
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GitHub Release Asset Uploader for CodeIsland CI/CD.
+GitHub Release Asset Uploader for Morrow CI/CD.
 Uploads build artifacts (DMG, SHA256SUMS.txt, appcast.xml) to GitHub Releases using standard library.
 """
 
@@ -24,7 +24,7 @@ def get_or_create_release(repo, tag, token):
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "CodeIsland-CI-Uploader"
+        "User-Agent": "Morrow-CI-Uploader"
     }
 
     # 1. Try to fetch existing release
@@ -63,7 +63,7 @@ def upload_assets(repo, tag, files, token):
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "CodeIsland-CI-Uploader"
+        "User-Agent": "Morrow-CI-Uploader"
     }
 
     existing_assets = {a["name"]: a["id"] for a in release.get("assets", [])}
@@ -118,8 +118,12 @@ def main():
         print("Warning: GITHUB_TOKEN environment variable not set. Skipping release asset upload.")
         sys.exit(0)
 
+    repo = args.repo
+    if "codeisland" in repo.lower():
+        repo = "fzrsahi/Morrow"
+
     try:
-        upload_assets(args.repo, args.tag, args.files, token)
+        upload_assets(repo, args.tag, args.files, token)
         print("==> All release assets uploaded successfully!")
     except Exception as exc:
         print(f"ERROR during release asset upload: {exc}", file=sys.stderr)

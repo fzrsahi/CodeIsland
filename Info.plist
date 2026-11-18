@@ -3,15 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleExecutable</key>
-	<string>CodeIsland</string>
+	<string>Morrow</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.codeisland.app</string>
+	<string>com.morrow.app</string>
 	<key>CFBundleName</key>
-	<string>CodeIsland</string>
+	<string>Morrow</string>
+	<key>CFBundleDisplayName</key>
+	<string>Morrow</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -26,19 +28,20 @@
 		<true/>
 	</dict>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>CodeIsland needs permission to control Spotify and Apple Music to synchronize playback progress, scrubber position, and live lyrics.</string>
+	<string>Morrow needs permission to control Spotify and Apple Music to synchronize playback progress, scrubber position, and live lyrics.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>CodeIsland uses Bluetooth to mirror the island onto Buddy.</string>
+	<string>Morrow uses Bluetooth to mirror the island onto Buddy.</string>
 	<key>NSBonjourServices</key>
 	<array>
+		<string>_morrow._tcp</string>
 		<string>_codeisland._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>CodeIsland advertises itself on the local network so iPhone can mirror the island state.</string>
+	<string>Morrow advertises itself on the local network so iPhone can mirror the island state.</string>
 	<key>NSLocationUsageDescription</key>
-	<string>CodeIsland uses your location on-device to compute local prayer times and sun phases. Coordinates never leave your Mac.</string>
+	<string>Morrow uses your location on-device to compute local prayer times and sun phases. Coordinates never leave your Mac.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>CodeIsland uses your location on-device to compute local prayer times and sun phases. Coordinates never leave your Mac.</string>
+	<string>Morrow uses your location on-device to compute local prayer times and sun phases. Coordinates never leave your Mac.</string>
 	<key>SUAutomaticallyUpdate</key>
 	<false/>
 	<key>SUEnableAutomaticChecks</key>

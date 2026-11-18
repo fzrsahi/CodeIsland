@@ -4,10 +4,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-PROJECT="ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj"
-SCHEME="CodeIslandWatchApp"
+PROJECT="ios/MorrowCompanion/MorrowCompanion.xcodeproj"
+SCHEME="MorrowWatchApp"
 DERIVED_DATA="$ROOT/.build/CompanionWatchUISmokeDerivedData"
-BUNDLE_ID="top.fengye.CodeIslandCompanion.watchkitapp"
+BUNDLE_ID="top.fengye.MorrowCompanion.watchkitapp"
 PAGES=(status message actions activity)
 
 if [[ "$#" -gt 0 ]]; then
@@ -40,7 +40,7 @@ for watch_name in "${WATCH_NAMES[@]}"; do
     -derivedDataPath "$DERIVED_DATA" \
     build
 
-  app="$DERIVED_DATA/Build/Products/Debug-watchsimulator/CodeIslandWatchApp.app"
+  app="$DERIVED_DATA/Build/Products/Debug-watchsimulator/MorrowWatchApp.app"
   if [[ ! -d "$app" ]]; then
     printf 'Built watch app was not found at %s\n' "$app" >&2
     exit 1
@@ -56,8 +56,8 @@ for watch_name in "${WATCH_NAMES[@]}"; do
     xcrun simctl launch \
       "$udid" \
       "$BUNDLE_ID" \
-      -CodeIslandWatchSmokeState question \
-      -CodeIslandWatchSmokePage "$page" >/dev/null
+      -MorrowWatchSmokeState question \
+      -MorrowWatchSmokePage "$page" >/dev/null
     sleep 2
     xcrun simctl io "$udid" screenshot "$screenshot" >/dev/null
     printf 'Companion watch UI smoke screenshot (%s, %s): %s\n' "$watch_name" "$page" "$screenshot"

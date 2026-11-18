@@ -6,16 +6,16 @@ Current public submission target:
 
 - Version: `1.0.0`
 - Build: `4`
-- Primary working directory: `/Users/fengye/workspace/CodeIsland`
-- Xcode project: `ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj`
+- Primary working directory: `/Users/fengye/workspace/Morrow`
+- Xcode project: `ios/MorrowCompanion/MorrowCompanion.xcodeproj`
 
 ## Before Uploading a Build
 
 1. Confirm Apple Developer signing is selected for every target:
-   - `CodeIslandCompanion`
-   - `CodeIslandCompanionWidget`
-   - `CodeIslandWatchApp`
-   - `CodeIslandWatchWidget`
+   - `MorrowCompanion`
+   - `MorrowCompanionWidget`
+   - `MorrowWatchApp`
+   - `MorrowWatchWidget`
 
 2. Confirm the app can be reviewed without a Mac:
    - Launch the iPhone app.
