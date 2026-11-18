@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://codeisland.dev/schemas/hook-envelope.schema.json",
-  "title": "CodeIsland Hook & IPC Envelope",
-  "description": "Versioned IPC and edge envelopes shared across CodeIsland cores.",
+  "$id": "https://morrow.dev/schemas/hook-envelope.schema.json",
+  "title": "Morrow Hook & IPC Envelope",
+  "description": "Versioned IPC and edge envelopes shared across Morrow cores.",
   "oneOf": [
     { "$ref": "#/$defs/edgePayload" },
     { "$ref": "#/$defs/ipcEnvelopeV1" }

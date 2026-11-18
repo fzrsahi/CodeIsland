@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://codeisland.dev/schemas/hook-payload.schema.json",
-  "title": "CodeIsland Hook Payload",
-  "description": "Forwarded hook payload sent by codeisland-bridge or produced by HookIntake for the island.",
+  "$id": "https://morrow.dev/schemas/hook-payload.schema.json",
+  "title": "Morrow Hook Payload",
+  "description": "Forwarded hook payload sent by morrow-bridge or produced by HookIntake for the island.",
   "type": "object",
   "required": ["hook_event_name", "session_id"],
   "additionalProperties": true,

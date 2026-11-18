@@ -1,19 +1,30 @@
 # Golden Fixtures (Frozen Contract)
 
-Exported from [`Tests/CodeIslandCoreTests/BridgeGoldenFixtures.swift`](../Tests/CodeIslandCoreTests/BridgeGoldenFixtures.swift) and [`Tests/CodeIslandCoreTests/BridgeGoldenExpectations.swift`](../Tests/CodeIslandCoreTests/BridgeGoldenExpectations.swift) by [`BridgeGoldenJSONExporter.swift`](../Tests/CodeIslandCoreTests/BridgeGoldenJSONExporter.swift) as one `bridge-golden.json` bundle per scope.
+Exported from [`Tests/MorrowCoreTests/BridgeGoldenFixtures.swift`](../Tests/MorrowCoreTests/BridgeGoldenFixtures.swift) and [`Tests/MorrowCoreTests/BridgeGoldenExpectations.swift`](../Tests/MorrowCoreTests/BridgeGoldenExpectations.swift) by [`BridgeGoldenJSONExporter.swift`](../Tests/MorrowCoreTests/BridgeGoldenJSONExporter.swift) as one `bridge-golden.json` bundle per scope.
 
-## Scopes
+These bundles cover the bridge (`morrow-bridge`) only; reducer and `AttentionPolicy` fixtures come in Phase 2.
 
-- `neutral/bridge-golden.json` — OS-independent expectations. Omits OS-specific telemetry keys: `_ppid`, `_hook_ppid`, `_term_bundle`, `_term_app`, `_tty`, `_iterm_session`. Stripping those keys from `macos`, `linux`, or `windows` must yield the exact `neutral` payload.
-- `macos/bridge-golden.json` — Full macOS bridge expectations, byte-identical to `BridgeGoldenExpectations.all`.
-- `linux/bridge-golden.json` — Linux expectations. Keeps `_ppid`, `_hook_ppid`, `_tty`, and cross-platform `_term_app` (`tmux`, `ghostty`, `WezTerm`); omits macOS-only `_term_bundle`, `_iterm_session`, and macOS-only `_term_app` (`iTerm.app`, `Apple_Terminal`).
-- `windows/bridge-golden.json` — Windows expectations. Keeps `_ppid`, `_hook_ppid`, and Windows-valid `_term_app` (`WezTerm`); omits `_term_bundle`, `_iterm_session`, POSIX `_tty`, and non-Windows `_term_app`.
+## Layout
+
+- `neutral/bridge-golden.json` holds every fixture's `input` (arguments, environment, stdin, process ancestry, reply, files) and its OS-independent `expectation`.
+- `macos/`, `linux/`, `windows/bridge-golden.json` hold only `name` + `expectation` per fixture. The `name` refers to the fixture in `neutral/`, which supplies the input.
+- Each bundle has top-level `omitted_keys` (forwarded keys the scope drops from the macOS recording) and `omitted_values` (keys kept only when the value is not listed). The rules live in `BridgeGoldenJSONExporter.swift` and nowhere else.
+
+| Scope | Drops |
+|---|---|
+| `macos` | nothing: byte-identical to `BridgeGoldenExpectations.all` |
+| `linux` | `_term_bundle`, `_iterm_session`, `_tty` (a macOS `/dev/ttysNNN` name), `_term_app` = `iTerm.app` / `Apple_Terminal` |
+| `windows` | the linux keys plus tmux, kitty, zellij, cmux, herdr keys and `_env`; `_term_app` unless `WezTerm` |
+| `neutral` | every key any OS drops, plus `_term_app` |
+
+`_ppid` and `_hook_ppid` are neutral: their values are already tokens (`$PID0`), and every hook edge carries `_ppid`. Projecting any OS bundle through the neutral `omitted_keys` yields the neutral expectation exactly.
 
 ## Regenerating and Validating
 
 ```bash
 CODEISLAND_GOLDEN_EXPORT_JSON="$(pwd)/fixtures" swift test --filter BridgeGoldenTests/testExportedJSONFixturesMatchSwiftGoldenSuite
 swift test --filter BridgeGoldenTests
+pip install -r scripts/requirements-fixtures.txt
 python3 scripts/validate-fixtures.py
 ```
 
