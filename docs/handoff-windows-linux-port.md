@@ -15,6 +15,7 @@ Last updated: 2026-11-18, on branch `docs/#33-windows-linux-architecture` (PR #4
 | [`docs/progress-windows-linux-port.md`](progress-windows-linux-port.md) | **Live status board and checkpoint log.** Update it before you stop. |
 | [Issue #33](https://github.com/fzrsahi/Morrow/issues/33) | Parent. Implementation order in its body ("Urutan Implementasi") mirrors §7. |
 | [Issue #47](https://github.com/fzrsahi/Morrow/issues/47) / [#48](https://github.com/fzrsahi/Morrow/issues/48) | Windows (W0–W7, W-001…W-009) / Linux (L0–L7, L-001…L-012). |
+| [Spec #82](https://github.com/fzrsahi/Morrow/issues/82) | User stories, keputusan implementasi, seam test. Tiket #83–#110 menggantung dari #47/#48/#70 dengan relasi *blocked by*: kerjakan tiket yang semua blocker-nya sudah tertutup. |
 | [Issue #70](https://github.com/fzrsahi/Morrow/issues/70) | CI runners (Debian host, macOS KVM, Windows QEMU), path routing, EC2 mirror. |
 | [`docs/research-mygo-vs-tauri.md`](research-mygo-vs-tauri.md) | Primary sources and measurements. **§9 (Go core + mygo) is superseded.** |
 

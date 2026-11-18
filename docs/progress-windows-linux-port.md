@@ -1,6 +1,6 @@
 # Progress — Windows & Linux port
 
-**Status:** fase 0 — PR #49–#52 terbuka, dua perlu revisi. Belum ada kode Rust.
+**Status:** fase 0 — PR #49–#52 terbuka, revisi selesai. Tiket #83–#110 dari spec #82. Belum ada kode Rust.
 **Checkpoint terakhir:** 2026-11-18 — review arsitektur, revisi dokumen pasca-rebrand Morrow.
 **Fase kanonik:** [`plan-windows-linux.md`](plan-windows-linux.md) §7. Kalau dokumen ini berbeda dengan §7, §7 yang benar.
 
@@ -26,25 +26,25 @@
 
 Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` · `dilewati`
 
-| Fase | PR | Isi | Status | Gate |
+| Fase | PR / tiket | Isi | Status | Gate |
 |---|---|---|---|---|
-| — | #49 | `docs(#33)`: ADR, glossary, plan, handoff | `PR dibuka` | — |
-| 0 | #50 | `test(#33)`: ekspor golden fixtures ke JSON + schema | `revisi` | `BridgeGoldenTests` hijau; schema memvalidasi semua fixture |
+| — | #49 | `docs(#33)`: ADR, glossary, plan, handoff, setup agent skills | `PR dibuka` | — |
+| 0 | #50 | `test(#33)`: ekspor golden fixtures ke JSON + schema | `PR dibuka` (revisi selesai `acbc4b9`) | `BridgeGoldenTests` hijau; schema memvalidasi semua fixture |
 | 0 | #51 | `fix(#33)`: atribusi hook Claude yang dijalankan Cursor di Windows (opsi 2) | `PR dibuka` | `windows/Morrow.Core.Tests` hijau |
-| 0 | #52 | `ci(#33)`: test .NET di Woodpecker | `revisi` | test gagal = pipeline merah |
-| 0 | — | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `belum` | test plugin memakai default asli |
-| 0.5 | — | `chore`: layout monorepo (plan §4) | `belum` | `swift test` + DMG hijau, nol perubahan perilaku |
-| 0.5 | — | kontrak endpoint (plan §3.1) | `belum` | satu dokumen; semua edge mengikuti |
-| 0.5 | — | eksperimen Opsi E (Swift core di Linux) | `belum` | kill criteria ADR-0001 → ADR-0003 atau bukti Rust |
-| 1 | — | `chore(#33)`: workspace Rust, protocol, ipc, CI purity | `belum` | `cargo test`; `cargo tree -p morrow-core` bersih |
-| 1 | — | `feat(#33)`: bridge untuk `claude` | `belum` | conformance fixtures |
-| 1 | — | `feat(#33)`: vertical slice island Linux X11 | `belum` | **`E2E-1`** — dua arah, <300 ms, tight-fit, tidak mencuri fokus |
-| 2 | — | ekspor fixture reducer + `AttentionPolicy` | `belum` | fixture terbaca lintas bahasa |
-| 2 | — | `feat(core)`: intake, reducer, attention, git, markdown, jsonl | `belum` | 100% fixture netral identik |
-| 3 | — | Linux lengkap: adapter, installer, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
-| 4 | — | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
-| 5 | — | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
-| 6 | — | Hapus core C# | `belum` | test Windows hijau; **izin maintainer `windows/`** |
+| 0 | #52 | `ci(#33)`: test .NET di Woodpecker + pipefail XCTest | `PR dibuka` (revisi selesai `78c80fe`; runner belum punya dotnet) | test gagal = pipeline merah |
+| 0 | #78 | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `belum` | test plugin memakai default asli |
+| 0.5 | #86 | `chore`: layout monorepo (plan §4) | `belum` | `swift test` + DMG hijau, nol perubahan perilaku |
+| 0.5 | #84 | kontrak endpoint (plan §3.1) | `belum` | satu dokumen; semua edge mengikuti |
+| 0.5 | #85 | eksperimen Opsi E (Swift core di Linux) | `belum` | kill criteria ADR-0001 → ADR-0003 atau bukti Rust |
+| 1 | #87, #88 | `chore(#33)`: workspace Rust, protocol, ipc, CI purity | `belum` | `cargo test`; `cargo tree -p morrow-core` bersih |
+| 1 | #89 | `feat(#33)`: bridge untuk `claude` | `belum` | conformance fixtures |
+| 1 | #90, #91 | `feat(#33)`: vertical slice island Linux X11 | `belum` | **`E2E-1`** — dua arah, <300 ms, tight-fit, tidak mencuri fokus |
+| 2 | #92 | ekspor fixture reducer + `AttentionPolicy` | `belum` | fixture terbaca lintas bahasa |
+| 2 | #93–#97 | `feat(core)`: intake, reducer, attention, git, markdown, jsonl | `belum` | 100% fixture netral identik |
+| 3 | #98–#104 | Linux lengkap: adapter, installer, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
+| 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
+| 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
+| 6 | #110 | Hapus core C# | `belum` | test Windows hijau; **izin maintainer `windows/`** |
 
 ---
 
@@ -58,6 +58,12 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 ---
 
 ## Log Checkpoint
+
+### 2026-11-18 (lanjutan 3) — spec + tiket
+
+- **Sudah:** setup agent skills (`AGENTS.md`, `docs/agents/`, label triage); spec #82; 28 tiket #83–#110 dengan relasi sub-issue (#47/#48/#70) dan *blocked by* native; revisi #50 dan #52 di-push.
+- **Berikutnya:** frontier #84 dan #85; review + merge #49–#52 membuka #83 dan #86.
+- **Blocker:** runner Woodpecker belum punya .NET 8 SDK (#52 akan merah sampai dipasang).
 
 ### 2026-11-18 (lanjutan 2) — #51 dirombak, masukan #70 diserap
 
