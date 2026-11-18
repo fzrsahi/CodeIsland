@@ -2120,6 +2120,7 @@ private struct MusicSettingsPage: View {
     @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
     @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
     @AppStorage(SettingsKey.floatingLyricVerticalGap) private var floatingLyricVerticalGap = SettingsDefaults.floatingLyricVerticalGap
+    @AppStorage(SettingsKey.floatingLyricAutoHideOnHover) private var floatingLyricAutoHideOnHover = SettingsDefaults.floatingLyricAutoHideOnHover
     @AppStorage(SettingsKey.lyricSyncOffset) private var lyricSyncOffset = SettingsDefaults.lyricSyncOffset
     @AppStorage(SettingsKey.detectSpotifyWebInBrowsers) private var detectSpotifyWebInBrowsers = SettingsDefaults.detectSpotifyWebInBrowsers
 
@@ -2172,6 +2173,13 @@ private struct MusicSettingsPage: View {
                     }
 
                     if showCompactLyrics {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Toggle("Hide Lyrics on Cursor Hover", isOn: $floatingLyricAutoHideOnHover)
+                            Text("Temporarily fade out floating lyrics when your cursor moves over them so tabs and controls underneath stay clickable.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                        }
+
                         VStack(alignment: .leading, spacing: 3) {
                             Picker("Floating Lyric Style", selection: $floatingLyricPreset) {
                                 ForEach(FloatingLyricPreset.allCases) { preset in
