@@ -39,6 +39,10 @@ def post_status(repo, sha, context, state, description=None, target_url=None, to
         print("⚠️  [report-status] No GitHub token found. Skipping status update.", file=sys.stderr)
         return False
 
+    # Normalize repo slug to prevent HTTP 307 temporary redirect drops
+    if repo.lower().endswith("codeisland") or "codeisland" in repo.lower():
+        repo = "fzrsahi/Morrow"
+
     url = f"https://api.github.com/repos/{repo}/statuses/{sha}"
     payload = {
         "state": state,
@@ -51,32 +55,49 @@ def post_status(repo, sha, context, state, description=None, target_url=None, to
         payload["target_url"] = target_url
 
     data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/vnd.github.v3+json",
-            "Content-Type": "application/json",
-            "User-Agent": "Morrow-CI",
-        },
-        method="POST",
-    )
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+        "User-Agent": "Morrow-CI",
+    }
 
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            if resp.status in (200, 201):
-                print(f"✅ [report-status] {context} -> {state}")
-                return True
-            print(f"⚠️  [report-status] HTTP {resp.status} while reporting {context}", file=sys.stderr)
+    target = url
+    for _ in range(3):
+        req = urllib.request.Request(
+            target,
+            data=data,
+            headers=headers,
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                if resp.status in (200, 201):
+                    print(f"✅ [report-status] {context} -> {state}")
+                    return True
+                print(f"⚠️  [report-status] HTTP {resp.status} while reporting {context}", file=sys.stderr)
+                return False
+        except urllib.error.HTTPError as e:
+            if e.code in (301, 302, 307, 308):
+                redirect_url = e.headers.get("Location")
+                if not redirect_url:
+                    try:
+                        err_body = json.loads(e.read().decode("utf-8", errors="replace"))
+                        redirect_url = err_body.get("url")
+                    except Exception:
+                        pass
+                if redirect_url:
+                    target = redirect_url
+                    continue
+            err_msg = e.read().decode("utf-8", errors="replace")
+            print(f"⚠️  [report-status] GitHub API error ({e.code}): {err_msg}", file=sys.stderr)
             return False
-    except urllib.error.HTTPError as e:
-        err_msg = e.read().decode("utf-8", errors="replace")
-        print(f"⚠️  [report-status] GitHub API error ({e.code}): {err_msg}", file=sys.stderr)
-        return False
-    except Exception as e:
-        print(f"⚠️  [report-status] Network error: {e}", file=sys.stderr)
-        return False
+        except Exception as e:
+            print(f"⚠️  [report-status] Network error: {e}", file=sys.stderr)
+            return False
+
+    return False
 
 
 def main():
@@ -92,7 +113,9 @@ def main():
 
     args = parser.parse_args()
 
-    repo = args.repo or os.environ.get("CI_REPO") or "fzrsahi/morrow"
+    repo = args.repo or os.environ.get("CI_REPO") or "fzrsahi/Morrow"
+    if repo.lower().endswith("codeisland") or "codeisland" in repo.lower():
+        repo = "fzrsahi/Morrow"
     sha = args.sha or os.environ.get("CI_COMMIT_SHA")
     if not sha or len(sha) < 40:
         # Resolve to full 40-char SHA if short or absent

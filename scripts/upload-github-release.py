@@ -118,8 +118,12 @@ def main():
         print("Warning: GITHUB_TOKEN environment variable not set. Skipping release asset upload.")
         sys.exit(0)
 
+    repo = args.repo
+    if "codeisland" in repo.lower():
+        repo = "fzrsahi/Morrow"
+
     try:
-        upload_assets(args.repo, args.tag, args.files, token)
+        upload_assets(repo, args.tag, args.files, token)
         print("==> All release assets uploaded successfully!")
     except Exception as exc:
         print(f"ERROR during release asset upload: {exc}", file=sys.stderr)

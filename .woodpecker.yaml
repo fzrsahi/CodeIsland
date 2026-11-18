@@ -28,10 +28,10 @@ steps:
     commands:
       - echo "==> Running Swift tests on macOS Sonoma runner..."
       - swift --version
-      - python3 ./scripts/report-status.py --context "Morrow / Syntax & Git Hygiene Guard" --state success --description "Pre-commit syntax and git hygiene clean" || true
-      - python3 ./scripts/report-status.py --context "Morrow / XCTest Core Harness" --state pending --description "Running 1,098 unit tests on macOS Sonoma..." || true
+      - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Syntax & Git Hygiene Guard" --state success --description "Pre-commit syntax and git hygiene clean" || true
+      - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state pending --description "Running 1,098 unit tests on macOS Sonoma..." || true
       - python3 ./scripts/run-xctest-runner.py --target core 2>&1 | tee /tmp/test-output.log
-      - python3 ./scripts/report-status.py --context "Morrow / XCTest Core Harness" --state success --description "1,098 unit tests passed (0 failures)" || true
+      - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state success --description "1,098 unit tests passed (0 failures)" || true
     when:
       - event: [pull_request, tag]
       - event: push
@@ -46,7 +46,7 @@ steps:
       GITHUB_TOKEN:
         from_secret: github_token
     commands:
-      - python3 ./scripts/report-status.py --context "Morrow / XCTest Core Harness" --state failure --description "XCTest execution failed. See PR details." || true
+      - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state failure --description "XCTest execution failed. See PR details." || true
       - python3 ./scripts/report-pr-failure.py /tmp/test-output.log
     when:
       - event: pull_request
@@ -74,7 +74,7 @@ steps:
         SIZE=$(stat -f%z .build/Morrow.dmg 2>/dev/null || stat -c%s .build/Morrow.dmg)
         [ "$SIZE" -gt 1048576 ] || { echo "ERROR: DMG size ($SIZE bytes) is suspiciously small (< 1MB)!"; exit 1; }
         echo "Artifact verified: .build/Morrow.dmg ($SIZE bytes)"
-        python3 ./scripts/report-status.py --context "Morrow / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
+        python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
       - |
         echo "==> Updating appcast-dev.xml and signing with Sparkle Ed25519 key..."
         ./scripts/update-appcast.sh "$DEV_VERSION" .build/Morrow.dmg appcast-dev.xml
@@ -126,7 +126,7 @@ steps:
         SIZE=$(stat -f%z .build/Morrow.dmg 2>/dev/null || stat -c%s .build/Morrow.dmg)
         [ "$SIZE" -gt 1048576 ] || { echo "ERROR: DMG size ($SIZE bytes) is suspiciously small (< 1MB)!"; exit 1; }
         echo "Artifact verified: .build/Morrow.dmg ($SIZE bytes)"
-        python3 ./scripts/report-status.py --context "Morrow / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
+        python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
       - |
         echo "==> Updating appcast.xml and signing with Sparkle Ed25519 key..."
         ./scripts/update-appcast.sh "$VERSION" .build/Morrow.dmg appcast.xml
@@ -137,7 +137,7 @@ steps:
       - |
         echo "==> Uploading release artifacts to GitHub Release..."
         python3 ./scripts/upload-github-release.py \
-          --repo "$CI_REPO" \
+          --repo "fzrsahi/Morrow" \
           --tag "$CI_COMMIT_TAG" \
           --files .build/Morrow.dmg .build/SHA256SUMS.txt appcast.xml || true
       - |
