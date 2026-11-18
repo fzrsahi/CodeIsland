@@ -17,8 +17,11 @@ struct PixelRetroSessionCardView: View {
     var isCompactRow: Bool = false
     var compactProjectWidth: CGFloat = 150
     var compactStatusWidth: CGFloat = 64
+    var approvalQueueIndex: Int? = nil
+    var hasHiddenPendingQuestion: Bool = false
     var isHovered: Bool = false
     var fontSize: CGFloat = 11
+    @Environment(\.mascotAnimationsActive) private var mascotAnimationsActive
 
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
@@ -34,21 +37,12 @@ struct PixelRetroSessionCardView: View {
 
     private var cardStatus: SessionCardStatus { SessionCardStatus(session) }
     private var aiLineLimit: Int? { aiMessageLines > 0 ? aiMessageLines : nil }
-
-    private var approvalQueueIndex: Int? {
-        appState.permissionQueue.firstIndex { ($0.event.sessionId ?? "default") == sessionId }
-    }
+    private var cardMascotAnimating: Bool { mascotAnimationsActive && session.status != .idle }
 
     private var showsExternalCursorQuestion: Bool {
         session.status == .waitingQuestion && session.cursorPendingQuestion != nil
     }
-
-    private var showsQuestionWaitingRow: Bool {
-        session.status == .waitingQuestion
-            && !showsExternalCursorQuestion
-            && appState.pendingQuestion(forSession: sessionId) != nil
-            && appState.surface.questionSessionId != sessionId
-    }
+    private var showsQuestionWaitingRow: Bool { hasHiddenPendingQuestion }
 
     /// Single unified 16-bit accent: Laser Cyan #00F5D4 or Adaptive Album art primary
     private var accentColor: Color {
@@ -203,6 +197,7 @@ struct PixelRetroSessionCardView: View {
                     .frame(width: 34, height: 34)
 
                 MascotView(source: session.mascotSource, status: session.status, size: 28)
+                    .environment(\.mascotAnimationsActive, cardMascotAnimating)
             }
 
             // Subagents Indicator / Status LED
@@ -482,6 +477,7 @@ struct PixelRetroSessionCardView: View {
                     .frame(width: 18, height: 18)
 
                 MascotView(source: session.mascotSource, status: session.status, size: 15)
+                    .environment(\.mascotAnimationsActive, cardMascotAnimating)
             }
             .frame(width: 18, height: 18)
 
