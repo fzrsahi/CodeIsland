@@ -52,28 +52,25 @@ public static class RawAgentEventNormalizer
         };
     }
 
+    // Same precedence as the Swift bridge (MorrowCore Models.swift bridgeSource): a declared
+    // --source wins, then a supported `_source` in the payload, then a non-blank cursor_version
+    // marks a hook Cursor ran (docs/hook-edge-protocol.md, rule 2). The Claude Code hook is
+    // installed without --source so that Cursor running it can be told apart.
     private static string? ResolveSource(JsonElement root, string? sourceTag)
     {
         var declaredSource = string.IsNullOrWhiteSpace(sourceTag) ? null : sourceTag.Trim();
-        var isClaudeHook = string.Equals(declaredSource, "claude", StringComparison.OrdinalIgnoreCase);
-        if (declaredSource is not null && !isClaudeHook)
-        {
-            return declaredSource;
-        }
+        if (declaredSource is not null) return declaredSource;
 
-        var eventSource = FirstString(root, "_source", "source", "agent");
-        if (eventSource is not null && ParseAgent(eventSource) is not (AgentKind.Unknown or AgentKind.Claude))
-        {
-            return eventSource;
-        }
+        var payloadSource = FirstString(root, "_source");
+        if (payloadSource is not null && ParseAgent(payloadSource) is not AgentKind.Unknown)
+            return payloadSource;
 
-        // Cursor runs imported Claude Code hooks (--source claude) with its own HookEvent carrying cursor_version.
-        if (FirstString(root, "cursor_version") is not null)
-        {
-            return "cursor";
-        }
+        if (FirstString(root, "cursor_version") is not null) return "cursor";
 
-        return declaredSource ?? eventSource;
+        // Like the macOS island, a hook that names no known source is Claude Code's:
+        // it is the one hook installed without --source.
+        var namedSource = FirstString(root, "_source", "source", "agent");
+        return namedSource is not null && ParseAgent(namedSource) is not AgentKind.Unknown ? namedSource : "claude";
     }
 
     private static AgentKind ParseAgent(string? value) => value?.Trim().ToLowerInvariant() switch

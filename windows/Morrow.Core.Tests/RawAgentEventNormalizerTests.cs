@@ -5,6 +5,18 @@ namespace Morrow.Core.Tests;
 
 public sealed class RawAgentEventNormalizerTests
 {
+    private const string CursorStopPayload = """
+        {
+          "conversation_id": "e1247fd5-d9a0-48ef-8457-0304606b1833",
+          "generation_id": "gen-1",
+          "session_id": "e1247fd5-d9a0-48ef-8457-0304606b1833",
+          "model": "composer-2.5",
+          "hook_event_name": "stop",
+          "cursor_version": "3.25.9",
+          "status": "completed"
+        }
+        """;
+
     [Theory]
     [InlineData("session.created", AgentEventType.SessionStart)]
     [InlineData("tool.execute.before", AgentEventType.ToolStart)]
@@ -24,27 +36,43 @@ public sealed class RawAgentEventNormalizerTests
         Assert.Equal("bash", agentEvent.ToolName);
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("claude")]
-    [InlineData("Claude")]
-    public void Normalize_CursorPayloadWithCursorVersion_DoesNotAppearAsClaude(string? sourceTag)
+    // Cursor runs the imported Claude Code hook, which is installed without --source.
+    [Fact]
+    public void Normalize_UndeclaredHookWithCursorVersion_IsCursor()
     {
-        var agentEvent = RawAgentEventNormalizer.Normalize("""
-            {
-              "conversation_id": "e1247fd5-d9a0-48ef-8457-0304606b1833",
-              "generation_id": "gen-1",
-              "session_id": "e1247fd5-d9a0-48ef-8457-0304606b1833",
-              "model": "composer-2.5",
-              "hook_event_name": "stop",
-              "cursor_version": "3.25.9",
-              "status": "completed"
-            }
-            """, sourceTag, "Stop");
+        var agentEvent = RawAgentEventNormalizer.Normalize(CursorStopPayload, null, "Stop");
 
         Assert.Equal(AgentKind.Cursor, agentEvent.Agent);
         Assert.Equal("e1247fd5-d9a0-48ef-8457-0304606b1833", agentEvent.SessionId);
         Assert.Equal(AgentEventType.SessionEnd, agentEvent.Type);
+    }
+
+    // Same as the Swift bridge: a declared source is never overridden, claude included.
+    [Theory]
+    [InlineData("claude", AgentKind.Claude)]
+    [InlineData("codex", AgentKind.Codex)]
+    public void Normalize_DeclaredSource_IsNotOverriddenByCursorVersion(string sourceTag, AgentKind expected)
+    {
+        var agentEvent = RawAgentEventNormalizer.Normalize(CursorStopPayload, sourceTag, "Stop");
+
+        Assert.Equal(expected, agentEvent.Agent);
+    }
+
+    [Theory]
+    [InlineData("codex", AgentKind.Codex)]
+    [InlineData("claude", AgentKind.Claude)]
+    public void Normalize_SupportedPayloadSource_IsNotOverriddenByCursorVersion(string payloadSource, AgentKind expected)
+    {
+        var agentEvent = RawAgentEventNormalizer.Normalize($$"""
+            {
+              "_source": "{{payloadSource}}",
+              "session_id": "s-1",
+              "hook_event_name": "Stop",
+              "cursor_version": "3.25.9"
+            }
+            """);
+
+        Assert.Equal(expected, agentEvent.Agent);
     }
 
     [Theory]
@@ -52,7 +80,7 @@ public sealed class RawAgentEventNormalizerTests
     [InlineData("\"\"")]
     [InlineData("null")]
     [InlineData("123")]
-    public void Normalize_ClaudeHookWithBlankOrInvalidCursorVersion_StaysClaude(string cursorVersionJson)
+    public void Normalize_UndeclaredHookWithBlankOrInvalidCursorVersion_IsClaude(string cursorVersionJson)
     {
         var json = $$"""
             {
@@ -62,42 +90,28 @@ public sealed class RawAgentEventNormalizerTests
             }
             """;
 
-        var agentEvent = RawAgentEventNormalizer.Normalize(json, "claude");
+        var agentEvent = RawAgentEventNormalizer.Normalize(json);
+
+        Assert.Equal(AgentKind.Claude, agentEvent.Agent);
+    }
+
+    // Claude Code's SessionStart carries "source": "startup", which names no agent.
+    [Fact]
+    public void Normalize_UndeclaredClaudeSessionStart_IsClaude()
+    {
+        var agentEvent = RawAgentEventNormalizer.Normalize("""
+            {
+              "source": "startup",
+              "session_id": "claude-start-1",
+              "hook_event_name": "SessionStart"
+            }
+            """);
 
         Assert.Equal(AgentKind.Claude, agentEvent.Agent);
     }
 
     [Fact]
-    public void Normalize_ExplicitNonClaudeSource_IsNotOverriddenByCursorVersion()
-    {
-        var agentEvent = RawAgentEventNormalizer.Normalize("""
-            {
-              "session_id": "codex-1",
-              "hook_event_name": "Stop",
-              "cursor_version": "3.25.9"
-            }
-            """, "codex");
-
-        Assert.Equal(AgentKind.Codex, agentEvent.Agent);
-    }
-
-    [Fact]
-    public void Normalize_KnownEventSourceUnderClaudeHook_IsNotOverriddenByCursorVersion()
-    {
-        var agentEvent = RawAgentEventNormalizer.Normalize("""
-            {
-              "_source": "codex",
-              "session_id": "codex-2",
-              "hook_event_name": "Stop",
-              "cursor_version": "3.25.9"
-            }
-            """, "claude");
-
-        Assert.Equal(AgentKind.Codex, agentEvent.Agent);
-    }
-
-    [Fact]
-    public void Normalize_SessionStartSourceStartupWithCursorVersion_ResolvesToCursor()
+    public void Normalize_SessionStartSourceStartupWithCursorVersion_IsCursor()
     {
         var agentEvent = RawAgentEventNormalizer.Normalize("""
             {
