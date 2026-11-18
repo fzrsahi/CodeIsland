@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "CodeIsland",
+    name: "Morrow",
     platforms: [.macOS(.v14)],
     dependencies: [
         // Sparkle — auto-update framework. Pinned to 2.6+ for stable
@@ -12,25 +12,25 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "CodeIslandCore",
-            path: "Sources/CodeIslandCore"
+            name: "MorrowCore",
+            path: "Sources/MorrowCore"
         ),
         .executableTarget(
-            name: "CodeIsland",
+            name: "Morrow",
             dependencies: [
-                "CodeIslandCore",
+                "MorrowCore",
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "Yams", package: "Yams"),
             ],
-            path: "Sources/CodeIsland",
+            path: "Sources/Morrow",
             resources: [
                 .copy("Resources")
             ]
         ),
         .executableTarget(
-            name: "codeisland-bridge",
-            dependencies: ["CodeIslandCore"],
-            path: "Sources/CodeIslandBridge"
+            name: "morrow-bridge",
+            dependencies: ["MorrowCore"],
+            path: "Sources/MorrowBridge"
         ),
         // Resets the xctest runner's shared defaults domain when a test
         // bundle loads (see Tests/TestDefaultsReset/TestDefaultsReset.c).
@@ -41,22 +41,22 @@ let package = Package(
         // The stand-in ancestor processes BridgeGoldenTests runs the bridge
         // under, built next to the test bundles (never shipped).
         .executableTarget(
-            name: "codeisland-golden-stub",
+            name: "morrow-golden-stub",
             path: "Tests/GoldenAncestryStub"
         ),
         .testTarget(
-            name: "CodeIslandCoreTests",
-            dependencies: ["CodeIslandCore", "TestDefaultsReset"],
-            path: "Tests/CodeIslandCoreTests"
+            name: "MorrowCoreTests",
+            dependencies: ["MorrowCore", "TestDefaultsReset"],
+            path: "Tests/MorrowCoreTests"
         ),
         .testTarget(
-            name: "CodeIslandTests",
+            name: "MorrowTests",
             dependencies: [
-                "CodeIsland",
+                "Morrow",
                 "TestDefaultsReset",
                 .product(name: "Yams", package: "Yams"),
             ],
-            path: "Tests/CodeIslandTests"
+            path: "Tests/MorrowTests"
         ),
     ]
 )

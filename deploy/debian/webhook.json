@@ -1,8 +1,8 @@
 [
   {
-    "id": "deploy-codeisland",
-    "execute-command": "/var/www/codeisland-updates/scripts/deploy-codeisland.sh",
-    "command-working-directory": "/var/www/codeisland-updates",
+    "id": "deploy-morrow",
+    "execute-command": "/var/www/morrow-updates/scripts/deploy-morrow.sh",
+    "command-working-directory": "/var/www/morrow-updates",
     "response-message": "Deployment job received and executing",
     "include-command-output-in-response": true,
     "pass-arguments-to-command": [

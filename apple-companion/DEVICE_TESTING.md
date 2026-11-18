@@ -15,7 +15,7 @@
 
 | 项目 | 要求 |
 | --- | --- |
-| Mac | 已安装当前分支构建出的 CodeIsland Mac app |
+| Mac | 已安装当前分支构建出的 Morrow Mac app |
 | iPhone | 已通过 USB 连接到 Mac，并在 Xcode 中信任/配对 |
 | Apple Watch | 已与这台 iPhone 配对，调试时已信任 Mac |
 | 网络 | Mac 和 iPhone 在同一个 Wi-Fi；蓝牙开启 |
@@ -31,19 +31,19 @@ swift test -c release
 scripts/check-companion-ui-regressions.sh
 scripts/smoke-companion-ui.sh
 scripts/smoke-companion-watch-ui.sh
-xcodebuild -project ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj \
-  -scheme CodeIslandCompanion \
+xcodebuild -project ios/MorrowCompanion/MorrowCompanion.xcodeproj \
+  -scheme MorrowCompanion \
   -configuration Debug \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
   -derivedDataPath .build/CompanionUITestDerivedData \
   test
-xcodebuild -project ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj \
-  -scheme CodeIslandCompanion \
+xcodebuild -project ios/MorrowCompanion/MorrowCompanion.xcodeproj \
+  -scheme MorrowCompanion \
   -configuration Release \
   -destination 'generic/platform=iOS' \
   CODE_SIGNING_ALLOWED=NO build
-xcodebuild -project ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj \
-  -scheme CodeIslandWatchApp \
+xcodebuild -project ios/MorrowCompanion/MorrowCompanion.xcodeproj \
+  -scheme MorrowWatchApp \
   -configuration Release \
   -destination 'generic/platform=watchOS' \
   CODE_SIGNING_ALLOWED=NO build
@@ -60,8 +60,8 @@ xcodebuild -project ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj \
 如果要把同一套 UI Test 跑到真机，把 destination 改成 iPhone 的设备 ID：
 
 ```bash
-xcodebuild -project ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj \
-  -scheme CodeIslandCompanion \
+xcodebuild -project ios/MorrowCompanion/MorrowCompanion.xcodeproj \
+  -scheme MorrowCompanion \
   -configuration Debug \
   -destination 'platform=iOS,id=<你的 iPhone 设备 ID>' \
   -derivedDataPath .build/CompanionDeviceUITestDerivedData \
@@ -72,14 +72,14 @@ xcodebuild -project ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj \
 
 ## 1. 安装 iPhone App
 
-1. 打开 `ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj`。
-2. 顶部 scheme 选择 `CodeIslandCompanion`。
+1. 打开 `ios/MorrowCompanion/MorrowCompanion.xcodeproj`。
+2. 顶部 scheme 选择 `MorrowCompanion`。
 3. 顶部设备选择你的 iPhone。
 4. 确认 `Signing & Capabilities` 中这几个 target 都使用你的 Developer Team：
-   - `CodeIslandCompanion`
-   - `CodeIslandCompanionWidget`
-   - `CodeIslandWatchApp`
-   - `CodeIslandWatchWidget`
+   - `MorrowCompanion`
+   - `MorrowCompanionWidget`
+   - `MorrowWatchApp`
+   - `MorrowWatchWidget`
 5. 点击 Run。
 6. iPhone 首次启动时允许：
    - 本地网络
@@ -100,8 +100,8 @@ xcodebuild -project ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj \
 
 ## 2. Mac 端广播
 
-1. 启动当前分支构建出的 CodeIsland Mac app。
-2. 打开 CodeIsland 设置。
+1. 启动当前分支构建出的 Morrow Mac app。
+2. 打开 Morrow 设置。
 3. 进入 `Buddy`。
 4. 打开 iPhone Buddy 广播。
 5. 确认状态显示为等待或已连接。
@@ -210,7 +210,7 @@ xcodebuild -project ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj \
 
 ### 方式 B：Xcode 直接调试
 
-1. Xcode 顶部 scheme 选择 `CodeIslandWatchApp`。
+1. Xcode 顶部 scheme 选择 `MorrowWatchApp`。
 2. 顶部设备选择你的 Apple Watch。
 3. 点击 Run。
 
@@ -257,7 +257,7 @@ xcodebuild -project ios/CodeIslandCompanion/CodeIslandCompanion.xcodeproj \
 ### iPhone 断开 Mac
 
 1. iPhone 已连接 Mac。
-2. 在 Mac CodeIsland 设置里关闭 iPhone Buddy 广播。
+2. 在 Mac Morrow 设置里关闭 iPhone Buddy 广播。
 3. 等 10 秒。
 4. 重新打开广播。
 

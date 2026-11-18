@@ -33,8 +33,8 @@ Block $white 4 4 8 1; Block $white 3 5 10 6; Block $white 5 11 2 1; Block $white
 Block $green 5 7 2 2; Block $green 9 7 2 2; Block $outline 7 10 2 1
 Block $blue 3 13 10 1; Block $gray 5 14 6 1
 
-$pngPath = Join-Path $output 'codeisland.png'
-$icoPath = Join-Path $output 'codeisland.ico'
+$pngPath = Join-Path $output 'morrow.png'
+$icoPath = Join-Path $output 'morrow.ico'
 $bitmap.Save($pngPath, [System.Drawing.Imaging.ImageFormat]::Png)
 $handle = $bitmap.GetHicon()
 try {
