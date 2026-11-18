@@ -572,6 +572,7 @@ struct NotchPanelView: View {
             && !isDynamicIslandInlineLyrics
             && !isBalancedTwinNonNotch
             && !isToastOnly
+            && !mailManager.showMailArrivalAnimation
             && !(signals.showChargingBanner && !appState.surface.isExpanded)
             && !(signals.showMiniPeekBanner && !appState.surface.isExpanded)
     }
@@ -621,8 +622,9 @@ struct NotchPanelView: View {
         }
         if signals.isPlaying || nowPlaying.isPlaying {
             if isThinking && !isConnectedChinLyricActive {
-                // Keep Thinking + Music locked to the exact same left/right wing width as Thinking without Music.
-                return effectiveNaturalLeftWidth + badgeReserve
+                // Keep Thinking + Music wide enough for the music title even when a short tool name narrows the left wing.
+                let minMusicTitleWing: CGFloat = isPixel ? 136 : 132
+                return max(effectiveNaturalLeftWidth, minMusicTitleWing) + badgeReserve
             }
             let baseMusic: CGFloat = isThinking ? 148 : 50
             let musicBaseline = baseMusic + badgeReserve
@@ -930,10 +932,11 @@ struct NotchPanelView: View {
         }
         let requiredActiveBarWidth = collapsedNotchGapWidth + collapsedLeftWingWidth + collapsedRightWingWidth
         if signals.showChargingBanner && !appState.surface.isExpanded {
-            return min(max(280, requiredActiveBarWidth), maxPanelWidth)
+            let targetBannerW: CGFloat = (displayMode == .dynamicIsland && !hasNotch) ? 300 : 440
+            return min(max(targetBannerW, requiredActiveBarWidth), maxPanelWidth)
         }
         if signals.showMiniPeekBanner && !appState.surface.isExpanded {
-            return min(max(280, requiredActiveBarWidth), maxPanelWidth)
+            return min(max(420, requiredActiveBarWidth), maxPanelWidth)
         }
         let maxSafeCollapsed = maxSafeCollapsedBarWidth
         return min(requiredActiveBarWidth, maxSafeCollapsed)
