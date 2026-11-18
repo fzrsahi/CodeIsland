@@ -123,6 +123,8 @@ def main():
         sys.exit(0)
 
     repo = args.repo
+    if "codeisland" in repo.lower():
+        repo = "fzrsahi/Morrow"
     pr_number = args.pr
     commit_sha = args.commit
     commit_short = commit_sha[:7] if commit_sha else "unknown"
