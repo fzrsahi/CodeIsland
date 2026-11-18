@@ -32,7 +32,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 0 | #50 | `test(#33)`: ekspor golden fixtures ke JSON + schema | `revisi` | `BridgeGoldenTests` hijau; schema memvalidasi semua fixture |
 | 0 | #51 | `fix(#33)`: hormati `cursor_version` di Windows | `PR dibuka` (keputusan precedence `--source claude`) | `windows/Morrow.Core.Tests` hijau |
 | 0 | #52 | `ci(#33)`: test .NET di Woodpecker | `revisi` | test gagal = pipeline merah |
-| 0 | — | `fix`: endpoint plugin pasca-rebrand (plan §12) | `belum` | test plugin memakai default asli |
+| 0 | — | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `belum` | test plugin memakai default asli |
 | 0.5 | — | `chore`: layout monorepo (plan §4) | `belum` | `swift test` + DMG hijau, nol perubahan perilaku |
 | 0.5 | — | kontrak endpoint (plan §3.1) | `belum` | satu dokumen; semua edge mengikuti |
 | 0.5 | — | eksperimen Opsi E (Swift core di Linux) | `belum` | kill criteria ADR-0001 → ADR-0003 atau bukti Rust |
@@ -41,8 +41,8 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 1 | — | `feat(#33)`: vertical slice island Linux X11 | `belum` | **`E2E-1`** — dua arah, <300 ms, tight-fit, tidak mencuri fokus |
 | 2 | — | ekspor fixture reducer + `AttentionPolicy` | `belum` | fixture terbaca lintas bahasa |
 | 2 | — | `feat(core)`: intake, reducer, attention, git, markdown, jsonl | `belum` | 100% fixture netral identik |
-| 3 | — | Linux lengkap: adapter, installer, packaging | `belum` | `L-001…L-011` + **`E2E-2`** |
-| 4 | — | Windows | `belum` | `W-001…W-008` + **`E2E-2`** |
+| 3 | — | Linux lengkap: adapter, installer, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
+| 4 | — | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | — | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
 | 6 | — | Hapus core C# | `belum` | test Windows hijau; **izin maintainer `windows/`** |
 
@@ -58,6 +58,12 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 ---
 
 ## Log Checkpoint
+
+### 2026-11-18 (lanjutan) — issue dirapikan
+
+- **Sudah:** bug #78 dibuat (socket plugin pasca-rebrand); body #33/#47/#48 ditulis ulang jadi versi yang berlaku (body lama diarsipkan sebagai komentar, komentar usang di-minimize); #70 dijadikan sub-issue #33; kriteria W-009 dan L-012 (tabel Capability) ditambahkan; keamanan pipe masuk W-001.
+- **Berikutnya:** keputusan #51; revisi #50 dan #52; PR fix #78; Fase 0.5.
+- **Blocker:** keputusan precedence `--source claude` di #51.
 
 ### 2026-11-18 — review arsitektur + revisi dokumen
 

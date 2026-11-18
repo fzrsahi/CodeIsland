@@ -14,7 +14,7 @@ Last updated: 2026-11-18, on branch `docs/#33-windows-linux-architecture` (PR #4
 | [`docs/plan-windows-linux.md`](plan-windows-linux.md) | Module map, endpoint contract (§3.1), monorepo layout (§4), adapters (§5.2), window plumbing (§6), **§7 = canonical phases**, §8 PR slicing, §9 packaging. If any other doc disagrees with §7, §7 wins. |
 | [`docs/progress-windows-linux-port.md`](progress-windows-linux-port.md) | **Live status board and checkpoint log.** Update it before you stop. |
 | [Issue #33](https://github.com/fzrsahi/Morrow/issues/33) | Parent. Implementation order in its body ("Urutan Implementasi") mirrors §7. |
-| [Issue #47](https://github.com/fzrsahi/Morrow/issues/47) / [#48](https://github.com/fzrsahi/Morrow/issues/48) | Windows (W0–W6, W-001…W-008) / Linux (L0–L7, L-001…L-011). |
+| [Issue #47](https://github.com/fzrsahi/Morrow/issues/47) / [#48](https://github.com/fzrsahi/Morrow/issues/48) | Windows (W0–W7, W-001…W-009) / Linux (L0–L7, L-001…L-012). |
 | [Issue #70](https://github.com/fzrsahi/Morrow/issues/70) | CI runners (Debian host, macOS KVM, Windows QEMU), path routing, EC2 mirror. |
 | [`docs/research-mygo-vs-tauri.md`](research-mygo-vs-tauri.md) | Primary sources and measurements. **§9 (Go core + mygo) is superseded.** |
 
@@ -86,6 +86,6 @@ Every PR that needs another machine ships a script that runs its gate and prints
 ## Next actions
 
 1. Revise and merge Phase 0: #49 (this), #50 (exporter path, neutral rules, validator), #51 (decide `--source claude` precedence), #52 (drop `windows.yml`, `pipefail`, Morrow names).
-2. Fix the plugin endpoint regression in its own PR (plan §12) — it is a live macOS bug.
+2. Fix the plugin endpoint regression in its own PR ([#78](https://github.com/fzrsahi/Morrow/issues/78)) — it is a live macOS bug.
 3. Phase 0.5: monorepo move PR, endpoint contract, Option E experiment → ADR-0003 or ADR-0001 evidence.
 4. Phase 1 vertical slice, with the gate script handed to the collaborator for the real X11 run.

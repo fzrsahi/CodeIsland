@@ -17,8 +17,8 @@ Yang berlaku **hanya satu** daftar fase: **§7 di bawah, identik dengan "Urutan 
 | [`adr/0002`](adr/0002-tauri-v2-shell.md) | Keputusan: Tauri (bukan .NET, bukan mygo) | "kenapa bukan WPF / Avalonia / mygo?" |
 | **dokumen ini** | Arsitektur + **fase kanonik (§7)** | modul, seam, adapter, urutan kerja |
 | [#33](https://github.com/fzrsahi/Morrow/issues/33) | Urutan + alasan urutan | "kenapa Linux dulu?" |
-| [#47](https://github.com/fzrsahi/Morrow/issues/47) | Scope Windows, item W0–W6, acceptance W-001…W-008 | detail kerja Windows |
-| [#48](https://github.com/fzrsahi/Morrow/issues/48) | Scope Linux, item L0–L7, acceptance L-001…L-011 | detail kerja Linux |
+| [#47](https://github.com/fzrsahi/Morrow/issues/47) | Scope Windows, item W0–W7, acceptance W-001…W-009 | detail kerja Windows |
+| [#48](https://github.com/fzrsahi/Morrow/issues/48) | Scope Linux, item L0–L7, acceptance L-001…L-012 | detail kerja Linux |
 | [#70](https://github.com/fzrsahi/Morrow/issues/70) | Pipeline CI multiplatform + distribusi | runner, path filter, mirror EC2 |
 | [`handoff-windows-linux-port.md`](handoff-windows-linux-port.md) | Indeks + daftar jebakan + siapa mengerjakan apa | mulai dari mana, apa yang menipu |
 | [`progress-windows-linux-port.md`](progress-windows-linux-port.md) | Papan status + log checkpoint | fase mana yang jalan, apa blocker-nya |
@@ -354,13 +354,13 @@ Gate: 100% fixture netral identik dengan output Swift; `Clock` dan `CustomSource
 
 ### Fase 3 — Linux lengkap (4–6 minggu; naik dari 3–4 karena scope app-held §5.1)
 
-9 hook target → 34 source, adapter §5.2 + `probe()`, tray, hotkey, autostart, settings, installer hook, packaging (§9). Gate: `L-001…L-011` (minus Wayland) **dan `E2E-2`**.
+9 hook target → 34 source, adapter §5.2 + `probe()`, tray, hotkey, autostart, settings, installer hook, packaging (§9). Gate: `L-001…L-012` (minus Wayland) **dan `E2E-2`**.
 
 **`E2E-2`:** install hook `claude` → jalankan `claude` → PreToolUse → panel → Approve → `claude` benar-benar lanjut; deny juga bekerja; tidak ada event dobel.
 
 ### Fase 4 — Windows (3–4 minggu)
 
-Window plumbing Win32 (§6), adapter WinRT, named pipe dengan verifikasi peer (§3.1), NSIS + signing. Gate: `W-001…W-008` **dan `E2E-2`** di Windows.
+Window plumbing Win32 (§6), adapter WinRT, named pipe dengan verifikasi peer (§3.1), NSIS + signing. Gate: `W-001…W-009` **dan `E2E-2`** di Windows.
 
 ### Fase 5 — Wayland (2 minggu)
 
@@ -462,4 +462,4 @@ Arsitektur: x86_64 dulu; aarch64 bila ada runner. Build di Ubuntu 22.04 (glibc 2
 
 ## 12. Temuan di luar port yang memengaruhinya
 
-**Regresi rebrand (macOS, hari ini).** App mendengarkan `/tmp/morrow-<uid>.sock` (`SocketPath.swift:9`, `HookSocket.swift:142-177`). Plugin lokal masih default ke `/tmp/codeisland-<uid>.sock` dan memeriksa path itu **sebelum** mengirim maupun memanggil bridge: `morrow-omp.ts:46-47,213,266`, `morrow-openclaw/index.ts:58-59`, `morrow-pi.ts:70-71`, `morrow-opencode.js:26`. Akibatnya event dan permission request OMP/OpenClaw/Pi/OpenCode hilang tanpa error, kecuali bila socket legacy kebetulan masih ada. OpenCode remote juga rusak: `RemoteInstaller.swift:1817-1835` mencari literal lama yang tidak lagi ada di `morrow-opencode-remote.js:24-28`, sehingga plugin terpasang memakai `/tmp/morrow.sock`. Test lolos karena memakai `CODEISLAND_SOCKET_PATH` eksplisit dan string sumber buatan (`ConfigInstallerTests.swift:1132,1186`). Ini contoh nyata kenapa endpoint harus masuk kontrak (§3.1).
+**Regresi rebrand (macOS, hari ini — [#78](https://github.com/fzrsahi/Morrow/issues/78)).** App mendengarkan `/tmp/morrow-<uid>.sock` (`SocketPath.swift:9`, `HookSocket.swift:142-177`). Plugin lokal masih default ke `/tmp/codeisland-<uid>.sock` dan memeriksa path itu **sebelum** mengirim maupun memanggil bridge: `morrow-omp.ts:46-47,213,266`, `morrow-openclaw/index.ts:58-59`, `morrow-pi.ts:70-71`, `morrow-opencode.js:26`. Akibatnya event dan permission request OMP/OpenClaw/Pi/OpenCode hilang tanpa error, kecuali bila socket legacy kebetulan masih ada. OpenCode remote juga rusak: `RemoteInstaller.swift:1817-1835` mencari literal lama yang tidak lagi ada di `morrow-opencode-remote.js:24-28`, sehingga plugin terpasang memakai `/tmp/morrow.sock`. Test lolos karena memakai `CODEISLAND_SOCKET_PATH` eksplisit dan string sumber buatan (`ConfigInstallerTests.swift:1132,1186`). Ini contoh nyata kenapa endpoint harus masuk kontrak (§3.1).
