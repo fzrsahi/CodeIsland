@@ -4,7 +4,7 @@ Status: **SUPERSEDED (2026-11-16), diarsipkan 2026-11-18** dari `linux/CodeIslan
 
 Pilihan Avalonia di §2.3 sudah mati — digantikan [ADR-0002](../adr/0002-tauri-v2-shell.md).
 
-Yang **masih berlaku** dari dokumen ini: §3 analisis per-file platform abstraction, §5 tabel padanan file Windows→Linux, dan §6 tabel risiko (terutama Wayland). Acceptance criteria L-001…L-012 di §5 juga masih dipakai — #48 memakai nomor yang sama.
+Yang **masih berlaku** dari dokumen ini: §3 analisis per-file platform abstraction, §5 tabel padanan file Windows→Linux, dan §6 tabel risiko (terutama Wayland). Acceptance criteria L-001…L-012 di §5 masih berguna sebagai bahan, tapi **penomorannya tidak sama dengan #48** (contoh: hotkey di sini L-009, di #48 L-008; packaging di sini L-012, di #48 L-011). Yang mengikat adalah tabel di #48.
 
 ---
 
