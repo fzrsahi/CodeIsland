@@ -1,4 +1,4 @@
-package com.morrow.buddywatch
+package com.morrow.watch
 
 import android.content.Context
 import android.graphics.Canvas

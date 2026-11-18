@@ -1,4 +1,4 @@
-package com.morrow.buddywatch
+package com.morrow.watch
 
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals

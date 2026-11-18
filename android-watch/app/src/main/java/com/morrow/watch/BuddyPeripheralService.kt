@@ -1,4 +1,4 @@
-package com.morrow.buddywatch
+package com.morrow.watch
 
 import android.Manifest
 import android.app.Notification
@@ -771,12 +771,12 @@ class BuddyPeripheralService : Service() {
         private const val attentionNotificationId = 1002
         private const val attentionNotificationDebounceMs = 250L
         private const val attentionReminderIntervalMs = 30_000L
-        const val ACTION_REQUEST_FOCUS = "com.morrow.buddywatch.action.REQUEST_FOCUS"
-        const val ACTION_TOGGLE_DEMO = "com.morrow.buddywatch.action.TOGGLE_DEMO"
-        const val ACTION_CYCLE_DEMO = "com.morrow.buddywatch.action.CYCLE_DEMO"
-        const val ACTION_APPROVE_CURRENT_PERMISSION = "com.morrow.buddywatch.action.APPROVE_CURRENT_PERMISSION"
-        const val ACTION_DENY_CURRENT_PERMISSION = "com.morrow.buddywatch.action.DENY_CURRENT_PERMISSION"
-        const val ACTION_SKIP_CURRENT_QUESTION = "com.morrow.buddywatch.action.SKIP_CURRENT_QUESTION"
+        const val ACTION_REQUEST_FOCUS = "com.morrow.watch.action.REQUEST_FOCUS"
+        const val ACTION_TOGGLE_DEMO = "com.morrow.watch.action.TOGGLE_DEMO"
+        const val ACTION_CYCLE_DEMO = "com.morrow.watch.action.CYCLE_DEMO"
+        const val ACTION_APPROVE_CURRENT_PERMISSION = "com.morrow.watch.action.APPROVE_CURRENT_PERMISSION"
+        const val ACTION_DENY_CURRENT_PERMISSION = "com.morrow.watch.action.DENY_CURRENT_PERMISSION"
+        const val ACTION_SKIP_CURRENT_QUESTION = "com.morrow.watch.action.SKIP_CURRENT_QUESTION"
 
         fun start(context: Context) {
             ContextCompat.startForegroundService(context, Intent(context, BuddyPeripheralService::class.java))

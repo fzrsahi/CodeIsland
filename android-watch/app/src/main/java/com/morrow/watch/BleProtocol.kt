@@ -1,4 +1,4 @@
-package com.morrow.buddywatch
+package com.morrow.watch
 
 import java.nio.charset.StandardCharsets
 import java.util.UUID

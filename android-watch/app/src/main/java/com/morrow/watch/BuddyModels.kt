@@ -1,4 +1,4 @@
-package com.morrow.buddywatch
+package com.morrow.watch
 
 enum class ScreenOrientation(val wireValue: Int) {
     UP(0),

@@ -1,4 +1,4 @@
-package com.morrow.buddywatch
+package com.morrow.watch
 
 import android.os.SystemClock
 import kotlinx.coroutines.CoroutineScope

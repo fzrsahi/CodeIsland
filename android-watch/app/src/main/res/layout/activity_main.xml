@@ -89,7 +89,7 @@
             android:textSize="@dimen/watch_chip_text_size"
             android:textStyle="bold" />
 
-        <com.morrow.buddywatch.BuddyMascotView
+        <com.morrow.watch.BuddyMascotView
             android:id="@+id/mascotView"
             android:layout_width="@dimen/watch_badge_size"
             android:layout_height="@dimen/watch_badge_size"

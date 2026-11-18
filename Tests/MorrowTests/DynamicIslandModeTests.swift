@@ -373,7 +373,7 @@ final class DynamicIslandModeTests: XCTestCase {
         let state = AppState()
         var session = SessionSnapshot()
         session.source = "claude"
-        session.cwd = "/Users/dev/code/Morrow"
+        session.cwd = "/Users/dev/code/CodeIsland"
         session.gitBranch = "main"
         session.status = status
         state.sessions = ["s1": session]
@@ -497,8 +497,10 @@ final class DynamicIslandModeTests: XCTestCase {
         let midWidth = try XCTUnwrap(rowSpanWidth(y: midY))
         let bottomWidth = try XCTUnwrap(rowSpanWidth(y: max(firstY, lastY - 1)))
 
-        let notchLeftPx = Int((canvasWidth - notchW) / 2 * scale)
-        let notchRightPx = Int((canvasWidth + notchW) / 2 * scale)
+        // Give a 0.5pt (1 pixel at scale 2) subpixel cushion on both outer boundaries
+        // so subpixel edge anti-aliasing of the wing shapes is not mistaken for intrusion.
+        let notchLeftPx = Int(((canvasWidth - notchW) / 2 + 0.5) * scale)
+        let notchRightPx = Int(((canvasWidth + notchW) / 2 - 0.5) * scale)
         let intrusionPx: Int? = hasNotch ? (notchLeftPx..<notchRightPx).first { x in
             panelRows.contains { y in
                 let c = rgb(x, y)
