@@ -95,6 +95,7 @@ public final class SystemMonitorManager: ObservableObject {
     }
 
     public func triggerChargingBanner(previewState: PowerBannerState? = nil, previewBatteryLevel: Int? = nil) {
+        PrayerTimeManager.shared.dismissMiniPeekBanner()
         if let previewState {
             activeBannerState = previewState
         } else {

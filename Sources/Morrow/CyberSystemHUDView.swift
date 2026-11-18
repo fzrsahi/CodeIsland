@@ -136,8 +136,8 @@ public struct MagSafeChargingBanner: View {
                 }
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
+        .padding(.horizontal, displayMode == .dynamicIsland ? 22 : 18)
+        .padding(.vertical, displayMode == .dynamicIsland ? 12 : 10)
     }
 
     // MARK: - 2. Modern Clean Dynamic Island Banner (Ref #3: Ring + Bolt Left, 2-Line Stack, Hero % Right)
@@ -189,8 +189,8 @@ public struct MagSafeChargingBanner: View {
                 }
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
+        .padding(.horizontal, displayMode == .dynamicIsland ? 22 : 18)
+        .padding(.vertical, displayMode == .dynamicIsland ? 12 : 10)
     }
 
     private func dismissButton(onDismiss: @escaping () -> Void) -> some View {

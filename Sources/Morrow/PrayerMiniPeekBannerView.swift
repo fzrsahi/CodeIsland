@@ -5,6 +5,7 @@ import MorrowCore
 /// Seamless notch-integrated 3-line Dynamic Island design with Modern Clean & Pixel 32-bit parity.
 public struct PrayerMiniPeekBannerView: View {
     @ObservedObject var manager: PrayerTimeManager
+    var displayMode: IslandDisplayMode = .notch
     var onOpenFull: () -> Void
 
     @ObservedObject private var nowPlaying = NowPlayingManager.shared
@@ -25,8 +26,9 @@ public struct PrayerMiniPeekBannerView: View {
         )
     }
 
-    public init(manager: PrayerTimeManager, onOpenFull: @escaping () -> Void) {
+    public init(manager: PrayerTimeManager, displayMode: IslandDisplayMode = .notch, onOpenFull: @escaping () -> Void) {
         self.manager = manager
+        self.displayMode = displayMode
         self.onOpenFull = onOpenFull
     }
 
@@ -144,8 +146,8 @@ public struct PrayerMiniPeekBannerView: View {
                     .transition(.opacity)
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
+        .padding(.horizontal, displayMode == .dynamicIsland ? 22 : 18)
+        .padding(.vertical, displayMode == .dynamicIsland ? 12 : 10)
     }
 
     // MARK: - 2. Modern Clean Notch-Integrated 3-Line Banner (Ref #2)
@@ -192,8 +194,8 @@ public struct PrayerMiniPeekBannerView: View {
                     .transition(.opacity)
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
+        .padding(.horizontal, displayMode == .dynamicIsland ? 22 : 18)
+        .padding(.vertical, displayMode == .dynamicIsland ? 12 : 10)
     }
 
     private var dismissButton: some View {

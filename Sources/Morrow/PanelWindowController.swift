@@ -715,7 +715,8 @@ class PanelWindowController: NSObject, NSWindowDelegate {
             return
         }
 
-        if settings.hideWhenNoSession && appState.activeSessionCount == 0 {
+        let hasActiveBanner = SystemMonitorManager.shared.showChargingBanner || PrayerTimeManager.shared.showMiniPeekBanner
+        if settings.hideWhenNoSession && appState.activeSessionCount == 0 && !hasActiveBanner {
             panel.orderOut(nil)
             MascotAnimationGate.shared.setPanelVisible(false)
             return

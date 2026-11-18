@@ -883,17 +883,9 @@ struct NotchPanelView: View {
             return min(max(baseWidth, minWidth), maxPanelWidth)
         }
         if isToastOnly {
-            if displayMode == .dynamicIsland && !hasNotch {
-                return min(280, maxPanelWidth)
-            }
-            let requiredActiveBarWidth = nw + symmetricWingWidth * 2
-            return min(max(280, requiredActiveBarWidth), maxPanelWidth)
-        }
-        if signals.showChargingBanner && !appState.surface.isExpanded {
-            return min(max(440, collapsedNotchGapWidth + symmetricWingWidth * 2), maxPanelWidth)
-        }
-        if signals.showMiniPeekBanner && !appState.surface.isExpanded {
-            return min(max(420, collapsedNotchGapWidth + symmetricWingWidth * 2), maxPanelWidth)
+            let targetWidth: CGFloat = signals.showChargingBanner ? 440 : 420
+            let requiredActiveBarWidth = collapsedNotchGapWidth + symmetricWingWidth * 2
+            return min(max(targetWidth, requiredActiveBarWidth), maxPanelWidth)
         }
         if showIdleIndicator {
             if displayMode == .dynamicIsland && !hasNotch {
@@ -1697,7 +1689,7 @@ struct NotchPanelView: View {
             ))
         } else if signals.showMiniPeekBanner && !appState.surface.isExpanded {
             // PRAYER MINI PEEK BANNER: Buka tipis saat T-10m & saat masuk waktu salat
-            PrayerMiniPeekBannerView(manager: prayerManager) {
+            PrayerMiniPeekBannerView(manager: prayerManager, displayMode: displayMode) {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                     appState.transitionToTab(.prayer)
                     appState.surface = .sessionList
