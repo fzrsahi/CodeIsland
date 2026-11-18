@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CodeIslandBuddyWatch"
+rootProject.name = "MorrowBuddyWatch"
 include(":app")

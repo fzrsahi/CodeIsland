@@ -1,26 +1,26 @@
-# CodeIsland Distribution Node & CI/CD Deployment
+# Morrow Distribution Node & CI/CD Deployment
 
-This guide documents the architecture, automated deployment pipelines, and node setup required to distribute CodeIsland updates via self-hosted Debian infrastructure and Sparkle auto-updates.
+This guide documents the architecture, automated deployment pipelines, and node setup required to distribute Morrow updates via self-hosted Debian infrastructure and Sparkle auto-updates.
 
 ---
 
 ## 1. Architecture Overview
 
-CodeIsland operates a zero-cost, self-hosted build and distribution pipeline:
+Morrow operates a zero-cost, self-hosted build and distribution pipeline:
 - **Build Runner:** Local KVM-accelerated macOS Sonoma VM (`macos-kvm-builder`) on AMD Ryzen hardware, eliminating cloud macOS runner costs.
-- **Orchestration:** Self-hosted Woodpecker CI Server (`ci-codeisland.azhr.cloud`) connected to the local runner over a persistent reverse SSH tunnel.
-- **Distribution Node:** Debian server (`codeisland.azhr.cloud`) fronted by Cloudflare Tunnel and Nginx, serving signed DMGs and Sparkle XML feeds.
+- **Orchestration:** Self-hosted Woodpecker CI Server (`ci-morrow.azhr.cloud`) connected to the local runner over a persistent reverse SSH tunnel.
+- **Distribution Node:** Debian server (`morrow.azhr.cloud`) fronted by Cloudflare Tunnel and Nginx, serving signed DMGs and Sparkle XML feeds.
 
 ```mermaid
 flowchart TD
-    subgraph GitHub["GitHub Remote: fzrsahi/CodeIsland"]
+    subgraph GitHub["GitHub Remote: fzrsahi/morrow"]
         E_PR["Event: pull_request"]
         E_DEV["Event: push to dev"]
         E_MAIN["Event: push to main"]
         E_TAG["Event: tag v*"]
     end
 
-    subgraph Orchestration["AWS CI Server: ci-codeisland.azhr.cloud"]
+    subgraph Orchestration["AWS CI Server: ci-morrow.azhr.cloud"]
         WP["Woodpecker Server Engine"]
         TUNNEL["Reverse SSH Tunnel (:9090)"]
         WP <--> TUNNEL
@@ -35,8 +35,8 @@ flowchart TD
         STEP_PROD["Step: build-release-dmg\nBuild Prod DMG + Sign"]
     end
 
-    subgraph Distribution["AWS Debian Server: codeisland.azhr.cloud"]
-        WEB["Nginx Web Root (/var/www/codeisland-updates)"]
+    subgraph Distribution["AWS Debian Server: morrow.azhr.cloud"]
+        WEB["Nginx Web Root (/var/www/morrow-updates)"]
         FEED_DEV["appcast-dev.xml\n(Beta Channel)"]
         FEED_PROD["appcast.xml\n(Stable Channel)"]
         WEB --> FEED_DEV
@@ -64,7 +64,7 @@ flowchart TD
 sequenceDiagram
     autonumber
     actor Dev as Developer
-    participant Git as GitHub (fzrsahi/CodeIsland)
+    participant Git as GitHub (fzrsahi/morrow)
     participant WP as AWS Woodpecker Server
     participant Run as Local macOS Runner
     participant Web as AWS Debian Node
@@ -85,14 +85,14 @@ sequenceDiagram
         alt Dev Merge (Beta Channel)
             Git->>WP: Webhook: push to dev
             WP->>Run: Dispatch step: build-dev-dmg
-            Run->>Run: Package CodeIsland-dev.dmg & sign with Ed25519
+            Run->>Run: Package Morrow-dev.dmg & sign with Ed25519
             Run->>Web: Webhook POST /api/deploy-webhook (channel: dev)
             Web->>Web: Atomically update appcast-dev.xml
         else Release Tag (Stable Channel)
             Dev->>Git: Push tag v1.0.X to main
             Git->>WP: Webhook: tag v1.0.X
             WP->>Run: Dispatch step: build-release-dmg
-            Run->>Run: Package CodeIsland.dmg & sign with Ed25519
+            Run->>Run: Package Morrow.dmg & sign with Ed25519
             Run->>Web: Webhook POST /api/deploy-webhook (channel: stable)
             Web->>Web: Atomically update appcast.xml & latest.dmg
         end
@@ -120,12 +120,12 @@ sudo ./deploy/debian/setup-debian-node.sh
 
 The script performs the following tasks:
 - Installs `webhook`, `curl`, and `jq`.
-- Creates `/var/www/codeisland-updates/releases/` with `www-data` ownership.
+- Creates `/var/www/morrow-updates/releases/` with `www-data` ownership.
 - Generates a cryptographically random 32-character `WEBHOOK_SECRET`.
-- Configures and starts the systemd service `codeisland-webhook.service` on `127.0.0.1:9000`.
+- Configures and starts the systemd service `morrow-webhook.service` on `127.0.0.1:9000`.
 
 > [!IMPORTANT]
-> Record the `WEBHOOK_SECRET` printed at the end of the script output. It is stored in Woodpecker CI Server secrets as `codeisland_webhook_secret`.
+> Record the `WEBHOOK_SECRET` printed at the end of the script output. It is stored in Woodpecker CI Server secrets as `morrow_webhook_secret`.
 
 ---
 
@@ -133,20 +133,20 @@ The script performs the following tasks:
 Copy the Nginx configuration template to `sites-available`:
 
 ```bash
-sudo cp deploy/debian/nginx-updates.conf /etc/nginx/sites-available/codeisland-updates.conf
+sudo cp deploy/debian/nginx-updates.conf /etc/nginx/sites-available/morrow-updates.conf
 ```
 
 Edit the file to set the `server_name` to match your designated Cloudflare Tunnel domain:
 
 ```bash
-sudo nano /etc/nginx/sites-available/codeisland-updates.conf
-# Set: server_name codeisland.azhr.cloud;
+sudo nano /etc/nginx/sites-available/morrow-updates.conf
+# Set: server_name morrow.azhr.cloud;
 ```
 
 Enable the configuration and reload Nginx:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/codeisland-updates.conf /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/morrow-updates.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -158,7 +158,7 @@ Ensure your Cloudflare Zero Trust tunnel configuration routes the designated hos
 
 ```yaml
 ingress:
-  - hostname: codeisland.azhr.cloud
+  - hostname: morrow.azhr.cloud
     service: http://localhost:80
   - service: http_status:404
 ```
@@ -167,11 +167,11 @@ ingress:
 
 ## 4. Secret Configuration (Woodpecker CI)
 
-Secrets are securely maintained in Woodpecker Server (`https://ci-codeisland.azhr.cloud/fzrsahi/CodeIsland/settings/secrets`):
+Secrets are securely maintained in Woodpecker Server (`https://ci-morrow.azhr.cloud/fzrsahi/morrow/settings/secrets`):
 
 | Secret Name | Description | Scope |
 |---|---|---|
-| `codeisland_webhook_secret` | Shared secret token for `/api/deploy-webhook` | Injected into `build-dev-dmg` & `build-release-dmg` |
+| `morrow_webhook_secret` | Shared secret token for `/api/deploy-webhook` | Injected into `build-dev-dmg` & `build-release-dmg` |
 | `sparkle_private_key` | Ed25519 private key used to sign DMG releases | Injected in-memory to `sign_update` |
 
 ---
@@ -184,10 +184,10 @@ Push a semantic version tag to `main`:
 git tag v1.0.41
 git push origin v1.0.41
 ```
-The CI runner will compile universal arm64/x86_64 binaries, assemble `CodeIsland.dmg`, sign with the Ed25519 key, and update `https://codeisland.azhr.cloud/appcast.xml`.
+The CI runner will compile universal arm64/x86_64 binaries, assemble `Morrow.dmg`, sign with the Ed25519 key, and update `https://morrow.azhr.cloud/appcast.xml`.
 
 ### Development Release (Beta)
-Merge any pull request into the `dev` branch. The runner automatically packages `CodeIsland-dev.dmg` and publishes the pre-release item to `https://codeisland.azhr.cloud/appcast-dev.xml`.
+Merge any pull request into the `dev` branch. The runner automatically packages `Morrow-dev.dmg` and publishes the pre-release item to `https://morrow.azhr.cloud/appcast-dev.xml`.
 
 ---
 
@@ -195,23 +195,23 @@ Merge any pull request into the `dev` branch. The runner automatically packages 
 
 ### Standalone Daemon (Systemd)
 ```bash
-journalctl -u codeisland-webhook.service -f
+journalctl -u morrow-webhook.service -f
 ```
 
-### Docker Containerized Node (`codeisland-node`)
+### Docker Containerized Node (`morrow-node`)
 ```bash
 # View real-time webhook & ingress logs
-docker logs -f codeisland-node
+docker logs -f morrow-node
 
 # Inspect resource utilization (RAM capped at 64MB)
-docker stats --no-stream codeisland-node
+docker stats --no-stream morrow-node
 
 # Inspect releases directory
-docker exec codeisland-node ls -la /data/releases/
+docker exec morrow-node ls -la /data/releases/
 ```
 
 Verify the Sparkle update feed endpoint:
 ```bash
-curl -I https://codeisland.azhr.cloud/appcast.xml
-curl -I https://codeisland.azhr.cloud/appcast-dev.xml
+curl -I https://morrow.azhr.cloud/appcast.xml
+curl -I https://morrow.azhr.cloud/appcast-dev.xml
 ```

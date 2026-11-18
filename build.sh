@@ -6,7 +6,7 @@ if [ -d /Applications/Xcode.app/Contents/Developer ]; then
     export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 fi
 
-APP_NAME="CodeIsland"
+APP_NAME="Morrow"
 BUILD_DIR=".build/release"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 ICON_CATALOG="Assets.xcassets"
@@ -81,7 +81,14 @@ build_mac() {
     mkdir -p "$APP_BUNDLE/Contents/Frameworks"
 
     cp "$ARM_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
-    cp "$ARM_DIR/codeisland-bridge" "$APP_BUNDLE/Contents/Helpers/codeisland-bridge"
+    if [ -f "$ARM_DIR/morrow-bridge" ]; then
+        cp "$ARM_DIR/morrow-bridge" "$APP_BUNDLE/Contents/Helpers/morrow-bridge"
+        # Provide backward-compatible alias for existing hooks
+        ln -sf "morrow-bridge" "$APP_BUNDLE/Contents/Helpers/codeisland-bridge"
+    elif [ -f "$ARM_DIR/codeisland-bridge" ]; then
+        cp "$ARM_DIR/codeisland-bridge" "$APP_BUNDLE/Contents/Helpers/codeisland-bridge"
+        ln -sf "codeisland-bridge" "$APP_BUNDLE/Contents/Helpers/morrow-bridge"
+    fi
     cp Info.plist "$APP_BUNDLE/Contents/Info.plist"
 
     echo "Embedding frameworks..."
@@ -97,7 +104,7 @@ build_mac() {
     install_name_tool -add_rpath "@executable_path/../Frameworks" \
         "$APP_BUNDLE/Contents/MacOS/$APP_NAME" 2>/dev/null || true
     install_name_tool -add_rpath "@executable_path/../../Frameworks" \
-        "$APP_BUNDLE/Contents/Helpers/codeisland-bridge" 2>/dev/null || true
+        "$APP_BUNDLE/Contents/Helpers/morrow-bridge" 2>/dev/null || true
 
     echo "Compiling app icon assets..."
     xcrun actool \
@@ -113,12 +120,20 @@ build_mac() {
         --compile "$APP_BUNDLE/Contents/Resources" \
         "$ICON_CATALOG" \
         "$ICON_SOURCE"
-    cp "Sources/CodeIsland/Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+    if [ -f "Sources/Morrow/Resources/AppIcon.icns" ]; then
+        cp "Sources/Morrow/Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+    elif [ -f "Sources/CodeIsland/Resources/AppIcon.icns" ]; then
+        cp "Sources/CodeIsland/Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+    fi
 
     # Copy the SPM resource bundle into Contents/Resources/ (required for code signing)
-    cp -R "$ARM_DIR/CodeIsland_CodeIsland.bundle" "$APP_BUNDLE/Contents/Resources/"
+    if [ -d "$ARM_DIR/Morrow_Morrow.bundle" ]; then
+        cp -R "$ARM_DIR/Morrow_Morrow.bundle" "$APP_BUNDLE/Contents/Resources/"
+    elif [ -d "$ARM_DIR/CodeIsland_CodeIsland.bundle" ]; then
+        cp -R "$ARM_DIR/CodeIsland_CodeIsland.bundle" "$APP_BUNDLE/Contents/Resources/"
+    fi
 
-    ENTITLEMENTS="CodeIsland.entitlements"
+    ENTITLEMENTS="Morrow.entitlements"
 
     # Use SIGN_ID env var, local .signing.local override, or auto-detect:
     # prefer "Developer ID Application" for distribution, fall back to any valid identity, then ad-hoc
@@ -152,7 +167,12 @@ build_mac() {
     fi
     codesign --force --options runtime --sign "$SIGN_ID" "$SPARKLE_FW"
 
-    codesign --force --options runtime --sign "$SIGN_ID" "$APP_BUNDLE/Contents/Helpers/codeisland-bridge"
+    if [ -f "$APP_BUNDLE/Contents/Helpers/morrow-bridge" ]; then
+        codesign --force --options runtime --sign "$SIGN_ID" "$APP_BUNDLE/Contents/Helpers/morrow-bridge"
+    fi
+    if [ -f "$APP_BUNDLE/Contents/Helpers/codeisland-bridge" ]; then
+        codesign --force --options runtime --sign "$SIGN_ID" "$APP_BUNDLE/Contents/Helpers/codeisland-bridge"
+    fi
     codesign --force --options runtime --sign "$SIGN_ID" --entitlements "$ENTITLEMENTS" "$APP_BUNDLE"
 
     if [ "$NOTARIZE" = true ] && [[ "$SIGN_ID" == *"Developer ID"* ]]; then
@@ -161,11 +181,15 @@ build_mac() {
         ditto -c -k --keepParent "$APP_BUNDLE" "$ZIP_PATH"
 
         echo "Submitting for notarization..."
-        if xcrun notarytool submit "$ZIP_PATH" --keychain-profile "CodeIsland" --wait 2>&1 | tee /dev/stderr | grep -q "status: Accepted"; then
+        NOTARY_PROFILE="Morrow"
+        if ! xcrun notarytool credentials-list 2>/dev/null | grep -q "Morrow"; then
+            NOTARY_PROFILE="Morrow"
+        fi
+        if xcrun notarytool submit "$ZIP_PATH" --keychain-profile "$NOTARY_PROFILE" --wait 2>&1 | tee /dev/stderr | grep -q "status: Accepted"; then
             echo "Stapling notarization ticket..."
             xcrun stapler staple "$APP_BUNDLE"
         else
-            echo "ERROR: Notarization failed. Run 'xcrun notarytool log <submission-id> --keychain-profile CodeIsland' for details."
+            echo "ERROR: Notarization failed. Run 'xcrun notarytool log <submission-id> --keychain-profile $NOTARY_PROFILE' for details."
             rm -f "$ZIP_PATH"
             exit 1
         fi
@@ -201,7 +225,7 @@ build_mac() {
 
         codesign --force --sign "$SIGN_ID" "$DMG_PATH"
         echo "Notarizing DMG..."
-        if xcrun notarytool submit "$DMG_PATH" --keychain-profile "CodeIsland" --wait 2>&1 | tee /dev/stderr | grep -q "status: Accepted"; then
+        if xcrun notarytool submit "$DMG_PATH" --keychain-profile "$NOTARY_PROFILE" --wait 2>&1 | tee /dev/stderr | grep -q "status: Accepted"; then
             xcrun stapler staple "$DMG_PATH"
             echo "DMG ready: $DMG_PATH"
         else
