@@ -1400,11 +1400,17 @@ struct SubNotchFloatingLyricCapsuleView: View {
     @AppStorage(SettingsKey.floatingLyricFontDesign) private var floatingLyricFontDesign = SettingsDefaults.floatingLyricFontDesign
     @AppStorage(SettingsKey.floatingLyricIconStyle) private var floatingLyricIconStyle = SettingsDefaults.floatingLyricIconStyle
     @AppStorage(SettingsKey.floatingLyricTextColor) private var floatingLyricTextColor = SettingsDefaults.floatingLyricTextColor
+    @AppStorage(SettingsKey.floatingLyricAutoHideOnHover) private var floatingLyricAutoHideOnHover = SettingsDefaults.floatingLyricAutoHideOnHover
     @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
     @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @State private var isHovered = false
     @State private var capsuleWidth: CGFloat = 180
+    @StateObject private var cursorMonitor = FloatingLyricCursorMonitor()
+
+    private var shouldAutoHide: Bool {
+        floatingLyricAutoHideOnHover && cursorMonitor.isCursorInside
+    }
 
     private var isPixel: Bool {
         islandUITheme == IslandUITheme.pixel.rawValue
@@ -2214,11 +2220,26 @@ struct SubNotchFloatingLyricCapsuleView: View {
                 .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isHovered)
         }
         .buttonStyle(.plain)
+        .background(
+            FloatingLyricScreenFrameReader { rect in
+                cursorMonitor.updateScreenRect(rect)
+            }
+        )
+        .opacity(shouldAutoHide ? 0.0 : 1.0)
+        .allowsHitTesting(!shouldAutoHide)
+        .animation(.easeInOut(duration: 0.16), value: shouldAutoHide)
         .onHover { hovering in
             isHovered = hovering
         }
         .onAppear {
             capsuleWidth = calculateTargetWidth(for: activeDisplayText, preset: activePreset)
+            cursorMonitor.setEnabled(floatingLyricAutoHideOnHover)
+        }
+        .onDisappear {
+            cursorMonitor.setEnabled(false)
+        }
+        .onChange(of: floatingLyricAutoHideOnHover) { _, enabled in
+            cursorMonitor.setEnabled(enabled)
         }
         .onChange(of: activeDisplayText) { _, newText in
             let target = calculateTargetWidth(for: newText, preset: activePreset)
@@ -2251,6 +2272,128 @@ struct SubNotchFloatingLyricCapsuleView: View {
             }
         }
         .help("♫ Live Synced Lyrics [Style: \(activePreset.title)] (Click to open Music HUD)")
+    }
+}
+
+/// Tracks global/local cursor position against the floating lyric's screen frame so
+/// hovering hides the lyrics and passes clicks through without `.onHover` flicker.
+@MainActor
+private final class FloatingLyricCursorMonitor: ObservableObject {
+    @Published private(set) var isCursorInside = false
+
+    private var screenRect: CGRect = .zero
+    private var isEnabled = false
+    private var globalMonitor: Any?
+    private var localMonitor: Any?
+
+    func setEnabled(_ enabled: Bool) {
+        guard enabled != isEnabled else { return }
+        isEnabled = enabled
+        if enabled {
+            installMonitors()
+            evaluate(mouseLocation: NSEvent.mouseLocation)
+        } else {
+            removeMonitors()
+            if isCursorInside {
+                isCursorInside = false
+            }
+        }
+    }
+
+    func updateScreenRect(_ rect: CGRect) {
+        screenRect = rect
+        if isEnabled {
+            evaluate(mouseLocation: NSEvent.mouseLocation)
+        }
+    }
+
+    private func installMonitors() {
+        guard globalMonitor == nil, localMonitor == nil else { return }
+        let mask: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .rightMouseDragged]
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.evaluate(mouseLocation: NSEvent.mouseLocation)
+            }
+        }
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
+            Task { @MainActor [weak self] in
+                self?.evaluate(mouseLocation: NSEvent.mouseLocation)
+            }
+            return event
+        }
+    }
+
+    private func removeMonitors() {
+        if let globalMonitor {
+            NSEvent.removeMonitor(globalMonitor)
+            self.globalMonitor = nil
+        }
+        if let localMonitor {
+            NSEvent.removeMonitor(localMonitor)
+            self.localMonitor = nil
+        }
+    }
+
+    private func evaluate(mouseLocation: NSPoint) {
+        guard isEnabled, !screenRect.isEmpty else {
+            if isCursorInside { isCursorInside = false }
+            return
+        }
+        let hitRect = screenRect.insetBy(dx: -4, dy: -4)
+        let inside = hitRect.contains(mouseLocation)
+        if inside != isCursorInside {
+            isCursorInside = inside
+        }
+    }
+
+    deinit {
+        if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
+        if let localMonitor { NSEvent.removeMonitor(localMonitor) }
+    }
+}
+
+/// Non-hit-testing NSView that reports its AppKit screen frame when laid out or moved.
+private struct FloatingLyricScreenFrameReader: NSViewRepresentable {
+    var onFrameChange: (CGRect) -> Void
+
+    func makeNSView(context: Context) -> FrameReportingNSView {
+        let view = FrameReportingNSView()
+        view.onFrameChange = onFrameChange
+        return view
+    }
+
+    func updateNSView(_ nsView: FrameReportingNSView, context: Context) {
+        nsView.onFrameChange = onFrameChange
+        nsView.reportFrameIfChanged()
+    }
+
+    final class FrameReportingNSView: NSView {
+        var onFrameChange: ((CGRect) -> Void)?
+        private var lastReported: CGRect = .zero
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func layout() {
+            super.layout()
+            reportFrameIfChanged()
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            reportFrameIfChanged()
+        }
+
+        func reportFrameIfChanged() {
+            guard let window else { return }
+            let windowRect = convert(bounds, to: nil)
+            let screenRect = window.convertToScreen(windowRect)
+            if screenRect != lastReported {
+                lastReported = screenRect
+                DispatchQueue.main.async { [weak self] in
+                    self?.onFrameChange?(screenRect)
+                }
+            }
+        }
     }
 }
 
