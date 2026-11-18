@@ -1,5 +1,7 @@
 # Development Guidelines & Safety Workflow (Claude Code Style Auto-Mode)
 
+> Konfigurasi skill agent (issue tracker, label triage, domain docs) ada di [`AGENTS.md`](AGENTS.md).
+
 ## 1. Permission & Safety Policy
 When executing commands and editing files in this workspace, follow strict safety boundaries:
 
