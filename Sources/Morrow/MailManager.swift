@@ -653,7 +653,7 @@ public final class MailManager: ObservableObject {
                                 set olderStreak to 0
                                 if not (read status of m) then
                                     set recentUnreadCount to recentUnreadCount + 1
-                                    if parsedCount < 6 then
+                                    if parsedCount < 35 then
                                         set msgId to id of m
                                         set msgSender to sender of m as string
                                         set msgSubj to subject of m as string
@@ -890,7 +890,11 @@ public final class MailManager: ObservableObject {
             self.unreadCount = max(0, self.unreadCount - 1)
             self.totalInboxUnreadCount = max(0, self.totalInboxUnreadCount - 1)
             self.baselineTotalInboxUnread = self.totalInboxUnreadCount
-            self.unreadObservationEpoch += 1
+        }
+
+        // Prefetch the next page in background before the local buffer runs empty.
+        if self.recentMails.count <= 4 && self.unreadCount > self.recentMails.count {
+            self.refresh(checkRemote: false, queueIfBusy: true)
         }
 
         Task.detached(priority: .userInitiated) {
