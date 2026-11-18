@@ -30,7 +30,11 @@ steps:
       - swift --version
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Syntax & Git Hygiene Guard" --state success --description "Pre-commit syntax and git hygiene clean" || true
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state pending --description "Running 1,098 unit tests on macOS Sonoma..." || true
-      - python3 ./scripts/run-xctest-runner.py --target core 2>&1 | tee /tmp/test-output.log
+      # pipefail: without it the step's exit status is tee's, so failing tests
+      # passed the step. .xctest-failed tells report-pr-failure that XCTest
+      # (not a later step) is what failed.
+      - set -o pipefail
+      - python3 ./scripts/run-xctest-runner.py --target core 2>&1 | tee /tmp/test-output.log || { touch .xctest-failed; exit 1; }
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state success --description "1,098 unit tests passed (0 failures)" || true
     when:
       - event: [pull_request, tag]
@@ -38,40 +42,61 @@ steps:
         branch: [dev, main]
 
   # --------------------------------------------------------------------------
-  # 1a. .NET core tests: CodeIsland.Core, CodeIsland.Protocol and
-  #     CodeIsland.Core.Tests are all net8.0 and use no Windows-only API, so
-  #     they run on this macOS runner. Only CodeIsland.Windows and
-  #     CodeIsland.Windows.Smoke need a Windows agent, and both are being
-  #     removed in phase 6 of the port (#33).
+  # 1a. .NET core tests: Morrow.Core, Morrow.Protocol and Morrow.Core.Tests
+  #     are all net8.0 and use no Windows-only API, so they run on this macOS
+  #     runner. Only Morrow.Windows and Morrow.Windows.Smoke need a Windows
+  #     agent, and both are being removed in phase 6 of the port (#33).
+  #     Runs only when windows/** (other than docs) or this file changes.
   # --------------------------------------------------------------------------
   - name: dotnet-core-tests
     image: bash
-    # TODO(#33): remove `failure: ignore` once the .NET 8 SDK is installed on
-    # ci-codeisland.azhr.cloud. Until then the step reports its real status to
-    # GitHub through report-status.py, so the gap stays visible on the PR
-    # without reddening the pipeline for every other change.
-    failure: ignore
     environment:
       GITHUB_TOKEN:
         from_secret: github_token
     commands:
-      - echo "==> Running CodeIsland.Core.Tests (.NET, portable)..."
+      - echo "==> Running Morrow.Core.Tests (.NET, portable)..."
       - |
+        # The agent's PATH may not include the default macOS install location.
+        DOTNET_HOME="${DOTNET_ROOT:-/usr/local/share/dotnet}"
+        if ! command -v dotnet >/dev/null 2>&1 && [ -x "$DOTNET_HOME/dotnet" ]; then
+          export PATH="$DOTNET_HOME:$PATH"
+        fi
         if ! command -v dotnet >/dev/null 2>&1; then
-          echo "dotnet not found on this runner."
-          echo "Install the .NET 8 SDK on the runner, or set DOTNET_ROOT if it is installed outside PATH."
-          python3 ./scripts/report-status.py --context "CodeIsland / .NET Core Tests" --state error --description "dotnet not installed on runner" || true
+          echo "ERROR: dotnet not found on PATH or in $DOTNET_HOME."
+          echo "Install the .NET 8 SDK on the runner, or set DOTNET_ROOT to its install directory."
+          python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / .NET Core Tests" --state error --description "dotnet not installed on runner" || true
           exit 1
         fi
-      # net8.0 targets run on a newer runtime when only that one is installed.
-      - export DOTNET_ROLL_FORWARD=Major
+      - |
+        # The tests target net8.0. If the runner has no .NET 8 runtime, roll
+        # forward to the newest installed major so they still run. The proper
+        # fix is installing the .NET 8 runtime on the runner, which makes this
+        # a no-op.
+        RUNTIMES="$(dotnet --list-runtimes)"
+        if ! printf '%s\n' "$RUNTIMES" | grep -q '^Microsoft.NETCore.App 8\.'; then
+          echo "No .NET 8 runtime found; setting DOTNET_ROLL_FORWARD=Major."
+          export DOTNET_ROLL_FORWARD=Major
+        fi
       - dotnet --list-sdks
-      - dotnet test windows/CodeIsland.Core.Tests/CodeIsland.Core.Tests.csproj -c Release 2>&1 | tee /tmp/dotnet-test.log
-      - python3 ./scripts/report-status.py --context "CodeIsland / .NET Core Tests" --state success --description ".NET core tests passed" || true
+      - |
+        set -o pipefail
+        if dotnet test windows/Morrow.Core.Tests/Morrow.Core.Tests.csproj -c Release 2>&1 | tee /tmp/dotnet-test.log; then
+          python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / .NET Core Tests" --state success --description ".NET core tests passed" || true
+        else
+          status=$?
+          python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / .NET Core Tests" --state failure --description ".NET core tests failed (exit $status)" || true
+          exit "$status"
+        fi
     when:
-      - event: [pull_request, tag]
+      - event: pull_request
+        path:
+          include: ['windows/**', '.woodpecker.yaml']
+          exclude: ['windows/**/*.md']
       - event: push
         branch: [dev, main]
+        path:
+          include: ['windows/**', '.woodpecker.yaml']
+          exclude: ['windows/**/*.md']
 
   # --------------------------------------------------------------------------
   # 1b. Failure Notification: Report test failures directly to GitHub PR
@@ -82,6 +107,11 @@ steps:
       GITHUB_TOKEN:
         from_secret: github_token
     commands:
+      - |
+        if [ ! -f .xctest-failed ]; then
+          echo "XCTest did not fail; the failure came from another step."
+          exit 0
+        fi
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state failure --description "XCTest execution failed. See PR details." || true
       - python3 ./scripts/report-pr-failure.py /tmp/test-output.log
     when:
