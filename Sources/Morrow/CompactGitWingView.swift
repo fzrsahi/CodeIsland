@@ -62,6 +62,8 @@ struct CompactGitStandbyWingView: View {
     @ObservedObject var workspaceManager: WorkspaceMonitorManager
     var appState: AppState
     var isDynamicIslandCompact: Bool = false
+    var isWideMode: Bool = false
+    var maxContentWidth: CGFloat? = nil
     var onTap: (() -> Void)? = nil
 
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
@@ -105,29 +107,15 @@ struct CompactGitStandbyWingView: View {
     var body: some View {
         let fontSize: CGFloat = isDynamicIslandCompact ? 11 : 10.5
 
-        HStack(spacing: 7) {
-            switch displayState {
-            case .modified(let modified):
-                modifiedToken(count: modified, fontSize: fontSize)
-            case .ahead(let ahead):
-                HStack(spacing: 4) {
-                    unpushedToken(ahead: ahead, fontSize: fontSize)
-                    branchGlyph(color: primaryAutoColor)
-                }
-            case .clean:
-                HStack(spacing: 3) {
-                    branchGlyph(color: cleanColor)
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 8.5, weight: .bold))
-                        .foregroundStyle(cleanColor)
-                }
-            case .nonRepo:
-                Image(systemName: "folder")
-                    .font(.system(size: 9.5, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.45))
+        Group {
+            if isWideMode {
+                wideBody(fontSize: fontSize)
+            } else {
+                compactBody(fontSize: fontSize)
             }
         }
-        .fixedSize()
+        .fixedSize(horizontal: !isWideMode, vertical: false)
+        .frame(maxWidth: isWideMode ? maxContentWidth : nil, alignment: .trailing)
         .contentShape(Rectangle())
         .onAppear {
             if workspaceManager.currentCwd.isEmpty || !workspaceManager.isGitRepo {
@@ -141,33 +129,247 @@ struct CompactGitStandbyWingView: View {
     }
 
     @ViewBuilder
-    private func unpushedToken(ahead: Int, fontSize: CGFloat) -> some View {
-        HStack(spacing: 1) {
-            Image(systemName: "arrow.up")
-                .font(.system(size: 8.5, weight: .bold))
-            Text("\(ahead)")
-                .font(.system(size: fontSize, weight: .bold, design: .monospaced))
-                .monospacedDigit()
+    private func compactBody(fontSize: CGFloat) -> some View {
+        HStack(spacing: isPixel ? 5 : 7) {
+            switch displayState {
+            case .modified(let modified):
+                modifiedToken(count: modified, fontSize: fontSize)
+            case .ahead(let ahead):
+                HStack(spacing: 4) {
+                    unpushedToken(ahead: ahead, fontSize: fontSize)
+                    branchGlyph(color: isPixel ? Pixel16Palette.cyan : primaryAutoColor)
+                }
+            case .clean:
+                HStack(spacing: isPixel ? 4 : 3) {
+                    let color = isPixel ? Pixel16Palette.cyan : cleanColor
+                    branchGlyph(color: color)
+                    if isPixel {
+                        WorkspacePixelIcon(glyph: .check, color: color, pixelSize: 1.2)
+                    } else {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 8.5, weight: .bold))
+                            .foregroundStyle(color)
+                    }
+                }
+            case .nonRepo:
+                if isPixel {
+                    WorkspacePixelIcon(glyph: .folder, color: Pixel16Palette.textDim, pixelSize: 1.25)
+                } else {
+                    Image(systemName: "folder")
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.45))
+                }
+            }
         }
-        .foregroundStyle(primaryAutoColor)
+    }
+
+    /// Strips conventional type prefixes (feat/, fix/, etc.) on long branches so meaningful IDs/slugs stay visible.
+    private static func compactBranchLabel(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "main" }
+        if trimmed.count > 10, let slash = trimmed.firstIndex(of: "/") {
+            let afterSlash = trimmed[trimmed.index(after: slash)...]
+            if !afterSlash.isEmpty {
+                return String(afterSlash)
+            }
+        }
+        return trimmed
+    }
+
+    private var pixelWideTelemetryEstimatedWidth: CGFloat {
+        let px: CGFloat = 1.0
+        let charStep = 6.0 * px
+        switch displayState {
+        case .modified(let modified):
+            let ins = max(0, workspaceManager.insertions)
+            let del = max(0, workspaceManager.deletions)
+            if ins > 0 || del > 0 {
+                let insWidth = ins > 0 ? CGFloat("+\(ins)".count) * charStep : 0
+                let delWidth = del > 0 ? CGFloat("-\(del)".count) * charStep : 0
+                let gap: CGFloat = (ins > 0 && del > 0) ? 4 : 0
+                return insWidth + delWidth + gap
+            }
+            return CGFloat("\(modified)M".count) * charStep
+        case .ahead(let ahead):
+            return 10 + 2 + CGFloat("\(ahead)".count) * charStep
+        case .clean:
+            return 10
+        case .nonRepo:
+            return 0
+        }
+    }
+
+    private var pixelWideMaxBranchChars: Int {
+        let px: CGFloat = 1.0
+        let charStep = 6.0 * px
+        guard let maxW = maxContentWidth, maxW > 0 else { return 8 }
+        // Reserve: branch icon (~10pt) + inner spacing (4pt) + outer HStack spacing (5pt) + telemetry + 4pt safety margin
+        let overhead = 10 + 4 + 5 + pixelWideTelemetryEstimatedWidth + 4
+        let remaining = max(0, maxW - overhead)
+        return max(3, Int(floor(remaining / charStep)))
+    }
+
+    @ViewBuilder
+    private func wideBody(fontSize: CGFloat) -> some View {
+        let branchColor: Color = isPixel ? Pixel16Palette.cyan : primaryAutoColor
+        let labelFont: Font = .system(size: 10, weight: .bold, design: .monospaced)
+        let statFont: Font = .system(size: 10, weight: .bold, design: .monospaced)
+        let branchLabel = Self.compactBranchLabel(workspaceManager.branch)
+        let rawProject = workspaceManager.projectName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let projectLabel = rawProject.isEmpty ? "Workspace" : rawProject
+        let maxPixelChars = pixelWideMaxBranchChars
+
+        HStack(spacing: isPixel ? 5 : 6) {
+            switch displayState {
+            case .nonRepo:
+                if isPixel {
+                    WorkspacePixelIcon(glyph: .folder, color: Pixel16Palette.textMuted, pixelSize: 1.1)
+                    PixelText(text: projectLabel, color: Pixel16Palette.textWhite, pixelSize: 1.0, maxChars: maxPixelChars)
+                } else {
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.65))
+                    Text(projectLabel)
+                        .font(labelFont)
+                        .foregroundStyle(Color.white.opacity(0.85))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            default:
+                HStack(spacing: 4) {
+                    branchGlyph(color: branchColor)
+                    if isPixel {
+                        PixelText(text: branchLabel, color: Pixel16Palette.textWhite, pixelSize: 1.0, maxChars: maxPixelChars)
+                    } else {
+                        Text(branchLabel)
+                            .font(labelFont)
+                            .foregroundStyle(Color.white.opacity(0.92))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                }
+
+                wideTelemetryToken(statFont: statFont)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func wideTelemetryToken(statFont: Font) -> some View {
+        switch displayState {
+        case .modified(let modified):
+            let ins = max(0, workspaceManager.insertions)
+            let del = max(0, workspaceManager.deletions)
+            if ins > 0 || del > 0 {
+                HStack(spacing: isPixel ? 4 : 3) {
+                    if ins > 0 {
+                        if isPixel {
+                            PixelText(text: "+\(ins)", color: Pixel16Palette.cyan, pixelSize: 1.0)
+                        } else {
+                            Text("+\(ins)")
+                                .font(statFont)
+                                .monospacedDigit()
+                                .foregroundStyle(Color(red: 0.20, green: 0.85, blue: 0.58))
+                        }
+                    }
+                    if del > 0 {
+                        if isPixel {
+                            PixelText(text: "-\(del)", color: Pixel16Palette.red, pixelSize: 1.0)
+                        } else {
+                            Text("-\(del)")
+                                .font(statFont)
+                                .monospacedDigit()
+                                .foregroundStyle(Color(red: 1.0, green: 0.42, blue: 0.42))
+                        }
+                    }
+                }
+                .fixedSize()
+            } else {
+                if isPixel {
+                    PixelText(text: "\(modified)M", color: Pixel16Palette.amber, pixelSize: 1.0)
+                        .fixedSize()
+                } else {
+                    Text("\(modified)M")
+                        .font(statFont)
+                        .monospacedDigit()
+                        .foregroundStyle(secondaryAutoColor)
+                        .fixedSize()
+                }
+            }
+        case .ahead(let ahead):
+            HStack(spacing: isPixel ? 2 : 1) {
+                if isPixel {
+                    WorkspacePixelIcon(glyph: .push, color: Pixel16Palette.cyan, pixelSize: 1.05)
+                    PixelText(text: "\(ahead)", color: Pixel16Palette.cyan, pixelSize: 1.0)
+                } else {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 8, weight: .bold))
+                    Text("\(ahead)")
+                        .font(statFont)
+                        .monospacedDigit()
+                }
+            }
+            .foregroundStyle(isPixel ? Pixel16Palette.cyan : primaryAutoColor)
+            .fixedSize()
+        case .clean:
+            if isPixel {
+                WorkspacePixelIcon(glyph: .check, color: Pixel16Palette.cyan, pixelSize: 1.05)
+                    .fixedSize()
+            } else {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 8.5, weight: .bold))
+                    .foregroundStyle(cleanColor)
+                    .fixedSize()
+            }
+        case .nonRepo:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func unpushedToken(ahead: Int, fontSize: CGFloat) -> some View {
+        let color = isPixel ? Pixel16Palette.cyan : primaryAutoColor
+        HStack(spacing: isPixel ? 2 : 1) {
+            if isPixel {
+                WorkspacePixelIcon(glyph: .push, color: color, pixelSize: 1.2)
+                PixelText(text: "\(ahead)", color: color, pixelSize: 1.4)
+            } else {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 8.5, weight: .bold))
+                Text("\(ahead)")
+                    .font(.system(size: fontSize, weight: .bold, design: .monospaced))
+                    .monospacedDigit()
+            }
+        }
+        .foregroundStyle(color)
     }
 
     @ViewBuilder
     private func modifiedToken(count: Int, fontSize: CGFloat) -> some View {
-        HStack(spacing: 2.5) {
-            branchGlyph(color: secondaryAutoColor)
-            Text("\(count)")
-                .font(.system(size: fontSize, weight: .bold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundStyle(secondaryAutoColor)
+        let color = isPixel ? Pixel16Palette.amber : secondaryAutoColor
+        HStack(spacing: isPixel ? 5 : 2.5) {
+            branchGlyph(color: color)
+            if isPixel {
+                PixelText(text: "\(count)", color: color, pixelSize: 1.4)
+            } else {
+                Text("\(count)")
+                    .font(.system(size: fontSize, weight: .bold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(color)
+            }
         }
     }
 
     @ViewBuilder
     private func branchGlyph(color: Color) -> some View {
-        GitBranchGlyph(color: color)
-            .frame(width: 10, height: 11)
-            .fixedSize()
+        if isPixel {
+            WorkspacePixelIcon(glyph: .branch, color: color, pixelSize: isWideMode ? 1.1 : 1.3)
+                .fixedSize()
+        } else {
+            GitBranchGlyph(color: color)
+                .frame(width: 10, height: 11)
+                .fixedSize()
+        }
     }
 }
 

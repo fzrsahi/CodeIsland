@@ -620,7 +620,11 @@ struct NotchPanelView: View {
             }
             return min(musicBaseline, cap)
         }
-        // Standby / Minimal Git-only right wing:
+        // Standby / Git right wing:
+        // Strict width lock during Thinking: never expand the notch beyond the left wing's Thinking width.
+        if isThinking {
+            return effectiveNaturalLeftWidth + badgeReserve
+        }
         let standbyBaseline = min(
             CompactGitStatusModel.estimatedBaselineWidth(
                 isGitRepo: workspaceManager.isGitRepo,
@@ -2692,10 +2696,15 @@ private struct CompactRightWing: View {
 
     @ViewBuilder
     private var standbyPill: some View {
+        let wideMaxWidth: CGFloat? = (!expanded && wingWidth > 0)
+            ? max(0, collapsedMaxInnerWidth - totalRightInnerPadding - badgeReserve)
+            : nil
         CompactGitStandbyWingView(
             workspaceManager: workspaceManager,
             appState: appState,
             isDynamicIslandCompact: isDynamicIslandCompact,
+            isWideMode: isThinking && (!isDynamicIslandCompact || hasNotch),
+            maxContentWidth: wideMaxWidth,
             onTap: {
                 withAnimation(NotchAnimation.open) {
                     expandedTab = workspaceManager.isGitRepo ? .workspace : .agents
