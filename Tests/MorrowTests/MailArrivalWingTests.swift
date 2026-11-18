@@ -326,4 +326,70 @@ final class MailArrivalWingTests: XCTestCase {
         SoundManager.shared.playMailArrivalSound(now: baseDate.addingTimeInterval(5.0))
         XCTAssertEqual(played, ["modern_mail", "8bit_mail"])
     }
+
+    func testLocalNaiveISOTimestampAndLiveRelativeTime() throws {
+        let wita = try XCTUnwrap(TimeZone(secondsFromGMT: 8 * 3600))
+        let received = try XCTUnwrap(MailItem.parseISO8601Date("2026-11-18T12:00:00", timeZone: wita))
+
+        // Naive AppleScript `«class isot»` timestamp must be treated as local time (UTC+8), not UTC.
+        let zoned = try XCTUnwrap(MailItem.parseISO8601Date("2026-11-18T12:00:00+08:00", timeZone: wita))
+        XCTAssertEqual(received.timeIntervalSince1970, zoned.timeIntervalSince1970, accuracy: 0.5)
+
+        let item = MailItem(
+            id: 42,
+            senderRaw: "Azhar <azhar@example.com>",
+            senderName: "Azhar",
+            senderEmail: "azhar@example.com",
+            subject: "PR Review",
+            dateReceived: "just now",
+            receivedDate: received,
+            isRead: false
+        )
+
+        XCTAssertEqual(item.relativeDateText(now: received.addingTimeInterval(30)), "just now")
+        XCTAssertEqual(item.relativeDateText(now: received.addingTimeInterval(5 * 60)), "5m ago")
+        XCTAssertEqual(item.relativeDateText(now: received.addingTimeInterval(2 * 3600)), "2h ago")
+        XCTAssertEqual(item.relativeDateText(now: received.addingTimeInterval(26 * 3600)), "yesterday")
+        XCTAssertEqual(item.relativeDateText(now: received.addingTimeInterval(3 * 86400)), "3d ago")
+    }
+
+    func testSyncedUnreadCountMatchesRecentItemsInvariant() {
+        // When parsed items is empty on a settled matching epoch, unreadCount must clear to 0
+        // (never stay stuck at 28 while body shows All Caught Up).
+        XCTAssertEqual(
+            MailManager.resolveSyncedUnreadCount(
+                parsedRecentCount: 28,
+                parsedItemsCount: 0,
+                currentUnreadCount: 28,
+                epochMatched: true,
+                hasCompletedBaseline: true
+            ),
+            0
+        )
+
+        // With parsed items present, use max(parsedRecentCount, parsedItemsCount).
+        XCTAssertEqual(
+            MailManager.resolveSyncedUnreadCount(
+                parsedRecentCount: 12,
+                parsedItemsCount: 6,
+                currentUnreadCount: 0,
+                epochMatched: true,
+                hasCompletedBaseline: true
+            ),
+            12
+        )
+
+        // When an optimistic arrival jump bumped epoch while refresh was in flight, keep currentUnreadCount
+        // until the queued follow-up refresh lands.
+        XCTAssertEqual(
+            MailManager.resolveSyncedUnreadCount(
+                parsedRecentCount: 0,
+                parsedItemsCount: 0,
+                currentUnreadCount: 1,
+                epochMatched: false,
+                hasCompletedBaseline: true
+            ),
+            1
+        )
+    }
 }

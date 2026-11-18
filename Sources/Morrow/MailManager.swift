@@ -12,7 +12,28 @@ public struct MailItem: Identifiable, Equatable, Sendable {
     public let senderEmail: String
     public let subject: String
     public let dateReceived: String
+    public let receivedDate: Date?
     public var isRead: Bool
+
+    public init(
+        id: Int,
+        senderRaw: String,
+        senderName: String,
+        senderEmail: String,
+        subject: String,
+        dateReceived: String,
+        receivedDate: Date? = nil,
+        isRead: Bool
+    ) {
+        self.id = id
+        self.senderRaw = senderRaw
+        self.senderName = senderName
+        self.senderEmail = senderEmail
+        self.subject = subject
+        self.dateReceived = dateReceived
+        self.receivedDate = receivedDate
+        self.isRead = isRead
+    }
 
     public var avatarInitials: String {
         let trimmed = senderName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -57,18 +78,28 @@ public struct MailItem: Identifiable, Equatable, Sendable {
     }
 
     /// Parses an ISO8601 or Mail AppleScript timestamp into a `Date`.
-    public static func parseISO8601Date(_ raw: String) -> Date? {
+    public static func parseISO8601Date(_ raw: String, timeZone: TimeZone = .current) -> Date? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty || trimmed.lowercased() == "recent" { return nil }
 
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]
-        if let parsed = formatter.date(from: trimmed) {
+        // Respect explicit timezone suffixes (`Z`, `+08:00`, etc.) first.
+        let zonedFormatter = ISO8601DateFormatter()
+        zonedFormatter.formatOptions = [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime, .withTimeZone]
+        if let parsed = zonedFormatter.date(from: trimmed) {
+            return parsed
+        }
+
+        // AppleScript `«class isot»` omits timezone and encodes local wall-clock time.
+        let localISOFormatter = ISO8601DateFormatter()
+        localISOFormatter.timeZone = timeZone
+        localISOFormatter.formatOptions = [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]
+        if let parsed = localISOFormatter.date(from: trimmed) {
             return parsed
         }
 
         let df = DateFormatter()
         df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = timeZone
         df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         if let parsed = df.date(from: trimmed) {
             return parsed
@@ -76,6 +107,7 @@ public struct MailItem: Identifiable, Equatable, Sendable {
 
         let df2 = DateFormatter()
         df2.locale = Locale(identifier: "en_US_POSIX")
+        df2.timeZone = timeZone
         df2.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return df2.date(from: trimmed)
     }
@@ -89,13 +121,9 @@ public struct MailItem: Identifiable, Equatable, Sendable {
         return date >= cutoff
     }
 
-    /// Formats an ISO8601 date string from Apple Mail into relative English time (e.g. "2m ago", "1h ago", "yesterday")
-    public static func parseDateRelative(_ raw: String) -> String {
-        guard let date = parseISO8601Date(raw) else {
-            return "just now"
-        }
-
-        let seconds = Int(Date().timeIntervalSince(date))
+    /// Formats a `Date` into relative English time (e.g. "just now", "2m ago", "1h ago", "yesterday").
+    public static func formatRelativeDate(_ date: Date, now: Date = Date()) -> String {
+        let seconds = Int(now.timeIntervalSince(date))
         if seconds < 60 {
             return "just now"
         } else if seconds < 3600 {
@@ -112,6 +140,20 @@ public struct MailItem: Identifiable, Equatable, Sendable {
                 return "\(days)d ago"
             }
         }
+    }
+
+    /// Formats an ISO8601 date string from Apple Mail into relative English time (e.g. "2m ago", "1h ago", "yesterday")
+    public static func parseDateRelative(_ raw: String, now: Date = Date()) -> String {
+        guard let date = parseISO8601Date(raw) else {
+            return "just now"
+        }
+        return formatRelativeDate(date, now: now)
+    }
+
+    /// Computes live relative time from `receivedDate` when available, falling back to `dateReceived`.
+    public func relativeDateText(now: Date = Date()) -> String {
+        guard let receivedDate else { return dateReceived }
+        return Self.formatRelativeDate(receivedDate, now: now)
     }
 }
 
@@ -484,7 +526,6 @@ public final class MailManager: ObservableObject {
     }
 
     private func handleObservedUnreadCount(_ count: Int, triggerDetailFetch: Bool) {
-        unreadObservationEpoch += 1
         let isSettled = hasCompletedInitialBaseline && Date() >= baselineSettledAt
         let jump = Self.evaluateUnreadCountJump(
             newCount: count,
@@ -504,6 +545,7 @@ public final class MailManager: ObservableObject {
         }
 
         if jump.shouldTrigger {
+            unreadObservationEpoch += 1
             pendingCountTriggeredArrivals += 1
             unreadCount += 1
             let placeholder = MailItem(
@@ -611,7 +653,7 @@ public final class MailManager: ObservableObject {
                                 set olderStreak to 0
                                 if not (read status of m) then
                                     set recentUnreadCount to recentUnreadCount + 1
-                                    if parsedCount < 6 then
+                                    if parsedCount < 35 then
                                         set msgId to id of m
                                         set msgSender to sender of m as string
                                         set msgSubj to subject of m as string
@@ -674,6 +716,26 @@ public final class MailManager: ObservableObject {
         return (newCount > prev, newCount)
     }
 
+    /// Keeps 7-day `unreadCount` consistent with `recentMails` when parsing a `refresh()` snapshot.
+    nonisolated public static func resolveSyncedUnreadCount(
+        parsedRecentCount: Int?,
+        parsedItemsCount: Int,
+        currentUnreadCount: Int,
+        epochMatched: Bool,
+        hasCompletedBaseline: Bool
+    ) -> Int {
+        guard epochMatched || !hasCompletedBaseline else {
+            return currentUnreadCount
+        }
+        guard parsedItemsCount > 0 else {
+            return 0
+        }
+        if let recentCount = parsedRecentCount {
+            return max(recentCount, parsedItemsCount)
+        }
+        return parsedItemsCount
+    }
+
     /// Evaluates whether the latest unread item represents a brand-new email arrival after the initial baseline
     public static func evaluateArrival(
         topItem: MailItem?,
@@ -730,7 +792,8 @@ public final class MailManager: ObservableObject {
                 }
                 let senderRaw = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
                 let subject = fields[2].trimmingCharacters(in: .whitespacesAndNewlines)
-                let dateReceived = MailItem.parseDateRelative(rawDate)
+                let receivedDate = MailItem.parseISO8601Date(rawDate)
+                let dateReceived = receivedDate.map { MailItem.formatRelativeDate($0) } ?? "just now"
                 let (name, email) = MailItem.parseSender(senderRaw)
 
                 let item = MailItem(
@@ -740,19 +803,20 @@ public final class MailManager: ObservableObject {
                     senderEmail: email,
                     subject: subject.isEmpty ? "(No Subject)" : subject,
                     dateReceived: dateReceived,
+                    receivedDate: receivedDate,
                     isRead: false
                 )
                 parsedItems.append(item)
             }
         }
 
-        if let recentCount = parsedRecentCount {
-            if startedAtEpoch == self.unreadObservationEpoch || !self.hasCompletedInitialBaseline {
-                self.unreadCount = max(recentCount, parsedItems.count)
-            }
-        } else {
-            self.unreadCount = parsedItems.count
-        }
+        self.unreadCount = Self.resolveSyncedUnreadCount(
+            parsedRecentCount: parsedRecentCount,
+            parsedItemsCount: parsedItems.count,
+            currentUnreadCount: self.unreadCount,
+            epochMatched: startedAtEpoch == self.unreadObservationEpoch,
+            hasCompletedBaseline: self.hasCompletedInitialBaseline
+        )
 
         // Detect new mail arrival strictly AFTER initial baseline has completed and settled.
         let hadCompletedBaseline = self.hasCompletedInitialBaseline
@@ -826,7 +890,11 @@ public final class MailManager: ObservableObject {
             self.unreadCount = max(0, self.unreadCount - 1)
             self.totalInboxUnreadCount = max(0, self.totalInboxUnreadCount - 1)
             self.baselineTotalInboxUnread = self.totalInboxUnreadCount
-            self.unreadObservationEpoch += 1
+        }
+
+        // Prefetch the next page in background before the local buffer runs empty.
+        if self.recentMails.count <= 4 && self.unreadCount > self.recentMails.count {
+            self.refresh(checkRemote: false, queueIfBusy: true)
         }
 
         Task.detached(priority: .userInitiated) {
