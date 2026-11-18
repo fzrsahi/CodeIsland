@@ -5711,6 +5711,7 @@ private struct SessionListView: View {
                 LazyVStack(spacing: listSpacing) {
                     listRows
                 }
+                .id(groupingMode)
             } else {
                 VStack(spacing: listSpacing) {
                     listRows
@@ -5803,19 +5804,29 @@ private struct SessionListView: View {
             .frame(maxWidth: .infinity, minHeight: 65)
             .padding(.vertical, 8)
         } else {
-            ForEach(groups, id: \.header) { group in
+            let flatRows: [SessionListRowItem] = groups.flatMap { group in
+                var items: [SessionListRowItem] = []
                 if !group.header.isEmpty {
+                    items.append(.header(id: group.header, title: group.header, source: group.source))
+                }
+                items.append(contentsOf: group.ids.map { .session(id: $0) })
+                return items
+            }
+
+            ForEach(flatRows) { row in
+                switch row {
+                case .header(_, let title, let source):
                     HStack(spacing: 6) {
                         if isPixelRetro {
                             PixelIcon(glyph: .agents, color: accentColor, pixelSize: 1.1)
-                            PixelText(text: "// \(group.header.uppercased())", color: accentColor, pixelSize: 1.1)
+                            PixelText(text: "// \(title.uppercased())", color: accentColor, pixelSize: 1.1)
                         } else {
-                            if let src = group.source, let icon = cliIcon(source: src) {
+                            if let src = source, let icon = cliIcon(source: src) {
                                 Image(nsImage: icon)
                                     .resizable()
                                     .frame(width: 14, height: 14)
                             }
-                            Text(group.header)
+                            Text(title)
                                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                                 .foregroundStyle(.white.opacity(0.5))
                         }
@@ -5824,9 +5835,8 @@ private struct SessionListView: View {
                     .padding(.horizontal, 12)
                     .padding(.top, 6)
                     .padding(.bottom, 2)
-                }
 
-                ForEach(group.ids, id: \.self) { sessionId in
+                case .session(let sessionId):
                     if let session = appState.sessions[sessionId] {
                         let approvalIdx = approvalIndices[sessionId]
                         let hasHiddenQ = session.status == .waitingQuestion
@@ -5856,6 +5866,18 @@ private struct SessionListView: View {
                     appState.surface = .sessionList
                     appState.cancelCompletionQueue()
                 }
+            }
+        }
+    }
+
+    private enum SessionListRowItem: Identifiable {
+        case header(id: String, title: String, source: String?)
+        case session(id: String)
+
+        var id: String {
+            switch self {
+            case .header(let id, _, _): return "header:\(id)"
+            case .session(let id): return "session:\(id)"
             }
         }
     }
