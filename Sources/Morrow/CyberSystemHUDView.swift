@@ -2,32 +2,67 @@ import SwiftUI
 import AppKit
 import MorrowCore
 
-// MARK: - MagSafe Charging Dynamic Island Banner
+// MARK: - MagSafe & Power Charging Dynamic Island Banner
 
 public struct MagSafeChargingBanner: View {
     let batteryLevel: Int
     var displayMode: IslandDisplayMode = .notch
+    var powerState: PowerBannerState? = nil
     var onDismiss: (() -> Void)? = nil
+    @ObservedObject private var sys = SystemMonitorManager.shared
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
     @State private var pulseRing = false
-    @State private var pixelPulse = false
+    @State private var isHovered = false
 
     private var isPixel: Bool {
         islandUITheme == IslandUITheme.pixel.rawValue
     }
 
-    public init(batteryLevel: Int, displayMode: IslandDisplayMode = .notch, onDismiss: (() -> Void)? = nil) {
+    public init(
+        batteryLevel: Int,
+        displayMode: IslandDisplayMode = .notch,
+        powerState: PowerBannerState? = nil,
+        onDismiss: (() -> Void)? = nil
+    ) {
         self.batteryLevel = batteryLevel
         self.displayMode = displayMode
+        self.powerState = powerState
         self.onDismiss = onDismiss
     }
 
-    private var chargingGreen: Color {
-        Color(red: 0.19, green: 0.82, blue: 0.35) // Apple MagSafe Emerald (#30D158)
+    private var effectiveState: PowerBannerState {
+        powerState ?? sys.activeBannerState
     }
 
-    private var cyberCyan: Color {
-        Color(red: 0.0, green: 0.96, blue: 0.83) // Cyberpunk Neon Cyan
+    private var effectiveBattery: Int {
+        sys.showChargingBanner ? sys.activeBannerBatteryLevel : batteryLevel
+    }
+
+    private var stateColor: Color {
+        switch effectiveState {
+        case .charging, .fullyCharged:
+            return Color(red: 0.19, green: 0.82, blue: 0.35) // Apple Emerald (#30D158)
+        case .chargingOnHold:
+            return Color(red: 1.0, green: 0.72, blue: 0.20) // Warm Amber
+        case .lowBattery:
+            return Color(red: 1.0, green: 0.27, blue: 0.23) // Alert Red (#FF453A)
+        }
+    }
+
+    private var modernIconName: String {
+        switch effectiveState {
+        case .charging, .lowBattery: return "bolt.fill"
+        case .chargingOnHold: return "pause.fill"
+        case .fullyCharged: return "checkmark"
+        }
+    }
+
+    private var pixelGlyph: PixelIconGlyph {
+        switch effectiveState {
+        case .charging, .lowBattery: return .bolt
+        case .chargingOnHold: return .pause
+        case .fullyCharged: return .checkmark
+        }
     }
 
     public var body: some View {
@@ -40,44 +75,59 @@ public struct MagSafeChargingBanner: View {
                 modernChargingBanner
             }
         }
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
         .onAppear {
             withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) {
                 pulseRing = true
             }
-            withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
-                pixelPulse = true
-            }
         }
     }
 
-    /// Flush full-pill MagSafe toast endorsed in Round 2 (@agungdunggio): zero nested gray card border.
+    /// Flush full-pill toast for non-notch Dynamic Island single-row bar.
     private var dynamicIslandFlushBanner: some View {
         HStack(spacing: 9) {
             ZStack {
                 Circle()
-                    .fill(chargingGreen.opacity(0.20))
+                    .fill(stateColor.opacity(0.20))
                     .frame(width: 24, height: 24)
                     .overlay(
                         Circle()
-                            .strokeBorder(chargingGreen.opacity(0.45), lineWidth: 1)
+                            .strokeBorder(stateColor.opacity(0.45), lineWidth: 1)
                     )
 
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Color(red: 0.29, green: 0.87, blue: 0.50))
-                    .scaleEffect(pulseRing ? 1.08 : 0.96)
+                if isPixel {
+                    PixelIcon(glyph: pixelGlyph, color: stateColor, pixelSize: 1.1)
+                } else {
+                    Image(systemName: modernIconName)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(stateColor)
+                        .scaleEffect(pulseRing ? 1.08 : 0.96)
+                }
             }
 
-            Text("MagSafe Charging")
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
-                .lineLimit(1)
+            if isPixel {
+                PixelText(text: effectiveState.title.uppercased(), color: .white, pixelSize: 1.2)
+            } else {
+                Text(effectiveState.title)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+            }
 
             Spacer(minLength: 12)
 
-            Text("\(batteryLevel)%")
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color(red: 0.29, green: 0.87, blue: 0.50))
+            if isPixel {
+                PixelText(text: "\(effectiveBattery)%", color: stateColor, pixelSize: 1.35)
+            } else {
+                Text("\(effectiveBattery)%")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(stateColor)
+            }
         }
         .padding(.leading, 8)
         .padding(.trailing, 15)
@@ -89,146 +139,129 @@ public struct MagSafeChargingBanner: View {
                 onDismiss()
             }
         }
-        .help("MagSafe Charging — Click to dismiss")
+        .help("\(effectiveState.title) — Click to dismiss")
     }
 
-    // MARK: - 1. Pixel Retro 16-Bit Cyber Cartridge Banner (Impeccable Lineless)
+    // MARK: - 1. Pixel 32-Bit Power Banner (Smooth Pixel Ring + Bolt Left, PixelText, % Right)
 
     private var pixelChargingBanner: some View {
-        HStack(spacing: 8) {
-            // Recessed Energy Core Slot
+        let pct = max(0.06, min(1.0, Double(effectiveBattery) / 100.0))
+
+        return HStack(spacing: 14) {
             ZStack {
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 10, weight: .black))
-                    .foregroundStyle(chargingGreen)
-                    .shadow(color: chargingGreen.opacity(0.85), radius: 3)
-                    .scaleEffect(pixelPulse ? 1.1 : 0.95)
-            }
-            .frame(width: 22, height: 22)
-            .pixel16Bevel(raised: false, cornerRadius: 3.5, fillColor: Pixel16Palette.slot)
-
-            Text("MAGSAFE")
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.white)
-                .lineLimit(1)
-
-            Spacer(minLength: 8)
-
-            // Percentage & 5-Segment Discrete Solid Charge Meter
-            HStack(spacing: 5) {
-                Text("\(batteryLevel)%")
-                    .font(.system(size: 12, weight: .black, design: .monospaced))
-                    .foregroundStyle(Color.white)
-
-                // 5-Segment discrete solid charge bar
-                HStack(spacing: 1.5) {
-                    ForEach(0..<5, id: \.self) { idx in
-                        let isFilled = batteryLevel >= (idx * 20 + 10)
-                        Rectangle()
-                            .fill(isFilled ? chargingGreen : Color.white.opacity(0.12))
-                            .frame(width: 3, height: 7)
+                Canvas { ctx, size in
+                    let cx = size.width / 2
+                    let cy = size.height / 2
+                    let radius: CGFloat = 17.0
+                    let steps = 72
+                    for i in 0..<steps {
+                        let t = Double(i) / Double(steps)
+                        let angle = t * Double.pi * 2.0 - Double.pi / 2.0
+                        let px = (cx + cos(angle) * radius).rounded()
+                        let py = (cy + sin(angle) * radius).rounded()
+                        let rect = CGRect(x: px - 1.25, y: py - 1.25, width: 2.5, height: 2.5)
+                        if t <= pct {
+                            ctx.fill(Path(rect), with: .color(stateColor))
+                        } else {
+                            ctx.fill(Path(rect), with: .color(Color.white.opacity(0.14)))
+                        }
                     }
                 }
-                .padding(.horizontal, 3)
-                .padding(.vertical, 2)
-                .pixel16Bevel(raised: false, cornerRadius: 2, fillColor: Pixel16Palette.slot)
+                .frame(width: 44, height: 44)
+
+                PixelIcon(glyph: pixelGlyph, color: .white, pixelSize: 1.55)
+                    .scaleEffect(pulseRing ? 1.06 : 0.96)
             }
 
-            if let onDismiss = onDismiss {
-                Button(action: {
-                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                    onDismiss()
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 7, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.4))
-                        .frame(width: 14, height: 14)
-                }
-                .buttonStyle(.plain)
-                .help("Dismiss")
+            VStack(alignment: .leading, spacing: 4) {
+                PixelText(text: effectiveState.title.uppercased(), color: .white, pixelSize: 1.55)
+                Text(effectiveState.subtitle)
+                    .font(.system(size: 11.5, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.58))
+                    .lineLimit(1)
             }
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 4.5)
-        .pixel16Bevel(raised: false, cornerRadius: 6, fillColor: Pixel16Palette.chassis)
-        .padding(.horizontal, 6)
-        .padding(.bottom, 3)
-    }
-
-    // MARK: - 2. Modern Clean Dynamic Island Fluid Glass Banner
-
-    private var modernChargingBanner: some View {
-        HStack(spacing: 8) {
-            // Glowing MagSafe Energy Puck
-            ZStack {
-                Circle()
-                    .stroke(Color.white.opacity(0.12), lineWidth: 1.8)
-                    .frame(width: 22, height: 22)
-
-                Circle()
-                    .trim(from: 0.0, to: max(0.08, CGFloat(batteryLevel) / 100.0))
-                    .stroke(chargingGreen, style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
-                    .frame(width: 22, height: 22)
-                    .rotationEffect(.degrees(-90))
-                    .shadow(color: chargingGreen.opacity(0.4), radius: 2)
-
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 8.5, weight: .bold))
-                    .foregroundStyle(chargingGreen)
-                    .scaleEffect(pulseRing ? 1.1 : 0.95)
-            }
-
-            Text("MagSafe")
-                .font(.system(size: 10.5, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .lineLimit(1)
 
             Spacer(minLength: 8)
 
-            HStack(spacing: 5) {
-                Text("\(batteryLevel)%")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+            HStack(spacing: 8) {
+                PixelText(text: "\(effectiveBattery)%", color: .white, pixelSize: 2.4)
 
-                // Mini hardware battery indicator
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .stroke(Color.white.opacity(0.35), lineWidth: 0.8)
-                        .frame(width: 16, height: 8)
-
-                    RoundedRectangle(cornerRadius: 1, style: .continuous)
-                        .fill(chargingGreen)
-                        .frame(width: max(2, 12 * CGFloat(batteryLevel) / 100.0), height: 4.8)
-                        .padding(.leading, 1.6)
+                if let onDismiss, isHovered {
+                    dismissButton(onDismiss: onDismiss)
+                        .transition(.opacity)
                 }
-            }
-
-            if let onDismiss = onDismiss {
-                Button(action: {
-                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                    onDismiss()
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 7, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.4))
-                        .frame(width: 14, height: 14)
-                }
-                .buttonStyle(.plain)
-                .help("Dismiss")
             }
         }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 4.5)
-        .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(Color.white.opacity(0.06))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .stroke(Color.white.opacity(0.10), lineWidth: 0.6)
-                )
-        )
-        .padding(.horizontal, 6)
-        .padding(.bottom, 3)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+    }
+
+    // MARK: - 2. Modern Clean Dynamic Island Banner (Ref #3: Ring + Bolt Left, 2-Line Stack, Hero % Right)
+
+    private var modernChargingBanner: some View {
+        let pct = max(0.06, min(1.0, CGFloat(effectiveBattery) / 100.0))
+
+        return HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .stroke(stateColor.opacity(0.22), lineWidth: 5.0)
+                    .frame(width: 42, height: 42)
+
+                Circle()
+                    .trim(from: 0.0, to: pct)
+                    .stroke(stateColor, style: StrokeStyle(lineWidth: 5.0, lineCap: .round))
+                    .frame(width: 42, height: 42)
+                    .rotationEffect(.degrees(-90))
+
+                Image(systemName: modernIconName)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .scaleEffect(pulseRing ? 1.06 : 0.96)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(effectiveState.title)
+                    .font(.system(size: 16.5, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
+                Text(effectiveState.subtitle)
+                    .font(.system(size: 12.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.56))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 8) {
+                Text("\(effectiveBattery)%")
+                    .font(.system(size: 25, weight: .regular, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+
+                if let onDismiss, isHovered {
+                    dismissButton(onDismiss: onDismiss)
+                        .transition(.opacity)
+                }
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+    }
+
+    private func dismissButton(onDismiss: @escaping () -> Void) -> some View {
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            onDismiss()
+        }) {
+            Image(systemName: "xmark")
+                .font(.system(size: 8.5, weight: .bold))
+                .foregroundStyle(Color.white.opacity(0.55))
+                .frame(width: 18, height: 18)
+                .background(Circle().fill(Color.white.opacity(0.10)))
+        }
+        .buttonStyle(.plain)
+        .help("Dismiss")
     }
 }
 

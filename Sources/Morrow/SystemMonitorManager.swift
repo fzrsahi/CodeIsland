@@ -3,6 +3,66 @@ import AppKit
 import IOKit.ps
 import Darwin
 
+public enum PowerAdapterKind: String, CaseIterable, Sendable, Equatable {
+    case magSafe
+    case usbC
+    case ac
+
+    public var label: String {
+        switch self {
+        case .magSafe: return "MagSafe"
+        case .usbC: return "USB-C"
+        case .ac: return "AC Power"
+        }
+    }
+}
+
+public enum PowerBannerState: Equatable, Sendable {
+    case charging(kind: PowerAdapterKind, watts: Int?, timeToFullMinutes: Int?)
+    case chargingOnHold(kind: PowerAdapterKind, watts: Int?)
+    case fullyCharged(kind: PowerAdapterKind)
+    case lowBattery
+
+    public var title: String {
+        switch self {
+        case .charging(let kind, _, _):
+            switch kind {
+            case .magSafe: return "MagSafe Charging"
+            case .usbC: return "USB-C Charging"
+            case .ac: return "Charging"
+            }
+        case .chargingOnHold: return "Charging On Hold"
+        case .fullyCharged: return "Fully Charged"
+        case .lowBattery: return "Low Battery"
+        }
+    }
+
+    public var subtitle: String {
+        switch self {
+        case .charging(let kind, let watts, let mins):
+            var parts: [String] = []
+            if let watts, watts > 0 {
+                parts.append("\(watts)W \(kind.label)")
+            } else {
+                parts.append("Charger connected")
+            }
+            if let mins, mins > 0, mins < 600 {
+                parts.append("~\(mins)m left")
+            }
+            return parts.joined(separator: " · ")
+        case .chargingOnHold(let kind, let watts):
+            if let watts, watts > 0 {
+                return "Optimized Charging · \(watts)W \(kind.label)"
+            }
+            return "Optimized Charging · \(kind.label)"
+        case .fullyCharged(let kind):
+            return "\(kind.label) Connected"
+        case .lowBattery:
+            return "Connect power adapter"
+        }
+    }
+}
+
 public struct SystemMetrics: Sendable, Equatable {
     public var cpuUsagePercent: Double = 0.0
     public var memoryUsedGB: Double = 0.0
@@ -13,6 +73,7 @@ public struct SystemMetrics: Sendable, Equatable {
     public var batteryLevel: Int = 100
     public var isCharging: Bool = false
     public var isACPowered: Bool = true
+    public var powerBannerState: PowerBannerState = .charging(kind: .magSafe, watts: nil, timeToFullMinutes: nil)
 }
 
 @MainActor
@@ -21,6 +82,8 @@ public final class SystemMonitorManager: ObservableObject {
 
     @Published public private(set) var metrics = SystemMetrics()
     @Published public var showChargingBanner: Bool = false
+    @Published public private(set) var activeBannerState: PowerBannerState = .charging(kind: .magSafe, watts: nil, timeToFullMinutes: nil)
+    @Published public private(set) var activeBannerBatteryLevel: Int = 100
     private var chargingDismissWorkItem: DispatchWorkItem?
 
     public func dismissChargingBanner() {
@@ -31,7 +94,17 @@ public final class SystemMonitorManager: ObservableObject {
         }
     }
 
-    public func triggerChargingBanner() {
+    public func triggerChargingBanner(previewState: PowerBannerState? = nil, previewBatteryLevel: Int? = nil) {
+        if let previewState {
+            activeBannerState = previewState
+        } else {
+            activeBannerState = metrics.powerBannerState
+        }
+        if let previewBatteryLevel {
+            activeBannerBatteryLevel = previewBatteryLevel
+        } else {
+            activeBannerBatteryLevel = metrics.batteryLevel
+        }
         showChargingBanner = true
         NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
         chargingDismissWorkItem?.cancel()
@@ -50,6 +123,8 @@ public final class SystemMonitorManager: ObservableObject {
     private var previousCpuLoad: host_cpu_load_info?
     private var previousNetworkBytes: (inBytes: UInt64, outBytes: UInt64, time: Date)?
     private var lastChargingState: Bool?
+    private var lastACState: Bool?
+    private var lastLowBatteryAlerted: Bool = false
     /// IOKit's power-source change source: the charger is an event, not a poll.
     private var powerSourceRunLoopSource: CFRunLoopSource?
     private var isDisplayAsleep = false
@@ -110,15 +185,28 @@ public final class SystemMonitorManager: ObservableObject {
     /// A power-source event: the charger was plugged in or pulled. Only the
     /// power fields are re-read; the gauges are not running a timer here.
     private func powerSourceChanged() {
-        let (battery, isCharging, isAC) = readPowerStatus()
-        if lastChargingState == false, isCharging {
-            triggerChargingBanner()
+        let (battery, isCharging, isAC, bannerState) = readPowerStatus()
+        let becameCharging = (lastChargingState == false && isCharging)
+        let becameAC = (lastACState == false && isAC)
+        let becameLowBattery = (!isAC && battery <= 20 && !lastLowBatteryAlerted)
+        if isAC || battery > 25 {
+            lastLowBatteryAlerted = false
+        } else if becameLowBattery {
+            lastLowBatteryAlerted = true
         }
+
         lastChargingState = isCharging
-        if metrics.batteryLevel != battery || metrics.isCharging != isCharging || metrics.isACPowered != isAC {
+        lastACState = isAC
+
+        if metrics.batteryLevel != battery || metrics.isCharging != isCharging || metrics.isACPowered != isAC || metrics.powerBannerState != bannerState {
             metrics.batteryLevel = battery
             metrics.isCharging = isCharging
             metrics.isACPowered = isAC
+            metrics.powerBannerState = bannerState
+        }
+
+        if becameCharging || becameAC || becameLowBattery {
+            triggerChargingBanner()
         }
     }
 
@@ -163,15 +251,18 @@ public final class SystemMonitorManager: ObservableObject {
         let cpu = readCpuUsage()
         let (memUsed, memTotal, memPct) = readMemoryUsage()
         let (downSpeed, upSpeed) = readNetworkSpeeds()
-        let (battery, isCharging, isAC) = readPowerStatus()
+        let (battery, isCharging, isAC, bannerState) = readPowerStatus()
 
-        // Check for charger connection event (MagSafe animation trigger)
-        if let lastState = lastChargingState {
-            if !lastState && isCharging {
-                triggerChargingBanner()
-            }
+        let becameCharging = (lastChargingState == false && isCharging)
+        let becameAC = (lastACState == false && isAC)
+        let becameLowBattery = (!isAC && battery <= 20 && !lastLowBatteryAlerted)
+        if isAC || battery > 25 {
+            lastLowBatteryAlerted = false
+        } else if becameLowBattery {
+            lastLowBatteryAlerted = true
         }
         lastChargingState = isCharging
+        lastACState = isAC
 
         let newMetrics = SystemMetrics(
             cpuUsagePercent: cpu,
@@ -182,9 +273,14 @@ public final class SystemMonitorManager: ObservableObject {
             uploadBytesPerSec: upSpeed,
             batteryLevel: battery,
             isCharging: isCharging,
-            isACPowered: isAC
+            isACPowered: isAC,
+            powerBannerState: bannerState
         )
         if metrics != newMetrics { metrics = newMetrics }
+
+        if becameCharging || becameAC || becameLowBattery {
+            triggerChargingBanner()
+        }
     }
 
     // MARK: - CPU Load via host_statistics
@@ -273,23 +369,61 @@ public final class SystemMonitorManager: ObservableObject {
 
     // MARK: - Power & Battery Status via IOKit
 
-    private func readPowerStatus() -> (batteryLevel: Int, isCharging: Bool, isAC: Bool) {
+    private func readPowerStatus() -> (batteryLevel: Int, isCharging: Bool, isAC: Bool, bannerState: PowerBannerState) {
+        let (adapterKind, watts) = readExternalPowerAdapterDetails()
+
         guard let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
               let sources = IOPSCopyPowerSourcesList(snapshot)?.takeRetainedValue() as? [CFTypeRef],
               !sources.isEmpty else {
-            return (100, false, true)
+            return (100, false, true, .fullyCharged(kind: adapterKind))
         }
 
         for source in sources {
             guard let desc = IOPSGetPowerSourceDescription(snapshot, source)?.takeUnretainedValue() as? [String: Any] else { continue }
             let curCapacity = desc[kIOPSCurrentCapacityKey as String] as? Int ?? 100
             let isCharging = desc[kIOPSIsChargingKey as String] as? Bool ?? false
+            let isCharged = desc[kIOPSIsChargedKey as String] as? Bool ?? false
             let powerSourceState = desc[kIOPSPowerSourceStateKey as String] as? String
             let isAC = (powerSourceState == (kIOPSACPowerValue as String))
-            return (curCapacity, isCharging, isAC)
+            let timeToFull = desc[kIOPSTimeToFullChargeKey as String] as? Int
+
+            let bannerState: PowerBannerState
+            if isAC {
+                if isCharging {
+                    bannerState = .charging(kind: adapterKind, watts: watts, timeToFullMinutes: timeToFull)
+                } else if isCharged || curCapacity >= 100 {
+                    bannerState = .fullyCharged(kind: adapterKind)
+                } else {
+                    bannerState = .chargingOnHold(kind: adapterKind, watts: watts)
+                }
+            } else if curCapacity <= 20 {
+                bannerState = .lowBattery
+            } else {
+                bannerState = .charging(kind: adapterKind, watts: watts, timeToFullMinutes: nil)
+            }
+
+            return (curCapacity, isCharging, isAC, bannerState)
         }
 
-        return (100, false, true)
+        return (100, false, true, .fullyCharged(kind: adapterKind))
+    }
+
+    private func readExternalPowerAdapterDetails() -> (kind: PowerAdapterKind, watts: Int?) {
+        guard let details = IOPSCopyExternalPowerAdapterDetails()?.takeRetainedValue() as? [String: Any] else {
+            return (.ac, nil)
+        }
+        let watts = details[kIOPSPowerAdapterWattsKey as String] as? Int
+        let name = (details["Name"] as? String ?? details["Description"] as? String ?? "").lowercased()
+        let familyCode = details[kIOPSPowerAdapterFamilyKey as String] as? Int
+
+        if name.contains("magsafe") {
+            return (.magSafe, watts)
+        }
+        // Apple USB-C PD family code is 0xe000400a (-536854518 signed)
+        if name.contains("usb-c") || name.contains("usb c") || name.contains("pd") || familyCode == Int(bitPattern: 0xe000400a) {
+            return (.usbC, watts)
+        }
+        return (.ac, watts)
     }
 
     // Formatters

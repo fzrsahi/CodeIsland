@@ -2,15 +2,27 @@ import SwiftUI
 import MorrowCore
 
 /// Minimalist, Impeccable Mini Peek Notification Banner for Prayer times.
-/// Single-line ultra-clean Dynamic Island design.
+/// Seamless notch-integrated 3-line Dynamic Island design with Modern Clean & Pixel 32-bit parity.
 public struct PrayerMiniPeekBannerView: View {
     @ObservedObject var manager: PrayerTimeManager
     var onOpenFull: () -> Void
 
+    @ObservedObject private var nowPlaying = NowPlayingManager.shared
     @AppStorage(SettingsKey.islandUITheme) private var islandUITheme = SettingsDefaults.islandUITheme
+    @AppStorage(SettingsKey.musicHUDProgressColor) private var musicHUDProgressColor = SettingsDefaults.musicHUDProgressColor
+    @AppStorage(SettingsKey.syncThemeWithAlbumArt) private var syncThemeWithAlbumArt = SettingsDefaults.syncThemeWithAlbumArt
+    @State private var isHovered = false
 
     private var isPixel: Bool {
         islandUITheme == IslandUITheme.pixel.rawValue
+    }
+
+    private var pixelAccent: Color {
+        _ = syncThemeWithAlbumArt
+        _ = nowPlaying.albumPalette
+        return AppColorTheme.readableOnDark(
+            AppColorTheme.accent(for: musicHUDProgressColor, isModern: false)
+        )
     }
 
     public init(manager: PrayerTimeManager, onOpenFull: @escaping () -> Void) {
@@ -34,18 +46,36 @@ public struct PrayerMiniPeekBannerView: View {
     private var statusBadge: String {
         let diff = manager.minutesUntilNextPrayer
         if diff <= 0 {
-            return "NOW"
+            return isPixel ? "NOW" : "now"
         }
-        return "-\(diff)M"
+        return isPixel ? "-\(diff)M" : "-\(diff)m"
     }
 
     private var prayerTimeString: String {
         if let next = manager.upcomingPrayer {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "HH:mm"
-            return formatter.string(from: next.date)
+            return manager.formattedPrayerTime(next.date)
         }
         return manager.currentTimeString
+    }
+
+    private var subtitleLine: String {
+        let sub = manager.miniPeekBannerSubtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !sub.isEmpty {
+            return sub
+        }
+        let diff = manager.minutesUntilNextPrayer
+        if diff <= 0 {
+            return "Prayer time at \(prayerTimeString)"
+        }
+        return "Adhan at \(prayerTimeString) · \(manager.currentPhase.displayName)"
+    }
+
+    private var titleLine: String {
+        let diff = manager.minutesUntilNextPrayer
+        if diff > 0 {
+            return "\(prayerName) in \(diff) min"
+        }
+        return prayerName
     }
 
     public var body: some View {
@@ -62,129 +92,124 @@ public struct PrayerMiniPeekBannerView: View {
             }
         }
         .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
     }
 
-    // MARK: - 1. Pixel Retro Single-Line Minimalist Banner
+    // MARK: - 1. Pixel 32-Bit Clean 3-Line Banner (No Brackets, PixelText, Adaptive Color)
 
     private var pixelBanner: some View {
-        HStack(spacing: 8) {
-            // Recessed Celestial Slot
+        HStack(spacing: 14) {
             ZStack {
-                Image(systemName: "moon.stars.fill")
-                    .font(.system(size: 10, weight: .black))
-                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                    .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.85), radius: 3)
+                PixelIcon(glyph: .prayer, color: pixelAccent, pixelSize: 2.3)
             }
-            .frame(width: 22, height: 22)
-            .pixel16Bevel(raised: false, cornerRadius: 3.5, fillColor: Pixel16Palette.slot)
+            .frame(width: 44, height: 44)
+            .pixel16Bevel(raised: false, cornerRadius: 6, fillColor: Pixel16Palette.slot)
 
-            // Prayer Name
-            Text(prayerName.uppercased())
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.white)
-                .lineLimit(1)
+            VStack(alignment: .leading, spacing: 3.5) {
+                HStack(alignment: .center, spacing: 8) {
+                    PixelText(
+                        text: "PRAYER · \(manager.cityName.uppercased())",
+                        color: Color.white.opacity(0.58),
+                        pixelSize: 1.15
+                    )
 
-            Spacer(minLength: 8)
+                    Spacer(minLength: 8)
 
-            // Status Badge & Time
-            HStack(spacing: 4.5) {
-                Text(statusBadge)
-                    .font(.system(size: 8, weight: .black, design: .monospaced))
-                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1.5)
-                    .pixel16Bevel(raised: false, cornerRadius: 2, fillColor: Pixel16Palette.slot)
-
-                Text(prayerTimeString)
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Pixel16Palette.textMuted)
-            }
-
-            // Minimal dismiss button
-            Button(action: {
-                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    manager.dismissMiniPeekBanner()
+                    PixelText(
+                        text: statusBadge,
+                        color: pixelAccent,
+                        pixelSize: 1.2
+                    )
                 }
-            }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 7, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.4))
-                    .frame(width: 14, height: 14)
+
+                PixelText(
+                    text: titleLine.uppercased(),
+                    color: .white,
+                    pixelSize: 1.55
+                )
+
+                Text(subtitleLine)
+                    .font(.system(size: 11.5, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.68))
+                    .lineLimit(1)
             }
-            .buttonStyle(.plain)
-            .help("Dismiss")
+
+            if isHovered {
+                dismissButton
+                    .transition(.opacity)
+            }
         }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 4.5)
-        .pixel16Bevel(raised: false, cornerRadius: 6, fillColor: Pixel16Palette.chassis)
-        .padding(.horizontal, 6)
-        .padding(.bottom, 3)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
     }
 
-    // MARK: - 2. Modern Clean Single-Line Minimalist Banner
+    // MARK: - 2. Modern Clean Notch-Integrated 3-Line Banner (Ref #2)
 
     private var modernBanner: some View {
-        HStack(spacing: 8) {
-            // Phase icon capsule
+        HStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(manager.currentPhase.accentColor.opacity(0.18))
-                    .frame(width: 22, height: 22)
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(manager.currentPhase.accentColor)
+                    .frame(width: 44, height: 44)
+
                 Image(systemName: manager.currentPhase.systemImage)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(manager.currentPhase.accentColor)
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(.white)
             }
 
-            Text(prayerName)
-                .font(.system(size: 10.5, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .lineLimit(1)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .center, spacing: 8) {
+                    Text("Prayer · \(manager.cityName)")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.56))
+                        .lineLimit(1)
 
-            Spacer(minLength: 8)
+                    Spacer(minLength: 8)
 
-            HStack(spacing: 4.5) {
-                Text(statusBadge)
-                    .font(.system(size: 8, weight: .bold, design: .rounded))
-                    .padding(.horizontal, 4.5)
-                    .padding(.vertical, 1.5)
-                    .background(
-                        Capsule()
-                            .fill(manager.currentPhase.accentColor.opacity(0.25))
-                    )
-                    .foregroundStyle(manager.currentPhase.accentColor)
-
-                Text(prayerTimeString)
-                    .font(.system(size: 9.5, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.white.opacity(0.55))
-            }
-
-            // Minimal dismiss button
-            Button(action: {
-                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    manager.dismissMiniPeekBanner()
+                    Text(statusBadge)
+                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.52))
                 }
-            }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 7, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.4))
-                    .frame(width: 14, height: 14)
+
+                Text(titleLine)
+                    .font(.system(size: 15.5, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
+                Text(subtitleLine)
+                    .font(.system(size: 13, weight: .regular, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.68))
+                    .lineLimit(1)
             }
-            .buttonStyle(.plain)
-            .help("Dismiss")
+
+            if isHovered {
+                dismissButton
+                    .transition(.opacity)
+            }
         }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 4.5)
-        .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(Color.white.opacity(0.06))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .stroke(Color.white.opacity(0.10), lineWidth: 0.6)
-                )
-        )
-        .padding(.horizontal, 6)
-        .padding(.bottom, 3)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+    }
+
+    private var dismissButton: some View {
+        Button(action: {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                manager.dismissMiniPeekBanner()
+            }
+        }) {
+            Image(systemName: "xmark")
+                .font(.system(size: 8.5, weight: .bold))
+                .foregroundStyle(Color.white.opacity(0.55))
+                .frame(width: 18, height: 18)
+                .background(Circle().fill(Color.white.opacity(0.10)))
+        }
+        .buttonStyle(.plain)
+        .help("Dismiss")
     }
 }
