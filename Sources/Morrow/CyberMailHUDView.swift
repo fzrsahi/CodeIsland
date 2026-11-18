@@ -199,7 +199,7 @@ private struct ModernCleanMailHUDContentView: View {
                         .foregroundStyle(Color.white)
                         .lineLimit(1)
 
-                    Text(mail.dateReceived)
+                    MailRelativeTimeText(mail: mail)
                         .font(.system(size: 9.5, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.40))
                 }
@@ -395,7 +395,7 @@ private struct RetroCyberMailHUDContentView: View {
                         .foregroundStyle(themeColor)
                         .lineLimit(1)
 
-                    Text(mail.dateReceived)
+                    MailRelativeTimeText(mail: mail)
                         .font(.system(size: 9, weight: .regular, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.35))
                 }
@@ -490,5 +490,20 @@ private struct RetroCyberMailHUDContentView: View {
         }
         .padding(.vertical, 14)
         .frame(maxWidth: .infinity)
+    }
+}
+
+/// Refreshes relative timestamp labels once per minute while the Mail HUD is visible.
+private struct MailRelativeTimeText: View {
+    let mail: MailItem
+
+    var body: some View {
+        if mail.receivedDate != nil {
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                Text(mail.relativeDateText(now: context.date))
+            }
+        } else {
+            Text(mail.dateReceived)
+        }
     }
 }

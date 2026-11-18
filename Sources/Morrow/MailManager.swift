@@ -12,7 +12,28 @@ public struct MailItem: Identifiable, Equatable, Sendable {
     public let senderEmail: String
     public let subject: String
     public let dateReceived: String
+    public let receivedDate: Date?
     public var isRead: Bool
+
+    public init(
+        id: Int,
+        senderRaw: String,
+        senderName: String,
+        senderEmail: String,
+        subject: String,
+        dateReceived: String,
+        receivedDate: Date? = nil,
+        isRead: Bool
+    ) {
+        self.id = id
+        self.senderRaw = senderRaw
+        self.senderName = senderName
+        self.senderEmail = senderEmail
+        self.subject = subject
+        self.dateReceived = dateReceived
+        self.receivedDate = receivedDate
+        self.isRead = isRead
+    }
 
     public var avatarInitials: String {
         let trimmed = senderName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -57,18 +78,28 @@ public struct MailItem: Identifiable, Equatable, Sendable {
     }
 
     /// Parses an ISO8601 or Mail AppleScript timestamp into a `Date`.
-    public static func parseISO8601Date(_ raw: String) -> Date? {
+    public static func parseISO8601Date(_ raw: String, timeZone: TimeZone = .current) -> Date? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty || trimmed.lowercased() == "recent" { return nil }
 
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]
-        if let parsed = formatter.date(from: trimmed) {
+        // Respect explicit timezone suffixes (`Z`, `+08:00`, etc.) first.
+        let zonedFormatter = ISO8601DateFormatter()
+        zonedFormatter.formatOptions = [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime, .withTimeZone]
+        if let parsed = zonedFormatter.date(from: trimmed) {
+            return parsed
+        }
+
+        // AppleScript `«class isot»` omits timezone and encodes local wall-clock time.
+        let localISOFormatter = ISO8601DateFormatter()
+        localISOFormatter.timeZone = timeZone
+        localISOFormatter.formatOptions = [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]
+        if let parsed = localISOFormatter.date(from: trimmed) {
             return parsed
         }
 
         let df = DateFormatter()
         df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = timeZone
         df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         if let parsed = df.date(from: trimmed) {
             return parsed
@@ -76,6 +107,7 @@ public struct MailItem: Identifiable, Equatable, Sendable {
 
         let df2 = DateFormatter()
         df2.locale = Locale(identifier: "en_US_POSIX")
+        df2.timeZone = timeZone
         df2.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return df2.date(from: trimmed)
     }
@@ -89,13 +121,9 @@ public struct MailItem: Identifiable, Equatable, Sendable {
         return date >= cutoff
     }
 
-    /// Formats an ISO8601 date string from Apple Mail into relative English time (e.g. "2m ago", "1h ago", "yesterday")
-    public static func parseDateRelative(_ raw: String) -> String {
-        guard let date = parseISO8601Date(raw) else {
-            return "just now"
-        }
-
-        let seconds = Int(Date().timeIntervalSince(date))
+    /// Formats a `Date` into relative English time (e.g. "just now", "2m ago", "1h ago", "yesterday").
+    public static func formatRelativeDate(_ date: Date, now: Date = Date()) -> String {
+        let seconds = Int(now.timeIntervalSince(date))
         if seconds < 60 {
             return "just now"
         } else if seconds < 3600 {
@@ -112,6 +140,20 @@ public struct MailItem: Identifiable, Equatable, Sendable {
                 return "\(days)d ago"
             }
         }
+    }
+
+    /// Formats an ISO8601 date string from Apple Mail into relative English time (e.g. "2m ago", "1h ago", "yesterday")
+    public static func parseDateRelative(_ raw: String, now: Date = Date()) -> String {
+        guard let date = parseISO8601Date(raw) else {
+            return "just now"
+        }
+        return formatRelativeDate(date, now: now)
+    }
+
+    /// Computes live relative time from `receivedDate` when available, falling back to `dateReceived`.
+    public func relativeDateText(now: Date = Date()) -> String {
+        guard let receivedDate else { return dateReceived }
+        return Self.formatRelativeDate(receivedDate, now: now)
     }
 }
 
@@ -730,7 +772,8 @@ public final class MailManager: ObservableObject {
                 }
                 let senderRaw = fields[1].trimmingCharacters(in: .whitespacesAndNewlines)
                 let subject = fields[2].trimmingCharacters(in: .whitespacesAndNewlines)
-                let dateReceived = MailItem.parseDateRelative(rawDate)
+                let receivedDate = MailItem.parseISO8601Date(rawDate)
+                let dateReceived = receivedDate.map { MailItem.formatRelativeDate($0) } ?? "just now"
                 let (name, email) = MailItem.parseSender(senderRaw)
 
                 let item = MailItem(
@@ -740,6 +783,7 @@ public final class MailManager: ObservableObject {
                     senderEmail: email,
                     subject: subject.isEmpty ? "(No Subject)" : subject,
                     dateReceived: dateReceived,
+                    receivedDate: receivedDate,
                     isRead: false
                 )
                 parsedItems.append(item)
