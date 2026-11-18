@@ -67,9 +67,7 @@ public struct MagSafeChargingBanner: View {
 
     public var body: some View {
         Group {
-            if displayMode == .dynamicIsland {
-                dynamicIslandFlushBanner
-            } else if isPixel {
+            if isPixel {
                 pixelChargingBanner
             } else {
                 modernChargingBanner
@@ -86,60 +84,6 @@ public struct MagSafeChargingBanner: View {
                 pulseRing = true
             }
         }
-    }
-
-    /// Flush full-pill toast for non-notch Dynamic Island single-row bar.
-    private var dynamicIslandFlushBanner: some View {
-        HStack(spacing: 9) {
-            ZStack {
-                Circle()
-                    .fill(stateColor.opacity(0.20))
-                    .frame(width: 24, height: 24)
-                    .overlay(
-                        Circle()
-                            .strokeBorder(stateColor.opacity(0.45), lineWidth: 1)
-                    )
-
-                if isPixel {
-                    PixelIcon(glyph: pixelGlyph, color: stateColor, pixelSize: 1.1)
-                } else {
-                    Image(systemName: modernIconName)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(stateColor)
-                        .scaleEffect(pulseRing ? 1.08 : 0.96)
-                }
-            }
-
-            if isPixel {
-                PixelText(text: effectiveState.title.uppercased(), color: .white, pixelSize: 1.2)
-            } else {
-                Text(effectiveState.title)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 12)
-
-            if isPixel {
-                PixelText(text: "\(effectiveBattery)%", color: stateColor, pixelSize: 1.35)
-            } else {
-                Text("\(effectiveBattery)%")
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundStyle(stateColor)
-            }
-        }
-        .padding(.leading, 8)
-        .padding(.trailing, 15)
-        .padding(.vertical, 7)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if let onDismiss {
-                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
-                onDismiss()
-            }
-        }
-        .help("\(effectiveState.title) — Click to dismiss")
     }
 
     // MARK: - 1. Pixel 32-Bit Power Banner (Smooth Pixel Ring + Bolt Left, PixelText, % Right)

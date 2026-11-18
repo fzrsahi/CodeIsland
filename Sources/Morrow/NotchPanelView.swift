@@ -527,9 +527,12 @@ struct NotchPanelView: View {
     }
 
     private var dynamicIslandShape: AnyShape {
-        if !shouldShowExpanded && !isConnectedChinLyricActive && (!isToastOnly || displayMode == .dynamicIsland) {
+        if !shouldShowExpanded && !isConnectedChinLyricActive && !isToastOnly {
             // Circular capsule avoids macOS SwiftUI's .continuous hairline offset when cornerRadius == height / 2.
             return AnyShape(Capsule(style: .circular))
+        }
+        if isToastOnly && !shouldShowExpanded {
+            return AnyShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
         return AnyShape(RoundedRectangle(cornerRadius: dynamicIslandCornerRadius, style: .continuous))
     }
@@ -789,6 +792,12 @@ struct NotchPanelView: View {
                 asymmetricEnabled: true
             )
         }
+        if signals.showChargingBanner && !appState.surface.isExpanded {
+            return min(max(440, collapsedNotchGapWidth + symmetricWingWidth * 2), maxPanelWidth)
+        }
+        if signals.showMiniPeekBanner && !appState.surface.isExpanded {
+            return min(max(420, collapsedNotchGapWidth + symmetricWingWidth * 2), maxPanelWidth)
+        }
         if showIdleIndicator {
             return CompactNotchWingGeometry.centerShift(
                 leftWidth: idleLeftIndicatorWingWidth,
@@ -880,6 +889,12 @@ struct NotchPanelView: View {
             let requiredActiveBarWidth = nw + symmetricWingWidth * 2
             return min(max(280, requiredActiveBarWidth), maxPanelWidth)
         }
+        if signals.showChargingBanner && !appState.surface.isExpanded {
+            return min(max(440, collapsedNotchGapWidth + symmetricWingWidth * 2), maxPanelWidth)
+        }
+        if signals.showMiniPeekBanner && !appState.surface.isExpanded {
+            return min(max(420, collapsedNotchGapWidth + symmetricWingWidth * 2), maxPanelWidth)
+        }
         if showIdleIndicator {
             if displayMode == .dynamicIsland && !hasNotch {
                 if mailManager.showMailArrivalAnimation {
@@ -931,13 +946,6 @@ struct NotchPanelView: View {
             return min(CGFloat(width) + prehoverExtra, maxSafe)
         }
         let requiredActiveBarWidth = collapsedNotchGapWidth + collapsedLeftWingWidth + collapsedRightWingWidth
-        if signals.showChargingBanner && !appState.surface.isExpanded {
-            let targetBannerW: CGFloat = (displayMode == .dynamicIsland && !hasNotch) ? 300 : 440
-            return min(max(targetBannerW, requiredActiveBarWidth), maxPanelWidth)
-        }
-        if signals.showMiniPeekBanner && !appState.surface.isExpanded {
-            return min(max(420, requiredActiveBarWidth), maxPanelWidth)
-        }
         let maxSafeCollapsed = maxSafeCollapsedBarWidth
         return min(requiredActiveBarWidth, maxSafeCollapsed)
     }
@@ -1280,36 +1288,14 @@ struct NotchPanelView: View {
     @ViewBuilder
     private var panelChromeBackground: some View {
         if displayMode == .dynamicIsland {
-            let isFlushMagSafeToast = isToastOnly && signals.showChargingBanner && !shouldShowExpanded
-            if isFlushMagSafeToast {
-                dynamicIslandShape
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.black,
-                                Color(red: 0.02, green: 0.086, blue: 0.047),
-                                Color(red: 0.039, green: 0.145, blue: 0.082)
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .overlay(
-                        dynamicIslandShape
-                            .stroke(Color(red: 0.19, green: 0.82, blue: 0.35).opacity(0.38), lineWidth: 1.2)
-                    )
-                    .clipShape(dynamicIslandShape)
-                    .shadow(color: Color.black.opacity(0.45), radius: 10, y: 4)
-            } else {
-                dynamicIslandShape
-                    .fill(Color.black)
-                    .overlay(
-                        dynamicIslandShape
-                            .stroke(Color.white.opacity(0.24), lineWidth: 1.2)
-                    )
-                    .clipShape(dynamicIslandShape)
-                    .shadow(color: Color.black.opacity(0.45), radius: 10, y: 4)
-            }
+            dynamicIslandShape
+                .fill(Color.black)
+                .overlay(
+                    dynamicIslandShape
+                        .stroke(Color.white.opacity(0.20), lineWidth: 1.0)
+                )
+                .clipShape(dynamicIslandShape)
+                .shadow(color: Color.black.opacity(0.45), radius: 10, y: 4)
         } else if appState.isFullscreenMode {
             RoundedRectangle(cornerRadius: 7)
                 .fill(Color.black)
@@ -1342,7 +1328,7 @@ struct NotchPanelView: View {
                 let isFlushNonNotchToast = displayMode == .dynamicIsland && !hasNotch && isToastOnly && !shouldShowExpanded
                 if isFlushNonNotchToast {
                     belowNotchContent
-                        .frame(height: effectiveNotchHeight)
+                        .padding(.vertical, 2)
                 } else {
                     if showBar || shouldShowExpanded {
                         activeCompactBar
