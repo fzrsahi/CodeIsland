@@ -5691,78 +5691,29 @@ private struct SessionListView: View {
                 CompactSessionRowMetrics.statusColumnWidth(fontSize: CompactSessionRowMetrics.statusFontSize(fontSize))
             )
             : (0, 0)
-        let content = VStack(spacing: density == .compact ? CompactSessionRowMetrics.spacing : 6) {
-            if totalSessionCount == 0 {
-                VStack(spacing: 5) {
-                    if isPixelRetro {
-                        PixelIcon(glyph: .agents, color: accentColor, pixelSize: 1.6)
-                        PixelText(text: "NO ACTIVE AGENTS", color: accentColor, pixelSize: 1.1)
-                        Text("// RUN CLAUDE, CODEX, GEMINI, OR CURSOR IN TERMINAL")
-                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.45))
-                    } else {
-                        Image(systemName: "cpu")
-                            .font(.system(size: 16))
-                            .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7))
-                        Text("NO ACTIVE AGENT SESSIONS")
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.85))
-                        Text("Run Claude Code, Gemini CLI, Cursor, or Codex in Terminal to monitor live status.")
-                            .font(.system(size: 7.5, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.45))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
-                    }
+        let approvalIndices: [String: Int] = Dictionary(
+            appState.permissionQueue.enumerated().map { ($0.element.event.sessionId ?? "default", $0.offset) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let activeQuestionSessionId = appState.surface.questionSessionId
+        let listSpacing = density == .compact ? CompactSessionRowMetrics.spacing : 6
+        let listRows = sessionListRows(
+            groups: groups,
+            totalSessionCount: totalSessionCount,
+            density: density,
+            compactColumns: compactColumns,
+            approvalIndices: approvalIndices,
+            activeQuestionSessionId: activeQuestionSessionId
+        )
+
+        let content = Group {
+            if needsScroll {
+                LazyVStack(spacing: listSpacing) {
+                    listRows
                 }
-                .frame(maxWidth: .infinity, minHeight: 65)
-                .padding(.vertical, 8)
             } else {
-                ForEach(groups, id: \.header) { group in
-                    if !group.header.isEmpty {
-                        HStack(spacing: 6) {
-                            if isPixelRetro {
-                                PixelIcon(glyph: .agents, color: accentColor, pixelSize: 1.1)
-                                PixelText(text: "// \(group.header.uppercased())", color: accentColor, pixelSize: 1.1)
-                            } else {
-                                if let src = group.source, let icon = cliIcon(source: src) {
-                                    Image(nsImage: icon)
-                                        .resizable()
-                                        .frame(width: 14, height: 14)
-                                }
-                                Text(group.header)
-                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(.white.opacity(0.5))
-                            }
-                            Spacer()
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.top, 6)
-                        .padding(.bottom, 2)
-                    }
-
-                    ForEach(group.ids, id: \.self) { sessionId in
-                        if let session = appState.sessions[sessionId] {
-                            SessionCard(
-                                appState: appState,
-                                sessionId: sessionId,
-                                session: session,
-                                isCompletion: onlySessionId != nil,
-                                density: density,
-                                compactProjectWidth: compactColumns.project,
-                                compactStatusWidth: compactColumns.status
-                            )
-                        }
-                    }
-                }
-            }
-
-            // "Show all sessions" — hover with delay to expand
-            if onlySessionId != nil && appState.sessions.count > 1 {
-                SessionsExpandLink(count: appState.sessions.count) {
-                    withAnimation(NotchAnimation.open) {
-                        appState.surface = .sessionList
-                        appState.cancelCompletionQueue()
-                    }
+                VStack(spacing: listSpacing) {
+                    listRows
                 }
             }
         }
@@ -5814,6 +5765,97 @@ private struct SessionListView: View {
             // the finished session.
             if onlySessionId == nil {
                 SessionListFooter(appState: appState, showUsageStats: showUsageStats, showClaudeQuota: showClaudeQuota)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func sessionListRows(
+        groups: [(header: String, source: String?, ids: [String])],
+        totalSessionCount: Int,
+        density: SessionListDensity,
+        compactColumns: (project: CGFloat, status: CGFloat),
+        approvalIndices: [String: Int],
+        activeQuestionSessionId: String?
+    ) -> some View {
+        if totalSessionCount == 0 {
+            VStack(spacing: 5) {
+                if isPixelRetro {
+                    PixelIcon(glyph: .agents, color: accentColor, pixelSize: 1.6)
+                    PixelText(text: "NO ACTIVE AGENTS", color: accentColor, pixelSize: 1.1)
+                    Text("// RUN CLAUDE, CODEX, GEMINI, OR CURSOR IN TERMINAL")
+                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.45))
+                } else {
+                    Image(systemName: "cpu")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83).opacity(0.7))
+                    Text("NO ACTIVE AGENT SESSIONS")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.85))
+                    Text("Run Claude Code, Gemini CLI, Cursor, or Codex in Terminal to monitor live status.")
+                        .font(.system(size: 7.5, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.45))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 65)
+            .padding(.vertical, 8)
+        } else {
+            ForEach(groups, id: \.header) { group in
+                if !group.header.isEmpty {
+                    HStack(spacing: 6) {
+                        if isPixelRetro {
+                            PixelIcon(glyph: .agents, color: accentColor, pixelSize: 1.1)
+                            PixelText(text: "// \(group.header.uppercased())", color: accentColor, pixelSize: 1.1)
+                        } else {
+                            if let src = group.source, let icon = cliIcon(source: src) {
+                                Image(nsImage: icon)
+                                    .resizable()
+                                    .frame(width: 14, height: 14)
+                            }
+                            Text(group.header)
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.top, 6)
+                    .padding(.bottom, 2)
+                }
+
+                ForEach(group.ids, id: \.self) { sessionId in
+                    if let session = appState.sessions[sessionId] {
+                        let approvalIdx = approvalIndices[sessionId]
+                        let hasHiddenQ = session.status == .waitingQuestion
+                            && session.cursorPendingQuestion == nil
+                            && appState.pendingQuestion(forSession: sessionId) != nil
+                            && activeQuestionSessionId != sessionId
+                        SessionCard(
+                            appState: appState,
+                            sessionId: sessionId,
+                            session: session,
+                            isCompletion: onlySessionId != nil,
+                            density: density,
+                            compactProjectWidth: compactColumns.project,
+                            compactStatusWidth: compactColumns.status,
+                            approvalQueueIndex: approvalIdx,
+                            hasHiddenPendingQuestion: hasHiddenQ
+                        )
+                    }
+                }
+            }
+        }
+
+        // "Show all sessions" — hover with delay to expand
+        if onlySessionId != nil && appState.sessions.count > 1 {
+            SessionsExpandLink(count: appState.sessions.count) {
+                withAnimation(NotchAnimation.open) {
+                    appState.surface = .sessionList
+                    appState.cancelCompletionQueue()
+                }
             }
         }
     }
@@ -6850,6 +6892,9 @@ private struct SessionCard: View {
     /// Compact rows: column widths every row shares, so the words line up.
     var compactProjectWidth: CGFloat = 150
     var compactStatusWidth: CGFloat = 64
+    var approvalQueueIndex: Int? = nil
+    var hasHiddenPendingQuestion: Bool = false
+    @Environment(\.mascotAnimationsActive) private var mascotAnimationsActive
     @State private var hovering = false
     @State private var deleteHovered = false
     @State private var dragOffset: CGFloat = 0
@@ -6868,10 +6913,8 @@ private struct SessionCard: View {
     @AppStorage(SettingsKey.agentsHUDTheme) private var agentsHUDTheme = SettingsDefaults.agentsHUDTheme
     private var fontSize: CGFloat { CGFloat(contentFontSize) }
     private var aiLineLimit: Int? { aiMessageLines > 0 ? aiMessageLines : nil }
-    private var approvalQueueIndex: Int? {
-        appState.permissionQueue.firstIndex { ($0.event.sessionId ?? "default") == sessionId }
-    }
     private var isActiveApproval: Bool { approvalQueueIndex == 0 }
+    private var cardMascotAnimating: Bool { mascotAnimationsActive && session.status != .idle }
 
     private var isPixelRetro: Bool {
         if islandUITheme == IslandUITheme.pixel.rawValue { return true }
@@ -6887,12 +6930,7 @@ private struct SessionCard: View {
     /// off, Smart Suppress, or queued behind another card): the card itself
     /// cannot answer it, so it offers the way to its card rather than only a
     /// jump to the terminal.
-    private var showsQuestionWaitingRow: Bool {
-        session.status == .waitingQuestion
-            && !showsExternalCursorQuestion
-            && appState.pendingQuestion(forSession: sessionId) != nil
-            && appState.surface.questionSessionId != sessionId
-    }
+    private var showsQuestionWaitingRow: Bool { hasHiddenPendingQuestion }
     private var cardStatus: SessionCardStatus { SessionCardStatus(session) }
     /// The completion card is a full card whatever the density.
     private var isCompactRow: Bool { density == .compact && !isCompletion }
@@ -6949,6 +6987,8 @@ private struct SessionCard: View {
                         isCompactRow: isCompactRow,
                         compactProjectWidth: compactProjectWidth,
                         compactStatusWidth: compactStatusWidth,
+                        approvalQueueIndex: approvalQueueIndex,
+                        hasHiddenPendingQuestion: hasHiddenPendingQuestion,
                         isHovered: hovering,
                         fontSize: fontSize
                     )
@@ -7066,6 +7106,7 @@ private struct SessionCard: View {
     private var mascotColumn: some View {
         VStack(spacing: 3) {
             MascotView(source: session.mascotSource, status: session.status, size: 32)
+                .environment(\.mascotAnimationsActive, cardMascotAnimating)
             if showAgentDetails && !session.subagents.isEmpty {
                 let sorted = session.subagents.values.sorted { $0.startTime < $1.startTime }
                 // Grid: 4 per row, 8px icons
@@ -7373,6 +7414,7 @@ private struct SessionCard: View {
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 MascotView(source: session.mascotSource, status: session.status, size: 18)
+                    .environment(\.mascotAnimationsActive, cardMascotAnimating)
                     .frame(width: 22)
                 Text(session.headline(showProjectName: showProjectName).text)
                     .font(.system(size: fontSize, weight: .bold, design: .monospaced))
