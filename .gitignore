@@ -1,6 +1,7 @@
 # Build artifacts
 .build/
 .swiftpm/
+dist/
 
 # Superpowers artifacts
 .superpowers/
