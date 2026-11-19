@@ -19,3 +19,12 @@ thiserror = "2"
 # `deny`, not `forbid`: a future OS-facing crate (ipc, platform) may `#[allow]`
 # a reviewed unsafe block. Pure crates add `#![forbid(unsafe_code)]` themselves.
 unsafe_code = "deny"
+
+# The bridge runs on every hook call: small and quick to start. Every
+# crate's release build shares this profile.
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

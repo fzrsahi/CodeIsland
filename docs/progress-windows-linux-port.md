@@ -37,7 +37,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 0.5 | #84 | kontrak endpoint (plan §3.1) | `belum` | satu dokumen; semua edge mengikuti |
 | 0.5 | #85 | eksperimen Opsi E (Swift core di Linux) | `belum` | kill criteria ADR-0001 → ADR-0003 atau bukti Rust |
 | 1 | #87, #88 | `chore(#33)`: workspace Rust, protocol, ipc, CI purity | `belum` | `cargo test`; `cargo tree -p morrow-core` bersih |
-| 1 | #89 | `feat(#33)`: bridge untuk `claude` | `belum` | conformance fixtures |
+| 1 | #89 | `feat(#89)`: `morrow-bridge` untuk hook Claude Code (stacked di atas #88) | `sedang` (commit lokal, belum di-push) | conformance fixtures: 23/23 fixture linux yang diklaim; fast exit <10 ms |
 | 1 | #90, #91 | `feat(#33)`: vertical slice island Linux X11 | `belum` | **`E2E-1`** — dua arah, <300 ms, tight-fit, tidak mencuri fokus |
 | 2 | #92 | ekspor fixture reducer + `AttentionPolicy` | `belum` | fixture terbaca lintas bahasa |
 | 2 | #93–#97 | `feat(core)`: intake, reducer, attention, git, markdown, jsonl | `belum` | 100% fixture netral identik |
@@ -58,6 +58,12 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 ---
 
 ## Log Checkpoint
+
+### 2026-11-19 — #89 `morrow-bridge` (claude)
+
+- **Sudah:** crate `shared/crates/morrow-bridge` (bin + lib) di branch `feat/#89-bridge-claude` di atas #88; 23 fixture linux hook Claude lulus in-process (61 di luar scope), 18 test proses (fixture end-to-end, deadline 4 s/5 s/8 s, stdin rusak, bukan-socket), fast exit median 0,21 ms (container) / 1,3 ms (macOS); `morrow-ipc` dapat `Client::send` + `PendingReply::wait`.
+- **Berikutnya:** push + PR stacked di atas #121; #93 memindahkan `intake` ke morrow-core dan menambah source lain.
+- **Blocker:** tidak ada; `E2E-2` (claude asli di host Debian) belum dijalankan.
 
 ### 2026-11-18 (lanjutan 3) — spec + tiket
 
