@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 import Combine
-@preconcurrency import UserNotifications
 import MorrowCore
 
 public enum DayPhase: String, CaseIterable, Sendable {
@@ -84,6 +83,7 @@ public final class PrayerTimeManager: ObservableObject {
     @Published public private(set) var miniPeekBannerTitle: String = ""
     @Published public private(set) var miniPeekBannerSubtitle: String = ""
     @Published public private(set) var testWingPrayer: PrayerType? = nil
+    @Published public private(set) var testWingThinking: Bool = false
     public var simulatedDate: Date? = nil
     private var testWingWorkItem: DispatchWorkItem? = nil
 
@@ -269,7 +269,6 @@ public final class PrayerTimeManager: ObservableObject {
     static func settingsSnapshot(defaults: UserDefaults = .standard) -> [String] {
         [
             SettingsKey.prayerEnabled,
-            SettingsKey.prayerAlertBeforeMinutes,
             SettingsKey.prayerCalculationMethod,
             SettingsKey.prayerHijriCalendarSource,
             SettingsKey.prayerHijriDayOffset,
@@ -330,7 +329,7 @@ public final class PrayerTimeManager: ObservableObject {
             now: now,
             schedule: todaySchedule,
             tomorrowSubuh: tomorrowSubuh,
-            alertMinutes: UserDefaults.standard.integer(forKey: SettingsKey.prayerAlertBeforeMinutes),
+            alertMinutes: 0,
             timeZone: locationService.activeCity.timeZone
         ) else { return }
         let timer = Timer.scheduledTimer(withTimeInterval: max(0.05, wake.timeIntervalSince(now)), repeats: false) { [weak self] _ in
@@ -559,7 +558,7 @@ public final class PrayerTimeManager: ObservableObject {
     }
 
     /// Cycles through the 5 Fardh prayers in the live compact notch right wing for 10 seconds.
-    public func triggerTestCompactWing() {
+    public func triggerTestCompactWing(thinking: Bool = false) {
         let cycle: [PrayerType] = [.subuh, .dzuhur, .ashar, .maghrib, .isya]
         let nextPrayer: PrayerType = {
             guard let current = testWingPrayer, let idx = cycle.firstIndex(of: current) else {
@@ -570,6 +569,7 @@ public final class PrayerTimeManager: ObservableObject {
 
         testWingWorkItem?.cancel()
         testWingPrayer = nextPrayer
+        testWingThinking = thinking
         upcomingPrayer = (nextPrayer, Date().addingTimeInterval(12 * 60))
         minutesUntilNextPrayer = 12
         IslandSignals.shared.setPrayerPrioritized(true)
@@ -578,6 +578,7 @@ public final class PrayerTimeManager: ObservableObject {
         let item = DispatchWorkItem { [weak self] in
             Task { @MainActor in
                 self?.testWingPrayer = nil
+                self?.testWingThinking = false
                 self?.tick(now: Date())
                 IslandSignals.shared.setPrayerPrioritized(self?.isPrayerPrioritized ?? false)
             }
@@ -594,7 +595,10 @@ public final class PrayerTimeManager: ObservableObject {
         }
         scheduleBannerAutoDismiss()
         playChimeIfConfigured()
-        sendSystemNotificationIfConfigured(title: title, subtitle: subtitle)
+    }
+
+    public func previewChime() {
+        NSSound(named: "Glass")?.play()
     }
 
     private func playChimeIfConfigured() {
@@ -609,39 +613,5 @@ public final class PrayerTimeManager: ObservableObject {
             }
         }
         NSSound(named: "Glass")?.play()
-    }
-
-    /// `UNUserNotificationCenter.current()` throws `NSInternalInconsistencyException` when called
-    /// from an unbundled executable (`swift run` or Xcode SwiftPM Debug).
-    public static var canUseSystemNotifications: Bool {
-        Bundle.main.bundleURL.pathExtension == "app" && Bundle.main.bundleIdentifier != nil
-    }
-
-    private func sendSystemNotificationIfConfigured(title: String, subtitle: String) {
-        guard Self.canUseSystemNotifications,
-              UserDefaults.standard.bool(forKey: SettingsKey.prayerSystemNotificationEnabled) else { return }
-
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
-                return
-            }
-            let content = UNMutableNotificationContent()
-            content.title = title
-            content.body = subtitle
-            if UserDefaults.standard.bool(forKey: SettingsKey.prayerSoundEnabled) {
-                content.sound = .default
-            }
-
-            let request = UNNotificationRequest(
-                identifier: "prayer-\(UUID().uuidString)",
-                content: content,
-                trigger: nil
-            )
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("Failed to deliver prayer notification: \(error)")
-                }
-            }
-        }
     }
 }

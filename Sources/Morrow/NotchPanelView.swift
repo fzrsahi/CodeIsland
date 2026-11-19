@@ -382,7 +382,7 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if signals.isPlaying || nowPlaying.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner || mailManager.showMailArrivalAnimation { return true }
+        if signals.isPlaying || nowPlaying.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner || mailManager.showMailArrivalAnimation || PrayerTimeManager.shared.testWingThinking { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
@@ -536,7 +536,7 @@ struct NotchPanelView: View {
 
     /// Derived in `AppState.refreshDerivedState()`; walking every session here
     /// ran on each render of the bar.
-    private var isThinking: Bool { appState.isThinking }
+    private var isThinking: Bool { appState.isThinking || PrayerTimeManager.shared.testWingThinking }
 
     private var hasQuotaChip: Bool {
         guard showAgentDetails, showClaudeQuota, !shouldShowExpanded, !nowPlaying.isPlaying,
@@ -1944,7 +1944,7 @@ private struct CompactLeftWing: View {
         return displayStatus
     }
 
-    private var isThinking: Bool { appState.isThinking }
+    private var isThinking: Bool { appState.isThinking || PrayerTimeManager.shared.testWingThinking }
     private var liveTool: String? { displaySession?.currentTool }
     @State private var shownTool: String?
     @State private var lingerTimer: Timer?
@@ -2311,7 +2311,7 @@ private struct CompactRightWing: View {
     }
     /// Derived in `AppState.refreshDerivedState()`; walking every session here
     /// ran on each render of the bar.
-    private var isThinking: Bool { appState.isThinking }
+    private var isThinking: Bool { appState.isThinking || PrayerTimeManager.shared.testWingThinking }
     private var shouldExpandRightWing: Bool {
         isHovered
     }
