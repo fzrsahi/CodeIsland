@@ -91,7 +91,7 @@ Every PR that needs another machine ships a script that runs its gate and prints
 
 ## Next actions
 
-1. After PR #126 merges: merge `main` into #49 (keep `main`'s `AGENTS.md`/`GEMINI.md`, add the port pointer and the "Agent skills" block), then merge each stack PR's base into it, bottom-up.
+1. After PR #126 merges: merge `main` into #49 (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md` already match #119 plus the port §7 and "Agent skills" sections, so only take `main` elsewhere), then merge each stack PR's base into it, bottom-up.
 2. Resume #94 from `wip/#94-core-reducer` (or restart), branch `feat/#94-…` on top of #128 with #127 merged; then #95 → #96/#97.
 3. #78 once the three endpoint-contract questions on PR #115 are answered.
 4. Collaborator: run `linux/ci/e2e1.sh` on a real X11 desktop (PR #125) — the phase 1 gate.
