@@ -1,10 +1,11 @@
 //! `morrow-app`: the Tauri v2 shell on Linux (ADR-0002). Listens at the
 //! endpoint, reduces each hook into a session list, and shows it in a
-//! tight-fit, nonactivating panel.
+//! tight-fit, nonactivating panel, which answers permission requests.
 
 mod feed;
 mod island;
 mod listener;
+mod permissions;
 mod sessions;
 
 use std::process::ExitCode;
@@ -14,14 +15,21 @@ use morrow_ipc::unix::{Error, Server, current_endpoint};
 use tauri::State;
 use tauri::ipc::Channel;
 
-use crate::feed::Feed;
+use crate::feed::{Feed, Snapshot};
 use crate::island::Smoke;
-use crate::sessions::Snapshot;
+use crate::permissions::Decision;
 
 /// The frontend's channel for snapshots.
 #[tauri::command]
 fn subscribe(feed: State<'_, Arc<Feed>>, channel: Channel<Snapshot>) {
     feed.subscribe(channel);
+}
+
+/// The user's Approve or Deny on card `id`. False if the request is no
+/// longer held (answered already, or its hook gone).
+#[tauri::command]
+fn answer_permission(feed: State<'_, Arc<Feed>>, id: u64, decision: Decision) -> bool {
+    feed.answer(id, decision)
 }
 
 fn main() -> ExitCode {
@@ -45,16 +53,21 @@ fn main() -> ExitCode {
 
     let feed = Arc::new(Feed::default());
     listener::spawn(server, Arc::clone(&feed));
-    Feed::spawn_pusher(Arc::clone(&feed), move |count| {
+    Feed::spawn_pusher(Arc::clone(&feed), move |sessions, cards| {
         if smoke {
-            println!("morrow-smoke: pushed sessions={count}");
+            println!("morrow-smoke: pushed sessions={sessions} cards={cards}");
         }
     });
 
     let result = tauri::Builder::default()
         .manage(feed)
         .manage(Smoke(smoke))
-        .invoke_handler(tauri::generate_handler![subscribe, island::set_island_size])
+        .invoke_handler(tauri::generate_handler![
+            subscribe,
+            answer_permission,
+            island::set_island_size,
+            island::smoke_card
+        ])
         .setup(|app| Ok(island::create(app)?))
         .run(tauri::generate_context!());
     match result {

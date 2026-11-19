@@ -22,6 +22,7 @@ morrow-protocol = { path = "../../crates/morrow-protocol" }
 # depends on this tao/GTK3 generation (ADR-0002). No plugins.
 tauri = { version = "=2.12.7", features = [] }
 serde = { version = "1", features = ["derive"] }
+serde_json.workspace = true
 
 [features]
 default = ["custom-protocol"]

@@ -1,6 +1,7 @@
-//! The calls std does not offer on stable: the process's uid, the umask, and
-//! the credentials of the process at the other end of a Unix socket. Every
-//! unsafe block of the crate is here.
+//! The calls std does not offer on stable: the process's uid, the umask,
+//! the credentials of the process at the other end of a Unix socket, and
+//! whether that process has closed it. Every unsafe block of the crate is
+//! here.
 #![allow(unsafe_code)]
 
 use std::io;
@@ -65,4 +66,23 @@ pub(crate) fn peer_uid(stream: &UnixStream) -> io::Result<u32> {
         return Err(io::Error::last_os_error());
     }
     Ok(uid)
+}
+
+/// Whether the peer of `stream` has closed its end, without waiting:
+/// `POLLHUP` or `POLLERR`. A peer that only half-closed (`shutdown(SHUT_WR)`,
+/// a bridge waiting for its answer) sets neither (Swift
+/// `HookConnection.finishIfPeerGone`).
+pub(crate) fn peer_closed(stream: &UnixStream) -> io::Result<bool> {
+    let mut check = libc::pollfd {
+        fd: stream.as_raw_fd(),
+        events: libc::POLLOUT,
+        revents: 0,
+    };
+    // SAFETY: `check` is one valid pollfd for a live socket borrowed from
+    // `stream`; the count is 1 and the timeout 0, so poll(2) never blocks.
+    let rc = unsafe { libc::poll(&raw mut check, 1, 0) };
+    if rc < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(rc > 0 && check.revents & (libc::POLLHUP | libc::POLLERR) != 0)
 }

@@ -21,13 +21,6 @@ pub struct Session {
     pub updated_at: u64,
 }
 
-/// What the frontend receives (`Snapshot` in `src/App.svelte`).
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub struct Snapshot {
-    /// Newest first; ties by session id, so the order is stable.
-    pub sessions: Vec<Session>,
-}
-
 #[derive(Debug, Default)]
 pub struct Sessions {
     by_id: HashMap<String, Session>,
@@ -50,14 +43,15 @@ impl Sessions {
         self.by_id.insert(session.session_id.clone(), session);
     }
 
-    pub fn snapshot(&self) -> Snapshot {
+    /// Newest first; ties by session id, so the order is stable.
+    pub fn snapshot(&self) -> Vec<Session> {
         let mut sessions: Vec<Session> = self.by_id.values().cloned().collect();
         sessions.sort_by(|a, b| {
             b.updated_at
                 .cmp(&a.updated_at)
                 .then_with(|| a.session_id.cmp(&b.session_id))
         });
-        Snapshot { sessions }
+        sessions
     }
 }
 
@@ -89,7 +83,7 @@ mod tests {
             20,
         );
         assert_eq!(
-            sessions.snapshot().sessions,
+            sessions.snapshot(),
             vec![Session {
                 session_id: "a".into(),
                 source: "codex".into(),
@@ -113,7 +107,6 @@ mod tests {
         );
         let snapshot = sessions.snapshot();
         let rows: Vec<_> = snapshot
-            .sessions
             .iter()
             .map(|s| {
                 (

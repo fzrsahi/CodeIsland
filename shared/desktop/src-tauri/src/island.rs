@@ -16,7 +16,8 @@ pub const LABEL: &str = "island";
 /// (`NotchPanelView.effectiveNotchHeight`, 34 pt).
 const COLLAPSED: (f64, f64) = (240.0, 34.0);
 
-/// `MORROW_SMOKE=1`: print each fit on stdout for linux/ci/smoke-x11.sh.
+/// `MORROW_SMOKE=1`: print each fit and each card's buttons on stdout for
+/// linux/ci/smoke-x11.sh and linux/ci/e2e1.sh.
 pub struct Smoke(pub bool);
 
 pub fn create(app: &App) -> tauri::Result<()> {
@@ -54,6 +55,44 @@ pub fn set_island_size(
         return Err(format!("not an island size: {width}×{height}"));
     }
     fit(&window, width, height, smoke.0).map_err(|e| e.to_string())
+}
+
+/// A rectangle in the window, in logical pixels.
+#[derive(serde::Deserialize)]
+pub struct Rect {
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+}
+
+/// The frontend laid out card `id` and fitted the window to it. Smoke mode
+/// prints the Approve and Deny buttons in window pixels and the time, so
+/// the E2E-1 gate clicks them and times the card. Otherwise nothing.
+#[tauri::command]
+pub fn smoke_card(
+    window: WebviewWindow,
+    smoke: State<'_, Smoke>,
+    id: u64,
+    approve: Rect,
+    deny: Rect,
+) {
+    if !smoke.0 {
+        return;
+    }
+    let at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis());
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let px = |r: &Rect| {
+        let p = |v: f64| (v * scale).round() as i64;
+        format!("{},{},{},{}", p(r.x), p(r.y), p(r.width), p(r.height))
+    };
+    println!(
+        "morrow-smoke: card id={id} approve={} deny={} at={at}",
+        px(&approve),
+        px(&deny)
+    );
 }
 
 fn fit<R: Runtime>(

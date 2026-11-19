@@ -152,6 +152,13 @@ impl Connection {
         Ok(request)
     }
 
+    /// Whether the client has closed the connection (its process gone), not
+    /// just half-closed after its request; answers at once. A held request
+    /// asks now and then, and drops its card when its hook is gone.
+    pub fn peer_gone(&self) -> bool {
+        sys::peer_closed(&self.stream).unwrap_or(true)
+    }
+
     /// Writes the whole reply and closes the connection.
     pub fn reply(mut self, reply: &[u8]) -> io::Result<()> {
         self.stream.write_all(reply)?;
