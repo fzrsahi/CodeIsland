@@ -18,7 +18,7 @@ Accepting this ADR means accepting these as open risks, each with its own gate:
 - **The scope measured is `MorrowCore` only (21.7K LOC).** The ~15–18K LOC of domain logic held in the app target (plan §5.1) was not built. `ConfigInstaller.swift` imports AppKit and Yams. Moving it into a portable target is work Option E still has to do, though it is less work than rewriting it in Rust.
 - **Binary size and dependencies.** A static-stdlib release executable linking all of `MorrowCore` is 58 MB stripped (aarch64) and still links `libsqlite3` and `libcurl` dynamically. No Rust build was measured for comparison. ADR-0002 already does not treat memory or size as deciding.
 - **Sidecar latency.** The JSON-lines boundary is unmeasured against the `E2E-1` <300 ms gate.
-- **Toolchain cost.** CI needs a Swift lane on Linux (and Windows): about 85 s for a cold debug build with tests at `-j 1`, most of it swift-crypto.
+- **Toolchain cost.** CI needs a Swift lane on Linux (and Windows): 86–101 s for a cold debug build with tests at `-j 1`, of which 62–78 s is swift-crypto.
 
 ## Consequences
 

@@ -114,7 +114,7 @@ Informational run of the excluded suites (107 tests, not in the percentage): `Br
 
 ## Sizes and timings
 
-All at `--cpus 2 --memory 1800m`, `-j 1`, Colima on an Apple-silicon Mac (aarch64 Linux guest).
+All at `--cpus 2 --memory 1800m`, `-j 1`, Colima on an Apple-silicon Mac (aarch64 Linux guest). Where two values are given, the first comes from the interactive measurement runs (output read from the terminal, not archived) and the second from the archived `run.sh` run. Only the `run.sh` output was saved as a log.
 
 | Measurement | Result |
 |---|---|
