@@ -96,6 +96,12 @@ impl Permissions {
         self.held.remove(&id).is_some()
     }
 
+    /// Its session ended: every pending card for `session_id` goes, unanswered.
+    pub fn drop_session(&mut self, session_id: &str) {
+        self.held
+            .retain(|_, (card, _)| card.session_id != session_id);
+    }
+
     /// Oldest first.
     pub fn cards(&self) -> Vec<Card> {
         self.held.values().map(|(card, _)| card.clone()).collect()
@@ -196,6 +202,25 @@ mod tests {
         assert_eq!(rx.try_recv(), Err(TryRecvError::Disconnected));
         assert!(!permissions.answer(id, Decision::Allow));
         assert!(!permissions.drop_request(id));
+    }
+
+    #[test]
+    fn dropping_a_session_drops_only_its_cards() {
+        let mut permissions = Permissions::default();
+        let (tx1, rx1) = mpsc::channel();
+        let (tx2, rx2) = mpsc::channel();
+        let other =
+            hook(r#"{"session_id":"s2","hook_event_name":"PermissionRequest","tool_name":"Bash"}"#);
+        permissions.hold(&hook(BASH), tx1);
+        let kept = permissions.hold(&other, tx2);
+
+        permissions.drop_session("s1");
+        assert_eq!(rx1.try_recv(), Err(TryRecvError::Disconnected));
+        assert_eq!(rx2.try_recv(), Err(TryRecvError::Empty));
+        assert_eq!(
+            permissions.cards().iter().map(|c| c.id).collect::<Vec<_>>(),
+            [kept]
+        );
     }
 
     /// The replies as the macOS island writes them, read from its source:

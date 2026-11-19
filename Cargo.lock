@@ -1825,6 +1825,7 @@ dependencies = [
 name = "morrow-app"
 version = "0.0.0"
 dependencies = [
+ "morrow-core",
  "morrow-ipc",
  "morrow-protocol",
  "serde",

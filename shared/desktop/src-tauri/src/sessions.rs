@@ -1,9 +1,10 @@
-//! The trivial reduction of Phase 1 (docs/plan-windows-linux.md §7): one
-//! row per session id, overwritten by its latest hook. `TODO(#93)`: replaced
-//! by morrow-core's `reduce`.
+//! Session reduction backed by `morrow-core::reduce` (`reduceHookEvent`),
+//! projecting `SessionSnapshot` into the panel's `Session` rows.
 
 use std::collections::HashMap;
 
+use morrow_core::intake::SourceCatalog;
+use morrow_core::reduce::{HookEvent, ReduceContext, SideEffect, Timestamp, reduce_hook_event};
 use morrow_protocol::HookPayload;
 use serde::Serialize;
 
@@ -23,29 +24,73 @@ pub struct Session {
 
 #[derive(Debug, Default)]
 pub struct Sessions {
-    by_id: HashMap<String, Session>,
+    inner: morrow_core::reduce::Sessions,
+    last_events: HashMap<String, String>,
+    sources: SourceCatalog,
+    home_directory: String,
 }
 
 impl Sessions {
-    /// Records `payload` as its session's latest hook, arrived at `now_ms`.
-    pub fn apply(&mut self, payload: &HookPayload, now_ms: u64) {
-        let cwd = payload
-            .get("cwd")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default();
-        let session = Session {
-            session_id: payload.session_id().to_owned(),
-            source: payload.source().unwrap_or("claude").to_owned(),
-            last_event: payload.hook_event_name().to_owned(),
-            cwd_name: basename(cwd).to_owned(),
-            updated_at: now_ms,
+    /// Creates a session store whose reducer ignores `home_directory` as a
+    /// bare project `cwd`.
+    pub fn with_home(home_directory: impl Into<String>) -> Self {
+        Self {
+            home_directory: home_directory.into(),
+            ..Self::default()
+        }
+    }
+
+    /// Reduces `payload` at `now_ms`, applying `RemoveSession` effects locally
+    /// and returning all emitted `SideEffect`s for the shell.
+    pub fn apply(&mut self, payload: &HookPayload, now_ms: u64) -> Vec<SideEffect> {
+        let Some(event) = HookEvent::new(payload.as_object().clone(), &self.sources) else {
+            return Vec::new();
         };
-        self.by_id.insert(session.session_id.clone(), session);
+        let clock = || Timestamp(now_ms as f64 / 1000.0);
+        let ctx = ReduceContext {
+            clock: &clock,
+            sources: &self.sources,
+            home_directory: &self.home_directory,
+            max_history: 50,
+            reply_complete_placeholder: "Reply complete",
+        };
+        let reduction = reduce_hook_event(&mut self.inner, &event, &ctx);
+        for effect in &reduction.effects {
+            if let SideEffect::RemoveSession { session_id } = effect {
+                self.inner.remove(session_id);
+                self.last_events.remove(session_id);
+            }
+        }
+        let card_id = event.session_id.as_deref().unwrap_or("default");
+        if self.inner.contains_key(card_id) {
+            self.last_events
+                .insert(card_id.to_owned(), event.event_name);
+        }
+        reduction.effects
     }
 
     /// Newest first; ties by session id, so the order is stable.
     pub fn snapshot(&self) -> Vec<Session> {
-        let mut sessions: Vec<Session> = self.by_id.values().cloned().collect();
+        let mut sessions: Vec<Session> = self
+            .inner
+            .iter()
+            .map(|(session_id, snap)| Session {
+                session_id: session_id.clone(),
+                source: snap.source.clone(),
+                last_event: self
+                    .last_events
+                    .get(session_id)
+                    .cloned()
+                    .unwrap_or_default(),
+                cwd_name: snap
+                    .cwd
+                    .as_deref()
+                    .map(basename)
+                    .unwrap_or_default()
+                    .to_owned(),
+                updated_at: (snap.last_activity.0 * 1000.0).round().max(0.0) as u64,
+            })
+            .collect();
         sessions.sort_by(|a, b| {
             b.updated_at
                 .cmp(&a.updated_at)
@@ -65,6 +110,7 @@ fn basename(path: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use morrow_core::reduce::AgentStatus;
     use morrow_protocol::decode_payload;
 
     fn hook(json: &str) -> HookPayload {
@@ -72,7 +118,7 @@ mod tests {
     }
 
     #[test]
-    fn the_latest_hook_of_a_session_replaces_its_row() {
+    fn the_latest_hook_updates_the_session_and_preserves_prior_cwd() {
         let mut sessions = Sessions::default();
         sessions.apply(
             &hook(r#"{"session_id":"a","hook_event_name":"SessionStart","cwd":"/home/u/proj/"}"#),
@@ -88,7 +134,7 @@ mod tests {
                 session_id: "a".into(),
                 source: "codex".into(),
                 last_event: "PreToolUse".into(),
-                cwd_name: String::new(),
+                cwd_name: "proj".into(),
                 updated_at: 20,
             }]
         );
@@ -117,6 +163,55 @@ mod tests {
             })
             .collect();
         assert_eq!(rows, [("new", "claude", "web"), ("old", "claude", "api")]);
+    }
+
+    #[test]
+    fn session_end_emits_remove_session_and_clears_the_card() {
+        let mut sessions = Sessions::default();
+        sessions.apply(
+            &hook(r#"{"session_id":"a","hook_event_name":"SessionStart","cwd":"/srv/api"}"#),
+            10,
+        );
+        let effects = sessions.apply(
+            &hook(r#"{"session_id":"a","hook_event_name":"SessionEnd"}"#),
+            20,
+        );
+        assert_eq!(
+            effects,
+            vec![SideEffect::RemoveSession {
+                session_id: "a".into()
+            }]
+        );
+        assert!(sessions.snapshot().is_empty());
+    }
+
+    #[test]
+    fn permission_request_preserves_project_cwd_and_normalizes_source() {
+        let mut sessions = Sessions::with_home("/home/u");
+        sessions.apply(
+            &hook(r#"{"session_id":"a","hook_event_name":"SessionStart","cwd":"/home/u/proj"}"#),
+            10,
+        );
+        sessions.apply(
+            &hook(
+                r#"{"session_id":"a","hook_event_name":"PermissionRequest","cwd":"/home/u","_source":"anti-gravity"}"#,
+            ),
+            20,
+        );
+        let snap = sessions.inner.get("a").expect("session a");
+        assert_eq!(snap.status, AgentStatus::Idle);
+        assert_eq!(snap.source, "antigravity");
+        assert_eq!(snap.cwd.as_deref(), Some("/home/u/proj"));
+
+        // A permission_prompt notification moves status to WaitingApproval.
+        sessions.apply(
+            &hook(
+                r#"{"session_id":"a","hook_event_name":"Notification","notification_type":"permission_prompt"}"#,
+            ),
+            30,
+        );
+        let snap = sessions.inner.get("a").expect("session a");
+        assert_eq!(snap.status, AgentStatus::WaitingApproval);
     }
 
     #[test]

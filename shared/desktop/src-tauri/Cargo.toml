@@ -16,6 +16,7 @@ path = "src/main.rs"
 tauri-build = { version = "=2.7.6", features = [] }
 
 [dependencies]
+morrow-core = { path = "../../crates/morrow-core" }
 morrow-ipc = { path = "../../crates/morrow-ipc" }
 morrow-protocol = { path = "../../crates/morrow-protocol" }
 # Pinned: window plumbing (focusable, skip_taskbar, always-on-top on X11)

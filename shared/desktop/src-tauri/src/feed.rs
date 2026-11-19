@@ -8,6 +8,7 @@ use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use morrow_core::reduce::SideEffect;
 use morrow_protocol::HookPayload;
 use serde::Serialize;
 use tauri::ipc::Channel;
@@ -32,13 +33,23 @@ pub struct Feed {
     changed: Condvar,
 }
 
-#[derive(Default)]
 struct State {
     sessions: Sessions,
     permissions: Permissions,
     channel: Option<Channel<Snapshot>>,
     /// The frontend has not seen the latest snapshot.
     dirty: bool,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            sessions: Sessions::with_home(std::env::var("HOME").unwrap_or_default()),
+            permissions: Permissions::default(),
+            channel: None,
+            dirty: false,
+        }
+    }
 }
 
 impl Feed {
@@ -48,7 +59,11 @@ impl Feed {
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
         let mut state = self.lock();
-        state.sessions.apply(payload, now_ms);
+        for effect in state.sessions.apply(payload, now_ms) {
+            if let SideEffect::RemoveSession { session_id } = effect {
+                state.permissions.drop_session(&session_id);
+            }
+        }
         state.dirty = true;
         self.changed.notify_one();
     }
