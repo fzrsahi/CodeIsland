@@ -193,7 +193,11 @@ struct CompactGitStandbyWingView: View {
         case .ahead(let ahead):
             return 10 + 2 + CGFloat("\(ahead)".count) * charStep
         case .clean:
-            return 10
+            let behind = max(0, workspaceManager.behindCount)
+            if behind > 0 {
+                return 10 + 2 + CGFloat("\(behind)".count) * charStep
+            }
+            return CGFloat("SYNC".count) * charStep
         case .nonRepo:
             return 0
         }
@@ -312,14 +316,32 @@ struct CompactGitStandbyWingView: View {
             .foregroundStyle(isPixel ? Pixel16Palette.cyan : primaryAutoColor)
             .fixedSize()
         case .clean:
-            if isPixel {
-                WorkspacePixelIcon(glyph: .check, color: Pixel16Palette.cyan, pixelSize: 1.05)
-                    .fixedSize()
+            let behind = max(0, workspaceManager.behindCount)
+            if behind > 0 {
+                HStack(spacing: isPixel ? 2 : 1) {
+                    if isPixel {
+                        WorkspacePixelIcon(glyph: .sync, color: Pixel16Palette.amber, pixelSize: 1.05)
+                        PixelText(text: "\(behind)", color: Pixel16Palette.amber, pixelSize: 1.0)
+                    } else {
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 8, weight: .bold))
+                        Text("\(behind)")
+                            .font(statFont)
+                            .monospacedDigit()
+                    }
+                }
+                .foregroundStyle(isPixel ? Pixel16Palette.amber : secondaryAutoColor)
+                .fixedSize()
             } else {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 8.5, weight: .bold))
-                    .foregroundStyle(cleanColor)
-                    .fixedSize()
+                if isPixel {
+                    PixelText(text: "SYNC", color: Pixel16Palette.cyan, pixelSize: 1.0)
+                        .fixedSize()
+                } else {
+                    Text("SYNC")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(cleanColor)
+                        .fixedSize()
+                }
             }
         case .nonRepo:
             EmptyView()
