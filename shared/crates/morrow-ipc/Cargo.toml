@@ -1,0 +1,26 @@
+[package]
+name = "morrow-ipc"
+description = "Morrow's endpoint rule and the local transport to it: a Unix socket with peer checks and stale-socket recovery."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+
+# Not core (GLOSSARY.md): this crate is the OS edge, so it is not in
+# scripts/ci/rust-pure-crates.txt. `libc` for getuid, umask and the peer's
+# credentials (SO_PEERCRED, getpeereid), which std does not expose on stable;
+# `socket2` for a connect with a timeout without hand-written unsafe.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+socket2 = "0.6"
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true
