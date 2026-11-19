@@ -136,6 +136,28 @@ fn send_then_wait_is_the_same_round_trip_in_two_steps() {
 }
 
 #[test]
+fn a_half_closed_client_is_there_and_a_dropped_one_is_gone() {
+    let dir = TestDir::new();
+    let endpoint = dir.override_endpoint("held.sock");
+    let server = Server::bind(&endpoint).expect("bind");
+
+    let pending = Client::connect(&endpoint, CONNECT_TIMEOUT)
+        .expect("connect")
+        .send(b"held", IO_TIMEOUT)
+        .expect("send");
+    let mut connection = server.accept().expect("accept");
+    assert_eq!(connection.read_request().expect("read"), b"held");
+    assert!(!connection.peer_gone(), "a client waiting for its answer");
+
+    drop(pending);
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while !connection.peer_gone() {
+        assert!(Instant::now() < deadline, "the dropped client never went");
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
+#[test]
 fn a_second_bind_while_the_first_listens_is_already_running() {
     let dir = TestDir::new();
     let endpoint = dir.runtime_endpoint();

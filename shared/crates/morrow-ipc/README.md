@@ -29,6 +29,9 @@ peer of the same user. The rule and the checks are
   socket.
 - Byte transport: the client writes the request, half-closes, reads until
   the island closes; the server reads to EOF and writes one reply.
+  `Connection::peer_gone` tells a client that closed (its process gone,
+  `POLLHUP`/`POLLERR`) from one that only half-closed and waits, as Swift's
+  `HookConnection.finishIfPeerGone` does.
 
 ## Does not own
 
@@ -58,7 +61,8 @@ peer of the same user. The rule and the checks are
   #86 moves it to `shared/contract/fixtures`.
 - `tests/unix_socket.rs` (Unix) runs real sockets in a fresh folder under
   `/tmp`: round trip, single instance, stale recovery, a file or symlink at the
-  path, an unsafe or symlinked `morrow` folder, connect to nothing, a peer of
+  path, an unsafe or symlinked `morrow` folder, connect to nothing, a held client
+  there and then gone, a peer of
   another uid, and drop removing only its own file. A test cannot create
   another user, so the uid is passed in (`Client::connect_as`,
   `Server::bind_as`).
