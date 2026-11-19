@@ -1,0 +1,4 @@
+# Crates that must stay OS-free (GLOSSARY.md: Core). One package name per
+# line; scripts/ci/rust-purity.sh fails if any of them depends, on any
+# target, on a crate that reaches the OS.
+morrow-protocol
