@@ -13,9 +13,9 @@ import MorrowCore
 /// alone. Opt-in like MascotRenderHarness — skipped unless `README_SHOT_DIR`
 /// is set:
 ///
-///     README_SHOT_DIR=docs/images swift test --filter ReadmeScreenshotHarness
+///     README_SHOT_DIR=../docs/images swift test --filter ReadmeScreenshotHarness
 ///     # optional, lossless (zlib 9) — trims ~25%:
-///     python3 -c "import glob; from PIL import Image; [Image.open(f).save(f, optimize=True) for f in glob.glob('docs/images/readme-*.png')]"
+///     python3 -c "import glob; from PIL import Image; [Image.open(f).save(f, optimize=True) for f in glob.glob('../docs/images/readme-*.png')]"
 ///
 /// Optional filters: `README_SHOT_ONLY=hero,approval,question`,
 /// `README_SHOT_LANGS=en,zh`. Every settings key (`SettingsKey`) is cleared

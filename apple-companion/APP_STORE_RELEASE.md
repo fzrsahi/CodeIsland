@@ -32,10 +32,10 @@ Current public submission target:
 4. Run local verification:
 
 ```bash
-scripts/check-companion-ui-regressions.sh
-scripts/smoke-companion-ui.sh
-scripts/smoke-companion-watch-ui.sh
-swift test --filter AppleCompanionPayloadTests
+macos/scripts/check-companion-ui-regressions.sh
+macos/scripts/smoke-companion-ui.sh
+macos/scripts/smoke-companion-watch-ui.sh
+swift test --package-path macos --filter AppleCompanionPayloadTests
 ```
 
 5. Archive from Xcode:

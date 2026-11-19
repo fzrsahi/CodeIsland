@@ -6,9 +6,9 @@ if [ -d /Applications/Xcode.app/Contents/Developer ]; then
     export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 fi
 
-# Usage: [BUILD_ARCH=universal|arm64] ./scripts/build-dmg.sh <version>
-# Example: ./scripts/build-dmg.sh 1.0.7
-# Example: BUILD_ARCH=arm64 SKIP_SIGN=1 SKIP_NOTARIZE=1 ./scripts/build-dmg.sh 1.0.7
+# Usage: [BUILD_ARCH=universal|arm64] ./macos/scripts/build-dmg.sh <version>
+# Example: ./macos/scripts/build-dmg.sh 1.0.7
+# Example: BUILD_ARCH=arm64 SKIP_SIGN=1 SKIP_NOTARIZE=1 ./macos/scripts/build-dmg.sh 1.0.7
 
 VERSION="${1:-}"
 if [[ -z "$VERSION" ]]; then
@@ -16,6 +16,8 @@ if [[ -z "$VERSION" ]]; then
     exit 1
 fi
 
+# macos/, the Swift package root: Info.plist, the assets, appcast*.xml,
+# Sources/ and .build/ all live here.
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$REPO_ROOT/.build"
 RELEASE_DIR="$BUILD_DIR/release"
@@ -81,7 +83,7 @@ case "$BUILD_ARCH" in
 esac
 chmod +x "$CONTENTS_DIR/MacOS/Morrow" "$CONTENTS_DIR/Helpers/"*
 
-# Write Info.plist (use the root Info.plist as base, update version)
+# Write Info.plist (use macos/Info.plist as base, update version)
 CURRENT_VER=$(defaults read "$REPO_ROOT/Info.plist" CFBundleShortVersionString)
 sed -e "s/<string>${CURRENT_VER}<\/string>/<string>${VERSION}<\/string>/g" \
     "$REPO_ROOT/Info.plist" > "$CONTENTS_DIR/Info.plist"
@@ -327,6 +329,6 @@ if [ "${SKIP_SIGN:-0}" != "1" ] && [ "${SKIP_NOTARIZE:-0}" != "1" ]; then
     echo ""
     echo "==> Release checklist:"
     echo "    1. gh release create v${VERSION} --notes '…' \"$OUTPUT_DMG\""
-    echo "    2. ./scripts/update-appcast.sh ${VERSION} \"$OUTPUT_DMG\""
-    echo "    3. git add appcast.xml && git commit -m 'release: v${VERSION}' && git push"
+    echo "    2. ./macos/scripts/update-appcast.sh ${VERSION} \"$OUTPUT_DMG\""
+    echo "    3. git add macos/appcast.xml && git commit -m 'release: v${VERSION}' && git push"
 fi

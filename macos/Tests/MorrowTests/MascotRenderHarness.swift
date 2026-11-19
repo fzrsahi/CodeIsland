@@ -83,7 +83,7 @@ final class MascotRenderHarness: XCTestCase {
     /// Animated mascot GIFs for the README "Supported Tools" table: one
     /// seamless working-state loop per distinct mascot, on a transparent
     /// background, all on the same square canvas. Opt-in like the sheets:
-    /// `MASCOT_GIF_DIR=docs/images/mascots` (+ optional
+    /// `MASCOT_GIF_DIR=../docs/images/mascots` (+ optional
     /// `MASCOT_GIF_SOURCES=claude,kiro` to limit to some file names).
     func testRenderReadmeGifs() throws {
         guard let outDir = ProcessInfo.processInfo.environment["MASCOT_GIF_DIR"] else {

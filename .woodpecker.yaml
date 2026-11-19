@@ -31,7 +31,7 @@ steps:
       - swift --version
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Syntax & Git Hygiene Guard" --state success --description "Pre-commit syntax and git hygiene clean" || true
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state pending --description "Running unit tests on macOS Sonoma..." || true
-      - python3 ./scripts/run-xctest-runner.py --target core 2>&1 | tee /tmp/test-output.log
+      - python3 ./macos/scripts/run-xctest-runner.py --target core 2>&1 | tee /tmp/test-output.log
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state success --description "Unit tests passed (0 failures)" || true
     when:
       - event: [pull_request, tag]
@@ -65,24 +65,24 @@ steps:
         from_secret: github_token
     commands:
       - 'echo "==> Dev build triggered on branch dev (commit: ${CI_COMMIT_SHA:0:7})"'
-      - BASE_VER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist 2>/dev/null || echo "1.0.42")
+      - BASE_VER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' macos/Info.plist 2>/dev/null || echo "1.0.42")
       - DEV_VERSION="${BASE_VER}-dev.${CI_PIPELINE_NUMBER}"
       - 'echo "==> Building Morrow Beta version: $DEV_VERSION"'
-      - SKIP_SIGN=1 SKIP_NOTARIZE=1 BUILD_ARCH=arm64 ./scripts/build-dmg.sh "$DEV_VERSION"
+      - SKIP_SIGN=1 SKIP_NOTARIZE=1 BUILD_ARCH=arm64 ./macos/scripts/build-dmg.sh "$DEV_VERSION"
       - |
         echo "==> Verifying dev DMG artifact integrity..."
-        [ -f .build/Morrow.dmg ] || { echo "ERROR: .build/Morrow.dmg not found!"; exit 1; }
-        SIZE=$(stat -f%z .build/Morrow.dmg 2>/dev/null || stat -c%s .build/Morrow.dmg)
+        [ -f macos/.build/Morrow.dmg ] || { echo "ERROR: macos/.build/Morrow.dmg not found!"; exit 1; }
+        SIZE=$(stat -f%z macos/.build/Morrow.dmg 2>/dev/null || stat -c%s macos/.build/Morrow.dmg)
         [ "$SIZE" -gt 1048576 ] || { echo "ERROR: DMG size ($SIZE bytes) is suspiciously small (< 1MB)!"; exit 1; }
-        echo "Artifact verified: .build/Morrow.dmg ($SIZE bytes)"
+        echo "Artifact verified: macos/.build/Morrow.dmg ($SIZE bytes)"
         python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
       - |
         echo "==> Updating appcast-dev.xml and signing with Sparkle Ed25519 key..."
-        ./scripts/update-appcast.sh "$DEV_VERSION" .build/Morrow.dmg appcast-dev.xml
+        ./macos/scripts/update-appcast.sh "$DEV_VERSION" macos/.build/Morrow.dmg appcast-dev.xml
       - |
         echo "==> Generating SHA256SUMS.txt for dev build..."
-        shasum -a 256 .build/Morrow.dmg > .build/SHA256SUMS.txt
-        cat .build/SHA256SUMS.txt
+        (cd macos && shasum -a 256 .build/Morrow.dmg > .build/SHA256SUMS.txt)
+        cat macos/.build/SHA256SUMS.txt
       - |
         echo "==> Deploying artifacts to EC2 distribution node via SSH..."
         SSH_KEY="$HOME/.ssh/codeisland_deploy"
@@ -93,9 +93,9 @@ steps:
         # 1. Create target release folder
         ssh $SSH_OPTS "$EC2_HOST" "mkdir -p $EC2_DATA/releases/$DEV_VERSION"
         # 2. Upload binary DMG
-        scp -i "$SSH_KEY" -o StrictHostKeyChecking=no -o BatchMode=yes .build/Morrow.dmg "$EC2_HOST:$EC2_DATA/releases/$DEV_VERSION/Morrow.dmg"
+        scp -i "$SSH_KEY" -o StrictHostKeyChecking=no -o BatchMode=yes macos/.build/Morrow.dmg "$EC2_HOST:$EC2_DATA/releases/$DEV_VERSION/Morrow.dmg"
         # 3. Upload signed appcast-dev.xml atomically
-        scp -i "$SSH_KEY" -o StrictHostKeyChecking=no -o BatchMode=yes appcast-dev.xml "$EC2_HOST:$EC2_DATA/appcast-dev.xml.tmp"
+        scp -i "$SSH_KEY" -o StrictHostKeyChecking=no -o BatchMode=yes macos/appcast-dev.xml "$EC2_HOST:$EC2_DATA/appcast-dev.xml.tmp"
         ssh $SSH_OPTS "$EC2_HOST" "mv -f $EC2_DATA/appcast-dev.xml.tmp $EC2_DATA/appcast-dev.xml && chmod 644 $EC2_DATA/appcast-dev.xml"
         # 4. Release retention: retain last 3 dev builds to preserve EC2 disk space
         ssh $SSH_OPTS "$EC2_HOST" "cd $EC2_DATA/releases && ls -dt *-dev.* 2>/dev/null | tail -n +4 | xargs -r rm -rf"
@@ -120,30 +120,30 @@ steps:
       - 'echo "==> Production release tag detected: $CI_COMMIT_TAG"'
       - VERSION="${CI_COMMIT_TAG#[vV]}"
       - 'echo "==> Building Morrow Production DMG version: $VERSION"'
-      - SKIP_SIGN=1 SKIP_NOTARIZE=1 BUILD_ARCH=arm64 ./scripts/build-dmg.sh "$VERSION"
+      - SKIP_SIGN=1 SKIP_NOTARIZE=1 BUILD_ARCH=arm64 ./macos/scripts/build-dmg.sh "$VERSION"
       - |
         echo "==> Verifying release DMG artifact integrity..."
-        [ -f .build/Morrow.dmg ] || { echo "ERROR: .build/Morrow.dmg not found!"; exit 1; }
-        SIZE=$(stat -f%z .build/Morrow.dmg 2>/dev/null || stat -c%s .build/Morrow.dmg)
+        [ -f macos/.build/Morrow.dmg ] || { echo "ERROR: macos/.build/Morrow.dmg not found!"; exit 1; }
+        SIZE=$(stat -f%z macos/.build/Morrow.dmg 2>/dev/null || stat -c%s macos/.build/Morrow.dmg)
         [ "$SIZE" -gt 1048576 ] || { echo "ERROR: DMG size ($SIZE bytes) is suspiciously small (< 1MB)!"; exit 1; }
-        echo "Artifact verified: .build/Morrow.dmg ($SIZE bytes)"
+        echo "Artifact verified: macos/.build/Morrow.dmg ($SIZE bytes)"
         python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
       - |
         echo "==> Updating appcast.xml and signing with Sparkle Ed25519 key..."
-        ./scripts/update-appcast.sh "$VERSION" .build/Morrow.dmg appcast.xml
+        ./macos/scripts/update-appcast.sh "$VERSION" macos/.build/Morrow.dmg appcast.xml
       - |
         echo "==> Generating SHA256SUMS.txt..."
-        shasum -a 256 .build/Morrow.dmg > .build/SHA256SUMS.txt
-        cat .build/SHA256SUMS.txt
+        (cd macos && shasum -a 256 .build/Morrow.dmg > .build/SHA256SUMS.txt)
+        cat macos/.build/SHA256SUMS.txt
       - |
         echo "==> Uploading release artifacts to GitHub Release..."
         python3 ./scripts/upload-github-release.py \
           --repo "fzrsahi/Morrow" \
           --tag "$CI_COMMIT_TAG" \
-          --files .build/Morrow.dmg .build/SHA256SUMS.txt appcast.xml || true
+          --files macos/.build/Morrow.dmg macos/.build/SHA256SUMS.txt macos/appcast.xml || true
       - |
         echo "==> Triggering production deployment webhook..."
-        SHA=$(awk '{print $1}' .build/SHA256SUMS.txt)
+        SHA=$(awk '{print $1}' macos/.build/SHA256SUMS.txt)
         curl -f -X POST \
           -H "Content-Type: application/json" \
           -H "X-Webhook-Secret: $CODEISLAND_WEBHOOK_SECRET" \

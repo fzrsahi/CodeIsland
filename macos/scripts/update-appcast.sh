@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: ./scripts/update-appcast.sh <version> <dmg-path> [appcast-file]
-# Example: ./scripts/update-appcast.sh 1.0.22 .build/Morrow.dmg
-# Example: ./scripts/update-appcast.sh 1.0.42-dev .build/Morrow.dmg appcast-dev.xml
+# Usage: ./macos/scripts/update-appcast.sh <version> <dmg-path> [appcast-file]
+# Example: ./macos/scripts/update-appcast.sh 1.0.22 macos/.build/Morrow.dmg
+# Example: ./macos/scripts/update-appcast.sh 1.0.42-dev macos/.build/Morrow.dmg appcast-dev.xml
+# (<dmg-path> is relative to the cwd; [appcast-file] to macos/.)
 #
-# Produces / updates appcast.xml at the repo root. Signs the DMG with the
+# Produces / updates macos/appcast.xml. Signs the DMG with the
 # private EdDSA key that lives in the macOS Keychain (added by Sparkle's
 # generate_keys tool during initial setup) and records the signature + size
 # + pubDate on a new <item> entry.
@@ -28,6 +29,8 @@ if [[ ! -f "$DMG_PATH" ]]; then
     exit 1
 fi
 
+# macos/, the Swift package root: Info.plist, the assets, appcast*.xml,
+# Sources/ and .build/ all live here.
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$REPO_ROOT/.build"
 if [[ -n "${3:-}" ]]; then

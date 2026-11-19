@@ -12,7 +12,7 @@ swift test --filter AppStatePrimarySourceTests
 swift build
 
 xcodebuild \
-  -project ios/MorrowCompanion/MorrowCompanion.xcodeproj \
+  -project ../ios/MorrowCompanion/MorrowCompanion.xcodeproj \
   -scheme MorrowCompanion \
   -destination 'generic/platform=iOS' \
   build

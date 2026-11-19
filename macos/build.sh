@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Paths below are relative to the Swift package root (macos/).
+cd "$(dirname "$0")"
+
 # Ensure Xcode.app toolchain is used even if xcode-select points at CLT
 if [ -d /Applications/Xcode.app/Contents/Developer ]; then
     export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
@@ -12,7 +15,7 @@ APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 ICON_CATALOG="Assets.xcassets"
 ICON_SOURCE="AppIcon.icon"
 ICON_INFO_PLIST=".build/AppIcon.partial.plist"
-WATCH_DIR="android-watch"
+WATCH_DIR="../android-watch"
 WATCH_GRADLEW="$WATCH_DIR/gradlew"
 WATCH_APK_DEBUG="$WATCH_DIR/app/build/outputs/apk/debug/app-debug.apk"
 
@@ -137,8 +140,8 @@ build_mac() {
 
     # Use SIGN_ID env var, local .signing.local override, or auto-detect:
     # prefer "Developer ID Application" for distribution, fall back to any valid identity, then ad-hoc
-    if [ -z "${SIGN_ID:-}" ] && [ -f ".signing.local" ]; then
-        SIGN_ID=$(head -1 ".signing.local" | tr -d '\r\n')
+    if [ -z "${SIGN_ID:-}" ] && [ -f "../.signing.local" ]; then
+        SIGN_ID=$(head -1 "../.signing.local" | tr -d '\r\n')
     fi
     if [ -z "${SIGN_ID:-}" ]; then
         SIGN_ID=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)".*/\1/' 2>/dev/null || true)

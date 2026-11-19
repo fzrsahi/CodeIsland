@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 SIM_NAME="${1:-iPhone 17 Pro}"
-PROJECT="ios/MorrowCompanion/MorrowCompanion.xcodeproj"
+PROJECT="../ios/MorrowCompanion/MorrowCompanion.xcodeproj"
 SCHEME="MorrowCompanion"
 DERIVED_DATA="$ROOT/.build/CompanionUISmokeDerivedData"
 BUNDLE_ID="top.fengye.MorrowCompanion"

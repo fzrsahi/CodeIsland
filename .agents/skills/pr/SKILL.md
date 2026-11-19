@@ -19,7 +19,7 @@ Provide concrete proof that the implementation works:
   - Show the exact visual comparison on screen.
 - **Execution Proof**:
   - Unit test execution logs (`swift test --filter ...`).
-  - Build and codesign verification (`./build.sh`).
+  - Build and codesign verification (`./macos/build.sh`).
 
 ## 3. Merge Danger
 Explicitly evaluate risk and blast radius:

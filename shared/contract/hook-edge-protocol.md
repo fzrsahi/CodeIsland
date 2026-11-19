@@ -6,7 +6,7 @@ plugins (OpenCode, pi, Oh My Pi, OpenClaw), the community Windows bridge.
 
 What a hook *means* — which agent sent it, which session, whether the agent
 waits for an answer and in what form — is decided in one place:
-`HookIntake` (`Sources/MorrowCore/HookIntake.swift`). The bridge runs it
+`HookIntake` (`macos/Sources/MorrowCore/HookIntake.swift`). The bridge runs it
 itself. An edge that cannot run Swift sends the **facts** it observed instead,
 and the island runs HookIntake on them when the payload arrives. A provider
 quirk is then fixed once, in HookIntake, for every edge.
@@ -283,6 +283,6 @@ The Windows port runs its own island, so it cannot hand facts to HookIntake.
 It should follow the same rules — in particular rule 2 (Cursor runs Claude
 Code's hooks; without it, Cursor's events show as Claude and every step that
 both configs wire arrives twice) and the waiting rule above. The golden
-fixtures in `Tests/MorrowCoreTests/BridgeGoldenFixtures.swift`, with the
+fixtures in `macos/Tests/MorrowCoreTests/BridgeGoldenFixtures.swift`, with the
 output recorded in `BridgeGoldenExpectations.swift`, are worked examples for
 every agent the bridge serves.

@@ -13,9 +13,9 @@ Never execute destructive or privilege-escalating commands, including but not li
 
 ### Safe Operations (Auto-Allowed)
 Routine development operations are safe to perform:
-- Code building and testing: `swift build`, `swift test`, `./build.sh`
+- Code building and testing: `swift build`, `swift test`, `./macos/build.sh`
 - Inspection and navigation: `git status`, `git diff`, `git log`, `ls`, `grep`, `find`
-- Reading, writing, and editing source code within `Sources/`, `Tests/`, and project configuration files.
+- Reading, writing, and editing source code within `macos/Sources/`, `macos/Tests/`, and project configuration files.
 
 ---
 
@@ -49,7 +49,7 @@ Setiap ada task baru, wajib mengikuti urutan langkah ini secara disiplin:
   ```bash
   git config core.hooksPath .githooks
   ```
-- Kerjakan perubahan kode dan uji dengan `swift test` atau `./build.sh`. Hook `.githooks/pre-commit` otomatis memvalidasi sintaks staged files & conflict markers (< 0.5s), sedangkan `.githooks/pre-push` otomatis memverifikasi `swift build --build-tests` sebelum git push dieksekusi.
+- Kerjakan perubahan kode dan uji dengan `swift test` atau `./macos/build.sh`. Hook `.githooks/pre-commit` otomatis memvalidasi sintaks staged files & conflict markers (< 0.5s), sedangkan `.githooks/pre-push` otomatis memverifikasi `swift build --build-tests` sebelum git push dieksekusi.
 - Lakukan commit berkala menggunakan Conventional Commits:
   - `fix(#<id>): <deskripsi>`
   - `feat(#<id>): <deskripsi>`

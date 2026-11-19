@@ -97,7 +97,8 @@ def generate_runner_source(tests_by_class, output_path):
 
 def main():
     parser = argparse.ArgumentParser(description="Standalone XCTest Runner")
-    parser.add_argument("--repo-root", default=os.getcwd(), help="Repository root")
+    parser.add_argument("--repo-root", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        help="Swift package root (default: macos/, the parent of this script's directory)")
     parser.add_argument("--target", default="all", choices=["all", "core", "app"], help="Target test suite")
     parser.add_argument("--filter", default=None, help="Regex filter for test cases")
     parser.add_argument("--skip-build", action="store_true", help="Skip swift build of test targets")

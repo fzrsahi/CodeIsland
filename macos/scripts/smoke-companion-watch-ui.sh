@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-PROJECT="ios/MorrowCompanion/MorrowCompanion.xcodeproj"
+PROJECT="../ios/MorrowCompanion/MorrowCompanion.xcodeproj"
 SCHEME="MorrowWatchApp"
 DERIVED_DATA="$ROOT/.build/CompanionWatchUISmokeDerivedData"
 BUNDLE_ID="top.fengye.MorrowCompanion.watchkitapp"
