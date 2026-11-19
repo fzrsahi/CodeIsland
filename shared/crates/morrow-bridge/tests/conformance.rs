@@ -1,188 +1,123 @@
 //! The linux golden bundle (`fixtures/linux/bridge-golden.json`, inputs in
-//! `fixtures/neutral/`) against the bridge's interpretation, in process: each
-//! fixture's argv, environment, stdin and process tree go in; the forwarded
-//! payload, stdout and exit status must be the bundle's.
-//!
-//! Only Claude Code's hook is claimed (#89): fixtures with a `--source` or
-//! that resolve to another agent are listed as skipped. TODO(#93): every
-//! fixture, once HookIntake is morrow-core's.
+//! `fixtures/neutral/`) against the bridge, in process: each fixture's argv,
+//! environment and stdin, and its process tree behind the bridge's
+//! [`ProcessFacts`], go through the bridge's fact gathering and HookIntake
+//! (`morrow_core::intake`); the forwarded payload (as it goes on the wire),
+//! stdout and exit status must be the bundle's. Every fixture, every source.
+//! morrow-core's own conformance test runs the same fixtures on facts
+//! handed to HookIntake directly.
 #![cfg(unix)]
 
-mod common;
+#[path = "../../morrow-core/tests/golden/mod.rs"]
+mod golden;
 
 use std::collections::HashMap;
 
-use common::{Fixture, linux_fixtures, out_of_scope};
-use morrow_bridge::intake::{Ancestor, Args, MAX_ANCESTRY, ProcessFacts};
-use morrow_bridge::run::{Log, encode, interpret};
-use serde_json::Value;
+use golden::{Bundle, ChainProcess, Fixture, HOME, Outcome, ROOT, assert_bundle, normalize};
+use morrow_bridge::facts::{Args, ProcessFacts, interpret};
+use morrow_bridge::run::{Log, encode, immediate_stdout};
 
-/// The fixtures this ticket claims; a change in the filter or the bundle
-/// shows here instead of silently testing fewer.
-const CLAIMED: usize = 23;
+/// Every fixture of the bundle; a change in it shows here.
+const FIXTURES: usize = 84;
 
-/// A fixture's process tree, as Swift's golden runner builds it: the
-/// ancestors under a root, padded with neutral processes to six, each with
-/// a pid of its own. The hook runs in `$ROOT/work`, as there.
+/// A fixture's process tree and files, as the OS would report them.
 struct FixtureProcess {
-    ancestry: Vec<Ancestor>,
-}
-
-const FIRST_PID: i32 = 4100;
-
-impl FixtureProcess {
-    fn new(fixture: &Fixture) -> Self {
-        let mut paths = fixture.ancestor_paths();
-        let mut index = 1;
-        while paths.len() < MAX_ANCESTRY {
-            paths.push(format!("neutral/proc{index}"));
-            index += 1;
-        }
-        let ancestry = paths
-            .into_iter()
-            .enumerate()
-            .map(|(i, path)| Ancestor {
-                pid: FIRST_PID + i as i32,
-                executable_path: Some(format!("/tmp/ci-golden-root/tree/{path}")),
-            })
-            .collect();
-        Self { ancestry }
-    }
-
-    fn token(&self, pid: i64) -> Option<String> {
-        self.ancestry
-            .iter()
-            .position(|a| i64::from(a.pid) == pid)
-            .map(|i| format!("$PID{i}"))
-    }
+    chain: Vec<ChainProcess>,
+    files: Vec<String>,
 }
 
 impl ProcessFacts for FixtureProcess {
     fn parent_pid(&self) -> Option<i32> {
-        self.ancestry.first().map(|a| a.pid)
+        self.chain.first().map(|p| p.pid)
     }
-    fn ancestry(&self) -> Vec<Ancestor> {
-        self.ancestry.clone()
+    fn ancestry(&self) -> Vec<(i32, Option<String>)> {
+        self.chain
+            .iter()
+            .map(|p| (p.pid, Some(p.executable_path.clone())))
+            .collect()
+    }
+    fn arguments(&self, pid: i32) -> Vec<String> {
+        self.chain
+            .iter()
+            .find(|p| p.pid == pid)
+            .map(|p| p.arguments.clone())
+            .unwrap_or_default()
+    }
+    fn bundle_identifier(&self, executable_path: &str) -> Option<String> {
+        self.chain
+            .iter()
+            .find(|p| p.executable_path == executable_path)
+            .and_then(|p| p.bundle_identifier.clone())
     }
     fn working_directory(&self) -> Option<String> {
-        Some("$ROOT/work".into())
+        Some(format!("{ROOT}/work"))
     }
-    // The golden runner's PATH has no tmux.
+    // The golden runner has no controlling terminal and no tmux.
+    fn tty(&self) -> Option<String> {
+        None
+    }
+    fn home_directory(&self) -> Option<String> {
+        Some(HOME.to_owned())
+    }
     fn tmux_client_tty(&self, _pane: &str) -> Option<String> {
         None
     }
+    fn file_exists(&self, path: &str) -> bool {
+        self.files.iter().any(|f| f == path)
+    }
 }
 
-/// What the bridge does with a fixture: the forwarded payload with pids
-/// replaced by their `$PID<n>` tokens, and its stdout. Its status is 0 on
-/// every path (`run` returns, `main` exits 0).
-fn run_fixture(fixture: &Fixture) -> (Option<Value>, String) {
-    let process = FixtureProcess::new(fixture);
+/// `run::run` without the transport: the immediate answer, admission, the
+/// socket check, interpretation, terminal context, the encoded payload and
+/// the answer's stdout.
+fn run_fixture(fixture: &Fixture) -> Outcome {
     let args = Args::parse(fixture.arguments());
-    let environment: HashMap<String, String> = fixture.environment().into_iter().collect();
-    if !fixture.has_socket() {
-        return (None, String::new());
+    let environment: HashMap<String, String> = fixture.environment();
+    let mut stdout = String::new();
+    let immediate = immediate_stdout(&args);
+    stdout.push_str(immediate.unwrap_or_default());
+    if !morrow_core::intake::admits(args.source.as_deref(), &environment) || !fixture.has_socket() {
+        return Outcome {
+            forwarded: None,
+            stdout,
+        };
     }
-    let Some((mut intake, facts)) =
-        interpret(&args, &environment, fixture.stdin().as_bytes(), &process)
-    else {
-        return (None, String::new());
+    let process = FixtureProcess {
+        chain: fixture.chain(),
+        files: fixture.files(),
     };
-    intake.add_terminal_context(&facts);
+    let Some(mut intake) = interpret(&args, &environment, fixture.stdin().as_bytes(), &process)
+    else {
+        return Outcome {
+            forwarded: None,
+            stdout,
+        };
+    };
+    if immediate.is_none() {
+        stdout.push_str(intake.immediate_stdout().unwrap_or_default());
+    }
+    intake.add_terminal_context();
 
     // What goes on the wire decodes as a hook payload.
     let wire = encode(&intake, &Log::from_environment(&HashMap::new()));
     let decoded = morrow_protocol::decode_payload(&wire)
         .unwrap_or_else(|e| panic!("{}: forwarded bytes are no hook payload: {e}", fixture.name));
-    let mut forwarded = Value::Object(decoded.into_object());
-    tokenize_pids(&mut forwarded, &process);
+    let pids: Vec<i32> = process.chain.iter().map(|p| p.pid).collect();
+    let forwarded = normalize(&decoded.into_object(), &pids);
 
-    let stdout = intake
-        .stdout_for_answer(fixture.reply().as_bytes())
-        .map(|bytes| String::from_utf8_lossy(bytes).into_owned())
-        .unwrap_or_default();
-    (Some(forwarded), stdout)
-}
-
-/// `_ppid`, `_hook_ppid` and a `-ppid-<pid>` session id, as the golden
-/// normalizer writes them.
-fn tokenize_pids(payload: &mut Value, process: &FixtureProcess) {
-    let Some(object) = payload.as_object_mut() else {
-        return;
-    };
-    for key in ["_ppid", "_hook_ppid"] {
-        if let Some(token) = object
-            .get(key)
-            .and_then(Value::as_i64)
-            .and_then(|p| process.token(p))
-        {
-            object.insert(key.into(), token.into());
-        }
+    if let Some(answer) = intake.stdout_for_answer(fixture.reply().as_bytes()) {
+        stdout.push_str(&String::from_utf8_lossy(&answer));
     }
-    if let Some(session) = object.get("session_id").and_then(Value::as_str) {
-        if let Some((head, pid)) = session.rsplit_once("-ppid-") {
-            if let Some(token) = pid.parse().ok().and_then(|p| process.token(p)) {
-                let session = format!("{head}-ppid-{token}");
-                object.insert("session_id".into(), session.into());
-            }
-        }
+    Outcome {
+        forwarded: Some(forwarded),
+        stdout,
     }
 }
 
 #[test]
-fn claude_hook_fixtures_match_the_linux_bundle() {
-    let mut passed = Vec::new();
-    let mut skipped = Vec::new();
-    let mut failures = Vec::new();
-
-    for fixture in linux_fixtures() {
-        if let Some(reason) = out_of_scope(&fixture) {
-            skipped.push(format!("{} ({reason})", fixture.name));
-            continue;
-        }
-        let (forwarded, stdout) = run_fixture(&fixture);
-        let mut wrong = Vec::new();
-        if forwarded.as_ref() != fixture.forwarded() {
-            wrong.push(format!(
-                "forwarded\n    expected: {}\n    actual:   {}",
-                fixture
-                    .forwarded()
-                    .map_or("<nothing>".into(), Value::to_string),
-                forwarded.map_or("<nothing>".into(), |v| v.to_string()),
-            ));
-        }
-        if stdout != fixture.expected_stdout() {
-            wrong.push(format!(
-                "stdout: expected {:?}, got {stdout:?}",
-                fixture.expected_stdout()
-            ));
-        }
-        if fixture.expected_status() != 0 {
-            wrong.push(format!(
-                "status: expected {}, the bridge always exits 0",
-                fixture.expected_status()
-            ));
-        }
-        if wrong.is_empty() {
-            passed.push(fixture.name);
-        } else {
-            failures.push(format!("{}:\n  {}", fixture.name, wrong.join("\n  ")));
-        }
-    }
-
-    println!(
-        "conformance (linux, claude hook): {} passed, {} failed, {} skipped",
-        passed.len(),
-        failures.len(),
-        skipped.len()
-    );
-    println!("passed: {}", passed.join(", "));
-    println!("skipped:\n  {}", skipped.join("\n  "));
-    assert!(
-        failures.is_empty(),
-        "{} fixture(s) differ:\n{}",
-        failures.len(),
-        failures.join("\n")
-    );
-    assert_eq!(passed.len(), CLAIMED, "claimed fixture count changed");
+fn every_fixture_matches_the_linux_bundle() {
+    let bundle = Bundle::load("linux");
+    assert_eq!(bundle.fixtures.len(), FIXTURES, "linux fixture count");
+    let passed = assert_bundle(&bundle, "morrow-bridge", run_fixture);
+    assert_eq!(passed, FIXTURES);
 }

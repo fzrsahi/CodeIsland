@@ -1,17 +1,24 @@
 # morrow-bridge
 
-The hook command Claude Code runs on Linux (`docs/hook-edge-protocol.md`).
-Claude Code's hook is installed without `--source`, as on macOS (PR #51). Per
-invocation it:
+The hook command agents run on Linux (`docs/hook-edge-protocol.md`).
+Claude Code's hook is installed without `--source`, as on macOS (PR #51);
+every other agent's with `--source <agent>` (and `--event` where its stdin
+names no event). What a hook means is HookIntake's call
+(`morrow_core::intake`, the port of `Sources/MorrowCore/HookIntake.swift`);
+the bridge gathers the facts and does the I/O. Per invocation it:
 
-1. exits 0 at once when `MORROW_SKIP` / `CODEISLAND_SKIP` is set, or inside
+1. prints the answer that cannot wait (Google Antigravity's PreToolUse,
+   `{"decision":"ask"}`) before anything else can end it;
+2. exits 0 at once when `MORROW_SKIP` / `CODEISLAND_SKIP` is set, or inside
    Grok for any hook but Grok's own;
-2. resolves the endpoint (`morrow-ipc`), and exits 0 before reading stdin
+3. resolves the endpoint (`morrow-ipc`), and exits 0 before reading stdin
    unless `lstat` finds a socket this user owns there;
-3. reads stdin (deadline 5 s), interprets it (`intake`), records the
-   terminal context, and sends the payload (`morrow-protocol`'s encoding);
-4. for a hook that waits (a permission request, a question) prints the
-   island's answer verbatim, as Claude Code reads it.
+4. reads stdin (deadline 5 s), has HookIntake interpret it, records the
+   terminal context, waits the delivery delay (Gemini's permission
+   request, 250 ms), and sends the payload (`morrow-protocol`'s encoding);
+5. for a hook that waits (a permission request, a question) prints the
+   island's answer in the form the agent reads (verbatim, or Gemini's
+   `{"decision":…}`).
 
 Every way out is exit 0, a panic too (the panic hook exits 0 before
 `panic = "abort"` would). Debug lines go to stderr only with
@@ -25,38 +32,29 @@ Every way out is exit 0, a panic too (the panic hook exits 0 before
 
 | Module | |
 |---|---|
-| `intake` | The bridge's part of HookIntake: source (declared `--source`, a supported `_source`, a non-blank `cursor_version`, Claude in the ancestry), aliases, `_ppid` / `_hook_ppid`, the `<source>-ppid-<pid>` fallback session id, waiting, terminal context, stdout. `TODO(#93)`: moves to morrow-core. |
-| `intake::ProcessFacts` | What the OS says (parent, ancestry, cwd, tmux client tty), so tests hand in a fixture's process tree. |
-| `process::OsProcess` | Linux: `/proc/<pid>/stat` and `/proc/<pid>/exe`, six processes up. Elsewhere only the parent pid. |
-| `run` | The invocation end to end; `interpret` is the part without transport, which the conformance test runs. |
-| `digest` | SHA-256 for `_cursor_payload_digest`, without a crypto crate. |
+| `facts` | `Args` (`--source`, `--event`), the `ProcessFacts` trait (what the OS says, so tests hand in a fixture's process tree), and `interpret`: HookIntake's `Facts` built from them, as the Swift bridge's `main.swift` builds them. |
+| `process::OsProcess` | Linux: `/proc/<pid>/stat`, `/exe` and `/cmdline`, six processes up; the controlling `/dev/pts/<n>` from `tty_nr`; `$HOME`; `tmux display-message` for the client tty. No `.app` bundle ids. Elsewhere only the parent pid. |
+| `run` | The invocation end to end: immediate stdout, deadlines, endpoint I/O, the answer. |
 
-## Linux terminal context
+## On Linux
 
-The keys of the linux golden bundle: no `_tty`, `_term_bundle` or
-`_iterm_session`, and no `_term_app` naming a macOS terminal
-(`iTerm.app`, `Apple_Terminal`). tmux, kitty, zellij, WezTerm, cmux, Herdr,
-Superset, Orca and Claude Desktop keys come from the environment as in Swift;
-an `_env` a plugin sends is passed on as it came.
-
-## Not served yet (#93)
-
-Sources other than Claude Code's hook: Hermes, Grok runtime aliases, Copilot
-and Cline payload shapes, Google Antigravity's immediate stdout, Gemini's
-`{"decision":…}` answer and delivery delay, ancestry inference of agents
-other than Claude (so omo under OpenCode goes out with no `_source`), the
-per-source path rules other than `claude` and `cursor-cli`, Codex Desktop's
-`_term_bundle`. The macOS process tree is not read (the macOS bridge is the
-Swift one).
+The facts a Linux process has: no `.app` bundle id (so no Codex Desktop
+`_term_bundle`), argv from `/proc`, a tty only for a pseudo-terminal.
+The custom agent commands are Swift's seeded ones (`~/.claude-govtech`, …,
+when the directory exists); custom CLI sources come with the app's settings
+(not yet). HookIntake records whatever the environment says, as in Swift:
+the linux golden bundle leaves out `_tty`, `_term_bundle`, `_iterm_session`
+and a macOS `_term_app`, which a macOS recording cannot vouch for here.
 
 ## Tests
 
 - `tests/conformance.rs`: every fixture of `fixtures/linux/bridge-golden.json`
-  that Claude Code's hook serves (no `--source`; Claude, no source, or Cursor
-  by its payload), in process with the fixture's process tree: forwarded
-  payload, stdout, status. The others are printed as skipped.
+  (84, every source), in process with the fixture's process tree behind
+  `ProcessFacts`: forwarded payload as it goes on the wire, stdout, status.
+  It shares the golden harness of morrow-core (`#[path]`).
 - `tests/bridge_process.rs`: the binary against a `morrow_ipc::unix::Server`
-  stand-in: golden fixtures end to end, a blocking answer after 9 s, an
+  stand-in: golden fixtures end to end (Claude, Cursor, Codex, Gemini,
+  Antigravity with and without an island), a blocking answer after 9 s, an
   island that never answers, stdin invalid / empty / closed / never closed,
   a regular file at the socket path, no island; on Linux, the real `/proc`
   ancestry.

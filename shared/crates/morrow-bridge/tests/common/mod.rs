@@ -52,18 +52,6 @@ impl Fixture {
             .unwrap_or_default()
     }
 
-    /// Paths of the ancestors, nearest first, as the fixture names them.
-    pub fn ancestor_paths(&self) -> Vec<String> {
-        self.input["ancestors"]
-            .as_array()
-            .map(|a| {
-                a.iter()
-                    .map(|x| x["path"].as_str().unwrap_or_default().to_owned())
-                    .collect()
-            })
-            .unwrap_or_default()
-    }
-
     pub fn has_socket(&self) -> bool {
         self.input["has_socket"].as_bool().unwrap_or(true)
     }
@@ -125,21 +113,24 @@ pub fn fixture(name: &str) -> Fixture {
         .unwrap_or_else(|| panic!("no fixture {name}"))
 }
 
-/// Why a fixture is outside this ticket's claim, `None` when it is in:
-/// Claude Code's hook (no `--source`), attributed to Claude, to no source
-/// (the island's default, Claude), or to Cursor by its payload (rule 2,
-/// Cursor running Claude Code's hook). Dropped events count as in.
-pub fn out_of_scope(fixture: &Fixture) -> Option<String> {
-    let args = fixture.arguments();
-    if let Some(i) = args.iter().position(|a| a == "--source") {
-        let source = args.get(i + 1).map_or("", String::as_str);
-        return Some(format!("--source {source}"));
-    }
-    let source = fixture.forwarded().and_then(|f| f["_source"].as_str());
-    match source {
-        None | Some("claude" | "cursor" | "cursor-cli") => None,
-        Some(other) => Some(format!("resolves to {other}")),
-    }
+/// The linux bundle's projection (`omitted_keys`, `omitted_values`): what
+/// a Linux run is not asked to reproduce of the macOS recording, such as a
+/// `_tty` when the test runs in a terminal.
+pub fn project_linux(payload: &mut Value) {
+    let linux = bundle("linux");
+    let Some(object) = payload.as_object_mut() else {
+        return;
+    };
+    let keys = strings(&linux["omitted_keys"]);
+    object.retain(|key, value| {
+        if keys.contains(key) {
+            return false;
+        }
+        let dropped = strings(&linux["omitted_values"][key.as_str()]);
+        !value
+            .as_str()
+            .is_some_and(|v| dropped.iter().any(|d| d == v))
+    });
 }
 
 /// A folder of this test's own under `/tmp` (short enough for `sun_path`),

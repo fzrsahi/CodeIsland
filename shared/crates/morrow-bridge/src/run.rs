@@ -1,6 +1,7 @@
 //! One hook invocation, end to end (the Swift bridge's `main.swift`): every
-//! way out is exit 0, and nothing is printed unless the hook waits for an
-//! answer and the island gave one.
+//! way out is exit 0, and nothing is printed but what HookIntake says to
+//! print: an immediate answer (Google Antigravity's PreToolUse), or the
+//! island's answer to a hook that waits for one.
 
 use std::collections::HashMap;
 use std::fs;
@@ -8,12 +9,13 @@ use std::io::{self, Read, Write};
 use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::time::Duration;
 
+use morrow_core::intake::{HookIntake, SourceCatalog, admits};
 use morrow_ipc::Endpoint;
 use morrow_ipc::unix::{Client, current_endpoint};
 use morrow_protocol::{HookPayload, encode_payload};
 
 use crate::deadline::Deadline;
-use crate::intake::{Args, Facts, Intake, ProcessFacts, admits, stdin_object};
+use crate::facts::{Args, interpret};
 use crate::process::OsProcess;
 
 /// Reading stdin: an agent that never closes its pipe cannot hold the hook.
@@ -29,28 +31,22 @@ const BLOCKING_CONNECT: Duration = Duration::from_millis(3000);
 /// lifecycle event at once (protocol, *Transport*).
 const NON_BLOCKING_IO: Duration = Duration::from_secs(1);
 
-/// Interprets one invocation without the transport: whether it is admitted,
-/// the stdin object, the event, and the facts it was read from. `None`: the
-/// hook is dropped, exit 0.
-pub fn interpret<'a>(
-    args: &Args,
-    environment: &HashMap<String, String>,
-    stdin: &[u8],
-    process: &'a dyn ProcessFacts,
-) -> Option<(Intake, Facts<'a>)> {
-    if !admits(args.source.as_deref(), environment) {
-        return None;
-    }
-    let object = stdin_object(stdin)?;
-    let facts = Facts::gather(args, environment, process);
-    let intake = Intake::new(object, stdin, &facts)?;
-    Some((intake, facts))
+/// What the hook prints before anything else can end it, from argv alone
+/// (`HookIntake.immediateStdout(sourceTag:eventName:)`). The catalog is
+/// empty: the seeded custom commands are Claude's, which cannot make a hook
+/// Antigravity's.
+pub fn immediate_stdout(args: &Args) -> Option<&'static str> {
+    morrow_core::intake::immediate_stdout(
+        args.source.as_deref(),
+        args.event.as_deref(),
+        &SourceCatalog::default(),
+    )
 }
 
 /// The bytes to forward: the payload as morrow-protocol encodes it. One
 /// the schema refuses (an agent's odd field) still goes out as JSON, as the
 /// Swift bridge sends it; the island decides.
-pub fn encode(intake: &Intake, log: &Log) -> Vec<u8> {
+pub fn encode(intake: &HookIntake<'_>, log: &Log) -> Vec<u8> {
     match HookPayload::from_object(intake.payload().clone()) {
         Ok(payload) => encode_payload(&payload),
         Err(error) => {
@@ -91,6 +87,12 @@ fn own_socket_at(endpoint: &Endpoint) -> bool {
         .is_ok_and(|meta| meta.file_type().is_socket() && meta.uid() == crate::sys::current_uid())
 }
 
+/// Writes `text` to stdout at once.
+fn print(text: &[u8]) {
+    let mut stdout = io::stdout().lock();
+    let _ = stdout.write_all(text).and_then(|()| stdout.flush());
+}
+
 /// The process environment, UTF-8 variables only.
 fn environment() -> HashMap<String, String> {
     std::env::vars_os()
@@ -113,6 +115,16 @@ pub fn run() {
             .skip(1)
             .filter_map(|a| a.into_string().ok()),
     );
+    // Google Antigravity refuses the tool call when its PreToolUse hook
+    // prints no decision: answer before any way out below (#339).
+    let mut wrote_immediate = false;
+    let mut write_immediate = |text: Option<&str>| {
+        if let (false, Some(text)) = (wrote_immediate, text) {
+            wrote_immediate = true;
+            print(text.as_bytes());
+        }
+    };
+    write_immediate(immediate_stdout(&args));
     if !admits(args.source.as_deref(), &environment) {
         return;
     }
@@ -136,13 +148,15 @@ pub fn run() {
     disarm();
 
     let process = OsProcess;
-    let Some((mut intake, facts)) = interpret(&args, &environment, &stdin, &process) else {
+    let Some(mut intake) = interpret(&args, &environment, &stdin, &process) else {
         log.note(&format!(
             "dropped: stdin is not a JSON object or names no session ({} bytes)",
             stdin.len()
         ));
         return;
     };
+    // Antigravity wired through Gemini-style hooks names the event on stdin.
+    write_immediate(intake.immediate_stdout());
     let waits = intake.waits_for_answer;
     log.note(&format!(
         "event={} normalized={} source={} session={} waits={waits}",
@@ -157,8 +171,12 @@ pub fn run() {
     } else {
         NON_BLOCKING_DEADLINE
     });
-    intake.add_terminal_context(&facts);
+    intake.add_terminal_context();
     let request = encode(&intake, &log);
+    // Gemini prints its own approval prompt first; the card follows.
+    if !intake.delivery_delay.is_zero() {
+        std::thread::sleep(intake.delivery_delay);
+    }
 
     let connect_timeout = if waits {
         BLOCKING_CONNECT
@@ -194,7 +212,6 @@ pub fn run() {
         }
     };
     if let Some(answer) = intake.stdout_for_answer(&reply) {
-        let mut stdout = io::stdout().lock();
-        let _ = stdout.write_all(answer).and_then(|()| stdout.flush());
+        print(&answer);
     }
 }

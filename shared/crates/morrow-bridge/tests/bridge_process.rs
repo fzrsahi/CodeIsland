@@ -13,7 +13,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use common::{TestDir, bridge_binary, fixture};
+use common::{TestDir, bridge_binary, fixture, project_linux};
 use morrow_ipc::unix::{Client, Server};
 use morrow_ipc::{Endpoint, EndpointKind, Platform, resolve};
 use serde_json::Value;
@@ -102,8 +102,10 @@ fn feed(mut child: Child, stdin: &[u8]) -> Output {
 /// reproduce made equal: `_ppid` is this test process (the bridge's
 /// parent, `$PID0`), the work folder is `$ROOT/work`, and `_source`, which
 /// the fixture's process tree decides (the in-process conformance test
-/// covers it), is left out of both.
+/// covers it), is left out of both, as is what the linux bundle does not
+/// assert.
 fn comparable(mut payload: Value, dir: &TestDir) -> Value {
+    project_linux(&mut payload);
     let object = payload.as_object_mut().unwrap();
     object.remove("_source");
     if object.get("_ppid").and_then(Value::as_u64) == Some(u64::from(std::process::id())) {
@@ -190,6 +192,41 @@ fn cursor_running_claudes_hook_is_never_held() {
 #[test]
 fn an_event_without_a_session_is_not_sent() {
     run_fixture_end_to_end("no-session-no-source");
+}
+
+#[test]
+fn codex_permission_with_its_source_prints_the_answer() {
+    run_fixture_end_to_end("codex-permission-request-deny");
+}
+
+#[test]
+fn gemini_permission_answer_is_put_as_gemini_reads_it() {
+    run_fixture_end_to_end("gemini-beforetool-allow");
+}
+
+#[test]
+fn antigravity_pre_tool_use_is_answered_at_once() {
+    run_fixture_end_to_end("agy-pretooluse");
+}
+
+/// Antigravity refuses the tool call when its hook prints nothing: the
+/// answer comes before the bridge finds no island and exits.
+#[test]
+fn antigravity_is_answered_with_no_island_running() {
+    let fixture = fixture("agy-pretooluse-island-not-running");
+    let dir = TestDir::new();
+    let child = bridge(&dir, &dir.join("absent.sock"), &fixture.environment())
+        .args(fixture.arguments())
+        .stdin(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let output = feed(child, fixture.stdin().as_bytes());
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        fixture.expected_stdout()
+    );
+    assert_eq!(fixture.expected_stdout(), r#"{"decision":"ask"}"#);
 }
 
 /// A Stop event: valid, non-blocking.

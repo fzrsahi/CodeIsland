@@ -13,6 +13,7 @@ name = "morrow-bridge"
 path = "src/main.rs"
 
 [dependencies]
+morrow-core = { path = "../morrow-core" }
 morrow-ipc = { path = "../morrow-ipc" }
 morrow-protocol = { path = "../morrow-protocol" }
 serde_json.workspace = true

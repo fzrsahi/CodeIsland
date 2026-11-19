@@ -27,7 +27,7 @@ reaches the **endpoint**. Part of the **core**: no OS crate, no unsafe code
 ## Does not own
 
 - What a **hook event** means (source, session, whether it waits): that is
-  HookIntake, which moves into `morrow-core`.
+  HookIntake, `morrow-core`'s `intake`.
 - Endpoint resolution, sockets, pipes and peer verification: `morrow-ipc`.
 - Reading stdin, process ancestry, tty: `morrow-bridge`.
 

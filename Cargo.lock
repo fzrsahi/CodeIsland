@@ -53,6 +53,7 @@ name = "morrow-bridge"
 version = "0.0.0"
 dependencies = [
  "libc",
+ "morrow-core",
  "morrow-ipc",
  "morrow-protocol",
  "serde_json",
