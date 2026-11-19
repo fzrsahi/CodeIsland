@@ -17,81 +17,19 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
+NAME=smoke-x11
+# shellcheck source=linux/ci/x11-lib.sh
+. linux/ci/x11-lib.sh
 
 SCREEN="${SMOKE_SCREEN:-1920x1080}"
 SW="${SCREEN%x*}"
 SH="${SCREEN#*x}"
-TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
-# WebKitGTK without a GPU: no accelerated compositing, software GL.
-export WEBKIT_DISABLE_COMPOSITING_MODE=1
-export LIBGL_ALWAYS_SOFTWARE=1
 
-die() {
-  echo "smoke-x11: $*" >&2
-  exit 1
-}
-now_ms() { echo $(($(date +%s%N) / 1000000)); }
-
-[ -f shared/desktop/dist/index.html ] ||
-  die "no shared/desktop/dist: build the frontend first (cd shared/desktop && bun install && bun run build)"
-
-if [ -z "${MORROW_APP:-}" ]; then
-  cargo build --locked -p morrow-app
-  MORROW_APP="$TARGET_DIR/debug/morrow-app"
-fi
-if [ -z "${MORROW_BRIDGE:-}" ]; then
-  cargo build --locked --release -p morrow-bridge
-  MORROW_BRIDGE="$TARGET_DIR/release/morrow-bridge"
-fi
-
-WORK="$(mktemp -d /tmp/morrow-smoke.XXXXXX)"
-export MORROW_SOCKET_PATH="$WORK/island.sock"
-pids=()
-cleanup() {
-  for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done
-  wait 2>/dev/null || true
-  rm -rf "$WORK"
-}
-trap cleanup EXIT
-
-# until <seconds> <command…>: polls every 50 ms.
-until_ok() {
-  local deadline=$(($(now_ms) + $1 * 1000))
-  shift
-  until "$@" >/dev/null 2>&1; do
-    [ "$(now_ms)" -lt "$deadline" ] || return 1
-    sleep 0.05
-  done
-}
-
-# --- X server and window manager ---------------------------------------
-export DISPLAY=:99
-Xvfb "$DISPLAY" -screen 0 "${SW}x${SH}x24" -nolisten tcp >"$WORK/xvfb.log" 2>&1 &
-pids+=($!)
-until_ok 10 xdpyinfo || die "Xvfb did not start: $(cat "$WORK/xvfb.log")"
-# Openbox runs --startup once it manages windows; a window mapped before
-# that can be missed.
-openbox --startup "touch $WORK/openbox.ready" >"$WORK/openbox.log" 2>&1 &
-pids+=($!)
-until_ok 10 test -e "$WORK/openbox.ready" || die "openbox did not start: $(cat "$WORK/openbox.log")"
-
-# --- target window: records clicks, holds focus -------------------------
-xev -geometry "${SW}x${SH}+0+0" >"$WORK/xev.log" 2>&1 &
-pids+=($!)
-TARGET="$(xdotool search --sync --name '^Event Tester$' | head -n1)"
-# Managed once Openbox has given it a desktop.
-until_ok 5 sh -c "xprop -id $TARGET _NET_WM_DESKTOP | grep -q '= '" || die "openbox never managed the target"
-xdotool windowactivate --sync "$TARGET"
-until_ok 5 sh -c "[ \"\$(xdotool getactivewindow)\" = $TARGET ]" || die "the target never got focus"
-
-# --- the island ---------------------------------------------------------
-t_app=$(now_ms)
-MORROW_SMOKE=1 "$MORROW_APP" >"$WORK/app.out" 2>"$WORK/app.err" &
-pids+=($!)
-until_ok 30 grep -q 'pushed sessions=0' "$WORK/app.out" ||
-  die "the frontend never subscribed. stdout: $(cat "$WORK/app.out") stderr: $(cat "$WORK/app.err")"
-ISLAND="$(xdotool search --sync --onlyvisible --name '^Morrow$' | head -n1)"
-t_shown=$(now_ms)
+x11_binaries
+x11_workdir
+x11_xvfb_openbox
+x11_target
+x11_start_app
 
 hook() {
   printf '{"session_id":"%s","hook_event_name":"PreToolUse","cwd":"%s","tool_name":"Bash","tool_input":{"command":"ls"}}' "$1" "$2" |
@@ -107,39 +45,6 @@ t_pushed=$(now_ms)
 sleep 0.3 # let the frontend lay out and fit
 
 # --- checks -------------------------------------------------------------
-results=()
-failed=0
-check() { # check <name> <detail> <command…>
-  local name="$1" detail="$2"
-  shift 2
-  if "$@" >/dev/null 2>&1; then
-    results+=("PASS  $name  ($detail)")
-  else
-    results+=("FAIL  $name  ($detail)")
-    failed=1
-  fi
-}
-
-geometry() { # sets X Y W H of window $1, as the X server has it
-  local g
-  g="$(xdotool getwindowgeometry --shell "$1")"
-  X="$(sed -n 's/^X=//p' <<<"$g")"
-  Y="$(sed -n 's/^Y=//p' <<<"$g")"
-  W="$(sed -n 's/^WIDTH=//p' <<<"$g")"
-  H="$(sed -n 's/^HEIGHT=//p' <<<"$g")"
-}
-focused_is_target() {
-  [ "$(xdotool getactivewindow)" = "$TARGET" ] && [ "$(xdotool getwindowfocus -f)" = "$TARGET" ]
-}
-clicks() { grep -c '^ButtonPress event' "$WORK/xev.log" || true; }
-# click_reaches_target <x> <y>: a click there lands on the target.
-click_reaches_target() {
-  local before
-  before="$(clicks)"
-  xdotool mousemove --sync "$1" "$2" click 1
-  until_ok 2 sh -c "[ \$(grep -c '^ButtonPress event' '$WORK/xev.log') -gt $before ]" &&
-    grep -A1 '^ButtonPress event' "$WORK/xev.log" | tail -n1 | grep -q "root:($1,$2)"
-}
 fits() { grep -c 'morrow-smoke: fit' "$WORK/app.out" || true; }
 # click_island <x> <y>: a click there is the island's: the window is refitted
 # (it toggled) and the target saw nothing.
@@ -157,13 +62,7 @@ small_top_centre() { # of the last geometry
     [ $(((2 * X + W - SW) * (2 * X + W - SW))) -le 4 ]
 }
 
-state="$(xprop -id "$ISLAND" _NET_WM_STATE)"
-hints="$(xprop -id "$ISLAND" WM_HINTS)"
-check net_wm_state_above "$state" grep -q _NET_WM_STATE_ABOVE <<<"$state"
-check net_wm_state_skip_taskbar "$state" grep -q _NET_WM_STATE_SKIP_TASKBAR <<<"$state"
-actions="$(xprop -id "$ISLAND" _NET_WM_ALLOWED_ACTIONS)"
-check not_user_resizable "no _NET_WM_ACTION_RESIZE in allowed actions" eval '! grep -q _NET_WM_ACTION_RESIZE <<<"$actions"'
-check wm_hints_no_input "$(tr -s '\n\t ' ' ' <<<"$hints")" grep -q 'input focus: False' <<<"$hints"
+x11_window_checks
 
 geometry "$ISLAND"
 collapsed="${W}x${H}+${X}+${Y}"
