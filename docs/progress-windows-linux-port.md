@@ -35,7 +35,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 0 | #78 | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `belum` | test plugin memakai default asli |
 | 0.5 | #86 | `chore`: layout monorepo (plan §4) | `belum` | `swift test` + DMG hijau, nol perubahan perilaku |
 | 0.5 | #84 | kontrak endpoint (plan §3.1) | `belum` | satu dokumen; semua edge mengikuti |
-| 0.5 | #85 | eksperimen Opsi E (Swift core di Linux) | `merged`-siap: hijau 96,8%, **ditolak → Rust** (PR #117) | kill criteria ADR-0001 → ADR-0003 atau bukti Rust |
+| 0.5 | #85 | eksperimen Opsi E (Swift core di Linux) | `selesai` (hijau 96,8%; Opsi E ditolak → **Rust**, PR #117) | kill criteria ADR-0001 → ADR-0003 atau bukti Rust |
 | 1 | #87, #88 | `chore(#33)`: workspace Rust, protocol, ipc, CI purity | `belum` | `cargo test`; `cargo tree -p morrow-core` bersih |
 | 1 | #89 | `feat(#33)`: bridge untuk `claude` | `belum` | conformance fixtures |
 | 1 | #90, #91 | `feat(#33)`: vertical slice island Linux X11 | `belum` | **`E2E-1`** — dua arah, <300 ms, tight-fit, tidak mencuri fokus |
