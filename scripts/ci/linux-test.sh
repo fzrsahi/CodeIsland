@@ -41,8 +41,9 @@ step() {
 } 2>&1 | tee -a "$LOG"
 
 step fmt cargo fmt --all --check
-step clippy cargo clippy --workspace --all-targets --locked -- -D warnings
-step test cargo test --workspace --locked
+# morrow-app needs GTK / WebKitGTK: linux/ci/test-desktop.sh, in its image.
+step clippy cargo clippy --workspace --exclude morrow-app --all-targets --locked -- -D warnings
+step test cargo test --workspace --exclude morrow-app --locked
 step purity scripts/ci/rust-purity.sh
 
 {
