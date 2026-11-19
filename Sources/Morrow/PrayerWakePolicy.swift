@@ -11,9 +11,9 @@ import MorrowCore
 /// that actually shows them.
 enum PrayerWakePolicy {
     /// Smart priority: the wing hands itself to the next prayer this long before.
-    static let priorityLeadMinutes = 15
-    /// …and keeps it this long after the entry.
-    static let priorityTrailMinutes = 5
+    static let priorityLeadMinutes = 30
+    /// Trail minutes after entry (0 while NOW state is held back).
+    static let priorityTrailMinutes = 0
 
     /// Everything that can make the next tick do something:
     ///

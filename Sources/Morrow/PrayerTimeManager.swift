@@ -83,7 +83,9 @@ public final class PrayerTimeManager: ObservableObject {
     @Published public var showMiniPeekBanner: Bool = false
     @Published public private(set) var miniPeekBannerTitle: String = ""
     @Published public private(set) var miniPeekBannerSubtitle: String = ""
+    @Published public private(set) var testWingPrayer: PrayerType? = nil
     public var simulatedDate: Date? = nil
+    private var testWingWorkItem: DispatchWorkItem? = nil
 
     weak var appState: AppState?
 
@@ -91,12 +93,12 @@ public final class PrayerTimeManager: ObservableObject {
         UserDefaults.standard.bool(forKey: SettingsKey.prayerEnabled)
     }
 
-    /// Smart Priority: Takes over the compact right wing when a prayer is within <= 15 minutes.
+    /// Smart Priority: Takes over the compact right wing when a prayer is within 1...30 minutes (or during live preview test).
     public var isPrayerPrioritized: Bool {
+        if testWingPrayer != nil { return true }
         guard isEnabled, let next = upcomingPrayer else { return false }
         let timeRemaining = next.date.timeIntervalSince(Date())
-        // Active when within 15 mins before prayer, or up to 5 mins after prayer entry
-        return timeRemaining <= 15 * 60 && timeRemaining >= -5 * 60
+        return timeRemaining > 0 && timeRemaining <= Double(PrayerWakePolicy.priorityLeadMinutes) * 60
     }
 
     public var formattedCountdown: String {
@@ -400,7 +402,7 @@ public final class PrayerTimeManager: ObservableObject {
     // MARK: - Per-Second Tick
 
     internal func tick(now: Date = Date()) {
-        guard isEnabled else { return }
+        guard isEnabled, testWingPrayer == nil else { return }
         PerfCounters.shared?.bump(.prayerTick)
 
         let now = simulatedDate ?? now
@@ -566,6 +568,34 @@ public final class PrayerTimeManager: ObservableObject {
             subtitle: "Saatnya Menunaikan Ibadah Salat Maghrib"
         )
         NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+    }
+
+    /// Cycles through the 5 Fardh prayers in the live compact notch right wing for 10 seconds.
+    public func triggerTestCompactWing() {
+        let cycle: [PrayerType] = [.subuh, .dzuhur, .ashar, .maghrib, .isya]
+        let nextPrayer: PrayerType = {
+            guard let current = testWingPrayer, let idx = cycle.firstIndex(of: current) else {
+                return cycle[0]
+            }
+            return cycle[(idx + 1) % cycle.count]
+        }()
+
+        testWingWorkItem?.cancel()
+        testWingPrayer = nextPrayer
+        upcomingPrayer = (nextPrayer, Date().addingTimeInterval(12 * 60))
+        minutesUntilNextPrayer = 12
+        IslandSignals.shared.setPrayerPrioritized(true)
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+
+        let item = DispatchWorkItem { [weak self] in
+            Task { @MainActor in
+                self?.testWingPrayer = nil
+                self?.tick(now: Date())
+                IslandSignals.shared.setPrayerPrioritized(self?.isPrayerPrioritized ?? false)
+            }
+        }
+        testWingWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0, execute: item)
     }
 
     private func presentBanner(title: String, subtitle: String) {

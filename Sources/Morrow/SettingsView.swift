@@ -4202,18 +4202,33 @@ private struct PrayerSettingsPage: View {
                             }
                         }
 
-                    Button(action: {
-                        PrayerTimeManager.shared.triggerTestBanner()
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "bell.badge")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
-                            Text("Test Prayer Notification Banner")
-                                .font(.system(size: 11, weight: .medium))
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            PrayerTimeManager.shared.triggerTestBanner()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "bell.badge")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                                Text("Test Prayer Notification Banner")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
                         }
+                        .buttonStyle(.bordered)
+
+                        Button(action: {
+                            PrayerTimeManager.shared.triggerTestCompactWing()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "sun.horizon.fill")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(Color(red: 1.0, green: 0.72, blue: 0.20))
+                                Text("Test Prayer Wing (Cycle 5 Icons)")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
                 }
             }
         }
