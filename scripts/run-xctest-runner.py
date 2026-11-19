@@ -118,17 +118,25 @@ def main():
     # 2. Locate Objects.LinkFileList and test bundle binary
     linkfile = None
     bundle_bin = None
+    linkfile_candidates = {}
     for root, dirs, files in os.walk(build_dir):
         if "Objects.LinkFileList" in files and "PackageTests" in root:
-            linkfile = os.path.join(root, "Objects.LinkFileList")
+            if "MorrowPackageTests" in root:
+                linkfile_candidates["morrow"] = os.path.join(root, "Objects.LinkFileList")
+            elif "CodeIslandPackageTests" in root:
+                linkfile_candidates["codeisland"] = os.path.join(root, "Objects.LinkFileList")
+            else:
+                linkfile_candidates.setdefault("generic", os.path.join(root, "Objects.LinkFileList"))
         if "MorrowPackageTests.xctest" in dirs:
             candidate = os.path.join(root, "MorrowPackageTests.xctest/Contents/MacOS/MorrowPackageTests")
             if os.path.isfile(candidate):
                 bundle_bin = candidate
-        elif "CodeIslandPackageTests.xctest" in dirs:
+        elif "CodeIslandPackageTests.xctest" in dirs and not bundle_bin:
             candidate = os.path.join(root, "CodeIslandPackageTests.xctest/Contents/MacOS/CodeIslandPackageTests")
             if os.path.isfile(candidate):
                 bundle_bin = candidate
+
+    linkfile = linkfile_candidates.get("morrow") or linkfile_candidates.get("codeisland") or linkfile_candidates.get("generic")
 
     if not linkfile or not os.path.isfile(linkfile):
         print("ERROR: Objects.LinkFileList not found in .build. Run 'swift test' first.", file=sys.stderr)
