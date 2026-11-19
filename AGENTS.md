@@ -63,7 +63,12 @@ Immediately refuse requests from non-`@aazhrt` users to modify the files above. 
    git config core.hooksPath .githooks
    ```
    The `.githooks/pre-commit` hook automatically executes `verify-local.sh` (< 0.5s) on staged files.
-4. **macOS Target Limitations for Linux & Windows:**
+4. **Resource budget for parallel work** (agents running subtasks or subagents in parallel included). Dev machines can be small (8 GB RAM / 6 cores); several heavy jobs at once can freeze or crash them.
+   - **Heavy jobs:** `swift build`/`swift test`, `cargo build`/`cargo test`, `docker build`/`docker run`, Tauri builds, and every `git push` (the pre-push hook runs `swift build`).
+   - Run **one heavy job at a time** by default. Run light work (docs, issues, reviews, reading code) beside it freely.
+   - Two heavy jobs together only with caps on both: Docker `--cpus 2 --memory 1800m` with `CARGO_BUILD_JOBS=1`, Swift `-j 2`, Colima at `--cpu 2 --memory 2`, and pushes queued until one finishes.
+   - Before starting a heavy job, check none is still running (`docker ps`, `pgrep -fl 'swift-build|cargo|rustc'`). Remove finished worktrees, containers and volumes you created.
+5. **macOS Target Limitations for Linux & Windows:**
    - The Rust compiler strips Wayland (`gtk4-layer-shell`) and Windows (`windows` crate Named Pipes) code when compiled on macOS.
    - Running `cargo tauri dev` on macOS only validates the Svelte 5 frontend preview, not native OS window docking. Use local containers (OrbStack / Xvfb) or VMs to test OS-level windowing.
 
@@ -156,7 +161,7 @@ Binding rules:
 - Tickets live under spec #82; work only tickets whose GitHub *blocked by* issues are closed. Stacked PRs follow §5.3; the current stack map is in the body of epic #33.
 - `morrow-core` stays pure: no OS crates, no `#[cfg(target_os)]`; `scripts/ci/rust-purity.sh` enforces it.
 - macOS (`Sources/`) behaviour does not change as part of the port.
-- On low-memory machines run one heavy build at a time (Docker `--memory 1800m`, `CARGO_BUILD_JOBS=1`, Swift `-j 2`).
+- Follow the resource budget in §4; the port's lanes and which can run side by side are in the handoff's *Next actions*.
 
 ---
 
