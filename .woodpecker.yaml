@@ -26,12 +26,13 @@ steps:
       GITHUB_TOKEN:
         from_secret: github_token
     commands:
+      - set -eo pipefail
       - echo "==> Running Swift tests on macOS Sonoma runner..."
       - swift --version
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Syntax & Git Hygiene Guard" --state success --description "Pre-commit syntax and git hygiene clean" || true
-      - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state pending --description "Running 1,098 unit tests on macOS Sonoma..." || true
+      - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state pending --description "Running unit tests on macOS Sonoma..." || true
       - python3 ./scripts/run-xctest-runner.py --target core 2>&1 | tee /tmp/test-output.log
-      - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state success --description "1,098 unit tests passed (0 failures)" || true
+      - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state success --description "Unit tests passed (0 failures)" || true
     when:
       - event: [pull_request, tag]
       - event: push
