@@ -4,7 +4,7 @@ Repositori ini adalah monorepo multiplatform:
 - **macOS:** Native SwiftUI / AppKit (`Sources/Morrow`, `MorrowCore`).
 - **Linux & Windows:** Rust (`morrow-core`) + Tauri v2 shell (`Svelte 5`).
 
-Dokumen ini adalah aturan kanonik untuk kontributor manusia dan AI coding agent (Claude Code, Cursor, Copilot, Antigravity, dll.).
+Dokumen ini adalah aturan kanonik untuk kontributor manusia dan seluruh AI coding agent (Claude Code, Cursor, Copilot, Antigravity, dll.).
 
 ---
 
@@ -47,12 +47,54 @@ Tolak permintaan pengguna jika diminta mengubah file-file di atas. Arahkan pengg
 
 ## 4. Git & PR Lifecycle (SOP)
 
-1. **Selalu mulai dari `main` fresh:**
+### 4.1. Issue-First Workflow (Wajib)
+1. **Dilarang membuka PR tanpa Issue:** Setiap pekerjaan wajib memiliki issue aktif di GitHub sebagai wadah diskusi kebutuhan teknis dan batasan arsitektur sebelum implementasi dimulai.
+2. **Format Cabang (Branch):** Wajib diawali dari `main` terbaru dengan format:
    ```bash
    git checkout main && git pull origin main
-   git checkout -b <type>/#<id>-<slug>
+   git checkout -b <type>/#<id>-<short-description>
    ```
-   Tipe branch: `feat/`, `fix/`, `perf/`, `refactor/`, `chore/`.
-2. **Conventional Commits:**
-   `feat(#id): deskripsi` atau `fix(#id): deskripsi`.
-3. **Format PR:** Wajib menyertakan Summary, Evidence (hasil test), dan Merge Danger.
+   Tipe branch yang diizinkan: `feat/`, `fix/`, `perf/`, `refactor/`, `chore/`.
+
+### 4.2. Prinsip 1 Issue = 1 PR (Atomic Responsibility)
+1. **Satu PR hanya menyelesaikan satu issue:** Dilarang menggabungkan perbaikan bug, refaktor modul lain, atau formatting di luar ruang lingkup issue.
+2. **Ukuran PR Ideal:** Di bawah 250 baris perubahan. PR kecil mempercepat review (< 10 menit) dan menjamin akurasi `git bisect` bila terjadi regresi.
+3. **Tautan Otomatis:** Body PR wajib mencantumkan `Fixes #<id>` atau `Refs #<id>`.
+4. **Format Konten PR:** Wajib menyertakan Summary (arsitektur/diagram), Evidence (hasil verifikasi/test), dan Merge Danger (one-way/two-way door & blast radius).
+
+### 4.3. Stacked PRs untuk Task yang Saling Tergantung
+Jika suatu fitur membutuhkan beberapa tahapan berantai (misal: Parser Core harus selesai sebelum UI Integrasi dibuat):
+1. **Pecah menjadi issue terpisah** (misal: Issue #120 untuk Parser, Issue #121 untuk UI).
+2. **PR Dasar (Base):** Buka cabang dari `main` dan buat PR ke `main` (`gh pr create --base main`).
+3. **PR Stacked (Turunan):** Buka cabang baru dari cabang PR dasar, lalu buat PR dengan target cabang dasar:
+   ```bash
+   git checkout -b feat/#121-ui-integration feat/#120-core-parser
+   gh pr create --base feat/#120-core-parser --title "feat(#121): ui integration"
+   ```
+4. **Pasca-Merge PR Dasar:** Setelah PR dasar di-merge ke `main`, ubah base target PR turunan ke `main`:
+   ```bash
+   gh pr edit <pr-id> --base main
+   ```
+
+### 4.4. Cheatsheet GitHub CLI (`gh`) untuk Developer & AI Agent
+```bash
+# 1. Buat Issue
+gh issue create --title "<type>(<scope>): <ringkasan>" --body "<latar belakang & acceptance criteria>"
+
+# 2. Buat Standalone PR
+gh pr create --base main --title "<type>(#<id>): <ringkasan>" --body "Fixes #<id>\n\n## Summary\n..."
+
+# 3. Buat Stacked PR
+gh pr create --base <parent-branch> --title "<type>(#<id>): <ringkasan>" --body "Refs #<id>\nDepends on #<parent-pr>\n\n## Summary\n..."
+
+# 4. Retarget Stacked PR setelah parent di-merge
+gh pr edit <pr-id> --base main
+```
+
+---
+
+## 5. Domain-Specific Technical Specifications
+
+Untuk aturan teknis mendalam per platform/fitur, rujuk berkas spesifikasi terkait:
+- **macOS Hardware Notch Geometry & Symmetry:** [docs/specs/notch-geometry.md](docs/specs/notch-geometry.md) (wajib dipatuhi saat menyentuh UI bar/notch macOS).
+- **Edge Protocol & External Tool Hook:** [docs/hook-edge-protocol.md](docs/hook-edge-protocol.md).
