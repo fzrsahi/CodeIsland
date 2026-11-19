@@ -1,0 +1,21 @@
+[workspace]
+resolver = "3"
+members = ["shared/crates/*"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+# Edition 2024's minimum. The toolchain CI builds with is pinned in rust-toolchain.toml.
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/fzrsahi/Morrow"
+publish = false
+
+[workspace.dependencies]
+serde_json = { version = "1", features = ["preserve_order"] }
+thiserror = "2"
+
+[workspace.lints.rust]
+# `deny`, not `forbid`: a future OS-facing crate (ipc, platform) may `#[allow]`
+# a reviewed unsafe block. Pure crates add `#![forbid(unsafe_code)]` themselves.
+unsafe_code = "deny"
