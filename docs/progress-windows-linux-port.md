@@ -1,7 +1,7 @@
 # Progress — Windows & Linux port
 
 **Status:** fase 0 — PR #49–#52 terbuka, revisi selesai. Tiket #83–#110 dari spec #82. Belum ada kode Rust.
-**Checkpoint terakhir:** 2026-11-18 — review arsitektur, revisi dokumen pasca-rebrand Morrow.
+**Checkpoint terakhir:** 2026-11-19 — eksperimen Opsi E (#85) hijau, ADR-0003 `proposed`.
 **Fase kanonik:** [`plan-windows-linux.md`](plan-windows-linux.md) §7. Kalau dokumen ini berbeda dengan §7, §7 yang benar.
 
 ---
@@ -35,7 +35,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 0 | #78 | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `belum` | test plugin memakai default asli |
 | 0.5 | #86 | `chore`: layout monorepo (plan §4) | `belum` | `swift test` + DMG hijau, nol perubahan perilaku |
 | 0.5 | #84 | kontrak endpoint (plan §3.1) | `belum` | satu dokumen; semua edge mengikuti |
-| 0.5 | #85 | eksperimen Opsi E (Swift core di Linux) | `belum` | kill criteria ADR-0001 → ADR-0003 atau bukti Rust |
+| 0.5 | #85 | eksperimen Opsi E (Swift core di Linux) | `PR dibuka` (hijau, 96,8% lulus → ADR-0003 `proposed`) | kill criteria ADR-0001 → ADR-0003 atau bukti Rust |
 | 1 | #87, #88 | `chore(#33)`: workspace Rust, protocol, ipc, CI purity | `belum` | `cargo test`; `cargo tree -p morrow-core` bersih |
 | 1 | #89 | `feat(#33)`: bridge untuk `claude` | `belum` | conformance fixtures |
 | 1 | #90, #91 | `feat(#33)`: vertical slice island Linux X11 | `belum` | **`E2E-1`** — dua arah, <300 ms, tight-fit, tidak mencuri fokus |
@@ -58,6 +58,12 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 ---
 
 ## Log Checkpoint
+
+### 2026-11-19 — eksperimen Opsi E (#85)
+
+- **Sudah:** `MorrowCore` build di container Linux (Swift 6.2.4, jammy, aarch64, 2 CPU / 1,8 GB, `-j 1`) dengan shim di 16/73 file + target `CSQLite` + swift-crypto; 973/1.005 test core murni lulus (96,8%, 0 gagal saat runtime, 30 tidak bisa dikompilasi karena `AttributedString` markdown); ADR-0003 ditulis berstatus `proposed`. Laporan: `docs/experiments/option-e-linux.md`, reproduksi: `docs/experiments/option-e/run.sh`.
+- **Berikutnya:** maintainer menerima/menolak ADR-0003; bila diterima, gate Windows (`MorrowCore` + suite murni di VM Windows) sebelum Fase 4 dan sebelum shell bergantung pada protokol sidecar.
+- **Blocker:** Windows belum diukur; stub `JSONLTailer` (perlu inotify) dan dua formatter markdown; logika domain app-held (~15–18K LOC) belum dicoba di Linux.
 
 ### 2026-11-18 (lanjutan 3) — spec + tiket
 
