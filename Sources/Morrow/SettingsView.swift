@@ -4069,9 +4069,9 @@ private struct PrayerSettingsPage: View {
 
                 Section(header: Text("Calculation Method")) {
                     Picker("Method", selection: $calculationMethod) {
-                        Text("Ministry of Religious Affairs (Fajr -20°, +2m safety margin)").tag("kemenag")
-                        Text("Nahdlatul Ulama / LF PBNU (Fajr -20°, elevation dip correction)").tag("nuLFPBNU")
-                        Text("Muhammadiyah / MTT (Fajr -18°, astronomical reckoning)").tag("muhammadiyah")
+                        Text("Kemenag (Ministry of Religious Affairs)").tag("kemenag")
+                        Text("NU / LF PBNU").tag("nuLFPBNU")
+                        Text("Muhammadiyah / MTT").tag("muhammadiyah")
                     }
                     .pickerStyle(.menu)
 
