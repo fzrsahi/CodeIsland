@@ -4192,6 +4192,10 @@ private struct PrayerSettingsPage: View {
                     Toggle("Send macOS System Notifications", isOn: $systemNotificationEnabled)
                         .onChange(of: systemNotificationEnabled) { _, isEnabled in
                             if isEnabled {
+                                guard PrayerTimeManager.canUseSystemNotifications else {
+                                    systemNotificationEnabled = false
+                                    return
+                                }
                                 UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
                                     if !granted {
                                         Task { @MainActor in

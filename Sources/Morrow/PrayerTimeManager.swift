@@ -495,25 +495,13 @@ public final class PrayerTimeManager: ObservableObject {
     }
 
     /// Evaluates if banner should pop up, deferring if an agent approval or question dialog is currently visible.
+    /// Pre-prayer countdown (T-30m..T-1m) lives in the compact right wing; the below-notch banner fires at prayer entry (T-0m).
     func evaluateBannerTriggers(appState: AppState?) {
         guard isEnabled, let next = upcomingPrayer else { return }
 
-        let alertBeforeMinutes = UserDefaults.standard.integer(forKey: SettingsKey.prayerAlertBeforeMinutes)
         let diffMins = minutesUntilNextPrayer
 
-        // Trigger 1: Approaching prayer (e.g. T-10m). A lead-in whose moment
-        // passed while the Mac slept is not replayed on wake.
-        if !suppressStaleLeadInBanner && alertBeforeMinutes > 0 && diffMins == alertBeforeMinutes {
-            let key = "\(next.prayer.rawValue)-\(alertBeforeMinutes)"
-            if !triggeredAlerts.contains(key) {
-                triggeredAlerts.insert(key)
-                let title = "\(alertBeforeMinutes) Minutes to \(next.prayer.displayName)"
-                let subtitle = "\(currentTimeString) · \(locationService.displayName)"
-                enqueueOrPresentBanner(title: title, subtitle: subtitle, appState: appState)
-            }
-        }
-
-        // Trigger 2: Prayer entry (T-0m)
+        // Trigger at prayer entry (T-0m)
         if diffMins == 0 {
             let key = "\(next.prayer.rawValue)-0"
             if !triggeredAlerts.contains(key) {
@@ -623,8 +611,15 @@ public final class PrayerTimeManager: ObservableObject {
         NSSound(named: "Glass")?.play()
     }
 
+    /// `UNUserNotificationCenter.current()` throws `NSInternalInconsistencyException` when called
+    /// from an unbundled executable (`swift run` or Xcode SwiftPM Debug).
+    public static var canUseSystemNotifications: Bool {
+        Bundle.main.bundleURL.pathExtension == "app" && Bundle.main.bundleIdentifier != nil
+    }
+
     private func sendSystemNotificationIfConfigured(title: String, subtitle: String) {
-        guard UserDefaults.standard.bool(forKey: SettingsKey.prayerSystemNotificationEnabled) else { return }
+        guard Self.canUseSystemNotifications,
+              UserDefaults.standard.bool(forKey: SettingsKey.prayerSystemNotificationEnabled) else { return }
 
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
