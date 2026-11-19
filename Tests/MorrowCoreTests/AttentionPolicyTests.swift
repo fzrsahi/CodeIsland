@@ -9,7 +9,7 @@ final class AttentionPolicyTests: XCTestCase {
 
     // MARK: - What a moment calls for
 
-    private struct IntentRow {
+    struct IntentRow {
         let rule: String
         let moment: AttentionMoment
         var subject = AttentionSubject()
@@ -55,7 +55,7 @@ final class AttentionPolicyTests: XCTestCase {
 
     private static let finishedPush = AttentionPushKind.completion(isSubagent: false, interrupted: false)
 
-    private static let hookRows: [IntentRow] = [
+    static let hookRows: [IntentRow] = [
         IntentRow(
             rule: "a prompt rings the submit cue",
             moment: hook("UserPromptSubmit"),
@@ -213,7 +213,7 @@ final class AttentionPolicyTests: XCTestCase {
         ),
     ]
 
-    private static let requestRows: [IntentRow] = [
+    static let requestRows: [IntentRow] = [
         IntentRow(
             rule: "the first approval of a burst chimes and pushes",
             moment: .approvalQueued(firstOfBurst: true),
@@ -277,7 +277,7 @@ final class AttentionPolicyTests: XCTestCase {
         ),
     ]
 
-    private static let elsewhereTurnRows: [IntentRow] = [
+    static let elsewhereTurnRows: [IntentRow] = [
         IntentRow(
             rule: "a turn in a new session rings the start cue",
             moment: .turnStarted(newSession: true),
@@ -338,7 +338,7 @@ final class AttentionPolicyTests: XCTestCase {
         ),
     ]
 
-    private static let reminderRows: [IntentRow] = [
+    static let reminderRows: [IntentRow] = [
         IntentRow(
             rule: "an approval reminder rings the approval cue",
             moment: .reminderDue(.approval, turnFailed: false),

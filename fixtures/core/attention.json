@@ -1,0 +1,1440 @@
+{
+  "cases" : [
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "UserPromptSubmit"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "UserPromptSubmit",
+          "held_elsewhere" : false,
+          "raw_event_name" : "UserPromptSubmit",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a prompt rings the submit cue",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "SessionStart"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "SessionStart",
+          "held_elsewhere" : false,
+          "raw_event_name" : "SessionStart",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a session start rings the start cue",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "UserPromptSubmit"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "UserPromptSubmit",
+          "held_elsewhere" : false,
+          "raw_event_name" : "beforeSubmitPrompt",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a wire name is read as the island's own (Cursor's beforeSubmitPrompt)",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "PreToolUse"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "PreToolUse",
+          "held_elsewhere" : false,
+          "raw_event_name" : "PreToolUse",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a tool step offers its own cue, which has no sound",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "PostToolUseFailure",
+          "held_elsewhere" : false,
+          "raw_event_name" : "PostToolUseFailure",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a single failed tool call stays silent",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "AppLaunch",
+          "held_elsewhere" : false,
+          "raw_event_name" : "AppLaunch",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a hook event carrying the launch cue's name rings nothing: that cue is the app's own",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : false
+        },
+        "follow_up" : {
+          "turn_failed" : false,
+          "type" : "trackCompletion"
+        },
+        "push" : {
+          "kind" : {
+            "interrupted" : false,
+            "is_subagent" : false,
+            "type" : "completion"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "Stop"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "Stop",
+          "held_elsewhere" : false,
+          "raw_event_name" : "Stop",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a finished turn rings, pops its completion, pushes it and is followed up",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : true
+        },
+        "follow_up" : {
+          "turn_failed" : true,
+          "type" : "trackCompletion"
+        },
+        "push" : {
+          "kind" : {
+            "type" : "error"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "StopFailure"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "Stop",
+          "held_elsewhere" : false,
+          "raw_event_name" : "StopFailure",
+          "subagent_turn" : false,
+          "turn_error" : {
+            "detail" : "API Error: Rate limit reached",
+            "type" : "rate_limit"
+          }
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a turn that died rings the error jingle and pushes the error, not a completion",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : true
+        },
+        "follow_up" : {
+          "turn_failed" : true,
+          "type" : "trackCompletion"
+        },
+        "push" : {
+          "kind" : {
+            "type" : "error"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "StopFailure"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "Stop",
+          "held_elsewhere" : false,
+          "raw_event_name" : "stop_failure",
+          "subagent_turn" : false,
+          "turn_error" : {
+            "detail" : "API Error: Rate limit reached",
+            "type" : "rate_limit"
+          }
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/Grok's stop_failure is the same failed turn",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "type" : "error"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "StopFailure"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "Stop",
+          "held_elsewhere" : false,
+          "raw_event_name" : "StopFailure",
+          "subagent_turn" : false,
+          "turn_error" : {
+            "detail" : "API Error: Rate limit reached",
+            "type" : "rate_limit"
+          }
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a failure while folded subagents still work: the jingle and the error push, no completion",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "Stop"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "Stop",
+          "held_elsewhere" : false,
+          "raw_event_name" : "Stop",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a Stop while folded subagents still work rings, but completes nothing",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : false
+        },
+        "follow_up" : {
+          "turn_failed" : false,
+          "type" : "trackCompletion"
+        },
+        "push" : {
+          "kind" : {
+            "interrupted" : false,
+            "is_subagent" : false,
+            "type" : "completion"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "AfterAgentResponse"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "AfterAgentResponse",
+          "held_elsewhere" : false,
+          "raw_event_name" : "afterAgentResponse",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/an IDE's final response completes the turn (its own cue has no sound)",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : false
+        },
+        "follow_up" : {
+          "turn_failed" : false,
+          "type" : "trackCompletion"
+        },
+        "push" : {
+          "kind" : {
+            "interrupted" : false,
+            "is_subagent" : false,
+            "type" : "completion"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "TaskRoundComplete"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "TaskRoundComplete",
+          "held_elsewhere" : false,
+          "raw_event_name" : "TaskComplete",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a Cline task round completes the turn",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : false
+        },
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "interrupted" : true,
+            "is_subagent" : false,
+            "type" : "completion"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "Stop",
+          "held_elsewhere" : false,
+          "raw_event_name" : "Stop",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/an Esc'd Stop pops its card without a chime, is offered to the push gate as interrupted, and is not followed up",
+      "subject" : {
+        "interrupted" : true,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : false
+        },
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "interrupted" : true,
+            "is_subagent" : false,
+            "type" : "completion"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "TaskRoundComplete",
+          "held_elsewhere" : false,
+          "raw_event_name" : "TaskCancel",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/Cline's TaskCancel (an interrupted task round) pops its card without a chime",
+      "subject" : {
+        "interrupted" : true,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : false
+        },
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "interrupted" : true,
+            "is_subagent" : false,
+            "type" : "completion"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "Interrupt",
+          "held_elsewhere" : false,
+          "raw_event_name" : "Interrupt",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a Codex Interrupt: its card pops silently, the push gate turns it away",
+      "subject" : {
+        "interrupted" : true,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "SessionStart"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "SessionStart",
+          "held_elsewhere" : false,
+          "raw_event_name" : "SessionStart",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/only the turn's end goes silent: another event of an interrupted session still rings its cue",
+      "subject" : {
+        "interrupted" : true,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : false
+        },
+        "follow_up" : {
+          "turn_failed" : false,
+          "type" : "trackCompletion"
+        },
+        "push" : {
+          "kind" : {
+            "interrupted" : false,
+            "is_subagent" : true,
+            "type" : "completion"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "Stop"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "Stop",
+          "held_elsewhere" : false,
+          "raw_event_name" : "Stop",
+          "subagent_turn" : true,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a subagent's turn end is offered to the push gate as a subagent's",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : false,
+          "ended_turn" : false,
+          "event_name" : "Stop",
+          "held_elsewhere" : false,
+          "raw_event_name" : "Stop",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/an event filed under a subagent, dropped as stale or ending the session is silent",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : false,
+          "ended_turn" : false,
+          "event_name" : "SessionEnd",
+          "held_elsewhere" : false,
+          "raw_event_name" : "SessionEnd",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/SessionEnd is silent",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : false,
+          "ended_turn" : false,
+          "event_name" : "Stop",
+          "held_elsewhere" : false,
+          "raw_event_name" : "StopFailure",
+          "subagent_turn" : false,
+          "turn_error" : {
+            "detail" : "API Error: Rate limit reached",
+            "type" : "rate_limit"
+          }
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a subagent's failure filed under the session is not the session's error: nothing is pushed",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "type" : "error"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "Notification"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "Notification",
+          "held_elsewhere" : false,
+          "raw_event_name" : "errorOccurred",
+          "subagent_turn" : false,
+          "turn_error" : {
+            "detail" : "boom",
+            "type" : "Error"
+          }
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/Copilot's errorOccurred pushes the error (its Notification cue has no sound)",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "SessionStart",
+          "held_elsewhere" : false,
+          "raw_event_name" : "SessionStart",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a child's start is silent",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : true
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "UserPromptSubmit",
+          "held_elsewhere" : false,
+          "raw_event_name" : "UserPromptSubmit",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a child's prompt is silent",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : true
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "Stop",
+          "held_elsewhere" : false,
+          "raw_event_name" : "Stop",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a child's finished turn: no chime, no completion, no push, no follow-up",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : true
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "Stop",
+          "held_elsewhere" : false,
+          "raw_event_name" : "StopFailure",
+          "subagent_turn" : false,
+          "turn_error" : {
+            "detail" : "API Error: Rate limit reached",
+            "type" : "rate_limit"
+          }
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a child's failed turn pushes nothing either",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : true
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : false,
+          "event_name" : "UserPromptSubmit",
+          "held_elsewhere" : true,
+          "raw_event_name" : "pre_llm_call",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a Hermes gateway chat's prompt is silent",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "Stop",
+          "held_elsewhere" : true,
+          "raw_event_name" : "on_session_end",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a Hermes gateway chat's turn end settles its card without a completion",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : false
+        },
+        "follow_up" : {
+          "turn_failed" : false,
+          "type" : "trackCompletion"
+        },
+        "push" : {
+          "kind" : {
+            "interrupted" : false,
+            "is_subagent" : false,
+            "type" : "completion"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "Stop"
+      },
+      "moment" : {
+        "facts" : {
+          "applied_to_session" : true,
+          "ended_turn" : true,
+          "event_name" : "Stop",
+          "held_elsewhere" : false,
+          "raw_event_name" : "on_session_end",
+          "subagent_turn" : false,
+          "turn_error" : null
+        },
+        "type" : "hookEvent"
+      },
+      "name" : "hook/a Hermes turn at this Mac is a turn like any other",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "type" : "approval"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "PermissionRequest"
+      },
+      "moment" : {
+        "first_of_burst" : true,
+        "type" : "approvalQueued"
+      },
+      "name" : "request/the first approval of a burst chimes and pushes",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "type" : "approval"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : null
+      },
+      "moment" : {
+        "first_of_burst" : false,
+        "type" : "approvalQueued"
+      },
+      "name" : "request/a later approval of the burst only pushes",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "type" : "approval"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "PermissionRequest"
+      },
+      "moment" : {
+        "first_of_burst" : true,
+        "type" : "approvalQueued"
+      },
+      "name" : "request/a child's approval still alerts: the user has to answer it",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : true
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "type" : "question"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "PermissionRequest"
+      },
+      "moment" : {
+        "first_of_burst" : true,
+        "smart_suppressible" : true,
+        "type" : "questionQueued"
+      },
+      "name" : "request/the first question of a burst chimes and pushes",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "type" : "question"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : null
+      },
+      "moment" : {
+        "first_of_burst" : false,
+        "smart_suppressible" : true,
+        "type" : "questionQueued"
+      },
+      "name" : "request/a later question only pushes",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "type" : "question"
+          },
+          "smart_suppressible" : false
+        },
+        "sound" : "PermissionRequest"
+      },
+      "moment" : {
+        "first_of_burst" : true,
+        "smart_suppressible" : false,
+        "type" : "questionQueued"
+      },
+      "name" : "request/Codex Desktop's app-server question is never held back by Smart Suppress",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "type" : "question"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "PermissionRequest"
+      },
+      "moment" : {
+        "first_of_burst" : true,
+        "smart_suppressible" : true,
+        "type" : "questionQueued"
+      },
+      "name" : "request/a child's question still alerts",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : true
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "PermissionRequest"
+      },
+      "moment" : {
+        "type" : "requestRaisedElsewhere"
+      },
+      "name" : "request/a request raised where the island cannot answer it chimes",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "PermissionRequest"
+      },
+      "moment" : {
+        "type" : "requestRaisedElsewhere"
+      },
+      "name" : "request/a child's request raised elsewhere still chimes",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : true
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : {
+          "kind" : "approval",
+          "type" : "restartWait"
+        },
+        "push" : {
+          "kind" : {
+            "type" : "displayOnlyWait"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : null
+      },
+      "moment" : {
+        "announce" : true,
+        "kind" : "approval",
+        "type" : "displayOnlyWaitBegan"
+      },
+      "name" : "request/a live display-only wait pushes when it begins, and its reminders start over",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : {
+          "kind" : "question",
+          "type" : "restartWait"
+        },
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "announce" : false,
+        "kind" : "question",
+        "type" : "displayOnlyWaitBegan"
+      },
+      "name" : "request/a rebuilt or backfilled wait only restarts its reminders",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "SessionStart"
+      },
+      "moment" : {
+        "new_session" : true,
+        "type" : "turnStarted"
+      },
+      "name" : "elsewhere/a turn in a new session rings the start cue",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "UserPromptSubmit"
+      },
+      "moment" : {
+        "new_session" : false,
+        "type" : "turnStarted"
+      },
+      "name" : "elsewhere/a later turn rings the submit cue",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "new_session" : true,
+        "type" : "turnStarted"
+      },
+      "name" : "elsewhere/a child's turn starts silently",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : true
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : false
+        },
+        "follow_up" : {
+          "turn_failed" : false,
+          "type" : "trackCompletion"
+        },
+        "push" : {
+          "kind" : {
+            "interrupted" : false,
+            "is_subagent" : false,
+            "type" : "completion"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "Stop"
+      },
+      "moment" : {
+        "end" : "completed",
+        "host" : "claudeDesktop",
+        "type" : "turnEnded"
+      },
+      "name" : "elsewhere/a finished Cowork turn rings, completes, pushes and is followed up",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : false
+        },
+        "follow_up" : {
+          "turn_failed" : false,
+          "type" : "trackCompletion"
+        },
+        "push" : {
+          "kind" : {
+            "interrupted" : false,
+            "is_subagent" : false,
+            "type" : "completion"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "Stop"
+      },
+      "moment" : {
+        "end" : "completed",
+        "host" : "aiwork",
+        "type" : "turnEnded"
+      },
+      "name" : "elsewhere/a finished AiWork turn too",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : true
+        },
+        "follow_up" : {
+          "turn_failed" : true,
+          "type" : "trackCompletion"
+        },
+        "push" : {
+          "kind" : {
+            "type" : "error"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "StopFailure"
+      },
+      "moment" : {
+        "end" : "failed",
+        "host" : "claudeDesktop",
+        "type" : "turnEnded"
+      },
+      "name" : "elsewhere/a failed Cowork turn rings the error jingle and pushes the error",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : true
+        },
+        "follow_up" : {
+          "turn_failed" : true,
+          "type" : "trackCompletion"
+        },
+        "push" : {
+          "kind" : {
+            "type" : "error"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : "StopFailure"
+      },
+      "moment" : {
+        "end" : "failed",
+        "host" : "aiwork",
+        "type" : "turnEnded"
+      },
+      "name" : "elsewhere/a failed AiWork stream too",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "end" : "stopped",
+        "host" : "claudeDesktop",
+        "type" : "turnEnded"
+      },
+      "name" : "elsewhere/Claude Desktop's Stop button: nothing at all, the card just reads interrupted",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : false
+        },
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "end" : "stopped",
+        "host" : "aiwork",
+        "type" : "turnEnded"
+      },
+      "name" : "elsewhere/an aborted AiWork stream pops its card, silently, with no push and no follow-up",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : {
+          "turn_failed" : false
+        },
+        "follow_up" : null,
+        "push" : {
+          "kind" : {
+            "interrupted" : true,
+            "is_subagent" : false,
+            "type" : "completion"
+          },
+          "smart_suppressible" : true
+        },
+        "sound" : null
+      },
+      "moment" : {
+        "end" : "completed",
+        "host" : "aiwork",
+        "type" : "turnEnded"
+      },
+      "name" : "elsewhere/a turn marked interrupted ends without a chime wherever it ran",
+      "subject" : {
+        "interrupted" : true,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : null
+      },
+      "moment" : {
+        "end" : "completed",
+        "host" : "aiwork",
+        "type" : "turnEnded"
+      },
+      "name" : "elsewhere/a child's turn end elsewhere is its parent's business too",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : true
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "PermissionRequest"
+      },
+      "moment" : {
+        "kind" : "approval",
+        "turn_failed" : false,
+        "type" : "reminderDue"
+      },
+      "name" : "reminder/an approval reminder rings the approval cue",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "PermissionRequest"
+      },
+      "moment" : {
+        "kind" : "question",
+        "turn_failed" : false,
+        "type" : "reminderDue"
+      },
+      "name" : "reminder/a question reminder rings the approval cue",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "Stop"
+      },
+      "moment" : {
+        "kind" : "completion",
+        "turn_failed" : false,
+        "type" : "reminderDue"
+      },
+      "name" : "reminder/a finished turn's reminder rings 'done' again",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "StopFailure"
+      },
+      "moment" : {
+        "kind" : "completion",
+        "turn_failed" : true,
+        "type" : "reminderDue"
+      },
+      "name" : "reminder/a failed turn's reminder rings the error jingle again, not 'done'",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    },
+    {
+      "intents" : {
+        "completion" : null,
+        "follow_up" : null,
+        "push" : null,
+        "sound" : "AppLaunch"
+      },
+      "moment" : {
+        "type" : "appLaunched"
+      },
+      "name" : "reminder/a launch rings the launch cue",
+      "subject" : {
+        "interrupted" : false,
+        "is_child" : false
+      }
+    }
+  ],
+  "contract" : "attention"
+}
