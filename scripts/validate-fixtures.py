@@ -4,7 +4,9 @@
 Besides the schema, checks what a schema cannot express:
   - neutrality: no expectation in a scope contains a key from that bundle's
     `omitted_keys`, or a value listed for that key in `omitted_values`;
-  - every fixture name in a per-OS bundle exists in neutral/.
+  - every fixture name in a per-OS bundle exists in neutral/;
+  - core/: each bundle's `contract` matches its file, case names are unique,
+    and no step's sessions carry a clock token ($Tk) from a later step.
 
 Requires `jsonschema>=4.18` (pip install -r scripts/requirements-fixtures.txt).
 """
@@ -14,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import re
 import sys
 
 try:
@@ -38,6 +41,21 @@ def neutrality_errors(bundle: dict) -> list[str]:
         for key, dropped in values.items():
             if forwarded.get(key) in dropped:
                 errors.append(f"{scope}/{fixture['name']}: omitted value {key}={forwarded[key]!r} present")
+    return errors
+
+
+CORE = ("reducer", "attention")
+
+
+def core_errors(name: str, bundle: dict) -> list[str]:
+    errors = [] if bundle["contract"] == name else [f"core/{name}.json: contract is {bundle['contract']!r}"]
+    names = [case["name"] for case in bundle["cases"]]
+    errors += [f"core/{name}.json: duplicate case {n!r}" for n in sorted({n for n in names if names.count(n) > 1})]
+    for case in bundle["cases"]:
+        for index, step in enumerate(case.get("steps", []), start=1):
+            for token in re.findall(r'"\$T([0-9]+)"', json.dumps(step["sessions"])):
+                if int(token) > index:
+                    errors.append(f"core/{name}.json {case['name']} step {index}: clock token $T{token} from a later step")
     return errors
 
 
@@ -80,11 +98,23 @@ def main() -> int:
             if name not in neutral:
                 errors.append(f"{scope}/{BUNDLE}: fixture {name!r} not in neutral/{BUNDLE}")
 
+    core_validator = Draft202012Validator(schemas["core-fixture.schema.json"], registry=registry)
+    for name in CORE:
+        bundle = json.loads((args.fixtures_dir / "core" / f"{name}.json").read_text())
+        schema_errors = [
+            f"core/{name}.json at /{'/'.join(map(str, e.absolute_path))}: {e.message}"
+            for e in core_validator.iter_errors(bundle)
+        ]
+        errors += schema_errors
+        if not schema_errors:
+            errors += core_errors(name, bundle)
+            print(f"core/{name}.json: {len(bundle['cases'])} cases")
+
     for error in errors:
         print(f"ERROR: {error}", file=sys.stderr)
     if errors:
         return 1
-    print(f"All {len(SCOPES)} bundles valid.")
+    print(f"All {len(SCOPES)} bridge bundles and {len(CORE)} core bundles valid.")
     return 0
 
 
