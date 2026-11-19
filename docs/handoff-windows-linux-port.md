@@ -23,7 +23,9 @@ Superseded, still useful for Wayland risks and acceptance criteria: [`docs/archi
 
 ## State
 
-Live state is in [`progress-windows-linux-port.md`](progress-windows-linux-port.md). Summary at this writing: Phase 0 PRs #49–#52 open; #50 and #52 need revisions; no Rust code; Phase 0.5 (monorepo move, endpoint contract, Option E experiment) not started.
+Live state is in [`progress-windows-linux-port.md`](progress-windows-linux-port.md). Summary at this writing (2026-11-19): core language decided **Rust** (#117); phase 1 complete as a PR stack (#120 → #121 → #122 → #123 → #125), with the E2E-1 gate green in Xvfb and waiting for a real X11 run; phase 2 started (#127 fixtures, #128 `HookIntake` in `morrow-core`); #94 has an unverified draft on `wip/#94-core-reducer`.
+
+`main` now carries repo-wide agent rules (`AGENTS.md`, from #119): issue-first, 1 issue = 1 PR, stacked PRs, `.woodpecker.yaml` owned by @aazhrt, and a pre-commit `scripts/ci/verify-local.sh`. Until #126 merges, that guard blocks merging `main` into feature branches (#124).
 
 ## Who does what
 
@@ -89,7 +91,8 @@ Every PR that needs another machine ships a script that runs its gate and prints
 
 ## Next actions
 
-1. Revise and merge Phase 0: #49 (this), #50 (exporter path, neutral rules, validator), #51 (reworked: Claude hook without `--source`, Swift precedence), #52 (drop `windows.yml`, `pipefail`, Morrow names).
-2. Fix the plugin endpoint regression in its own PR ([#78](https://github.com/fzrsahi/Morrow/issues/78)) — it is a live macOS bug.
-3. Phase 0.5: monorepo move PR, endpoint contract, Option E experiment → ADR-0003 or ADR-0001 evidence.
-4. Phase 1 vertical slice, with the gate script handed to the collaborator for the real X11 run.
+1. After PR #126 merges: merge `main` into #49 (keep `main`'s `AGENTS.md`/`GEMINI.md`, add the port pointer and the "Agent skills" block), then merge each stack PR's base into it, bottom-up.
+2. Resume #94 from `wip/#94-core-reducer` (or restart), branch `feat/#94-…` on top of #128 with #127 merged; then #95 → #96/#97.
+3. #78 once the three endpoint-contract questions on PR #115 are answered.
+4. Collaborator: run `linux/ci/e2e1.sh` on a real X11 desktop (PR #125) — the phase 1 gate.
+5. After the stack lands: replay #118 on fresh `main`, splitting its `.woodpecker.yaml` edits into a PR for @aazhrt.
