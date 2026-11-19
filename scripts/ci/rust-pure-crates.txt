@@ -2,3 +2,4 @@
 # line; scripts/ci/rust-purity.sh fails if any of them depends, on any
 # target, on a crate that reaches the OS.
 morrow-protocol
+morrow-core

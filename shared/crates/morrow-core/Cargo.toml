@@ -1,0 +1,16 @@
+[package]
+name = "morrow-core"
+description = "Morrow's pure domain core: what a hook invocation means (HookIntake), from facts handed in."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+# Core (GLOSSARY.md): no OS crate. scripts/ci/rust-purity.sh checks it.
+[dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -59,6 +59,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "morrow-core"
+version = "0.0.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "morrow-ipc"
 version = "0.0.0"
 dependencies = [
