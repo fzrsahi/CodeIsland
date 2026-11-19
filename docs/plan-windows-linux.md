@@ -2,7 +2,7 @@
 
 **Status:** rencana yang berlaku. Dibuat 2026-11-16, direvisi 2026-11-18 (rebrand Morrow, koreksi click-through, adapter yang hilang, kontrak socket, layout monorepo, Opsi E).
 
-**Keputusan yang mendasari:** Windows + Linux dibangun sebagai **satu shell Tauri v2** di atas **satu core**, dihubungkan lewat **kontrak hook JSON yang dibekukan**. macOS tetap SwiftUI/AppKit. Default bahasa core Windows/Linux adalah **Rust**; Opsi E (core Swift yang sama dengan macOS, dijalankan sebagai sidecar) diuji dulu lewat eksperimen 1–2 hari sebelum PR workspace Rust (lihat §7 Fase 0.5). Alasannya ada di [ADR-0001](adr/0001-two-cores-one-contract.md) dan [ADR-0002](adr/0002-tauri-v2-shell.md).
+**Keputusan yang mendasari:** Windows + Linux dibangun sebagai **satu shell Tauri v2** di atas **satu core**, dihubungkan lewat **kontrak hook JSON yang dibekukan**. macOS tetap SwiftUI/AppKit. Bahasa core Windows/Linux: **Rust** (diputuskan 2026-11-19 di PR #117). Opsi E (core Swift sebagai sidecar) lulus eksperimen #85 tapi ditolak; lihat ADR-0001 bagian terakhir dan ADR-0003. Alasannya ada di [ADR-0001](adr/0001-two-cores-one-contract.md) dan [ADR-0002](adr/0002-tauri-v2-shell.md).
 
 ---
 
@@ -81,7 +81,7 @@ Kontrak bersama adalah satu-satunya yang wajib stabil:
 - Dari 73 file, ~13 butuh shim. Yang benar-benar sulit di Linux hanya `JSONLTailer` (`DispatchSource.makeFileSystemObjectSource`, tidak ada di libdispatch non-Darwin). Windows menambah AF_UNIX/`getpeereid`/`fchmod`/`O_NOFOLLOW` di `SocketPath`, `PrivateFiles`, `BridgeLog`, `AiWorkWatchClient`.
 - Biayanya nyata: runtime Swift harus dikirim di Windows, Foundation di Windows lebih rapuh, dan core↔shell menjadi IPC (sidecar JSON-lines), bukan in-process. Preseden produksi: [DigUp](https://github.com/ARahim3/DigUp) (engine Swift + shell Tauri di Windows/Linux).
 
-Keputusan Rust vs Opsi E diambil dari **eksperimen**, bukan argumen (§7 Fase 0.5). Selama eksperimen belum jalan, Rust adalah default.
+Eksperimen #85 membuktikan Opsi E layak di Linux (96,8% test core murni lulus), tapi maintainer memilih **Rust** (PR #117): satu bahasa dan satu proses dengan Tauri, binary kecil, dan tidak bergantung pada Foundation di Windows. Biaya yang diterima: dua core selamanya dan port ~37–40K LOC.
 
 ---
 
@@ -113,7 +113,7 @@ flowchart TB
     IPC --> EP --> BR -->|stdout| CLI
 ```
 
-Dua binary, satu proses app. Core adalah library in-process (Rust). Pada Opsi E, `morrow-core` diganti sidecar Swift yang bicara JSON-lines ke shell; topologi lainnya tidak berubah.
+Dua binary, satu proses app. Core adalah library in-process (Rust). (Opsi E — sidecar Swift — ditolak, lihat §2.)
 
 ### 3.1 Kontrak endpoint (baru — wajib dibekukan di Fase 0.5)
 

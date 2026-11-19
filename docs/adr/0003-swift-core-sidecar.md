@@ -1,6 +1,6 @@
 # Swift core as a sidecar for Windows and Linux (Option E)
 
-Status: proposed (2026-11-19), pending maintainer acceptance. Until it is accepted, ADR-0001's default (Rust) stands and no Rust code beyond Phase 1's vertical slice is written.
+Status: **rejected (2026-11-19)** by maintainer decision in PR #117 — option B, Rust core. The experiment result below stands as evidence; the decision and its reasons are recorded in [ADR-0001](0001-two-cores-one-contract.md#decision-after-the-experiment-2026-11-19).
 
 ADR-0001's decision rule picks Option E when `MorrowCore` builds in a Linux container within 2 days and at least 80% of the pure-logic core tests pass. The #85 experiment ([`docs/experiments/option-e-linux.md`](../experiments/option-e-linux.md)) met both conditions:
 

@@ -1,7 +1,7 @@
 # Progress — Windows & Linux port
 
 **Status:** fase 0 — PR #49–#52 terbuka, revisi selesai. Tiket #83–#110 dari spec #82. Belum ada kode Rust.
-**Checkpoint terakhir:** 2026-11-19 — eksperimen Opsi E (#85) hijau, ADR-0003 `proposed`.
+**Checkpoint terakhir:** 2026-11-19 — core diputuskan **Rust** (PR #117); ADR-0003 `rejected`.
 **Fase kanonik:** [`plan-windows-linux.md`](plan-windows-linux.md) §7. Kalau dokumen ini berbeda dengan §7, §7 yang benar.
 
 ---
@@ -35,7 +35,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 0 | #78 | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `belum` | test plugin memakai default asli |
 | 0.5 | #86 | `chore`: layout monorepo (plan §4) | `belum` | `swift test` + DMG hijau, nol perubahan perilaku |
 | 0.5 | #84 | kontrak endpoint (plan §3.1) | `belum` | satu dokumen; semua edge mengikuti |
-| 0.5 | #85 | eksperimen Opsi E (Swift core di Linux) | `PR dibuka` (hijau, 96,8% lulus → ADR-0003 `proposed`) | kill criteria ADR-0001 → ADR-0003 atau bukti Rust |
+| 0.5 | #85 | eksperimen Opsi E (Swift core di Linux) | `merged`-siap: hijau 96,8%, **ditolak → Rust** (PR #117) | kill criteria ADR-0001 → ADR-0003 atau bukti Rust |
 | 1 | #87, #88 | `chore(#33)`: workspace Rust, protocol, ipc, CI purity | `belum` | `cargo test`; `cargo tree -p morrow-core` bersih |
 | 1 | #89 | `feat(#33)`: bridge untuk `claude` | `belum` | conformance fixtures |
 | 1 | #90, #91 | `feat(#33)`: vertical slice island Linux X11 | `belum` | **`E2E-1`** — dua arah, <300 ms, tight-fit, tidak mencuri fokus |
@@ -58,6 +58,12 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 ---
 
 ## Log Checkpoint
+
+### 2026-11-19 — keputusan core: Rust
+
+- **Sudah:** maintainer memilih opsi B (Rust) di PR #117 walau eksperimen #85 lulus; ADR-0003 `rejected`, ADR-0001 mencatat keputusan dan alasannya.
+- **Berikutnya:** #87 workspace Rust, lalu #88 → #89 → #90 → #91; #92 wajib sebelum #94.
+- **Blocker:** tidak ada untuk #87.
 
 ### 2026-11-19 — eksperimen Opsi E (#85)
 

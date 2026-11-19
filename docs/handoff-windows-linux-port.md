@@ -33,7 +33,7 @@ The dev machine is macOS arm64 only. Work is split by what can be proven where.
 |---|---|---|
 | Docs, ADRs, contract, fixtures, schemas | anywhere | dev machine |
 | Rust crates without UI (`protocol`, `ipc` UDS, `core`, `bridge`, `hooks`) | macOS + Linux container (`cargo test`) | dev machine |
-| Option E experiment (Swift core on Linux) | Linux container | dev machine |
+| Option E experiment (Swift core on Linux) — done (#85), rejected in #117 | Linux container | dev machine |
 | Tauri shell build + X11 smoke (Xvfb + `xdotool`) | Linux container | dev machine |
 | **`E2E-1` / `E2E-2` final gate on X11 and Wayland** | real Linux desktop | collaborator with the Debian host (#70) |
 | Windows plumbing, WebView2 focus, SMTC, NSIS, signing | Windows 10/11 (QEMU on the Debian host, or hardware) | collaborator |
@@ -91,5 +91,5 @@ Every PR that needs another machine ships a script that runs its gate and prints
 
 1. Revise and merge Phase 0: #49 (this), #50 (exporter path, neutral rules, validator), #51 (reworked: Claude hook without `--source`, Swift precedence), #52 (drop `windows.yml`, `pipefail`, Morrow names).
 2. Fix the plugin endpoint regression in its own PR ([#78](https://github.com/fzrsahi/Morrow/issues/78)) — it is a live macOS bug.
-3. Phase 0.5: monorepo move PR, endpoint contract, Option E experiment → ADR-0003 or ADR-0001 evidence.
+3. Phase 0.5: monorepo move PR, endpoint contract. Core language is decided: **Rust** (#117).
 4. Phase 1 vertical slice, with the gate script handed to the collaborator for the real X11 run.
