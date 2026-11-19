@@ -6500,6 +6500,26 @@ private struct UsageSparkline: View {
     }
 }
 
+/// Routes horizontal trackpad swipes out of `NSScrollView` so tab navigation works anywhere over the Agents list.
+enum ThinScrollSwipePolicy {
+    static func decision(
+        deltaX: CGFloat,
+        deltaY: CGFloat,
+        isForwardingHorizontal: Bool,
+        isPhaseBegin: Bool,
+        isPhaseEnd: Bool
+    ) -> (forward: Bool, nextForwardingState: Bool) {
+        let isHorizontal = abs(deltaX) > abs(deltaY) && abs(deltaX) > 0.4
+        if isPhaseBegin {
+            return (isHorizontal, isHorizontal && !isPhaseEnd)
+        }
+        if isHorizontal || isForwardingHorizontal {
+            return (true, !isPhaseEnd)
+        }
+        return (false, false)
+    }
+}
+
 /// Thin overlay scrollbar via NSScrollView — ignores system "show scrollbar" preference.
 private struct ThinScrollView<Content: View>: NSViewRepresentable {
     let maxHeight: CGFloat
@@ -6509,9 +6529,31 @@ private struct ThinScrollView<Content: View>: NSViewRepresentable {
     /// attached or "Show scroll bars: Always") on its own schedule; a legacy
     /// scroller took 13pt off the session list's width until the next update.
     private final class OverlayScrollView: NSScrollView {
+        private var forwardingHorizontalSwipe = false
+
         override var scrollerStyle: NSScroller.Style {
             get { super.scrollerStyle }
             set { super.scrollerStyle = .overlay }
+        }
+
+        override func scrollWheel(with event: NSEvent) {
+            let isPhaseEnd = event.phase == .ended
+                || event.phase == .cancelled
+                || event.momentumPhase == .ended
+                || event.momentumPhase == .cancelled
+            let result = ThinScrollSwipePolicy.decision(
+                deltaX: event.scrollingDeltaX,
+                deltaY: event.scrollingDeltaY,
+                isForwardingHorizontal: forwardingHorizontalSwipe,
+                isPhaseBegin: event.phase == .began,
+                isPhaseEnd: isPhaseEnd
+            )
+            forwardingHorizontalSwipe = result.nextForwardingState
+            if result.forward {
+                nextResponder?.scrollWheel(with: event)
+                return
+            }
+            super.scrollWheel(with: event)
         }
     }
 
