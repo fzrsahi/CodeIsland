@@ -10,7 +10,7 @@ peer of the same user. The rule and the checks are
 |---|---|
 | `resolve`, `Platform`, `Endpoint`, `EndpointKind` | §2.1 (macOS), §3.1 (Linux), §4.1 (Windows): pure, no I/O |
 | `unix::current_endpoint` | the rule with this process's environment, uid and files |
-| `unix::Client` | §2.2 / §3.2 client side: `lstat`, private folder, connect timeout, peer uid, one request and its reply |
+| `unix::Client`, `unix::PendingReply` | §2.2 / §3.2 client side: `lstat`, private folder, connect timeout, peer uid, one request and its reply (`send_and_wait`, or `send` then `wait` for a caller whose deadline covers only the send) |
 | `unix::Server`, `unix::Connection` | §2.3 / §3.2 listener: private folder, probe before unlink, single instance, umask `077` + `0600`, peer uid on accept, removes only its own file |
 | `unix::Error` | why an endpoint, a peer or a file was refused |
 

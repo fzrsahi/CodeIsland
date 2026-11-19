@@ -58,22 +58,55 @@ impl Client {
     /// a request that waits for the user (a permission prompt) passes a long
     /// one or `None`. An empty reply is a valid answer.
     pub fn send_and_wait(
-        mut self,
+        self,
         request: &[u8],
         io_timeout: Option<Duration>,
     ) -> Result<Vec<u8>, Error> {
+        self.send(request, io_timeout)?.wait(io_timeout)
+    }
+
+    /// The first half of [`Client::send_and_wait`]: writes all of `request`
+    /// and half-closes, each write bounded by `write_timeout`. A caller
+    /// with a deadline for the send but none for the reply (a hook that
+    /// waits for the user) lifts its deadline in between.
+    pub fn send(
+        mut self,
+        request: &[u8],
+        write_timeout: Option<Duration>,
+    ) -> Result<PendingReply, Error> {
         let path = self.path.as_str();
         let io = |op| move |source| io_error(op, path, source);
         self.stream
-            .set_write_timeout(io_timeout)
+            .set_write_timeout(write_timeout)
             .map_err(io("set write timeout on"))?;
-        self.stream
-            .set_read_timeout(io_timeout)
-            .map_err(io("set read timeout on"))?;
         self.stream.write_all(request).map_err(io("write to"))?;
         self.stream
             .shutdown(Shutdown::Write)
             .map_err(io("half-close"))?;
+        Ok(PendingReply {
+            stream: self.stream,
+            path: self.path,
+        })
+    }
+}
+
+/// A request [`Client::send`] wrote and half-closed, its reply not read yet.
+#[derive(Debug)]
+pub struct PendingReply {
+    stream: UnixStream,
+    path: String,
+}
+
+impl PendingReply {
+    /// Reads the reply until the island closes, each read bounded by
+    /// `read_timeout` (`None`: as long as it takes). An empty reply is a
+    /// valid answer.
+    pub fn wait(mut self, read_timeout: Option<Duration>) -> Result<Vec<u8>, Error> {
+        let path = self.path.as_str();
+        let io = |op| move |source| io_error(op, path, source);
+        self.stream
+            .set_read_timeout(read_timeout)
+            .map_err(io("set read timeout on"))?;
         let mut reply = Vec::new();
         self.stream
             .read_to_end(&mut reply)

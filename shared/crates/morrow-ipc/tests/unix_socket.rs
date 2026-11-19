@@ -119,6 +119,23 @@ fn round_trip_sends_half_closes_and_reads_the_reply() {
 }
 
 #[test]
+fn send_then_wait_is_the_same_round_trip_in_two_steps() {
+    let dir = TestDir::new();
+    let endpoint = dir.override_endpoint("split.sock");
+    let server = Server::bind(&endpoint).expect("bind");
+
+    let reply = std::thread::scope(|scope| {
+        scope.spawn(|| serve_echo(&server, 1));
+        let pending = Client::connect(&endpoint, CONNECT_TIMEOUT)
+            .expect("connect")
+            .send(b"split", IO_TIMEOUT)
+            .expect("send");
+        pending.wait(None).expect("wait")
+    });
+    assert_eq!(reply, b"echo:split");
+}
+
+#[test]
 fn a_second_bind_while_the_first_listens_is_already_running() {
     let dir = TestDir::new();
     let endpoint = dir.runtime_endpoint();

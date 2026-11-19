@@ -15,7 +15,7 @@ use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 
-pub use client::Client;
+pub use client::{Client, PendingReply};
 pub use server::{Connection, Server};
 
 use crate::{Endpoint, EndpointKind, Platform, resolve};
