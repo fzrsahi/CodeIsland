@@ -13,6 +13,8 @@ quirk is then fixed once, in HookIntake, for every edge.
 
 ## Transport
 
+The endpoint rule per OS (overrides, legacy fallback, peer checks, case table) is in [`endpoint-contract.md`](endpoint-contract.md).
+
 - One Unix-domain stream connection per hook invocation, to
   `$MORROW_SOCKET_PATH`, else `/tmp/morrow-<uid>.sock` (on a remote
   host, the path the installer forwarded: `/tmp/morrow-<uid>/island.sock`).

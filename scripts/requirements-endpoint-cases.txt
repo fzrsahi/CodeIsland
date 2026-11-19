@@ -1,0 +1,2 @@
+# scripts/validate-endpoint-cases.py
+jsonschema==4.23.0
