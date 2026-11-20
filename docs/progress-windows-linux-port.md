@@ -101,6 +101,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 
 ## Log Checkpoint
 
+### 2026-11-20 (lanjutan 23) — #107 adapter Windows (PR #159)
+
+- **Sudah:** sembilan adapter Windows (SMTC, Core Audio, WTS, `SHQueryUserNotificationState`, toast, registry autostart, rantai proses untuk terminal, `GetCursorPos`, Credential Manager sebagai baris), `Environment.os` sehingga tabel Capability di-probe per platform, `windows_rules` (13 test) untuk tiga keputusan yang bisa salah diam-diam: pid terminal paling luar, arti state notifikasi (unknown = boleh menginterupsi), dan quoting nilai `Run`. `docs/windows-adapters.md` mencatat mekanisme, alasan, dan apa yang hanya bisa dibuktikan host Windows. Shell berhenti menyebut modul Unix; `fullscreen` dan `pointer_position` ditambahkan. Gate Unix hijau, lima crate Windows hijau. **PR #159** terhadap #158.
+- **Berikutnya:** #108 (installer hook + NSIS + E2E-2 di Windows) — butuh VM; lalu Fase 5/6.
+- **Blocker:** W-001, W-005, W-006, W-007, W-009 di host Windows; #91 masih OPEN; review stack #145–#159.
+
 ### 2026-11-20 (lanjutan 22) — #106 panel Windows (PR #158)
 
 - **Sudah:** `windows_panel.rs` (`WM_NCHITTEST` → `HTTRANSPARENT` di luar island membulat, `MA_NOACTIVATE` untuk klik, `WS_EX_NOACTIVATE` dilepas selama Question card terbuka lalu dipasang kembali), geometri di `morrow_platform::panel` (6 test: tengah pill, empat sudut, tepi eksklusif, radius 0/di-clamp, island lebih kecil dari window). `morrow-app` masuk lane Windows (lima crate) — butuh `llvm-rc`, skrip mencetak SKIP bila tidak ada. **Spike input region dicatat** di `docs/spike-windows-input-region.md`: `SetWindowRgn` memotong gambar, layered+alpha tidak bisa host WebView2, jadi `WM_NCHITTEST`; sisa terbuka — child HWND WebView2 bisa mencegat — diputuskan di W-005. Dua bug jahitan diperbaiki: `Connection::set_read_timeout` portabel (no-op di pipe) dan `Send` untuk handle Win32. Gate Unix hijau. **PR #158** terhadap #157.
