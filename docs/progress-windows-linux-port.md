@@ -101,6 +101,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 
 ## Log Checkpoint
 
+### 2026-11-20 (lanjutan 21) — #105 named pipe Windows (PR #157)
+
+- **Sudah:** `morrow_ipc::windows` (pipe mode pesan; `FILE_FLAG_FIRST_PIPE_INSTANCE` + `PIPE_REJECT_REMOTE_CLIENTS`; descriptor `O:<sid>G:<sid>D:(A;;GA;;;<sid>)`; `ERROR_ACCESS_DENIED` → `AlreadyRunning`), cek identitas server lewat `GetNamedPipeServerProcessId` → token → SID, `pipe::` untuk nama+descriptor (murni, diuji di mesin mana pun, termasuk kecocokan nama dengan `endpoint::resolve`), `is_sid` menolak SID cacat sebelum masuk API. `morrow_ipc` me-re-export satu nama transport, jadi bridge dan shell berhenti menyebut `unix`. Skrip baru `scripts/ci/windows-check.sh`. Bukti: `cargo xwin clippy --target x86_64-pc-windows-msvc -- -D warnings` hijau untuk `morrow-ipc`, `morrow-bridge`, `morrow-core`; gate Unix hijau; 4 test string lulus. **PR #157** terhadap #156.
+- **Berikutnya:** #106 (window plumbing, butuh #91 dan #105) dan #107 (WinRT + Capability) — keduanya berakhir di VM Windows; #108 (NSIS) di belakangnya.
+- **Blocker:** **W-001** butuh host Windows dengan dua akun; lane Windows belum dipasang di `.woodpecker.yaml` (@aazhrt); review stack #145–#157. Lokal butuh `rustup target add x86_64-pc-windows-msvc` + `cargo install cargo-xwin --locked` (~1,5 GB).
+
 ### 2026-11-20 (lanjutan 20) — #104 packaging Linux (PR #156)
 
 - **Sudah:** tiga skrip di kontrak §8.1 — `linux-package.sh` (semver tanpa `v`, signing key wajib di awal, tiap format butuh artefak + `.sig`, `SHA256SUMS` hanya kalau set lengkap), `linux-manifest.sh` (satu feed per format, **all-or-nothing**: validasi semua format dulu, tulis kedua, tiap dokumen di-parse ulang lalu di-rename), `linux-smoke.sh` (install → launch → tunggu copy-out bridge → satu hook sintetis berwaktu → uninstall; keluar **77** kalau host tidak punya display, karena lulus diam-diam lebih buruk daripada jujur tidak bisa). `morrow-platform::bridge` menyalin bridge ke `~/.local/bin/morrow-bridge` secara atomik; skrip hook memakai path stabil dulu, `~/.codeisland` cadangan, versi skrip v2. `tauri.conf.json` dapat `bundle.active`, tiga target, `externalBin`, updater artifacts, dependensi deb/rpm. Test `bridge_placement` 5; gate hijau. **PR #156** terhadap #155.
