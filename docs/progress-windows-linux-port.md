@@ -67,6 +67,26 @@ Stack PR dan urutan merge: body #33, bagian **Stack PR**. Ringkas: **sudah merge
 
 ---
 
+## Uji kering retarget (2026-11-20, belum di-push)
+
+Diuji dengan `git merge-tree --write-tree` terhadap `main` = `f812e7b`; worktree tidak disentuh, tidak ada push. Polanya sama di semua branch, jadi retarget nanti hanya menyelesaikan 2–3 file yang sama:
+
+| PR / branch | Bentrok | Penyelesaian |
+|---|---|---|
+| #49 `docs/#33` | — (sudah di-merge, `cad7ba7`) | — |
+| #50 `test/#33`, #117 `research/#85` | `AGENTS.md`, `GEMINI.md` | ambil versi `main` (setelah #49: `AGENTS.md` lengkap dengan §7; `GEMINI.md` sudah jadi 1 baris penunjuk) |
+| #120–#125, #128, #130–#133 | `AGENTS.md`, `GEMINI.md`, `.gitignore` | dua file pertama ambil `main`; `.gitignore` **pertahankan** versi branch (`target/`, `CLAUDE.md`) |
+| #127 `test/#92` | `AGENTS.md`, `GEMINI.md` | ambil versi `main` |
+| #118 `chore/#86` (draft) | `.woodpecker.yaml`, `GEMINI.md` | `.woodpecker.yaml` = zona @aazhrt, jangan disentuh agen |
+
+Sebabnya: branch-branch ini dibuat sebelum `main` punya `AGENTS.md` (git melihatnya add/add), `GEMINI.md` sudah diringkas di #119, dan `.gitignore` versi Rust menambah `target/` + `CLAUDE.md`. `rerere.enabled` sudah aktif di clone ini dan resolusi `AGENTS.md` dari merge #49 sudah terekam, jadi konflik yang sama akan diputar ulang otomatis.
+
+Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 → sisanya tetap menumpang induknya, retarget hanya saat induknya masuk `main`. Biaya per push: build Swift ~1,5 menit, dan `swift test` branch ikut menjalankan suite Swift terbaru.
+
+**Catatan: bagian ini sengaja belum di-push** (permintaan pemilik repo, 2026-11-20). Push menyusul bersama update berikutnya.
+
+---
+
 ## Log Checkpoint
 
 ### 2026-11-20 (lanjutan 5) — #126 merged, #49 lepas dari konflik
