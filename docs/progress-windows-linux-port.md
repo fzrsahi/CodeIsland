@@ -1,7 +1,7 @@
 # Progress — Windows & Linux port
 
-**Status:** fase 1 selesai di PR (#120–#125, gate E2E-1 hijau di Xvfb, menunggu X11 nyata); fase 2 (#127, #128, #130, #131, #132). Core = **Rust** (#117).
-**Checkpoint terakhir:** 2026-11-20 — PR #132 dibuka untuk #96 (`GitBranchReader` + `MarkdownBlockParser` di `morrow-core`; 53 test markdown + 12 test git hijau).
+**Status:** fase 1 selesai di PR (#120–#125, gate E2E-1 hijau di Xvfb, menunggu X11 nyata); fase 2 (#127, #128, #130, #131, #132, #133). Core = **Rust** (#117).
+**Checkpoint terakhir:** 2026-11-20 — PR #133 dibuka untuk #97 (transcript tail di `morrow-core`: 70 test, `TailState` murni untuk offset/rotasi).
 **Fase kanonik:** [`plan-windows-linux.md`](plan-windows-linux.md) §7. Kalau dokumen ini berbeda dengan §7, §7 yang benar.
 
 ---
@@ -47,7 +47,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 2 | #94 → PR #130 | port reducer + `HookEventFacts` + wire morrow-app | `PR dibuka` (stacked on #128) | 80/80 kasus (161 step) fixture reducer identik, gate E2E-1 27/27 |
 | 2 | #95 → PR #131 | `AttentionPolicy.intents` + `EventSoundRouting` + `reduce_event` | `PR dibuka` (stacked on #130) | 56/56 kasus attention; 80/80 + 161 step reducer termasuk intents; `morrow-app` 12/12 |
 | 2 | #96 → PR #132 | `GitBranchReader` + `MarkdownBlockParser` | `PR dibuka` (stacked on #131) | 53/53 test markdown + 9/9 test git diport 1:1; `linux-test.sh` hijau |
-| 2 | #97 | transcript live: parser JSONL di core + watcher di platform | `belum` | fixture/test port lulus |
+| 2 | #97 → PR #133 | transcript tail: parser JSONL + `TailState` di core | `PR dibuka` (stacked on #132) | 70 test port (2 test `DispatchSource` milik watcher); file diganti → replay sekali lalu live |
 | 3 | #98–#104 | Linux lengkap: installer, adapter, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
@@ -67,6 +67,12 @@ Stack PR dan urutan merge: body #33, bagian **Stack PR**. Ringkas: mandiri #51, 
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 3) — #97 selesai, PR #133 dibuka (stacked on #132)
+
+- **Sudah:** `JSONLTailer` diport ke `shared/crates/morrow-core/src/transcript.rs`: `scan_lines` murni untuk semua bentuk baris (Claude + command echo + wrapper `<system-reminder>`/`<USER_REQUEST>`, Antigravity `USER_INPUT`/`PLANNER_RESPONSE`, Codex `event_msg`/`response_item`, Grok, MiniMax thinking blob, Cursor `role`-keyed + sinyal `AskQuestion`), plus `TailState` (offset, fragment, replay file yang diganti, rewind saat truncate) dan `scan_tail_for_attach` (backfill yang tahu batas jendela). Test: **70** lulus (dua test `DispatchSource` milik watcher tidak diport). `linux-test.sh` hijau; `morrow-core` tetap 20 crate murni. PR #133 dibuka terhadap base `feat/#96-core-git-markdown` (#132).
+- **Berikutnya:** fase 2 selesai di sisi core begitu #131–#133 di-review. Kandidat berikut: watcher transcript di platform (bagian yang sengaja ditinggal di #97), atau tiga payload app-side yang ditunda (checklist, recap, label model) sebagai tiket sendiri; lalu Lane E: #98 installer + E2E-2, #101 adapter batch 1.
+- **Blocker:** run E2E-1 di X11 nyata (@aazhrt); 3 keputusan kontrak endpoint (#115); review stack #120–#125, #128, #130–#133. **Bug baru ditemukan:** `bridge_process::gemini_permission_answer_is_put_as_gemini_reads_it` flaky — fallback sentinel 200 ms di test harness balapan delay 250 ms hook Gemini; perlu tiket sendiri (di luar #96/#97).
 
 ### 2026-11-20 (lanjutan 2) — #96 selesai, PR #132 dibuka (stacked on #131)
 
