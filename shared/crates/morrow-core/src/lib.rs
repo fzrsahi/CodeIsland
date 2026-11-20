@@ -12,6 +12,8 @@
 //!   frontend to draw.
 //! - [`git`]: the checked-out branch of a session's `cwd`, from `.git` read
 //!   through a [`git::Disk`] the shell hands in.
+//! - [`transcript`]: the live transcript's newest prompt, reply, turn status
+//!   and Cursor question, from the JSONL lines the platform watcher reads.
 //! - [`digest`]: SHA-256, for the delivery digest of a hook Cursor ran.
 #![forbid(unsafe_code)]
 
@@ -21,6 +23,7 @@ pub mod git;
 pub mod intake;
 pub mod markdown;
 pub mod reduce;
+pub mod transcript;
 
 /// A JSON object, keys in arrival order.
 pub type JsonObject = serde_json::Map<String, serde_json::Value>;

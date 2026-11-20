@@ -98,6 +98,22 @@ through `Path`/`PathBuf`, joined and split by segment, so the same walk works
 on Windows. Linked worktrees are told apart from submodules by segment
 (`.git/worktrees/<name>`), never by a substring of the path.
 
+## `transcript`: JSONLTailer
+
+The live transcript (`Sources/MorrowCore/JSONLTailer.swift`): `scan_lines`
+splits a chunk of JSONL on newlines and reports the newest `last_user_prompt`,
+`last_assistant_message`, `turn_status`, whether the chunk was activity at all,
+and the trailing `CursorQuestionSignal`; the bytes after the last newline come
+back as a fragment for the next call. `TailState` is the reading position —
+offset, fragment, and one replay of a replaced file — and `scan_tail_for_attach`
+is the attach-time backfill. Nothing here opens a file or watches a path: the
+platform watcher reads and hands the bytes in.
+
+Not ported (the app-side payloads a delta also carries on macOS): the checklist
+(`AgentTaskTranscript`), the idle recap (`SessionRecap`), and the model label /
+reasoning effort (`ModelObservation`, `ModelLabel`, including the `/model`
+1M-context switch). Rows that only carry those parse to nothing here.
+
 ## Tests
 
 `tests/conformance.rs` (the port of `HookIntakeGoldenTests.swift`) runs every
@@ -118,3 +134,10 @@ read.
 (53 of its 54; the cache test belongs to the macOS app), and
 `tests/git_branch_reader.rs` is `GitBranchReaderTests` on an in-memory disk
 (9 of 9, plus the depth cap and a standardized `cwd`).
+
+`tests/transcript_tailer.rs` is `JSONLTailerTests` and
+`JSONLTailerCursorQuestionTests` ported: 70 tests, all the parsing ones as
+they are and the attach/replacement ones driven through `TailState` with the
+bytes a watcher would have read. Two Swift tests are the watcher's own and
+have no counterpart (a dispatch source that stops firing, a delayed reopen
+after a rename).
