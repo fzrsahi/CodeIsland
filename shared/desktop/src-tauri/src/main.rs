@@ -119,6 +119,8 @@ fn main() -> ExitCode {
             adapters::process_watch,
             adapters::process_alive,
             adapters::screen_locked,
+            adapters::fullscreen,
+            adapters::pointer_position,
             adapters::notify_send,
             island::island_question_focus
         ])

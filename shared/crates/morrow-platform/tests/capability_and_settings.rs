@@ -22,6 +22,7 @@ fn temp(tag: &str) -> PathBuf {
 
 fn x11(config_home: PathBuf) -> Environment {
     Environment {
+        os: morrow_platform::capability::Os::Linux,
         session_type: Some("x11".into()),
         has_session_bus: true,
         path_tools: vec!["/usr/bin".into()],
@@ -34,6 +35,7 @@ fn x11(config_home: PathBuf) -> Environment {
 
 fn wayland(config_home: PathBuf) -> Environment {
     Environment {
+        os: morrow_platform::capability::Os::Linux,
         session_type: Some("wayland".into()),
         ..x11(config_home)
     }

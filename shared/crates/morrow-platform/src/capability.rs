@@ -121,6 +121,9 @@ impl Feature {
     /// can hand in a Wayland session or an empty `PATH` without touching the
     /// process.
     pub fn probe(self, environment: &Environment) -> Capability {
+        if environment.os == Os::Windows {
+            return windows(self, environment);
+        }
         match self {
             // The panel is a window: these need a display to do anything.
             Self::NowPlaying => {
@@ -291,6 +294,62 @@ pub struct Row {
     pub capability: Capability,
 }
 
+/// The Windows answers (#107). Every row here is a mechanism Windows has and
+/// the Linux arms do not: WinRT for media and toasts, Core Audio for the volume,
+/// WTS for the lock, `SHQueryUserNotificationState` for fullscreen, the registry
+/// for autostart, the Credential Manager for secrets.
+fn windows(feature: Feature, environment: &Environment) -> Capability {
+    match feature {
+        // SMTC through WinRT: no tool to find, no bus to have.
+        Feature::NowPlaying => Capability::Supported,
+        Feature::Lyrics => {
+            if environment.has_network_tool() {
+                Capability::Supported
+            } else {
+                Capability::Unsupported("no curl or wget to fetch lyrics".into())
+            }
+        }
+        // Core Audio's endpoint volume: one COM interface, nothing to install.
+        Feature::SystemVolume => Capability::Supported,
+        // A window whose process owns the session, then `SetForegroundWindow`.
+        Feature::TerminalActivator => Capability::Supported,
+        // There is no `_NET_ACTIVE_WINDOW` and no per-terminal title protocol:
+        // "is my terminal visible" is not a question Windows answers.
+        Feature::TerminalVisibility => Capability::Unsupported(
+            "Windows has no cross-application way to say whether a window is visible".into(),
+        ),
+        Feature::ProcessTable => Capability::Supported,
+        Feature::GlobalHotkey => Capability::Supported,
+        // `GetCursorPos` is global on Windows, unlike on Wayland.
+        Feature::PointerMonitor => Capability::Supported,
+        Feature::Fullscreen => Capability::Supported,
+        Feature::SessionLock => Capability::Supported,
+        Feature::Notifications => Capability::Supported,
+        Feature::SyntheticInput => Capability::Supported,
+        Feature::SystemStats => Capability::Supported,
+        Feature::Geolocation => {
+            Capability::Degraded("WinRT Geolocation, subject to the privacy setting".into())
+        }
+        Feature::Tray => Capability::Supported,
+        // `HKCU\\…\\CurrentVersion\\Run`, one value, no administrator.
+        Feature::Autostart => Capability::Supported,
+        // Credential Manager: per user, no prompt beyond the first write.
+        Feature::Secrets => Capability::Supported,
+        Feature::ClaudeCredentials => {
+            if environment.claude_credentials.is_file() {
+                Capability::Supported
+            } else {
+                Capability::Degraded("no .claude/.credentials.json to read".into())
+            }
+        }
+        Feature::Ble => Capability::Degraded(
+            "WinRT Bluetooth LE, when the radio is on and the app is allowed".into(),
+        ),
+        Feature::Audio => Capability::Supported,
+        Feature::Updater => Capability::Supported,
+    }
+}
+
 /// Every feature, probed. This is what Settings renders.
 pub fn table(environment: &Environment) -> Vec<Row> {
     Feature::ALL
@@ -302,10 +361,29 @@ pub fn table(environment: &Environment) -> Vec<Row> {
         .collect()
 }
 
+/// Which platform's answers apply. A probe reads this instead of `cfg!` so a
+/// test can hand in Windows on a Linux machine and check the table it produces.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Os {
+    Linux,
+    Windows,
+}
+
+impl Os {
+    pub fn current() -> Self {
+        if cfg!(windows) {
+            Self::Windows
+        } else {
+            Self::Linux
+        }
+    }
+}
+
 /// What the probes are allowed to know: read once, from the process, or handed
 /// in by a test.
 #[derive(Clone, Debug)]
 pub struct Environment {
+    pub os: Os,
     pub session_type: Option<String>,
     pub has_session_bus: bool,
     pub path_tools: Vec<String>,
@@ -325,6 +403,7 @@ impl Environment {
             .map_or_else(|| home.join(".claude"), std::path::PathBuf::from);
         let session_type = std::env::var("XDG_SESSION_TYPE").ok();
         Self {
+            os: Os::current(),
             session_type,
             has_session_bus: std::env::var_os("DBUS_SESSION_BUS_ADDRESS").is_some(),
             path_tools: std::env::var("PATH")

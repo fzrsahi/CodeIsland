@@ -33,21 +33,57 @@ pub fn capabilities() -> Vec<capability::Row> {
     rows
 }
 
-/// Whether the autostart entry is there.
+/// Whether the autostart entry is there: a `.desktop` file on Linux, a value
+/// under `HKCU\…\Run` on Windows (#107).
 #[tauri::command]
 pub fn autostart_status(site: State<'_, HooksSite>) -> autostart::Status {
-    autostart::status(&site.paths.home.join(".config"))
+    #[cfg(windows)]
+    {
+        let _ = &site;
+        let entry =
+            morrow_platform::windows::autostart::status(&morrow_platform::runner::SystemRunner)
+                .ok()
+                .flatten()
+                .unwrap_or_default();
+        autostart::Status {
+            installed: !entry.is_empty(),
+            path: PathBuf::from(morrow_platform::windows::autostart::KEY),
+        }
+    }
+    #[cfg(unix)]
+    {
+        autostart::status(&site.paths.home.join(".config"))
+    }
 }
 
 /// Install or remove the autostart entry. Returns whether anything changed.
 #[tauri::command]
 pub fn autostart_set(site: State<'_, HooksSite>, enabled: bool) -> Result<bool, String> {
-    let config_home = site.paths.home.join(".config");
-    if enabled {
+    #[cfg(windows)]
+    {
+        let _ = &site;
         let executable = std::env::current_exe().map_err(|error| error.to_string())?;
-        autostart::install(&config_home, &executable).map_err(|error| error.to_string())
-    } else {
-        autostart::uninstall(&config_home).map_err(|error| error.to_string())
+        let before =
+            morrow_platform::windows::autostart::status(&morrow_platform::runner::SystemRunner)?;
+        if enabled {
+            morrow_platform::windows::autostart::install(
+                &morrow_platform::runner::SystemRunner,
+                &executable.display().to_string(),
+            )?;
+        } else {
+            morrow_platform::windows::autostart::uninstall(&morrow_platform::runner::SystemRunner)?;
+        }
+        Ok(before.is_some() != enabled)
+    }
+    #[cfg(unix)]
+    {
+        let config_home = site.paths.home.join(".config");
+        if enabled {
+            let executable = std::env::current_exe().map_err(|error| error.to_string())?;
+            autostart::install(&config_home, &executable).map_err(|error| error.to_string())
+        } else {
+            autostart::uninstall(&config_home).map_err(|error| error.to_string())
+        }
     }
 }
 

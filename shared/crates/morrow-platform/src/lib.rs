@@ -30,4 +30,7 @@ pub mod process;
 pub mod runner;
 pub mod settings;
 pub mod terminal;
+#[cfg(windows)]
+pub mod windows;
+pub mod windows_rules;
 pub mod yaml_hooks;
