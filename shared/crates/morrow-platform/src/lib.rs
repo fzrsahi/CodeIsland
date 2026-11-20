@@ -19,6 +19,7 @@
 pub mod autostart;
 pub mod bridge;
 pub mod capability;
+pub mod compositor;
 pub mod hooks;
 pub mod hooks_windows;
 pub mod kimi;

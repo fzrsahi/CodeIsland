@@ -20,6 +20,18 @@ const COLLAPSED: (f64, f64) = (240.0, 34.0);
 /// linux/ci/smoke-x11.sh and linux/ci/e2e1.sh.
 pub struct Smoke(pub bool);
 
+/// Whether the island is a layer surface or an ordinary always-on-top window,
+/// and the sentence the UI shows when it is the latter (#109).
+///
+/// On a compositor with `wlr-layer-shell` this *is* the seam a layer surface
+/// would be created at: tao upstream closed both PRs (plan §6.4), so a build
+/// that anchors needs the pinned patch, and until that decision is made the
+/// window path stays and the reason is reported instead of guessed at.
+#[tauri::command]
+pub fn anchoring() -> morrow_platform::compositor::Anchoring {
+    morrow_platform::compositor::current()
+}
+
 pub fn create(app: &App) -> tauri::Result<()> {
     let window = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::default())
         .title("Morrow")
@@ -41,6 +53,11 @@ pub fn create(app: &App) -> tauri::Result<()> {
     fit(&window, COLLAPSED.0, COLLAPSED.1, app.state::<Smoke>().0)?;
     // A panel without its Windows hooks still shows; it only behaves like an
     // ordinary window, which is worth a log line rather than no island at all.
+    // Where the island lives on this desktop, said once at startup so a log
+    // answers "why is it not above my fullscreen app?" (#109).
+    if let Some(reason) = morrow_platform::compositor::current().reason() {
+        println!("morrow: {reason}");
+    }
     #[cfg(windows)]
     if let Err(error) = crate::windows_panel::install(&window) {
         eprintln!("morrow: the panel's Windows hooks were not installed: {error}");

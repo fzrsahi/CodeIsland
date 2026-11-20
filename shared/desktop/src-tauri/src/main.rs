@@ -122,7 +122,8 @@ fn main() -> ExitCode {
             adapters::fullscreen,
             adapters::pointer_position,
             adapters::notify_send,
-            island::island_question_focus
+            island::island_question_focus,
+            island::anchoring
         ])
         .setup(|app| {
             island::create(app)?;

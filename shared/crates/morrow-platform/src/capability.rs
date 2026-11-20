@@ -48,6 +48,7 @@ pub enum Feature {
     SystemVolume,
     TerminalActivator,
     TerminalVisibility,
+    Anchoring,
     ProcessTable,
     GlobalHotkey,
     PointerMonitor,
@@ -98,6 +99,7 @@ impl Feature {
             Self::SystemVolume => "System volume",
             Self::TerminalActivator => "Jump to terminal",
             Self::TerminalVisibility => "Terminal visibility",
+            Self::Anchoring => "Panel anchoring",
             Self::ProcessTable => "Process table",
             Self::GlobalHotkey => "Global hotkey",
             Self::PointerMonitor => "Pointer outside the island",
@@ -171,6 +173,13 @@ impl Feature {
                     Capability::Unsupported("needs _NET_ACTIVE_WINDOW, which Wayland lacks".into())
                 }
             }
+            // #109: a layer surface on a compositor that has wlr-layer-shell,
+            // an always-on-top window on GNOME — stated, never simulated
+            // (plan §6.4).
+            Self::Anchoring => match crate::compositor::current() {
+                crate::compositor::Anchoring::Available => Capability::Supported,
+                crate::compositor::Anchoring::Unavailable(reason) => Capability::Degraded(reason),
+            },
             Self::ProcessTable => Capability::Supported,
             Self::GlobalHotkey => {
                 if environment.is_x11() {
@@ -318,6 +327,9 @@ fn windows(feature: Feature, environment: &Environment) -> Capability {
         Feature::TerminalVisibility => Capability::Unsupported(
             "Windows has no cross-application way to say whether a window is visible".into(),
         ),
+        // A Win32 window can be topsmost and non-activating; there is no
+        // separate anchoring protocol to lack.
+        Feature::Anchoring => Capability::Supported,
         Feature::ProcessTable => Capability::Supported,
         Feature::GlobalHotkey => Capability::Supported,
         // `GetCursorPos` is global on Windows, unlike on Wayland.

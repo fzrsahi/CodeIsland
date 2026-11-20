@@ -22,6 +22,7 @@ frontend ── set_island_size(w, h) ──▶ island::fit: pin size, top centr
 | `permissions.rs` | Which hook waits (`PermissionRequest`, not one Cursor ran; `TODO(#93)`: HookIntake), the held cards (id, session, source, tool, one-line summary), and the replies, byte for byte the macOS island's `{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"\|"deny"}}}`, which the bridge prints verbatim. |
 | `sessions.rs` | The trivial reduction: session id → source, last event, cwd basename, updated at. `TODO(#93)`: morrow-core's `reduce`. |
 | `feed.rs` | Sessions + held permission requests + the frontend's channel; pushes the snapshot (`sessions`, `permissions`) at most once a frame. |
+| `island.rs` → `anchoring` | #109: says whether the panel is a layer surface or an always-on-top window, and why |
 | `windows_panel.rs` (`cfg(windows)`)| #106: `WM_NCHITTEST` → `HTTRANSPARENT` outside the rounded island, `MA_NOACTIVATE` on clicks, `WS_EX_NOACTIVATE` lifted while a Question card is open |
 | `island.rs` | The **panel** window and the **tight-fit** rule. |
 
@@ -88,3 +89,21 @@ and `linux/ci/e2e1.sh`, and changes nothing else.
   No "always allow", no question card, no Gemini `{"decision":…}` form
   (#93). A request the island drops while its hook is there (the app quits)
   closes the connection with no answer, not `{}`.
+
+## Wayland anchoring (#109)
+
+`morrow_platform::compositor` answers which desktop this is and whether the panel
+can be a layer surface — Sway, Hyprland, KDE Plasma, COSMIC, niri, labwc, Wayfire
+and river have `wlr-layer-shell`; GNOME does not, and the plan (§6.4) asks for that
+to be **stated, not simulated**.
+
+- The answer is environment variables, so it is tested on any machine
+  (`tests/compositor_anchoring.rs`, 8 cases).
+- `island::anchoring` is the only place a layer surface would be created. tao
+  upstream closed both PRs (`tauri#15913`, `tauri#15914`, `tao#1316`), so a build
+  that anchors needs the pinned patch: until that fork decision is made, this
+  build keeps the window path and reports the reason, in the log and in Settings.
+- An AppImage on Wayland says something different, because `tauri#15781` forces
+  `GDK_BACKEND=x11`: the layer-shell code would never run, so claiming `Available`
+  would be a lie the user finds by looking at their screen. `.deb`/`.rpm` are the
+  Wayland path, as the plan says.
