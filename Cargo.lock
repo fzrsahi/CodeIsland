@@ -1930,6 +1930,8 @@ dependencies = [
  "morrow-core",
  "serde",
  "serde_json",
+ "windows",
+ "windows-future",
 ]
 
 [[package]]
