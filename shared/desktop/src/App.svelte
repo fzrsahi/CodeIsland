@@ -36,7 +36,18 @@
     installed: boolean;
     path: string;
   };
-  type HooksSnapshot = { status: HooksStatus; targets: TargetStatus[]; version: string | null };
+  type OpencodeStatus = {
+    detected: boolean;
+    plugin_installed: boolean;
+    registered: boolean;
+    config: string;
+  };
+  type HooksSnapshot = {
+    status: HooksStatus;
+    targets: TargetStatus[];
+    opencode: OpencodeStatus;
+    version: string | null;
+  };
 
   let sessions = $state<Session[]>([]);
   let cards = $state<Card[]>([]);
@@ -68,6 +79,13 @@
   async function toggleTarget(row: TargetStatus) {
     await run(() =>
       invoke(row.installed ? 'target_uninstall' : 'target_install', { source: row.source }),
+    );
+  }
+
+  // OpenCode is a plugin file, not a hooks key, so it gets its own row.
+  async function toggleOpencode(row: OpencodeStatus) {
+    await run(() =>
+      invoke(row.plugin_installed ? 'opencode_uninstall' : 'opencode_install'),
     );
   }
 
@@ -181,6 +199,31 @@
               </li>
             {/each}
           </ul>
+        {/if}
+        {#if hooks.opencode}
+          <div class="hooks-targets">
+            <ul>
+              <li class:missing={!hooks.opencode.detected}>
+                <span class="hooks-name">OpenCode</span>
+                <span class="hooks-state">
+                  {hooks.opencode.plugin_installed && hooks.opencode.registered
+                    ? 'Installed'
+                    : hooks.opencode.detected
+                      ? 'Not installed'
+                      : 'Not detected'}
+                </span>
+                {#if hooks.opencode.detected}
+                  <button
+                    class="hooks-button"
+                    disabled={hooksBusy}
+                    onclick={() => toggleOpencode(hooks!.opencode)}
+                  >
+                    {hooks.opencode.plugin_installed ? 'Remove' : 'Install'}
+                  </button>
+                {/if}
+              </li>
+            </ul>
+          </div>
         {/if}
       {:else}
         <div class="hooks-line">Checking…</div>

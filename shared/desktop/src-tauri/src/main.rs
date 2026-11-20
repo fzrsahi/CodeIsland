@@ -24,6 +24,7 @@ use crate::permissions::Decision;
 /// directory, resolved once at launch.
 pub struct HooksSite {
     pub paths: morrow_platform::hooks::Paths,
+    pub opencode: morrow_platform::opencode::Site,
     pub bridge_source: Option<std::path::PathBuf>,
 }
 
@@ -81,7 +82,9 @@ fn main() -> ExitCode {
             hooks::hooks_install,
             hooks::hooks_uninstall,
             hooks::target_install,
-            hooks::target_uninstall
+            hooks::target_uninstall,
+            hooks::opencode_install,
+            hooks::opencode_uninstall
         ])
         .setup(|app| Ok(island::create(app)?))
         .run(tauri::generate_context!());

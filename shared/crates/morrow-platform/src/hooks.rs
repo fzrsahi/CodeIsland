@@ -12,6 +12,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use morrow_core::installer::claude_hooks;
+use morrow_core::installer::codex_config;
 use morrow_core::installer::targets::{self, Target};
 
 /// Bumped when the script below changes, so an install from an older build is
@@ -145,7 +146,31 @@ pub fn install_target(paths: &Paths, source: &str, stamp: &str) -> Result<Option
         fs::write(&path, &outcome.text)?;
         report.settings_changed = true;
     }
+
+    // Codex only reads `hooks.json` when `config.toml` turns the feature on
+    // (`enableCodexFeatureFlag`).
+    if target.source == "codex" {
+        report.flag_enabled = enable_codex_hooks(paths)?;
+    }
     Ok(Some(report))
+}
+
+/// `features.hooks = true` in `~/.codex/config.toml`, or an error when that
+/// file's layout is one the editor will not touch.
+fn enable_codex_hooks(paths: &Paths) -> Result<bool, Error> {
+    let config_path = paths.home.join(".codex/config.toml");
+    let existing = read_text(&config_path)?.unwrap_or_default();
+    let Some(updated) = codex_config::enabling_hooks(&existing) else {
+        return Err(Error::UnparseableSettings(config_path));
+    };
+    if updated == existing {
+        return Ok(false);
+    }
+    if let Some(parent) = config_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(&config_path, updated)?;
+    Ok(true)
 }
 
 /// Take one target's hook back out.
@@ -183,6 +208,8 @@ pub struct Report {
     pub script_written: bool,
     pub bridge_copied: bool,
     pub settings_changed: bool,
+    /// Codex's `features.hooks = true` was added (or flipped) in `config.toml`.
+    pub flag_enabled: bool,
     /// The back-up this run made, if it made one.
     pub backup: Option<PathBuf>,
 }
@@ -302,7 +329,7 @@ fn version_marker() -> String {
     format!("# Morrow hook v{HOOK_SCRIPT_VERSION}")
 }
 
-fn read_text(path: &Path) -> io::Result<Option<String>> {
+pub(crate) fn read_text(path: &Path) -> io::Result<Option<String>> {
     match fs::read(path) {
         Ok(bytes) => Ok(String::from_utf8(bytes).ok()),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
@@ -343,7 +370,7 @@ fn copy_bridge(source: &Path, destination: &Path) -> io::Result<bool> {
 
 /// One back-up per file, ever: a second install does not pile them up
 /// (`backupOpencodeConfig`).
-fn back_up(settings: &Path, stamp: &str) -> io::Result<Option<PathBuf>> {
+pub(crate) fn back_up(settings: &Path, stamp: &str) -> io::Result<Option<PathBuf>> {
     let directory = settings.parent().unwrap_or(Path::new("."));
     let names: Vec<String> = fs::read_dir(directory)?
         .filter_map(Result::ok)

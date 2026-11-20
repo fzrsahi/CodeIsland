@@ -5,6 +5,7 @@
 use std::path::PathBuf;
 
 use morrow_platform::hooks::{self, Paths, Report, Status, TargetStatus};
+use morrow_platform::opencode;
 use tauri::State;
 
 use crate::HooksSite;
@@ -15,6 +16,8 @@ pub struct HooksSnapshot {
     status: Status,
     /// The other hook targets and where each one's file stands.
     targets: Vec<TargetStatus>,
+    /// OpenCode: a plugin file rather than a hooks key.
+    opencode: opencode::Status,
     /// The Claude Code version the plan was made for, from `claude --version`.
     version: Option<String>,
 }
@@ -26,8 +29,26 @@ pub fn hooks_status(site: State<'_, HooksSite>) -> HooksSnapshot {
     HooksSnapshot {
         status: hooks::status(&site.paths, version.as_deref()),
         targets: hooks::targets_status(&site.paths),
+        opencode: opencode::status(&site.opencode),
         version,
     }
+}
+
+/// Install or repair OpenCode's plugin. `false` when OpenCode is not on this
+/// machine or its config does not parse.
+#[tauri::command]
+pub fn opencode_install(site: State<'_, HooksSite>) -> Result<bool, String> {
+    opencode::install(&site.opencode, &stamp())
+        .map(|done| done.is_some())
+        .map_err(|error| error.to_string())
+}
+
+/// Take OpenCode's plugin and its registration back out.
+#[tauri::command]
+pub fn opencode_uninstall(site: State<'_, HooksSite>) -> Result<bool, String> {
+    opencode::uninstall(&site.opencode, &stamp())
+        .map(|done| done.is_some())
+        .map_err(|error| error.to_string())
 }
 
 /// Install or repair.
@@ -77,6 +98,7 @@ pub fn site() -> HooksSite {
         .map(PathBuf::from)
         .filter(|path| !path.as_os_str().is_empty());
     HooksSite {
+        opencode: opencode::Site::new(&home),
         paths: Paths::new(&home, config_dir.as_deref()),
         bridge_source: bridge_source(),
     }

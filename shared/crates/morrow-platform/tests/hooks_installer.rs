@@ -370,3 +370,45 @@ fn an_unknown_target_is_an_error_not_a_silent_no_op() {
     assert!(hooks::install_target(&paths, "nope", STAMP).is_err());
     assert!(hooks::uninstall_target(&paths, "nope").is_err());
 }
+
+#[test]
+fn codex_also_gets_the_feature_flag_in_config_toml() {
+    let home = Home::new("codex-flag");
+    let paths = home.paths();
+    cli_dir(&home, ".codex");
+    let config = home.root.join(".codex/config.toml");
+    home.write(&config, "model = \"gpt-6-sol\"\n");
+
+    let report = hooks::install_target(&paths, "codex", STAMP)
+        .expect("install")
+        .expect("a report");
+    assert!(report.flag_enabled);
+    assert_eq!(
+        home.read(&config),
+        "model = \"gpt-6-sol\"\nfeatures.hooks = true\n"
+    );
+
+    // Second run: the flag is already on, nothing to do.
+    let again = hooks::install_target(&paths, "codex", STAMP)
+        .expect("reinstall")
+        .expect("a report");
+    assert!(!again.flag_enabled);
+    assert_eq!(
+        home.read(&config),
+        "model = \"gpt-6-sol\"\nfeatures.hooks = true\n"
+    );
+}
+
+#[test]
+fn a_codex_config_the_editor_will_not_touch_is_an_error() {
+    let home = Home::new("codex-unsafe");
+    let paths = home.paths();
+    cli_dir(&home, ".codex");
+    let config = home.root.join(".codex/config.toml");
+    let unsafe_layout = "features = { hooks = false }\n";
+    home.write(&config, unsafe_layout);
+
+    let error = hooks::install_target(&paths, "codex", STAMP).expect_err("refuses");
+    assert!(matches!(error, Error::UnparseableSettings(_)), "{error}");
+    assert_eq!(home.read(&config), unsafe_layout, "left as it was");
+}

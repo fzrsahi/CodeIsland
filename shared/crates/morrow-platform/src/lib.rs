@@ -5,3 +5,4 @@
 //! so a write happens only after a back-up and only of the bytes we came for.
 
 pub mod hooks;
+pub mod opencode;

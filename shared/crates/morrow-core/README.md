@@ -185,9 +185,19 @@ Gemini (`nested`), Cursor (`flat`), Qoder, Factory's Droid and CodeBuddy
 its own path, event names and timeouts (Gemini counts milliseconds), and the
 `--event` flag only where the CLI's stdin does not carry the event. Installing
 or uninstalling one of them goes through the same minimal-diff editor, so a
-JSON5 comment of the user's survives. Not covered here, on purpose: OpenCode's
-plugin file, Codex's `hooks = true` in `config.toml`, and the YAML/TOML
-sources — each is its own slice.
+JSON5 comment of the user's survives. `installer::codex_config` turns on Codex's feature flag — `features.hooks =
+true` in `config.toml` — with a deliberately narrow TOML scanner: values stay
+opaque, a `hooks` under `[tui]` is not the flag, and a layout it cannot vouch
+for is refused rather than edited into a duplicate key. It also heals the
+`[features]` block older builds appended at EOF (#354).
+
+`installer::opencode` registers the plugin in `opencode.json(c)`: OpenCode has
+no hooks key, it loads what `plugin` names. A brand-new file gets a minimal
+document with the schema hint; an existing one keeps its comments and its own
+entries, and an emptied `plugin` key is deleted on uninstall.
+
+Not covered here, on purpose: the YAML/TOML *sources* (#100) — their own
+slice.
 
 ## Tests
 
@@ -217,7 +227,9 @@ asserts the checklist, #136). `tests/agent_task_parsing.rs` is the parsing half 
 scans a file on disk has no counterpart here).
 `tests/hook_targets.rs` is the external-CLI half of `ConfigInstallerTests`
 (19 tests: the table, the commands, one install per format, reinstall, a stale
-entry, uninstall), `tests/json_minimal_editor.rs` is `JSONMinimalEditorTests`
+entry, uninstall), `tests/codex_hooks_config.rs` is `CodexTomlHooksFixtures`
+(all 40 cases, plus idempotence), `tests/opencode_plugin.rs` is the OpenCode
+registration (10 tests), `tests/json_minimal_editor.rs` is `JSONMinimalEditorTests`
 (14 of 14), and
 `tests/claude_hooks_installer.rs` is the Claude Code slice of
 `ConfigInstallerTests` over text instead of a file system (18 tests: the table,
