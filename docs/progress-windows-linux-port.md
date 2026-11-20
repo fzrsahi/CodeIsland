@@ -32,10 +32,10 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 0 | PR #50 | `test(#33)`: ekspor golden fixtures bridge + schema | `PR dibuka`, approved | `BridgeGoldenTests` hijau; schema memvalidasi semua fixture |
 | 0 | PR #51 | `fix(#33)`: hook Claude Windows tanpa `--source`, precedence = Swift | `merged` (`b314f9c`, 2026-11-20) | `windows/Morrow.Core.Tests` hijau |
 | 0 | PR #52 | `ci(#33)`: pipefail XCTest | `dilewati` — ditutup, digantikan #111 | — |
-| 0 | #78 | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `belum` — menunggu 3 keputusan kontrak di PR #115 | test plugin memakai `fixtures/endpoint/cases.json` |
+| 0 | #78 | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `siap` — 3 keputusan kontrak sudah dijawab (@aazhrt, 2026-11-20) | test plugin memakai `fixtures/endpoint/cases.json` |
 | 0.5 | #83 → PR #114 | skrip CI macOS `test`/`package`/`manifest` | `merged` (`c695753`, 2026-11-20) | pipeline hijau + satu run sengaja merah |
 | 0.5 | #124 → PR #126 | guard `verify-local.sh` mengizinkan merge yang membawa CI upstream | `merged` (`f812e7b`, 2026-11-20) | merge `main` → branch fitur tidak diblokir lagi |
-| 0.5 | #84 → PR #115 | kontrak endpoint + 38 kasus | `PR dibuka` — 3 open question ditanyakan ke kolaborator | Swift `SocketPath.resolve` lulus kasus macOS |
+| 0.5 | #84 → PR #115 | kontrak endpoint + 38 kasus | `APPROVED` — keputusan tercatat di dokumen (`d947166`) | Swift `SocketPath.resolve` lulus kasus macOS |
 | 0.5 | #85 → PR #117 | eksperimen Opsi E | `PR dibuka` — hijau 96,8%, tapi **ditolak → Rust** | ADR-0003 `rejected`, keputusan di ADR-0001 |
 | 0.5 | #86 → PR #118 | layout monorepo (skrip replay) | `PR dibuka` (draft) — dijalankan ulang setelah PR lain merge; bagian `.woodpecker.yaml` perlu @aazhrt | `swift test` + DMG hijau, nol perubahan perilaku |
 | 1 | #87 → PR #120 | workspace Rust + `morrow-protocol` + purity check | `PR dibuka` | 300 payload round-trip identik; `cargo tree` bersih |
@@ -51,7 +51,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 2 | #97 → PR #133 | transcript tail: parser JSONL + `TailState` di core | `PR dibuka` (stacked on #132) | 70 test port (2 test `DispatchSource` milik watcher); file diganti → replay sekali lalu live |
 | 2 | #135 → PR #137 | sisa #97: `SessionRecap` + `ModelObservation`/`ModelLabel` + `parseISO8601`, termasuk penyerapan delta ke snapshot | `PR dibuka` (stacked on #133) | 22 `ModelLabelTests` + 38/39 `SessionRecapTests`; delta & snapshot lengkap |
 | 2 | #136 → PR #140 | sisa #97: parsing checklist (`AgentTaskTool`, event hook/transcript, `scan` backfill) | `PR dibuka` (stacked on #137) | 9 test parsing; `ScanDelta.task_events` terisi urut |
-| 2 | #139 | `AgentTaskList` (state machine checklist) + `Snapshot.agentTasks` | `belum` — tiket dibuat 2026-11-20, blocked by #136 | sisa 34 test `AgentTaskListTests` |
+| 2 | #139 → PR #142 | `AgentTaskList` (dedupe, park, undo, pensiun plan per-turn, linger, rebuild attach, persistensi) + `Snapshot.agent_tasks` | `PR dibuka` (stacked on #140) | 38/39 test list-side; `scanFile` tetap di platform |
 | 3 | #98–#104 | Linux lengkap: installer, adapter, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
@@ -91,6 +91,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 8) — #115 diputuskan, #139 selesai (PR #142)
+
+- **Sudah:** @aazhrt **APPROVED** #115 dan menjawab ketiganya (kosong = unset di semua OS; path remote ikut kode `/tmp/codeisland-<uid>/island.sock`, rename ke tiket sendiri; `CODEISLAND_SOCKET_PATH` fallback legacy). Keputusan itu **masuk dokumen**, bukan cuma komentar: `§1.4`/`§2.1`/`§3.1`/`§4`, dua tempat di `hook-edge-protocol.md`, dan `§6` yang kini berjudul *Decisions and what is still open* (satu pertanyaan lama — seleksi path legacy tak memeriksa jenis file — tetap terbuka dan dipatok dua kasus `macos-legacy-*`). Lalu #139 diport: `AgentTaskList` utuh (dedupe per op, park sampai create tiba, undo saat panggilan gagal, pensiun plan snapshot per-turn, linger 8 dtk, `rebuilt` untuk attach, persistensi bergaya `Codable` dengan epoch 2001), `SessionSnapshot.agent_tasks`, wiring reducer (subagent lewat `apply_shared_updates`, `SessionStart` memulihkan kecuali `/clear`). Test **38** baru; `linux-test.sh` hijau; `morrow-core` tetap 20 crate murni. **PR #142** dibuka terhadap #140.
+- **Berikutnya:** fase 2 tuntas di sisi core (#131–#133, #137, #140, #142). Fokus pindah ke jalur merge: cabut `CHANGES_REQUESTED` #49 → merge #49 → retarget #50/#117/#127 + stack Rust ke `main`. Setelah itu #78 (keputusan #115 sudah ada) dan #105.
+- **Blocker:** `CHANGES_REQUESTED` lama di #49 (hanya @aazhrt/admin bisa cabut); run E2E-1 di X11 nyata; `scanFile` + watcher transcript kini satu-satunya sisa fase 2 yang tinggal di platform.
 
 ### 2026-11-20 (lanjutan 7) — #135 lengkap, #136 parsing, #139 dibuat
 
