@@ -55,9 +55,13 @@ mkdir -p "$BINARIES"
 install -m 0755 "$ROOT/target/release/morrow-bridge" "$BINARIES/morrow-bridge-$TARGET"
 
 # 2. The bundles. `--config` pins the version so the artifact names, the
-#    updater feed and the tag cannot disagree.
+#    updater feed and the tag cannot disagree, and names the bridge as an
+#    external binary here rather than in tauri.conf.json: the file is built in
+#    step 1, and a `cargo check` on a fresh clone would otherwise fail on a
+#    sidecar that is not in the tree.
 say "==> bundling deb, rpm, appimage"
-cargo tauri build --bundles deb,rpm,appimage --config "{\"version\":\"$VERSION\"}" 2>&1 | tee -a "$LOG"
+cargo tauri build --bundles deb,rpm,appimage --config \
+  "{\"version\":\"$VERSION\",\"bundle\":{\"externalBin\":[\"binaries/morrow-bridge\"]}}" 2>&1 | tee -a "$LOG"
 
 BUNDLE="$ROOT/target/release/bundle"
 MISSING=()

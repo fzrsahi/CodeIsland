@@ -1,6 +1,10 @@
 //! The bridge ends up outside the package (#104): whatever the format, the path
 //! a CLI config records is `~/.local/bin/morrow-bridge` and the copy is atomic.
 
+// Unix-only: the assertions are file modes and an executable bit, which Windows
+// expresses as ACLs instead. The Windows half arrives with #107.
+#![cfg(unix)]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 

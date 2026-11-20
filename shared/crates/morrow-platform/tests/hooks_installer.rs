@@ -2,6 +2,11 @@
 //! repair and uninstall are idempotent byte for byte, a back-up is made, and a
 //! file we cannot parse is never touched.
 
+// Unix-only: these assertions are modes (`0700`, `0755`) and a symlink
+// write-through, which Windows expresses differently. Windows coverage arrives
+// with #108.
+#![cfg(unix)]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};

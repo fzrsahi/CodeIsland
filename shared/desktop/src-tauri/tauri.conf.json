@@ -21,9 +21,6 @@
     "icon": [
       "icons/icon.png"
     ],
-    "externalBin": [
-      "binaries/morrow-bridge"
-    ],
     "category": "Productivity",
     "shortDescription": "Coding-agent sessions, at the notch",
     "longDescription": "Morrow shows what your coding agents are doing, and asks you before they do something you would rather approve yourself.",

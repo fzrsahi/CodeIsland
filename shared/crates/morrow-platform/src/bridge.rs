@@ -52,6 +52,9 @@ pub fn ensure(source: &Path, home: &Path) -> io::Result<Placed> {
     }
     let temp = path.with_extension(format!("tmp{}", std::process::id()));
     fs::write(&temp, &wanted)?;
+    // A Unix binary needs the executable bit; on Windows an .exe inherits the
+    // folder's ACLs, which is the same rule (this user, `~/.local/bin`).
+    #[cfg(unix)]
     fs::set_permissions(&temp, std::os::unix::fs::PermissionsExt::from_mode(0o755))?;
     fs::rename(&temp, &path)?;
     Ok(Placed { path, copied: true })

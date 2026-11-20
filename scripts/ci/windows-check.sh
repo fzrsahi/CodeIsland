@@ -30,11 +30,12 @@ rustup target list --installed | grep -qx "$TARGET" \
 cargo xwin --version >/dev/null 2>&1 \
   || die "cargo-xwin is missing: cargo install cargo-xwin --locked"
 
-# The crates that carry Windows code today. `morrow-platform` and `morrow-app`
-# join when #107/#106 put Windows arms inside them; checking them now would fail
-# on the Unix adapters, which is not a Windows problem.
+# `morrow-app` is not in this list yet: its build script generates a Windows
+# resource file and needs `llvm-rc`, which a bare macOS/Linux toolchain does not
+# ship. It joins when the shell carries Windows arms (#106/#107) and the lane's
+# image has LLVM.
 failed=0
-for crate in morrow-ipc morrow-bridge morrow-core; do
+for crate in morrow-ipc morrow-bridge morrow-platform morrow-core; do
   printf '\n==> cargo xwin clippy -p %s --all-targets -- -D warnings\n' "$crate" | tee -a "$LOG"
   if cargo xwin clippy -p "$crate" --all-targets --target "$TARGET" --locked -- -D warnings 2>&1 \
       | tee -a "$LOG"; then
