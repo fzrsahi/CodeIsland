@@ -22,6 +22,7 @@ frontend ── set_island_size(w, h) ──▶ island::fit: pin size, top centr
 | `permissions.rs` | Which hook waits (`PermissionRequest`, not one Cursor ran; `TODO(#93)`: HookIntake), the held cards (id, session, source, tool, one-line summary), and the replies, byte for byte the macOS island's `{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"\|"deny"}}}`, which the bridge prints verbatim. |
 | `sessions.rs` | The trivial reduction: session id → source, last event, cwd basename, updated at. `TODO(#93)`: morrow-core's `reduce`. |
 | `feed.rs` | Sessions + held permission requests + the frontend's channel; pushes the snapshot (`sessions`, `permissions`) at most once a frame. |
+| `windows_panel.rs` (`cfg(windows)`)| #106: `WM_NCHITTEST` → `HTTRANSPARENT` outside the rounded island, `MA_NOACTIVATE` on clicks, `WS_EX_NOACTIVATE` lifted while a Question card is open |
 | `island.rs` | The **panel** window and the **tight-fit** rule. |
 
 ## The panel window
