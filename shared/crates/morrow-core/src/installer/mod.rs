@@ -9,3 +9,5 @@
 
 pub mod claude_hooks;
 pub mod json_editor;
+pub mod settings;
+pub mod targets;

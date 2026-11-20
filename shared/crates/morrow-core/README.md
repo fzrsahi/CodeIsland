@@ -179,6 +179,16 @@ changes nothing) and `uninstall` (an emptied `hooks` key is deleted, so a file
 that held only our entries comes back byte for byte), plus the back-up naming
 rule. All of it is a plan over text: the platform reads and writes the file.
 
+`installer::targets` covers the CLIs that speak a JSON hooks file — Codex and
+Gemini (`nested`), Cursor (`flat`), Qoder, Factory's Droid and CodeBuddy
+(Claude Code's schema) and Copilot CLI (`bash` + a seeded `version`) — each with
+its own path, event names and timeouts (Gemini counts milliseconds), and the
+`--event` flag only where the CLI's stdin does not carry the event. Installing
+or uninstalling one of them goes through the same minimal-diff editor, so a
+JSON5 comment of the user's survives. Not covered here, on purpose: OpenCode's
+plugin file, Codex's `hooks = true` in `config.toml`, and the YAML/TOML
+sources — each is its own slice.
+
 ## Tests
 
 `tests/conformance.rs` (the port of `HookIntakeGoldenTests.swift`) runs every
@@ -205,7 +215,10 @@ read.
 asserts the checklist, #136). `tests/agent_task_parsing.rs` is the parsing half of `AgentTaskListTests`
 (9 tests) and `tests/agent_task_list.rs` the list half (38; the Swift test that
 scans a file on disk has no counterpart here).
-`tests/json_minimal_editor.rs` is `JSONMinimalEditorTests` (14 of 14), and
+`tests/hook_targets.rs` is the external-CLI half of `ConfigInstallerTests`
+(19 tests: the table, the commands, one install per format, reinstall, a stale
+entry, uninstall), `tests/json_minimal_editor.rs` is `JSONMinimalEditorTests`
+(14 of 14), and
 `tests/claude_hooks_installer.rs` is the Claude Code slice of
 `ConfigInstallerTests` over text instead of a file system (18 tests: the table,
 the version gates, the legacy-name cleanup, install/repair/uninstall and the

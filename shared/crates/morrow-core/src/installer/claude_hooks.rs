@@ -7,7 +7,8 @@
 
 use serde_json::{Map, Value, json};
 
-use super::json_editor::{delete_top_level_key, set_top_level_value, strip_json_comments};
+use super::json_editor::{delete_top_level_key, set_top_level_value};
+use super::settings as settings_file;
 
 /// The top-level key Claude Code keeps hooks under.
 pub const HOOKS_KEY: &str = "hooks";
@@ -190,7 +191,7 @@ pub fn install(
     let original = existing.filter(|text| !text.is_empty());
     let source = original.unwrap_or("{}");
 
-    let settings = settings_object(source)?;
+    let settings = settings_file::object(source)?;
     let mut hooks = settings
         .get(HOOKS_KEY)
         .and_then(Value::as_object)
@@ -243,7 +244,7 @@ pub fn install(
 
     let text = set_top_level_value(source, HOOKS_KEY, &Value::Object(hooks))?;
     Some(InstallOutcome {
-        changed: !same_document(source, &text),
+        changed: !settings_file::same_document(source, &text),
         text,
     })
 }
@@ -251,7 +252,7 @@ pub fn install(
 /// Whether every event of this build already carries `command`, with no stale
 /// `async` key left behind (`isHooksInstalled`).
 pub fn is_installed(existing: &str, command: &str, version: Option<&str>) -> bool {
-    let Some(settings) = settings_object(existing) else {
+    let Some(settings) = settings_file::object(existing) else {
         return false;
     };
     let hooks = settings
@@ -288,7 +289,7 @@ pub struct UninstallOutcome {
 /// Take the hooks back out (`uninstallHooks`). `None` when the file does not
 /// hold a JSON object — there is nothing we could have written there.
 pub fn uninstall(existing: &str) -> Option<UninstallOutcome> {
-    let settings = settings_object(existing)?;
+    let settings = settings_file::object(existing)?;
     let hooks = settings
         .get(HOOKS_KEY)
         .and_then(Value::as_object)
@@ -322,19 +323,4 @@ pub fn backup_path(path: &str, stamp: &str, names_in_dir: &[String]) -> Option<S
         return None;
     }
     Some(format!("{path}.codeisland.bak.{stamp}"))
-}
-
-fn settings_object(source: &str) -> Option<Map<String, Value>> {
-    let value: Value = serde_json::from_str(&strip_json_comments(source)).ok()?;
-    value.as_object().cloned()
-}
-
-/// `isSameJSONDocument`: same document, whatever the key order, spacing or
-/// comments.
-fn same_document(left: &str, right: &str) -> bool {
-    let parse = |text: &str| serde_json::from_str::<Value>(&strip_json_comments(text));
-    match (parse(left), parse(right)) {
-        (Ok(left), Ok(right)) => left == right,
-        _ => false,
-    }
 }
