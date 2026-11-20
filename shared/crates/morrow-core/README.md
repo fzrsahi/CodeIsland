@@ -149,9 +149,18 @@ The vocabulary (`AgentTaskStatus`, `AgentTaskItem`, `AgentTaskDraft`,
 and `events_from_line` for transcript rows, plus the backfill `scan` and its
 byte prefilter `may_carry_task_event`.
 
-Not ported yet: `AgentTaskList`, the list that applies the events (dedupe,
-undo, turn retirement, persistence) — #138. `SessionSnapshot` therefore does
-not carry `agentTasks` yet.
+In `list`, `AgentTaskList` is the list those events are applied to: dedupe by
+op key, updates parked until their create names the row, undo when a call
+fails, retiring a snapshot plan a whole turn went by without, the completion
+linger, the attach-time rebuild, and persistence (`to_json` / `from_json`,
+Swift's `Codable` keys and its 2001 epoch for `completedAt`). `SessionSnapshot`
+carries it as `agent_tasks`: the reducer applies a hook's events, a subagent's
+`TaskUpdate` lands on the parent card through `apply_shared_updates`, and
+`SessionStart` restores the list unless the hook says `/clear`.
+
+Not ported: reading a transcript file at attach time
+(`AgentTaskTranscript.scanFile`) — opening a file belongs to the platform, as
+it does for the tailer.
 
 ## Tests
 
@@ -177,7 +186,8 @@ read.
 `tests/model_label.rs` is `ModelLabelTests` (22 tests) and
 `tests/session_recap.rs` is `SessionRecapTests` (38 of its 39; the one left
 asserts the checklist, #136). `tests/agent_task_parsing.rs` is the parsing half of `AgentTaskListTests`
-(9 tests; the ones that assert a built list belong to #138).
+(9 tests) and `tests/agent_task_list.rs` the list half (38; the Swift test that
+scans a file on disk has no counterpart here).
 `tests/transcript_tailer.rs` is `JSONLTailerTests` and
 `JSONLTailerCursorQuestionTests` ported: 70 tests, all the parsing ones as
 they are and the attach/replacement ones driven through `TailState` with the

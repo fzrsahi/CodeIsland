@@ -4,11 +4,13 @@
 //! Code), TodoWrite (older Claude Code and forks), `update_plan` (Codex),
 //! `write_todos` / `todowrite` (Gemini / OpenCode).
 //!
-//! This module holds the vocabulary only. Reading checklist events out of a
-//! hook or a transcript row is [`parsing`]; the list that applies them
-//! (`AgentTaskList`, #138) is not ported yet.
+//! [`parsing`] reads checklist events out of a hook or a transcript row;
+//! [`list`] is the `AgentTaskList` those events are applied to.
 
+pub mod list;
 pub mod parsing;
+
+pub use list::AgentTaskList;
 
 use serde_json::Value;
 

@@ -12,6 +12,7 @@
 use std::collections::BTreeMap;
 
 use super::hook_event::HookEvent;
+use crate::agent_tasks::AgentTaskList;
 use crate::intake::host_harness::{deleting_last_path_component, standardized};
 use crate::session_recap::SessionRecap;
 
@@ -169,6 +170,8 @@ pub struct SessionSnapshot {
     pub tool_history: Vec<ToolHistoryEntry>,
     pub total_tool_call_count: i64,
     pub subagents: BTreeMap<String, SubagentState>,
+    /// The agent's own checklist (TaskCreate / TodoWrite / update_plan).
+    pub agent_tasks: AgentTaskList,
     closed_subagent_ids: Vec<String>,
     pub start_time: Timestamp,
     pub last_user_prompt: Option<String>,
@@ -284,6 +287,7 @@ impl SessionSnapshot {
             tool_history: Vec::new(),
             total_tool_call_count: 0,
             subagents: BTreeMap::new(),
+            agent_tasks: AgentTaskList::new(),
             closed_subagent_ids: Vec::new(),
             start_time: now,
             last_user_prompt: None,

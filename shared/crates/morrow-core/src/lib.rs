@@ -17,9 +17,9 @@
 //!   platform watcher reads.
 //! - [`session_recap`], [`model_label`], [`time`]: the pieces those readings
 //!   are made of.
-//! - [`agent_tasks`]: the agent's own checklist — the vocabulary and the
-//!   events a hook or transcript row carries (the list that applies them is
-//!   #138).
+//! - [`agent_tasks`]: the agent's own checklist — the vocabulary, the events a
+//!   hook or transcript row carries (`parsing`), and the list that applies
+//!   them (`list`).
 //! - [`digest`]: SHA-256, for the delivery digest of a hook Cursor ran.
 #![forbid(unsafe_code)]
 

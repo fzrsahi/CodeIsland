@@ -1,7 +1,8 @@
 //! The parsing half of `AgentTaskListTests` (`Tests/MorrowCoreTests/AgentTaskListTests.swift`):
 //! reading checklist observations out of hook events and transcript rows, and
 //! the backfill scan's byte prefilter. The list these events feed
-//! (`AgentTaskList`) is #138, so the tests that assert a built list stay there.
+//! (`AgentTaskList`) is `agent_task_list.rs`, so the tests that assert a built
+//! list stay there.
 //!
 //! Ported 1:1: `testStatusVocabularies`, `testClaudeTranscriptRowShapes`,
 //! `testSidechainTranscriptRowsAreIgnored`,

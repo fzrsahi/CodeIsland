@@ -229,8 +229,14 @@ fn apply_hook_event(
     }
 
     if let Some(agent_id) = event.agent_id.as_deref() {
-        // Not ported: the shared task list (`AgentTaskHookParser`,
-        // `AgentTaskList.applySharedUpdates`).
+        // Subagents and teammates share the parent's task list: their
+        // TaskUpdate calls move the parent's rows too. Their own creates stay
+        // off the parent card (see `apply_shared_updates`).
+        let shared_task_events = crate::agent_tasks::parsing::hook_events(event, event_name);
+        if !shared_task_events.is_empty() {
+            s.agent_tasks
+                .apply_shared_updates(&shared_task_events, now());
+        }
         let handled = handle_subagent_event(
             s,
             session_id,
@@ -260,8 +266,14 @@ fn apply_hook_event(
     // Activity never overwrites a waiting state.
     let was_waiting = is_waiting(s.status);
 
-    // Not ported: the agent's checklist (`AgentTaskHookParser.events`,
-    // `AgentTaskList.apply`) and its restore after SessionStart below.
+    // Agent checklist progress. Subagent tool events were consumed above
+    // (after their shared-list updates), so a child's own list never lands
+    // here.
+    let agent_tasks_before_event = s.agent_tasks.clone();
+    let agent_task_events = crate::agent_tasks::parsing::hook_events(event, event_name);
+    if !agent_task_events.is_empty() {
+        s.agent_tasks.apply_all(&agent_task_events, now());
+    }
 
     match event_name {
         "UserPromptSubmit" => {
@@ -478,6 +490,16 @@ fn apply_hook_event(
             });
             *s = SessionSnapshot::new(now());
             apply_session_start(s, event, ctx);
+            // SessionStart rebuilt the snapshot, but a resumed or compacted
+            // conversation is still working through the same checklist.
+            // /clear starts the conversation over — even when it keeps the
+            // session id — so the old checklist goes with it.
+            let cleared = json::string(event.raw("source"))
+                .map(|source| source.to_lowercase() == "clear")
+                .unwrap_or(false);
+            if !cleared {
+                s.agent_tasks = agent_tasks_before_event;
+            }
             s.parent_session_id = parent_card_id(&event.raw_json).or(linked_parent_id);
             if !is_remote {
                 effects.push(SideEffect::TryMonitorSession {

@@ -2,7 +2,7 @@
 //! (`AgentTaskParsing`, `AgentTaskTool`, `AgentTaskHookParser`,
 //! `AgentTaskTranscript`, `Sources/MorrowCore/AgentTaskParsing.swift`).
 //!
-//! The list that applies the events (`AgentTaskList`) is #138.
+//! The list that applies the events is [`super::list::AgentTaskList`].
 
 use serde_json::{Map, Value};
 
