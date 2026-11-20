@@ -101,6 +101,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 
 ## Log Checkpoint
 
+### 2026-11-20 (lanjutan 25) — #78 bug socket path plugin (PR #161)
+
+- **Sudah:** keempat plugin (OMP, pi, OpenCode, OpenClaw) me-resolve socket **saat kirim** lewat `resolveSocketPath()` bersama: `MORROW_SOCKET_PATH` → `CODEISLAND_SOCKET_PATH` → `/tmp/morrow-<uid>.sock`, dengan nama lama hanya selama nama baru tidak ada (aturan `SocketPath.swift`). Versi plugin dinaikkan agar salinan terpasang minta repair. Plugin OpenCode remote memakai placeholder `__MORROW_...__` dan `RemoteInstaller` **gagal keras** bila placeholder hilang. Fallback shell hookScript mencoba path baru dulu (v7). Bukti: bun 99 lulus (termasuk 6 test default per plugin yang sebelumnya tidak ada), swift 84 lulus (ConfigInstaller memuat resource asli). **PR #161** ke `main`, terpisah dari stack port.
+- **Berikutnya:** perilaku panel/musik (#102/#103), #109 (policy Wayland), dan review stack.
+- **Blocker:** suite layout `CompletionCardLayoutTests`/`CompactSessionListLayoutTests` gagal juga di `origin/main` (pre-existing, terverifikasi di worktree bersih) — perlu tiket sendiri.
+
 ### 2026-11-20 (lanjutan 24) — #108 installer hook Windows (PR #160)
 
 - **Sudah:** `hooks_windows` (policy sama, ejaan Windows: `%USERPROFILE%`, `.cmd`, `.exe`, ACL), dikompilasi di semua platform sehingga bisa diuji di macOS — 6 test terhadap folder profil sementara termasuk penolakan file tak terparse byte for byte dan version-gating 2.1.80. `bundle.windows.nsis` per-user + ikon; `docs/windows-adapters.md` mencatat NSIS per-user dan konsekuensi SmartScreen untuk beta tanpa Authenticode. Shell: lima perintah bercabang per OS, dan Settings di Windows menyatakan hanya Claude Code yang di-hook (delapan target lain menunggu path Windows-nya sendiri).
