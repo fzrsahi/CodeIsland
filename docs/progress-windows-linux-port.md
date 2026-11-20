@@ -54,7 +54,8 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 2 | #139 → PR #142 | `AgentTaskList` (dedupe, park, undo, pensiun plan per-turn, linger, rebuild attach, persistensi) + `Snapshot.agent_tasks` | `PR dibuka` (stacked on #140) | 38/39 test list-side; `scanFile` tetap di platform |
 | 3 | #98 → PR #145/#146 | installer hook Claude Code: editor + rencana (#144), lalu crate `morrow-platform` + kartu Settings | `PR dibuka` (stacked #142 → #145 → #146) | 14 + 18 + 9 test; sisa hanya **E2E-2** di desktop Linux nyata |
 | 3 | #99 → PR #147/#148 | **sembilan target** hook (Claude, 7 JSON, OpenCode) + flag TOML Codex, semua dari kartu Settings | `PR dibuka` (stacked #142→#148) | 19+15+2(40 fixture)+10+8 test; sisa hanya E2E di desktop Linux |
-| 3 | #100–#104 | Linux lengkap: source YAML/TOML, adapter, tray, hotkey, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
+| 3 | #100 → PR #149 | source TOML (Kimi) + baris cakupan per agent di Settings | `PR dibuka` (stacked #142→#149) | 8 + 5 test; **open question**: source YAML (Hermes/TraeCli) — komentar hilang kalau ikut cara macOS (`Yams` re-dump) |
+| 3 | #101–#104 | adapter, tray, hotkey, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
@@ -94,6 +95,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 14) — #100 TOML (Kimi) + cakupan per agent (PR #149)
+
+- **Sudah:** `installer::kimi` — source pertama yang bukan JSON: blok `[[hooks]]` **ditambahkan** dan saat uninstall tepat blok itu dipotong, jadi komentar/urutan key pengguna selamat (L-002) tanpa parser TOML yang menulis ulang file; scalar legacy `hooks = …` dikomentari (bisa dipulihkan), dan hanya event tool yang membawa `matcher = ".*"`. `morrow_platform::kimi` memilih `~/.kimi-code` atau legacy `~/.kimi`, backup sekali, tulis hanya kalau berubah. Kartu Settings dapat baris Kimi + baris cakupan per agent ("N of M agents found here are hooked"). Test 8 + 5; gate & `npm run build` hijau. **PR #149** terhadap #148.
+- **Berikutnya:** keputusan untuk source YAML (Hermes, TraeCli) — di macOS lewat `Yams` yang justru menghilangkan komentar; saya ajukan tiga opsi di #100 dan condong ke "tunda YAML, buka tiket kecil". Setelah itu #101–#103 (adapter) dan #104 (packaging).
+- **Blocker:** jawaban atas pertanyaan YAML di #100; review stack #145–#149; E2E-2 butuh desktop Linux nyata. Flake `morrow-ipc` (`set_read_timeout` EINVAL) muncul sekali dan lulus saat diulang — di luar diff ini.
 
 ### 2026-11-20 (lanjutan 13) — #99 lengkap di sisi kode (PR #148)
 
