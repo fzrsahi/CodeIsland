@@ -42,12 +42,10 @@
     registered: boolean;
     config: string;
   };
-  type KimiStatus = { detected: boolean; installed: boolean; config: string };
   type HooksSnapshot = {
     status: HooksStatus;
     targets: TargetStatus[];
     opencode: OpencodeStatus;
-    kimi: KimiStatus;
     version: string | null;
   };
 
@@ -89,26 +87,6 @@
     await run(() =>
       invoke(row.plugin_installed ? 'opencode_uninstall' : 'opencode_install'),
     );
-  }
-
-  // Kimi keeps its hooks in a TOML file; our blocks are appended to it.
-  async function toggleKimi(row: KimiStatus) {
-    await run(() => invoke(row.installed ? 'kimi_uninstall' : 'kimi_install'));
-  }
-
-  // Coverage per agent (#100): how many of the agents found on this machine
-  // currently carry our hook.
-  function coverage(): { installed: number; detected: number } {
-    if (!hooks) return { installed: 0, detected: 0 };
-    const rows = [
-      ...hooks.targets.map((row) => ({ detected: row.detected, installed: row.installed })),
-      { detected: hooks.opencode.detected, installed: hooks.opencode.plugin_installed },
-      { detected: hooks.kimi.detected, installed: hooks.kimi.installed },
-    ];
-    return {
-      installed: rows.filter((row) => row.installed).length,
-      detected: rows.filter((row) => row.detected).length,
-    };
   }
 
   async function run(action: () => Promise<unknown>) {
@@ -191,11 +169,6 @@
       </div>
       {#if hooks}
         <div class="hooks-line">
-          {coverage().installed} of {coverage().detected} agents found here are hooked
-        </div>
-      {/if}
-      {#if hooks}
-        <div class="hooks-line">
           {hooks.status.hooks_installed ? 'Installed' : 'Not installed'}
           {#if hooks.status.script_installed}&nbsp;· script{/if}
           {#if hooks.status.bridge_installed}&nbsp;· bridge{/if}
@@ -246,31 +219,6 @@
                     onclick={() => toggleOpencode(hooks!.opencode)}
                   >
                     {hooks.opencode.plugin_installed ? 'Remove' : 'Install'}
-                  </button>
-                {/if}
-              </li>
-            </ul>
-          </div>
-        {/if}
-        {#if hooks.kimi}
-          <div class="hooks-targets">
-            <ul>
-              <li class:missing={!hooks.kimi.detected}>
-                <span class="hooks-name">Kimi</span>
-                <span class="hooks-state">
-                  {hooks.kimi.installed
-                    ? 'Installed'
-                    : hooks.kimi.detected
-                      ? 'Not installed'
-                      : 'Not detected'}
-                </span>
-                {#if hooks.kimi.detected}
-                  <button
-                    class="hooks-button"
-                    disabled={hooksBusy}
-                    onclick={() => toggleKimi(hooks!.kimi)}
-                  >
-                    {hooks.kimi.installed ? 'Remove' : 'Install'}
                   </button>
                 {/if}
               </li>
