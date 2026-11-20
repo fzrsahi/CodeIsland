@@ -52,8 +52,9 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 2 | #135 → PR #137 | sisa #97: `SessionRecap` + `ModelObservation`/`ModelLabel` + `parseISO8601`, termasuk penyerapan delta ke snapshot | `PR dibuka` (stacked on #133) | 22 `ModelLabelTests` + 38/39 `SessionRecapTests`; delta & snapshot lengkap |
 | 2 | #136 → PR #140 | sisa #97: parsing checklist (`AgentTaskTool`, event hook/transcript, `scan` backfill) | `PR dibuka` (stacked on #137) | 9 test parsing; `ScanDelta.task_events` terisi urut |
 | 2 | #139 → PR #142 | `AgentTaskList` (dedupe, park, undo, pensiun plan per-turn, linger, rebuild attach, persistensi) + `Snapshot.agent_tasks` | `PR dibuka` (stacked on #140) | 38/39 test list-side; `scanFile` tetap di platform |
-| 3 | #98 → PR #145 | installer hook Claude Code (bagian kode; E2E-2 menyusul) | `PR dibuka` (stacked on #142) — tiket: #144 | 14 `JSONMinimalEditorTests` + 18 test rencana install/uninstall |
+| 3 | #98 → PR #145/#146 | installer hook Claude Code: editor + rencana (#144), lalu crate `morrow-platform` + kartu Settings | `PR dibuka` (stacked #142 → #145 → #146) | 14 + 18 + 9 test; sisa hanya **E2E-2** di desktop Linux nyata |
 | 3 | #99–#104 | Linux lengkap: adapter, tray, hotkey, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
+| 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
 | 6 | #110 | Hapus core C# | `belum` | test Windows hijau; **izin maintainer `windows/`** |
@@ -92,6 +93,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 10) — #98 bagian install (PR #146)
+
+- **Sudah:** crate baru **`morrow-platform`** (plan §5.2) berisi `hooks::install/uninstall/status`: `~/.codeisland` 0700, skrip `codeisland-hook.sh` (ditulis hanya kalau penanda versi hilang), binary `morrow-bridge` (hanya kalau byte beda, temp+rename), backup `settings.json.codeisland.bak.<stamp>` sekali saja, tulis lewat symlink, dan `$CLAUDE_CONFIG_DIR` dihormati. Rencana perubahan settings dibuat **dulu** — file yang tidak bisa di-parse membatalkan seluruh install tanpa meninggalkan skrip/binary (#89). Versi `claude` jadi input (`None` → event bergerbang dilewati); `morrow-core`'s `install()` kini menerima nama perintah dari platform. Shell: `hooks_status`/`hooks_install`/`hooks_uninstall` + kartu "Claude Code hooks" di tampilan island yang diperluas. Test **9** (home sementara); `linux-test.sh` + `npm run build` hijau. **PR #146** terhadap #145.
+- **Berikutnya:** #98 tinggal **E2E-2** (`claude` asli → kartu → Approve/Deny, tanpa event dobel) di desktop Linux nyata; lalu #99–#104 (adapter, tray, hotkey, packaging).
+- **Blocker:** desktop Linux nyata untuk E2E-2; review stack (#145, #146) dan `CHANGES_REQUESTED` lama di #49. Catatan: dua test anggaran waktu `bridge_process` sempat flaky saat seluruh workspace dites paralel (`took 5.05s` vs batas 4,5 dtk); lulus 3/3 sendiri dan gate hijau saat mesin idle — bukan dari diff ini, kandidat tiket sendiri bersama flake gemini.
 
 ### 2026-11-20 (lanjutan 9) — #144: editor config + rencana hook Claude (PR #145)
 
