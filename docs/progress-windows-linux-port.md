@@ -49,8 +49,9 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 2 | #95 → PR #131 | `AttentionPolicy.intents` + `EventSoundRouting` + `reduce_event` | `PR dibuka` (stacked on #130) | 56/56 kasus attention; 80/80 + 161 step reducer termasuk intents; `morrow-app` 12/12 |
 | 2 | #96 → PR #132 | `GitBranchReader` + `MarkdownBlockParser` | `PR dibuka` (stacked on #131) | 53/53 test markdown + 9/9 test git diport 1:1; `linux-test.sh` hijau |
 | 2 | #97 → PR #133 | transcript tail: parser JSONL + `TailState` di core | `PR dibuka` (stacked on #132) | 70 test port (2 test `DispatchSource` milik watcher); file diganti → replay sekali lalu live |
-| 2 | #135 → PR #137 | sisa #97: `SessionRecap` + `ModelObservation`/`ModelLabel` + `parseISO8601` | `PR dibuka` (stacked on #133) | 22 test `ModelLabelTests` + 24 test scan-level `SessionRecapTests`; delta kembali lengkap |
-| 2 | #136 | sisa #97: `AgentTaskTranscript` (checklist) | `belum` — tiket dibuat 2026-11-20 | test `AgentTaskListTests` diport |
+| 2 | #135 → PR #137 | sisa #97: `SessionRecap` + `ModelObservation`/`ModelLabel` + `parseISO8601`, termasuk penyerapan delta ke snapshot | `PR dibuka` (stacked on #133) | 22 `ModelLabelTests` + 38/39 `SessionRecapTests`; delta & snapshot lengkap |
+| 2 | #136 → PR #140 | sisa #97: parsing checklist (`AgentTaskTool`, event hook/transcript, `scan` backfill) | `PR dibuka` (stacked on #137) | 9 test parsing; `ScanDelta.task_events` terisi urut |
+| 2 | #139 | `AgentTaskList` (state machine checklist) + `Snapshot.agentTasks` | `belum` — tiket dibuat 2026-11-20, blocked by #136 | sisa 34 test `AgentTaskListTests` |
 | 3 | #98–#104 | Linux lengkap: installer, adapter, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
@@ -90,6 +91,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 7) — #135 lengkap, #136 parsing, #139 dibuat
+
+- **Sudah:** #135 dilengkapi: `SessionSnapshot` dapat `recap`/`reasoning_effort`/`configured_long_context` (disimpan, tidak diproyeksikan), penyerapan delta (`apply_transcript_delta`, `apply_transcript_backfill`, `apply_backfilled_model_observation`, `clear_recap_if_superseded` yang kini dipanggil reducer pada `UserPromptSubmit`, `visible_recap`, `model_label`), plus `SubagentState.reasoning_effort`/`model_label`/`claude_transcript_path`. Test `session_recap` 24 → **38/39**. Push ke #137. Lalu #136 dipecah (1.220 baris sumber + 812 test): parsing diport (**PR #140**, 9 test, `ScanDelta.task_events`), state machine daftar jadi tiket **#139**.
+- **Berikutnya:** #139 (`AgentTaskList` + `agentTasks` di snapshot + wiring reducer/transcript). Setelah itu fase 2 tuntas di sisi core dan fokus pindah ke jalur review/merge.
+- **Blocker:** review #49 (@aazhrt), 3 OQ #115, E2E-1 di X11. Catatan proses: komentar scope di #136 dan body #139 sempat rusak karena backtick dieksekusi shell; sudah dikoreksi, dan nomor tiket lanjutan yang benar adalah **#139** (bukan #138).
 
 ### 2026-11-20 (lanjutan 6) — #135 dikerjakan, PR #137 dibuka (stacked on #133)
 
