@@ -59,7 +59,8 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 3 | #151 → PR #152 | source YAML (Hermes, TraeCli) sebagai blok terkelola — komentar utuh | `PR dibuka` (stacked #142→#152) | 14 + 6 test; keputusan **B** tercatat di tiket |
 | 3 | #101 → PR #153 | Capability table 21 adapter + autostart + settings + **tray + global hotkey** | `PR dibuka` (stacked #142→#153) | 11 test + clippy bersih; **sisa hanya L-006…L-012 di desktop nyata** |
 | 3 | #102 → PR #154 | kartu musik: MPRIS, ekstrapolasi posisi, lirik lrclib, volume | `PR dibuka` (stacked #142→#154) | 17 + 11 test; sisa: menggambar kartunya (pekerjaan panel) + L-003/L-004 |
-| 3 | #103–#104 | adapter batch 3, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
+| 3 | #103 → PR #155 | terminal jump (L-009), process watch, screen lock, notifikasi | `PR dibuka` (stacked #142→#155) | 14 test; sisa: perilaku panel yang memakainya |
+| 3 | #104 | packaging deb/AppImage/rpm + feed | `belum` — blocked by #91 | smoke install + `E2E-2` |
 | 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
@@ -99,6 +100,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 19) — #103 empat adapter (PR #155)
+
+- **Sudah:** `runner` dipindah jadi seam bersama, lalu empat adapter: `terminal` (sway `con_id` → Hyprland `address` → `wmctrl`/`xdotool` by class → **copy path/tty** sebagai lantai L-009 → penjelasan kalau dua-duanya tidak ada), `process` (satu angka dari `/proc/<pid>/stat` + start time agar pid daur ulang tidak menahan kartu mati; tanpa menelusuri tabel proses), `lock` (`loginctl … LockedHint`, tidak bisa menjawab = tidak terkunci), `notify` (`notify-send`, 8 dtk). Capability mengikuti: tanpa window API tapi ada clipboard = `Degraded` dengan jalur copy; tanpa `notify-send` = `Unsupported`. Shell mengekspos lima perintah. Test 14; gate hijau. **PR #155** terhadap #154.
+- **Berikutnya:** #104 (packaging deb/AppImage/rpm + feed update + smoke install) — masih `blocked by #91`; sisanya adalah verifikasi desktop: L-003/L-004/L-006…L-012, E2E-2, dan perilaku panel yang memakai adapter #102/#103.
+- **Blocker:** review stack #145–#155; verifikasi di desktop Linux nyata. Flake `bridge_process` (anggaran 5 dtk + sentinel gemini) masih perlu tiket sendiri.
 
 ### 2026-11-20 (lanjutan 18) — #102 kartu musik (PR #154)
 
