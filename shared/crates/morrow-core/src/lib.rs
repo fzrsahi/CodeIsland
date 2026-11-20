@@ -12,8 +12,11 @@
 //!   frontend to draw.
 //! - [`git`]: the checked-out branch of a session's `cwd`, from `.git` read
 //!   through a [`git::Disk`] the shell hands in.
-//! - [`transcript`]: the live transcript's newest prompt, reply, turn status
-//!   and Cursor question, from the JSONL lines the platform watcher reads.
+//! - [`transcript`]: the live transcript's newest prompt, reply, turn status,
+//!   Cursor question, idle recap and model tag, from the JSONL lines the
+//!   platform watcher reads.
+//! - [`session_recap`], [`model_label`], [`time`]: the pieces those readings
+//!   are made of.
 //! - [`digest`]: SHA-256, for the delivery digest of a hook Cursor ran.
 #![forbid(unsafe_code)]
 
@@ -22,7 +25,10 @@ pub mod digest;
 pub mod git;
 pub mod intake;
 pub mod markdown;
+pub mod model_label;
 pub mod reduce;
+pub mod session_recap;
+pub mod time;
 pub mod transcript;
 
 /// A JSON object, keys in arrival order.

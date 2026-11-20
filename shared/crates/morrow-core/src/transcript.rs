@@ -21,6 +21,10 @@
 
 use serde_json::{Map, Value};
 
+use crate::model_label::{self, ModelObservation};
+use crate::reduce::Timestamp;
+use crate::session_recap::SessionRecap;
+
 // MARK: - Model
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,13 +50,19 @@ pub enum CursorQuestionSignal {
 }
 
 /// What one chunk of transcript bytes updated.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ScanDelta {
     pub last_user_prompt: Option<String>,
     pub last_assistant_message: Option<String>,
     pub turn_status: Option<ConversationTurnStatus>,
     pub has_activity: bool,
     pub cursor_question: Option<CursorQuestionSignal>,
+    /// The newest `away_summary` no later prompt in the chunk superseded.
+    pub session_recap: Option<SessionRecap>,
+    /// Model / reasoning effort of the newest main-thread turn in the chunk.
+    pub model_observation: Option<ModelObservation>,
+    /// A `/model` switch in the chunk turned the 1M context variant on or off.
+    pub configured_long_context: Option<bool>,
 }
 
 impl ScanDelta {
@@ -63,10 +73,20 @@ impl ScanDelta {
             && self.turn_status.is_none()
             && !self.has_activity
             && self.cursor_question.is_none()
+            && self.session_recap.is_none()
+            && self.model_observation.is_none()
+            && self.configured_long_context.is_none()
+    }
+
+    /// Lines are applied in file order, so a prompt seen after a recap in the
+    /// same chunk means the recap is already stale (Swift's `didSet`).
+    fn set_user_prompt(&mut self, prompt: String) {
+        self.last_user_prompt = Some(prompt);
+        self.session_recap = None;
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ScanResult {
     pub delta: ScanDelta,
     /// Bytes after the final newline: the caller prepends them to the next
@@ -79,6 +99,14 @@ pub struct ScanResult {
 /// Split the given byte blob on newline boundaries and surface the latest user
 /// / assistant text observed.
 pub fn scan_lines(data: &[u8]) -> ScanResult {
+    scan_lines_at(data, Timestamp(0.0))
+}
+
+/// [`scan_lines`], with the clock a recap without its own `timestamp` falls
+/// back to (Swift's `observedAt` defaults to `Date()`). The CLI always writes
+/// one, so this only matters for synthetic rows; [`scan_lines`] passes the
+/// epoch because the core reads no clock.
+pub fn scan_lines_at(data: &[u8], observed_at: Timestamp) -> ScanResult {
     let mut delta = ScanDelta::default();
     let mut line_start = 0;
     for (index, byte) in data.iter().enumerate() {
@@ -87,7 +115,7 @@ pub fn scan_lines(data: &[u8]) -> ScanResult {
         }
         let line = &data[line_start..index];
         if !line.is_empty() {
-            apply(line, &mut delta);
+            apply(line, &mut delta, observed_at);
         }
         line_start = index + 1;
     }
@@ -109,7 +137,7 @@ pub fn latest_cursor_question(data: &[u8]) -> Option<CursorQuestionSignal> {
 }
 
 /// An attach-time scan of a transcript's tail, plus where it stopped.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct AttachScan {
     pub delta: ScanDelta,
     /// Just past the last complete line when the scan ran: hand it to
@@ -166,7 +194,7 @@ pub struct TailState {
 
 /// A delta and whether it re-reads a replaced file from its start — the new
 /// file's history, not things that just happened.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TailDelta {
     pub delta: ScanDelta,
     pub replays_whole_file: bool,
@@ -244,7 +272,7 @@ impl TailState {
 
 // MARK: - One line
 
-fn apply(line: &[u8], delta: &mut ScanDelta) {
+fn apply(line: &[u8], delta: &mut ScanDelta, observed_at: Timestamp) {
     // Fast path: realistic Claude transcripts are ~75% tool_use / tool_result /
     // meta rows we don't care about. Skipping the JSON parse for those saves a
     // measurable chunk of CPU per byte during streaming bursts.
@@ -285,12 +313,19 @@ fn apply(line: &[u8], delta: &mut ScanDelta) {
                     delta.turn_status = Some(ConversationTurnStatus::Idle);
                 }
                 match claude_command_echo(&text) {
-                    // /model, /effort, /clear…: no turn, so no new prompt.
-                    Some(ClaudeCommandEcho::Local) => {}
-                    Some(ClaudeCommandEcho::Prompt(command)) => {
-                        delta.last_user_prompt = Some(command);
+                    Some(ClaudeCommandEcho::Local) => {
+                        // /model, /effort, /clear…: no turn, so no new prompt —
+                        // and no reason to drop the recap. /model's output is
+                        // the only record of a switch to or from the 1M
+                        // variant; a model seen earlier in the chunk predates
+                        // it.
+                        if let Some(long_context) = model_label::long_context_switch(&text) {
+                            delta.configured_long_context = Some(long_context);
+                            delta.model_observation = None;
+                        }
                     }
-                    None => delta.last_user_prompt = Some(text),
+                    Some(ClaudeCommandEcho::Prompt(command)) => delta.set_user_prompt(command),
+                    None => delta.set_user_prompt(text),
                 }
             }
         }
@@ -313,6 +348,31 @@ fn apply(line: &[u8], delta: &mut ScanDelta) {
                     delta.last_assistant_message = Some(trimmed.to_owned());
                 }
             }
+            // Claude: `message.model` + top-level effort. Sidechain lines are a
+            // subagent's turns (older CLIs inlined them in the parent file) and
+            // must not relabel the parent with the subagent's model.
+            if root.get("isSidechain") != Some(&Value::Bool(true)) {
+                if let Some(observation) = ModelObservation::from_values(
+                    message.get("model"),
+                    root.get("perTurnEffort").or_else(|| root.get("effort")),
+                    root.get("timestamp"),
+                ) {
+                    delta.model_observation = Some(observation);
+                }
+            }
+        }
+        Some("system") => {
+            // Claude Code's idle recap; other system subtypes carry nothing we
+            // show.
+            if let Some(recap) = SessionRecap::from_transcript_line(root, observed_at) {
+                delta.session_recap = Some(recap);
+            }
+        }
+        Some("turn_context") => {
+            // Codex writes the turn's model and effort once per turn.
+            if let Some(observation) = ModelObservation::from_codex_turn_context(root) {
+                delta.model_observation = Some(observation);
+            }
         }
         Some("event_msg") => {
             delta.has_activity = true;
@@ -333,7 +393,7 @@ fn apply(line: &[u8], delta: &mut ScanDelta) {
                 "user_message" => {
                     delta.last_assistant_message = None;
                     if let Some(message) = normalized_text(payload.get("message")) {
-                        delta.last_user_prompt = Some(message);
+                        delta.set_user_prompt(message);
                     }
                 }
                 // "turn_failed" is not in today's codex EventMsg enum — kept as
@@ -372,7 +432,7 @@ fn apply_cursor_role_line(role: &str, message: &Map<String, Value>, delta: &mut 
         "user" => {
             delta.cursor_question = Some(CursorQuestionSignal::Cleared);
             if let Some(text) = normalized_cursor_chat_text(message.get("content")) {
-                delta.last_user_prompt = Some(text);
+                delta.set_user_prompt(text);
             }
         }
         "assistant" => {
@@ -706,6 +766,10 @@ pub enum QuickTypeKind {
     /// A line with no interesting `type` but a leading `"role":"user|assistant"`
     /// marker (Cursor's transcript shape).
     CursorRole,
+    /// Claude `system` line whose subtype is `away_summary` (session recap).
+    ClaudeRecap,
+    /// Codex `turn_context` (the turn's model + reasoning effort).
+    CodexTurnContext,
     KiroTool,
     Irrelevant,
 }
@@ -719,6 +783,9 @@ const PLANNER_RESPONSE_BYTES: &[u8] = b"PLANNER_RESPONSE\"";
 const EVENT_MSG_BYTES: &[u8] = b"event_msg\"";
 const RESPONSE_ITEM_BYTES: &[u8] = b"response_item\"";
 const TOOL_CALL_BYTES: &[u8] = b"tool_call\"";
+const SYSTEM_BYTES: &[u8] = b"system\"";
+const TURN_CONTEXT_BYTES: &[u8] = b"turn_context\"";
+const AWAY_SUMMARY_MARKER: &[u8] = b"\"subtype\":\"away_summary\"";
 const CODEX_MESSAGE_PAYLOAD_MARKER: &[u8] = b"\"payload\":{\"type\":\"message\",";
 const CODEX_ASSISTANT_ROLE_MARKER: &[u8] = b"\"role\":\"assistant\"";
 const CODEX_OUTPUT_TEXT_MARKER: &[u8] = b"\"type\":\"output_text\"";
@@ -775,8 +842,27 @@ pub fn quick_type_probe(line: &[u8]) -> QuickTypeKind {
                         QuickTypeKind::Irrelevant
                     };
                 }
-                b't' if has_exact_value(line, value_start, TOOL_CALL_BYTES) => {
-                    return QuickTypeKind::KiroTool;
+                b's' => {
+                    // Only the recap subtype earns a parse; turn_duration /
+                    // stop_hook_summary rows stay on the skip path. The subtype
+                    // sits right after `type`, so a bounded probe keeps an
+                    // unusually long system row O(1) here.
+                    if has_exact_value(line, value_start, SYSTEM_BYTES)
+                        && contains_marker(
+                            &line[..line.len().min(PROBE_PREFIX)],
+                            AWAY_SUMMARY_MARKER,
+                        )
+                    {
+                        return QuickTypeKind::ClaudeRecap;
+                    }
+                }
+                b't' => {
+                    if has_exact_value(line, value_start, TURN_CONTEXT_BYTES) {
+                        return QuickTypeKind::CodexTurnContext;
+                    }
+                    if has_exact_value(line, value_start, TOOL_CALL_BYTES) {
+                        return QuickTypeKind::KiroTool;
+                    }
                 }
                 _ => {}
             }

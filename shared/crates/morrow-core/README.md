@@ -109,10 +109,30 @@ offset, fragment, and one replay of a replaced file — and `scan_tail_for_attac
 is the attach-time backfill. Nothing here opens a file or watches a path: the
 platform watcher reads and hands the bytes in.
 
-Not ported (the app-side payloads a delta also carries on macOS): the checklist
-(`AgentTaskTranscript`), the idle recap (`SessionRecap`), and the model label /
-reasoning effort (`ModelObservation`, `ModelLabel`, including the `/model`
-1M-context switch). Rows that only carry those parse to nothing here.
+The delta also carries the idle recap and the model tag: `session_recap`
+(`SessionRecap`), `model_observation` (`ModelObservation`), and
+`configured_long_context` (a `/model` switch turning the 1M context variant on
+or off). Their own modules are below. Rows that only carry the agent's
+checklist (`AgentTaskTranscript`, #136) still parse to nothing here.
+
+## `session_recap`, `model_label`, `time`
+
+The three pieces the transcript's readings are made of:
+
+| Swift | Rust |
+|---|---|
+| `SessionRecap` (`from(transcriptLine:)`, `cleanedText`, `isSuperseded`) | `session_recap.rs` |
+| `ModelObservation` (`from`, `fromCodexTurnContext`, `observedAt`, `latestInClaudeTranscript`, `latestCodexTurnContext`), `ModelLabel` (`label`, `displayName`, `mergedModelId`, `withLongContext`, `longContextSwitch`) | `model_label.rs` |
+| `ClaudeUsageScanner.parseISO8601` | `time.rs` |
+
+`latest_codex_turn_context` walks the blob backwards in chunks with the row
+that straddles a boundary carried over, exactly as the Swift version does over
+a file handle — the platform hands in the bytes.
+
+Not ported here: how a snapshot absorbs a delta (`applyTranscriptMetadata`,
+`applyTranscriptBackfill`, `visibleRecap`). Those read and write app-side state
+the Rust `SessionSnapshot` does not carry yet (recap, reasoning effort, the
+hook-reported model time); they belong with the card that shows them.
 
 ## Tests
 
@@ -135,7 +155,10 @@ read.
 `tests/git_branch_reader.rs` is `GitBranchReaderTests` on an in-memory disk
 (9 of 9, plus the depth cap and a standardized `cwd`).
 
-`tests/transcript_tailer.rs` is `JSONLTailerTests` and
+`tests/model_label.rs` is `ModelLabelTests` (22 tests) and
+`tests/session_recap.rs` is the scan-level half of `SessionRecapTests`
+(24 tests); the snapshot-level cases of that suite need the app-side state
+listed above. `tests/transcript_tailer.rs` is `JSONLTailerTests` and
 `JSONLTailerCursorQuestionTests` ported: 70 tests, all the parsing ones as
 they are and the attach/replacement ones driven through `TailState` with the
 bytes a watcher would have read. Two Swift tests are the watcher's own and
