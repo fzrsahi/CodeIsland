@@ -60,7 +60,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 3 | #101 → PR #153 | Capability table 21 adapter + autostart + settings + **tray + global hotkey** | `PR dibuka` (stacked #142→#153) | 11 test + clippy bersih; **sisa hanya L-006…L-012 di desktop nyata** |
 | 3 | #102 → PR #154 | kartu musik: MPRIS, ekstrapolasi posisi, lirik lrclib, volume | `PR dibuka` (stacked #142→#154) | 17 + 11 test; sisa: menggambar kartunya (pekerjaan panel) + L-003/L-004 |
 | 3 | #103 → PR #155 | terminal jump (L-009), process watch, screen lock, notifikasi | `PR dibuka` (stacked #142→#155) | 14 test; sisa: perilaku panel yang memakainya |
-| 3 | #104 | packaging deb/AppImage/rpm + feed | `belum` — blocked by #91 | smoke install + `E2E-2` |
+| 3 | #104 → PR #156 | packaging deb/rpm/AppImage + feed per format + bridge di luar paket | `PR dibuka` (stacked #142→#156) | skrip + 5 test; sisa: L-011 smoke & `E2E-2` di host Debian |
 | 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
@@ -100,6 +100,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 20) — #104 packaging Linux (PR #156)
+
+- **Sudah:** tiga skrip di kontrak §8.1 — `linux-package.sh` (semver tanpa `v`, signing key wajib di awal, tiap format butuh artefak + `.sig`, `SHA256SUMS` hanya kalau set lengkap), `linux-manifest.sh` (satu feed per format, **all-or-nothing**: validasi semua format dulu, tulis kedua, tiap dokumen di-parse ulang lalu di-rename), `linux-smoke.sh` (install → launch → tunggu copy-out bridge → satu hook sintetis berwaktu → uninstall; keluar **77** kalau host tidak punya display, karena lulus diam-diam lebih buruk daripada jujur tidak bisa). `morrow-platform::bridge` menyalin bridge ke `~/.local/bin/morrow-bridge` secara atomik; skrip hook memakai path stabil dulu, `~/.codeisland` cadangan, versi skrip v2. `tauri.conf.json` dapat `bundle.active`, tiga target, `externalBin`, updater artifacts, dependensi deb/rpm. Test `bridge_placement` 5; gate hijau. **PR #156** terhadap #155.
+- **Berikutnya:** tidak ada tiket implementasi Linux yang bisa jalan tanpa desktop. Sisa Fase 3 = verifikasi: L-011 (smoke), E2E-2, L-003/L-004/L-006…L-012, plus perilaku panel yang memakai adapter #102/#103.
+- **Blocker:** review stack #145–#156; host Debian/VM untuk semua gate di atas; gate **#91 masih OPEN**; `.woodpecker.yaml` (memasang tiga skrip) milik @aazhrt. Flake `bridge_process::gemini_permission_answer_is_put_as_gemini_reads_it` muncul lagi hari ini — perlu tiket sendiri.
 
 ### 2026-11-20 (lanjutan 19) — #103 empat adapter (PR #155)
 
