@@ -1,7 +1,7 @@
 # Progress — Windows & Linux port
 
-**Status:** fase 1 selesai di PR (#120–#125, gate E2E-1 hijau di Xvfb, menunggu X11 nyata); fase 2 (#127, #128, #130). Core = **Rust** (#117).
-**Checkpoint terakhir:** 2026-11-20 — PR #130 dibuka untuk #94 (reducer di morrow-core 80/80 + desktop wired, gate E2E-1 27/27 hijau).
+**Status:** fase 1 selesai di PR (#120–#125, gate E2E-1 hijau di Xvfb, menunggu X11 nyata); fase 2 (#127, #128, #130, #131). Core = **Rust** (#117).
+**Checkpoint terakhir:** 2026-11-20 — PR #131 dibuka untuk #95 (`AttentionPolicy.intents` di `morrow-core` 56/56 + intents di 161 step reducer; `morrow-app` memakai `reduce_event`).
 **Fase kanonik:** [`plan-windows-linux.md`](plan-windows-linux.md) §7. Kalau dokumen ini berbeda dengan §7, §7 yang benar.
 
 ---
@@ -45,7 +45,8 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 2 | #92 → PR #127 | ekspor fixture reducer + `AttentionPolicy` | `PR dibuka` | 80 kasus reducer (161 step), 56 attention; `Sources/` tidak berubah |
 | 2 | #93 → PR #128 | `HookIntake` → `morrow-core`; bridge memakainya | `PR dibuka` | 84/84 neutral, 84/84 linux |
 | 2 | #94 → PR #130 | port reducer + `HookEventFacts` + wire morrow-app | `PR dibuka` (stacked on #128) | 80/80 kasus (161 step) fixture reducer identik, gate E2E-1 27/27 |
-| 2 | #95–#97 | attention, git + markdown, transcript live | `belum` | fixture/test port lulus |
+| 2 | #95 → PR #131 | `AttentionPolicy.intents` + `EventSoundRouting` + `reduce_event` | `PR dibuka` (stacked on #130) | 56/56 kasus attention; 80/80 + 161 step reducer termasuk intents; `morrow-app` 12/12 |
+| 2 | #96–#97 | git + markdown, transcript live | `belum` | fixture/test port lulus |
 | 3 | #98–#104 | Linux lengkap: installer, adapter, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
@@ -65,6 +66,12 @@ Stack PR dan urutan merge: body #33, bagian **Stack PR**. Ringkas: mandiri #51, 
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan) — #95 selesai, PR #131 dibuka (stacked on #130)
+
+- **Sudah:** `AttentionPolicy.intents` dan `EventSoundRouting.soundEvent` diport ke `shared/crates/morrow-core/src/attention.rs` bersama tipe yang dipakainya (moment, subject, intents, push kind, follow-up intent). Fixture `fixtures/core/attention.json` lulus **56/56** (hook 29, request 11, elsewhere 11, reminder 5). 161 step `fixtures/core/reducer.json` kini juga membandingkan intents, tetap **80/80**. `reduce_event` (= `reduceEvent` Swift) menaruh `PlaySound`/`EnqueueCompletion` di slot reducer dan `morrow-app` memakainya (12/12 test). `./scripts/ci/linux-test.sh` hijau (fmt, clippy, test, purity: morrow-core 20 crate, tidak ada yang terlarang). PR #131 dibuka terhadap base `feat/#94-core-reducer` (#130). Catatan: `settle(_:context:)` **belum** diport — butuh adapter setelan/scene `morrow-platform` (plan §5.2, #101) dan tidak ada fixture-nya.
+- **Berikutnya:** #96 `GitBranchReader` + `MarkdownBlockParser`, lalu #97 `JSONLTailer`, keduanya di-stack di atas #131. Jalur kritis tetap di luar kode: approval + merge #126 (guard #124), resolve konflik #49, jawab 3 OQ #115.
+- **Blocker:** run E2E-1 di X11 nyata (@aazhrt); 3 keputusan kontrak endpoint (#115); review stack #120–#125, #128, #130, #131.
 
 ### 2026-11-20 — #94 selesai, PR #130 dibuka (stacked on #128)
 
