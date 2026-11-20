@@ -2025,6 +2025,53 @@ private struct WorkspaceSettingsPage: View {
                 }
             }
             .disabled(!workspaceEnabled)
+
+            Section("Right Wing Preview (10s)") {
+                HStack(spacing: 8) {
+                    Button {
+                        WorkspaceMonitorManager.shared.triggerRightWingPreview(.nonGitIdle)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "folder")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                            Text("Non-Git (Idle)")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        WorkspaceMonitorManager.shared.triggerRightWingPreview(.nonGitThinking)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "folder.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                            Text("Non-Git (Thinking)")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        WorkspaceMonitorManager.shared.triggerRightWingPreview(.emptyIdle)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                            Text("Empty Idle")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                Text("Temporarily previews Non-Git standby or Empty Idle states on the right notch wing for 10 seconds.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+            }
         }
         .formStyle(.grouped)
     }

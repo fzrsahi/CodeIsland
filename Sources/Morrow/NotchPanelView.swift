@@ -378,10 +378,13 @@ struct NotchPanelView: View {
     /// First launch / no-session state should still render a visible marker so the app
     /// doesn't disappear completely behind the physical notch.
     private var showIdleIndicator: Bool {
-        !isActive && !hideWhenNoSession
+        if workspaceManager.testWingPreview == .emptyIdle { return true }
+        return !isActive && !hideWhenNoSession
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
+        if workspaceManager.testWingPreview == .emptyIdle { return false }
+        if workspaceManager.testWingPreview == .nonGitIdle || workspaceManager.testWingPreview == .nonGitThinking { return true }
         if signals.isPlaying || nowPlaying.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner || mailManager.showMailArrivalAnimation || PrayerTimeManager.shared.testWingThinking { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
@@ -536,7 +539,13 @@ struct NotchPanelView: View {
 
     /// Derived in `AppState.refreshDerivedState()`; walking every session here
     /// ran on each render of the bar.
-    private var isThinking: Bool { appState.isThinking || PrayerTimeManager.shared.testWingThinking }
+    private var isThinking: Bool {
+        switch workspaceManager.testWingPreview {
+        case .nonGitIdle: return false
+        case .nonGitThinking: return true
+        case .emptyIdle, .none: return appState.isThinking || PrayerTimeManager.shared.testWingThinking
+        }
+    }
 
     private var hasQuotaChip: Bool {
         guard showAgentDetails, showClaudeQuota, !shouldShowExpanded, !nowPlaying.isPlaying,
@@ -1944,7 +1953,13 @@ private struct CompactLeftWing: View {
         return displayStatus
     }
 
-    private var isThinking: Bool { appState.isThinking || PrayerTimeManager.shared.testWingThinking }
+    private var isThinking: Bool {
+        switch (workspaceManager ?? .shared).testWingPreview {
+        case .nonGitIdle: return false
+        case .nonGitThinking: return true
+        case .emptyIdle, .none: return appState.isThinking || PrayerTimeManager.shared.testWingThinking
+        }
+    }
     private var liveTool: String? { displaySession?.currentTool }
     @State private var shownTool: String?
     @State private var lingerTimer: Timer?
@@ -2311,7 +2326,13 @@ private struct CompactRightWing: View {
     }
     /// Derived in `AppState.refreshDerivedState()`; walking every session here
     /// ran on each render of the bar.
-    private var isThinking: Bool { appState.isThinking || PrayerTimeManager.shared.testWingThinking }
+    private var isThinking: Bool {
+        switch workspaceManager.testWingPreview {
+        case .nonGitIdle: return false
+        case .nonGitThinking: return true
+        case .emptyIdle, .none: return appState.isThinking || PrayerTimeManager.shared.testWingThinking
+        }
+    }
     private var shouldExpandRightWing: Bool {
         isHovered
     }
@@ -2408,7 +2429,9 @@ private struct CompactRightWing: View {
 
     @ViewBuilder
     private var collapsedWingContent: some View {
-        if mailManager.showMailArrivalAnimation {
+        if workspaceManager.testWingPreview == .nonGitIdle || workspaceManager.testWingPreview == .nonGitThinking {
+            standbyPill
+        } else if mailManager.showMailArrivalAnimation {
             // MAIL ARRIVAL MICRO-INTERACTION: compact sealed envelope (52pt) when idle, roller-coaster mailbox (118pt) when thinking
             MailArrivalWingView(
                 isRetro: isPixel,
@@ -3885,8 +3908,9 @@ private struct IdleIndicatorBar: View {
 
     var body: some View {
         let prayerManager = PrayerTimeManager.shared
+        let forceEmptyIdle = WorkspaceMonitorManager.shared.testWingPreview == .emptyIdle
         Group {
-            if displayMode == .dynamicIsland && !hasNotch && !mailManager.showMailArrivalAnimation {
+            if displayMode == .dynamicIsland && !hasNotch && (forceEmptyIdle || !mailManager.showMailArrivalAnimation) {
                 HStack(spacing: 10) {
                     MascotView(source: defaultSource, status: .idle, size: mascotSize)
                         .opacity(hovered ? 0.95 : 0.72)
@@ -3895,17 +3919,13 @@ private struct IdleIndicatorBar: View {
                         .fill(Color.white.opacity(0.16))
                         .frame(width: 1, height: 12)
 
-                    if prayerManager.isPrayerPrioritized {
+                    if !forceEmptyIdle && prayerManager.isPrayerPrioritized {
                         PrayerCompactWingView(isHovered: hovered, isWideMode: false, onExpand: onExpand)
                     } else {
-                        HStack(spacing: 4) {
-                            Text("Idle")
-                                .font(.system(size: 10, weight: .medium, design: .rounded))
-                                .foregroundStyle(Color.white.opacity(hovered ? 0.92 : 0.68))
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 7.5, weight: .semibold))
-                                .foregroundStyle(Color.white.opacity(hovered ? 0.85 : 0.45))
-                        }
+                        Text("IDLE")
+                            .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                            .tracking(0.6)
+                            .foregroundStyle(Color.white.opacity(hovered ? 0.88 : 0.55))
                     }
                 }
                 .padding(.horizontal, trailingOuterPadding)
@@ -3935,7 +3955,7 @@ private struct IdleIndicatorBar: View {
 
                     // Right Wing: mail arrival badge, prayer pill, or expand indicator
                     HStack(spacing: 4) {
-                        if mailManager.showMailArrivalAnimation {
+                        if !forceEmptyIdle && mailManager.showMailArrivalAnimation {
                             MailArrivalWingView(
                                 isRetro: islandUITheme == IslandUITheme.pixel.rawValue,
                                 accentColor: mailAccentColor,
@@ -3951,19 +3971,26 @@ private struct IdleIndicatorBar: View {
                             .transition(.opacity)
                         } else {
                             Spacer(minLength: 0)
-                            if prayerManager.isPrayerPrioritized {
+                            if !forceEmptyIdle && prayerManager.isPrayerPrioritized {
                                 PrayerCompactWingView(isHovered: hovered, isWideMode: false, onExpand: onExpand)
                                     .padding(.trailing, trailingOuterPadding)
                             } else {
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: hovered ? 8 : 7.5, weight: .semibold))
-                                    .foregroundStyle(Color.white.opacity(hovered ? 0.9 : 0.45))
-                                    .frame(width: 18, height: 18)
-                                    .background(
-                                        Circle()
-                                            .fill(Color.white.opacity(hovered ? 0.12 : 0))
-                                    )
-                                    .padding(.trailing, trailingOuterPadding)
+                                Group {
+                                    if islandUITheme == IslandUITheme.pixel.rawValue {
+                                        PixelText(
+                                            text: "IDLE",
+                                            color: Color.white.opacity(hovered ? 0.88 : 0.55),
+                                            pixelSize: 1.0
+                                        )
+                                    } else {
+                                        Text("IDLE")
+                                            .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                                            .tracking(0.6)
+                                            .foregroundStyle(Color.white.opacity(hovered ? 0.88 : 0.55))
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.trailing, trailingOuterPadding)
                             }
                         }
                     }
