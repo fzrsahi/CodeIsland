@@ -101,6 +101,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 
 ## Log Checkpoint
 
+### 2026-11-20 (lanjutan 26) — #109 anchoring Wayland (PR #162)
+
+- **Sudah:** `morrow_platform::compositor` (deteksi Sway/Hyprland/KDE/COSMIC/niri/labwc/Wayfire/river vs GNOME vs Wayland tak dikenal vs X11; AppImage di Wayland dapat kalimat sendiri karena `tauri#15781` memaksa X11), `Anchoring` dengan **satu string** yang dipakai Settings dan log, baris Capability "Panel anchoring", perintah `island::anchoring`, dan 8 test yang jalan di mesin tanpa Wayland. Gate Unix + lane Windows hijau. **PR #162** terhadap #160.
+- **Berikutnya:** sisa #109 (layer surface, input region, Portal) menunggu keputusan fork/pin tao — bukan pekerjaan kode yang bisa dimulai jujur. Selain itu review stack dan gate hardware.
+- **Blocker:** patch tao/tauri (upstream menutup PR-nya), compositor Sway/Hyprland/KDE, host Windows, desktop Linux.
+
 ### 2026-11-20 (lanjutan 25) — #78 bug socket path plugin (PR #161)
 
 - **Sudah:** keempat plugin (OMP, pi, OpenCode, OpenClaw) me-resolve socket **saat kirim** lewat `resolveSocketPath()` bersama: `MORROW_SOCKET_PATH` → `CODEISLAND_SOCKET_PATH` → `/tmp/morrow-<uid>.sock`, dengan nama lama hanya selama nama baru tidak ada (aturan `SocketPath.swift`). Versi plugin dinaikkan agar salinan terpasang minta repair. Plugin OpenCode remote memakai placeholder `__MORROW_...__` dan `RemoteInstaller` **gagal keras** bila placeholder hilang. Fallback shell hookScript mencoba path baru dulu (v7). Bukti: bun 99 lulus (termasuk 6 test default per plugin yang sebelumnya tidak ada), swift 84 lulus (ConfigInstaller memuat resource asli). **PR #161** ke `main`, terpisah dari stack port.
