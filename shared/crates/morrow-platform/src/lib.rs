@@ -17,6 +17,7 @@
 //! feature silently not working.
 
 pub mod autostart;
+pub mod bridge;
 pub mod capability;
 pub mod hooks;
 pub mod kimi;

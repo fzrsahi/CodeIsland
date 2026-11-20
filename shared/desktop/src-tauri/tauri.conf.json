@@ -12,7 +12,38 @@
     }
   },
   "bundle": {
-    "active": false,
-    "icon": ["icons/icon.png"]
-  }
+    "active": true,
+    "targets": [
+      "deb",
+      "rpm",
+      "appimage"
+    ],
+    "icon": [
+      "icons/icon.png"
+    ],
+    "externalBin": [
+      "binaries/morrow-bridge"
+    ],
+    "category": "Productivity",
+    "shortDescription": "Coding-agent sessions, at the notch",
+    "longDescription": "Morrow shows what your coding agents are doing, and asks you before they do something you would rather approve yourself.",
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0",
+          "libayatana-appindicator3-1"
+        ]
+      },
+      "rpm": {
+        "depends": [
+          "webkit2gtk4.1",
+          "gtk3",
+          "libayatana-appindicator-gtk3"
+        ]
+      }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "version": "0.1.0"
 }

@@ -407,7 +407,7 @@ Pipeline dan deploy dipegang pemilik #70. Repo menyediakan skrip dengan antarmuk
 | `<platform>/ci/package.sh <version>` | versi semver | artefak di `dist/<platform>/` + `SHA256SUMS` | 0 = artefak lengkap dan terverifikasi |
 | `shared/ci/manifest.sh <version>` | `dist/*` | `dist/latest.json` (Tauri) dan `dist/appcast.xml` (Sparkle), divalidasi sebelum ditulis | 0 = manifest valid |
 
-`<platform>` = `macos`, `linux`, `windows`. Rahasia (Sparkle, Tauri updater, signing) hanya lewat env dari secret store CI; skrip tidak menyimpan atau mencetaknya. Deploy (upload ke EC2 / GitHub Releases) bukan bagian repo — ia hanya membaca `dist/`. Sebelum PR monorepo, skrip ini sementara berada di `scripts/ci/<platform>-{test,package}.sh`.
+`<platform>` = `macos`, `linux`, `windows`. Rahasia (Sparkle, Tauri updater, signing) hanya lewat env dari secret store CI; skrip tidak menyimpan atau mencetaknya. Deploy (upload ke EC2 / GitHub Releases) bukan bagian repo — ia hanya membaca `dist/`. Sebelum PR monorepo, skrip ini sementara berada di `scripts/ci/<platform>-{test,package}.sh`, ditambah `linux-manifest.sh` (feed updater) dan `linux-smoke.sh` (install-and-launch, L-011). Smoke keluar **77** bila host tidak punya display dan tidak punya Xvfb: mesin itu tidak berhak menilai paket, dan diam-diam lulus lebih buruk daripada jujur tidak bisa.
 
 ---
 

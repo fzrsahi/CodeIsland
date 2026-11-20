@@ -82,9 +82,19 @@ fn a_fresh_home_gets_the_script_the_bridge_and_every_event() {
 
     assert_eq!(home.mode(&paths.codeisland_dir), 0o700);
     assert_eq!(home.mode(&paths.script), 0o700);
-    assert_eq!(home.mode(&paths.bridge), 0o700);
+    assert_eq!(
+        paths.bridge,
+        home.root.join(".local/bin/morrow-bridge"),
+        "the hook config records this path, so it lives outside any package"
+    );
+    assert_eq!(home.mode(&paths.bridge), 0o755);
     let script = home.read(&paths.script);
-    assert!(script.contains("# Morrow hook v1"), "{script}");
+    assert!(script.contains("# Morrow hook v2"), "{script}");
+    assert!(
+        script.contains("$HOME/.local/bin/morrow-bridge")
+            && script.contains("$HOME/.codeisland/morrow-bridge"),
+        "the stable path first, the older one as a fallback: {script}"
+    );
     assert!(script.contains("exec \"$BRIDGE\" \"$@\""));
 
     let settings = home.read(&paths.settings);

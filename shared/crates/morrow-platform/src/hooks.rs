@@ -17,15 +17,17 @@ use morrow_core::installer::targets::{self, Target};
 
 /// Bumped when the script below changes, so an install from an older build is
 /// rewritten instead of left in place (`hookScriptVersion`).
-pub const HOOK_SCRIPT_VERSION: u32 = 1;
+pub const HOOK_SCRIPT_VERSION: u32 = 2;
 
-/// What the hook command runs. The bridge is installed beside it, so a missing
-/// binary is a clean no-op instead of an error on every tool call.
+/// What the hook command runs. The stable path first, the older in-app one
+/// second, so a machine installed before #104 keeps working; a missing binary is
+/// a clean no-op instead of an error on every tool call.
 pub fn hook_script() -> String {
     format!(
         "#!/bin/sh\n\
-         {marker} — the bridge binary installed beside this script\n\
-         BRIDGE=\"$HOME/.codeisland/morrow-bridge\"\n\
+         {marker} — the bridge binary, copied out of the package to a stable path\n\
+         BRIDGE=\"$HOME/.local/bin/morrow-bridge\"\n\
+         [ -x \"$BRIDGE\" ] || BRIDGE=\"$HOME/.codeisland/morrow-bridge\"\n\
          [ -x \"$BRIDGE\" ] || exit 0\n\
          exec \"$BRIDGE\" \"$@\"\n",
         marker = version_marker(),
@@ -54,7 +56,7 @@ impl Paths {
         Self {
             home: home.to_path_buf(),
             script: codeisland_dir.join("codeisland-hook.sh"),
-            bridge: codeisland_dir.join("morrow-bridge"),
+            bridge: crate::bridge::stable_path(home),
             settings: config_dir.join("settings.json"),
             codeisland_dir,
         }
@@ -280,7 +282,7 @@ pub fn install(
     }
 
     if let Some(source) = bridge_source {
-        report.bridge_copied = copy_bridge(source, &paths.bridge)?;
+        report.bridge_copied = crate::bridge::ensure(source, &paths.home)?.copied;
     }
 
     if plan.changed {
@@ -356,20 +358,6 @@ fn private(path: &Path, mode: u32) -> io::Result<()> {
 fn write_script(path: &Path) -> io::Result<()> {
     fs::write(path, hook_script())?;
     private(path, 0o700)
-}
-
-/// Copy to a temporary name, then rename: a hook call never sees half a binary.
-fn copy_bridge(source: &Path, destination: &Path) -> io::Result<bool> {
-    let source_bytes = fs::read(source)?;
-    if fs::read(destination).is_ok_and(|existing| existing == source_bytes) {
-        private(destination, 0o700)?;
-        return Ok(false);
-    }
-    let temporary = destination.with_extension(format!("tmp.{}", std::process::id()));
-    fs::write(&temporary, &source_bytes)?;
-    private(&temporary, 0o700)?;
-    fs::rename(&temporary, destination)?;
-    Ok(true)
 }
 
 /// One back-up per file, ever: a second install does not pile them up
