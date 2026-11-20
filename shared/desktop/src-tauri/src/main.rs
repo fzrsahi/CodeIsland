@@ -26,6 +26,7 @@ pub struct HooksSite {
     pub paths: morrow_platform::hooks::Paths,
     pub opencode: morrow_platform::opencode::Site,
     pub kimi: morrow_platform::kimi::Site,
+    pub yaml: Vec<morrow_platform::yaml_hooks::Site>,
     pub bridge_source: Option<std::path::PathBuf>,
 }
 
@@ -87,7 +88,9 @@ fn main() -> ExitCode {
             hooks::opencode_install,
             hooks::opencode_uninstall,
             hooks::kimi_install,
-            hooks::kimi_uninstall
+            hooks::kimi_uninstall,
+            hooks::yaml_install,
+            hooks::yaml_uninstall
         ])
         .setup(|app| Ok(island::create(app)?))
         .run(tauri::generate_context!());

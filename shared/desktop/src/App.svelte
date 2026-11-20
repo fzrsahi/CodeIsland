@@ -43,11 +43,20 @@
     config: string;
   };
   type KimiStatus = { detected: boolean; installed: boolean; config: string };
+  type YamlStatus = {
+    source: string;
+    name: string;
+    detected: boolean;
+    installed: boolean;
+    config: string;
+    refusal: string | null;
+  };
   type HooksSnapshot = {
     status: HooksStatus;
     targets: TargetStatus[];
     opencode: OpencodeStatus;
     kimi: KimiStatus;
+    yaml: YamlStatus[];
     version: string | null;
   };
 
@@ -96,6 +105,14 @@
     await run(() => invoke(row.installed ? 'kimi_uninstall' : 'kimi_install'));
   }
 
+  // The YAML sources: one managed block, and a refusal is shown rather than
+  // silently skipped.
+  async function toggleYaml(row: YamlStatus) {
+    await run(() =>
+      invoke(row.installed ? 'yaml_uninstall' : 'yaml_install', { source: row.source }),
+    );
+  }
+
   // Coverage per agent (#100): how many of the agents found on this machine
   // currently carry our hook.
   function coverage(): { installed: number; detected: number } {
@@ -104,6 +121,7 @@
       ...hooks.targets.map((row) => ({ detected: row.detected, installed: row.installed })),
       { detected: hooks.opencode.detected, installed: hooks.opencode.plugin_installed },
       { detected: hooks.kimi.detected, installed: hooks.kimi.installed },
+      ...hooks.yaml.map((row) => ({ detected: row.detected, installed: row.installed })),
     ];
     return {
       installed: rows.filter((row) => row.installed).length,
@@ -252,6 +270,29 @@
             </ul>
           </div>
         {/if}
+        {#each hooks.yaml as row (row.source)}
+          <div class="hooks-targets">
+            <ul>
+              <li class:missing={!row.detected}>
+                <span class="hooks-name">{row.name}</span>
+                <span class="hooks-state">
+                  {row.refusal
+                    ? 'Needs a manual merge'
+                    : row.installed
+                      ? 'Installed'
+                      : row.detected
+                        ? 'Not installed'
+                        : 'Not detected'}
+                </span>
+                {#if row.detected && !row.refusal}
+                  <button class="hooks-button" disabled={hooksBusy} onclick={() => toggleYaml(row)}>
+                    {row.installed ? 'Remove' : 'Install'}
+                  </button>
+                {/if}
+              </li>
+            </ul>
+          </div>
+        {/each}
         {#if hooks.kimi}
           <div class="hooks-targets">
             <ul>

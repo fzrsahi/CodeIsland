@@ -202,9 +202,13 @@ are cut out, which is what keeps every other byte of a user's `config.toml`
 (comments included) where it was. A legacy scalar `hooks = …` is commented out
 rather than deleted, and uninstall puts it back.
 
-Not covered here, on purpose: the YAML sources (Hermes, TraeCli). macOS
-round-trips those through `Yams`, which already drops the user's comments, and
-that is a decision to make deliberately rather than copy (#100).
+`installer::yaml_hooks` covers the YAML sources — Hermes and TraeCli. macOS
+round-trips these through `Yams`, which re-dumps the document and drops the
+user's comments; #151 chose the other road, so Morrow owns **one fenced
+region** (`# >>> morrow hooks` … `# <<< morrow hooks`) and writes nothing
+outside it. An inline `hooks:` value, a nested `hooks:` key or tab indentation
+is refused rather than guessed at, and there is no YAML parser in the crate:
+nothing is re-serialised, so nothing can be reformatted.
 
 ## Tests
 
@@ -236,7 +240,8 @@ scans a file on disk has no counterpart here).
 (19 tests: the table, the commands, one install per format, reinstall, a stale
 entry, uninstall), `tests/codex_hooks_config.rs` is `CodexTomlHooksFixtures`
 (all 40 cases, plus idempotence), `tests/opencode_plugin.rs` is the OpenCode
-registration (10 tests), `tests/kimi_hooks.rs` is Kimi's TOML blocks (8), `tests/json_minimal_editor.rs` is `JSONMinimalEditorTests`
+registration (10 tests), `tests/kimi_hooks.rs` is Kimi's TOML blocks (8), `tests/yaml_sources.rs` is the
+managed YAML region (14), `tests/json_minimal_editor.rs` is `JSONMinimalEditorTests`
 (14 of 14), and
 `tests/claude_hooks_installer.rs` is the Claude Code slice of
 `ConfigInstallerTests` over text instead of a file system (18 tests: the table,

@@ -219,6 +219,9 @@ pub enum Error {
     /// The user's `settings.json` is not a JSON object. It stays untouched
     /// (#89): a settings file that half-parses is worth more than ours.
     UnparseableSettings(PathBuf),
+    /// The core refused a layout rather than guess at it — an inline `hooks:`
+    /// value, tab indentation. The file is untouched.
+    Refused(String),
     Io(io::Error),
 }
 
@@ -236,6 +239,7 @@ impl std::fmt::Display for Error {
                 "{} is not a JSON object; leaving it alone",
                 path.display()
             ),
+            Self::Refused(reason) => write!(f, "not written: {reason}"),
             Self::Io(error) => write!(f, "{error}"),
         }
     }

@@ -7,3 +7,4 @@
 pub mod hooks;
 pub mod kimi;
 pub mod opencode;
+pub mod yaml_hooks;

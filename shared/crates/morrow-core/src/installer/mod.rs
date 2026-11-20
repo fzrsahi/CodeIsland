@@ -14,3 +14,4 @@ pub mod kimi;
 pub mod opencode;
 pub mod settings;
 pub mod targets;
+pub mod yaml_hooks;
