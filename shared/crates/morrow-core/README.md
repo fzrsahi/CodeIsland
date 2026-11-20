@@ -75,6 +75,29 @@ Suppress, which arrive with the `morrow-platform` adapters (plan §5.2), and
 no fixture covers it. A shell settles what it has in its own outlets until
 then.
 
+## `markdown`: MarkdownBlockParser
+
+The block structure of an assistant reply (`Sources/MorrowCore/MarkdownBlockParser.swift`):
+headings, paragraphs, lists and task items, fenced code, GFM tables, quotes
+and thematic breaks, lenient enough for a reply that streams in. Inline spans
+stay raw Markdown in the block; nothing here writes HTML — the frontend draws
+the blocks. Names are the Swift ones (`MarkdownBlock`, `MarkdownList`,
+`MarkdownListItem.Checkbox`, `MarkdownCodeBlock`, `MarkdownTable`,
+`MarkdownTableAlignment`, `MAX_NESTING_DEPTH`, `MAX_TABLE_COLUMNS`).
+
+Known difference: Swift counts and splits `Character`s (grapheme clusters),
+the port counts and splits `char`s (scalar values).
+
+## `git`: GitBranchReader
+
+The checked-out branch of a session's `cwd`, read from `.git` rather than by
+spawning `git` (`Sources/MorrowCore/GitBranchReader.swift`): `GitBranchInfo`,
+`read`, `parse_head`, `parse_gitdir_pointer`, `standardize`. Core opens
+nothing, so the disk arrives as a `git::Disk` the shell implements; paths go
+through `Path`/`PathBuf`, joined and split by segment, so the same walk works
+on Windows. Linked worktrees are told apart from submodules by segment
+(`.git/worktrees/<name>`), never by a substring of the path.
+
 ## Tests
 
 `tests/conformance.rs` (the port of `HookIntakeGoldenTests.swift`) runs every
@@ -90,3 +113,8 @@ returns), and `tests/reducer_conformance.rs` checks the intents of all 161
 reducer steps against `fixtures/core/reducer.json` besides the sessions, the
 effects and the facts. `tests/contracts/mod.rs` holds the projection both
 read.
+
+`tests/markdown_parser.rs` is `MarkdownBlockParserTests` ported test for test
+(53 of its 54; the cache test belongs to the macOS app), and
+`tests/git_branch_reader.rs` is `GitBranchReaderTests` on an in-memory disk
+(9 of 9, plus the depth cap and a standardized `cwd`).

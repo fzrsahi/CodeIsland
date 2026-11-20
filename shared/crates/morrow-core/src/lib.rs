@@ -8,12 +8,18 @@
 //!   with the clock and the custom sources handed in.
 //! - [`attention`]: what a moment calls for (`AttentionPolicy.intents`) — a
 //!   sound, a completion card, a push, a follow-up reminder.
+//! - [`markdown`]: the block structure of an assistant reply, for the
+//!   frontend to draw.
+//! - [`git`]: the checked-out branch of a session's `cwd`, from `.git` read
+//!   through a [`git::Disk`] the shell hands in.
 //! - [`digest`]: SHA-256, for the delivery digest of a hook Cursor ran.
 #![forbid(unsafe_code)]
 
 pub mod attention;
 pub mod digest;
+pub mod git;
 pub mod intake;
+pub mod markdown;
 pub mod reduce;
 
 /// A JSON object, keys in arrival order.
