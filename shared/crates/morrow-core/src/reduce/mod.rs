@@ -268,7 +268,7 @@ fn apply_hook_event(
             s.interrupted = false;
             s.last_turn_failed = false;
             s.task_round_ended = false;
-            // Not ported: `clearRecapIfSuperseded` (the recap is not kept).
+            s.clear_recap_if_superseded(now());
             if s.source == "codex" {
                 s.live_codex_output = None;
             }

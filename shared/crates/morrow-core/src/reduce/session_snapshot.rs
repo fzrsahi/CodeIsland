@@ -4,13 +4,16 @@
 //!
 //! Only the state the reducer reads or writes. Left out, as the contract's
 //! `projection_omits` does: what is set outside the reducer (git, harness,
-//! transcript tailing, AppState), the per-value ids, the recap and the
-//! agent's task list (`AgentTaskList`, not ported yet).
+//! AppState), the per-value ids and the agent's task list (`AgentTaskList`,
+//! not ported yet). The recap, reasoning effort and 1M-context flag are kept
+//! (the reducer clears the recap on a prompt) but not projected, exactly as
+//! the contract's `projection_omits` says.
 
 use std::collections::BTreeMap;
 
 use super::hook_event::HookEvent;
 use crate::intake::host_harness::{deleting_last_path_component, standardized};
+use crate::session_recap::SessionRecap;
 
 /// A point in time, seconds since 1970 (`Date.timeIntervalSince1970`). The
 /// core never reads a clock: every one comes from the caller's.
@@ -106,6 +109,8 @@ pub struct SubagentState {
     pub start_time: Timestamp,
     pub last_activity: Timestamp,
     pub model: Option<String>,
+    /// The effort the subagent's own transcript reported.
+    pub reasoning_effort: Option<String>,
     pub subsession_kind: Option<SubsessionKind>,
 }
 
@@ -122,6 +127,7 @@ impl SubagentState {
             start_time: now,
             last_activity: now,
             model: None,
+            reasoning_effort: None,
             subsession_kind: None,
         }
     }
@@ -206,6 +212,12 @@ pub struct SessionSnapshot {
     pub remote_host_id: Option<String>,
     pub remote_host_name: Option<String>,
     pub model_reported_at: Option<Timestamp>,
+    /// Claude Code's idle recap (`SessionRecap`), cleared by the next prompt.
+    pub recap: Option<SessionRecap>,
+    /// The reasoning effort the newest transcript line reported.
+    pub reasoning_effort: Option<String>,
+    /// A `/model` switch's word on the 1M context variant.
+    pub configured_long_context: Option<bool>,
     pub hermes_hooks_report_prompts: bool,
     pub hermes_hooks_report_replies: bool,
     pub hermes_chat_elsewhere: bool,
@@ -313,6 +325,9 @@ impl SessionSnapshot {
             remote_host_id: None,
             remote_host_name: None,
             model_reported_at: None,
+            recap: None,
+            reasoning_effort: None,
+            configured_long_context: None,
             hermes_hooks_report_prompts: false,
             hermes_hooks_report_replies: false,
             hermes_chat_elsewhere: false,

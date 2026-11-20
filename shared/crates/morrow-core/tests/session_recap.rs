@@ -3,26 +3,18 @@
 //! `away_summary` system rows through, the supersede rule inside one chunk,
 //! the model observation each line carries, and the 1M `/model` switch.
 //!
-//! Not ported here (they exercise app-side snapshot state the Rust
-//! `SessionSnapshot` does not carry yet — recap, reasoning effort, the
-//! hook-reported model time): `testLiveRecapIsAdoptedWithoutTouchingLastActivity`,
-//! `testLivePromptClearsTheRecap`, `testLiveChunkWithoutPromptOrRecapKeepsTheRecap`,
-//! `testLiveModelKeepsTheContextVariantAndTracksEffort`,
-//! `testBackfillIsAuthoritativeForTheRecap`,
-//! `testBackfillKeepsAModelAHookReportedAfterTheScannedLines`,
-//! `testBackfillOfARestoredSessionTakesTheTranscriptModel`,
-//! `testSessionStartHookRecordsWhenItReportedTheModel`,
-//! `testSwitchingToAndFromThe1MVariantRelabelsTheSession`,
-//! `testUserPromptSubmitHookClearsTheRecapButOtherEventsKeepIt`,
-//! `testVisibleRecapOnlyWhileIdle`, `testCodexChildKeepsItsOwnModelAndNeverTheParents`,
-//! `testClaudeSubagentWithoutModelStaysUnlabeled`,
-//! `testClaudeSubagentTranscriptPathDerivation`, and
-//! `testLocalSlashCommandsStartNoChecklistTurn` (the checklist is #136).
+//! Only `testLocalSlashCommandsStartNoChecklistTurn` has no counterpart here:
+//! it asserts the checklist the transcript scanner does not carry yet (#136).
 
 use serde_json::{Value, json};
 
+use morrow_core::intake::SourceCatalog;
 use morrow_core::model_label::ModelObservation;
 use morrow_core::reduce::Timestamp;
+use morrow_core::reduce::{
+    AgentStatus, HookEvent, ReduceContext, SessionSnapshot, Sessions, SubagentState,
+    reduce_hook_event,
+};
 use morrow_core::session_recap::SessionRecap;
 use morrow_core::time::parse_iso8601;
 use morrow_core::transcript::{
@@ -514,6 +506,420 @@ fn scan_tail_for_attach_reads_only_the_window_and_survives_a_cut_first_line() {
         ))
     );
     assert_eq!(scan_tail_for_attach(b"", 0, 0).delta, ScanDelta::default());
+}
+
+// MARK: - Snapshot: live tail semantics
+
+fn session() -> SessionSnapshot {
+    SessionSnapshot::new(Timestamp(0.0))
+}
+
+fn live_delta(
+    prompt: Option<&str>,
+    recap: Option<SessionRecap>,
+    model: Option<ModelObservation>,
+) -> ScanDelta {
+    ScanDelta {
+        last_user_prompt: prompt.map(str::to_owned),
+        session_recap: recap,
+        model_observation: model,
+        ..ScanDelta::default()
+    }
+}
+
+#[test]
+fn live_recap_is_adopted_without_touching_last_activity() {
+    let mut session = session();
+    session.last_activity = Timestamp(1_000.0);
+    let recap = SessionRecap::new("r", Timestamp(2_000.0));
+
+    assert!(session.apply_transcript_delta(&live_delta(None, Some(recap.clone()), None)));
+    assert_eq!(session.recap, Some(recap.clone()));
+    assert_eq!(session.last_activity, Timestamp(1_000.0));
+    assert!(
+        !session.apply_transcript_delta(&live_delta(None, Some(recap), None)),
+        "unchanged recap is a no-op"
+    );
+}
+
+#[test]
+fn live_prompt_clears_the_recap() {
+    let mut session = session();
+    session.recap = Some(SessionRecap::new("r", Timestamp(2_000.0)));
+    assert!(session.apply_transcript_delta(&live_delta(Some("next"), None, None)));
+    assert_eq!(session.recap, None);
+}
+
+#[test]
+fn live_chunk_without_prompt_or_recap_keeps_the_recap() {
+    let mut session = session();
+    let recap = SessionRecap::new("r", Timestamp(2_000.0));
+    session.recap = Some(recap.clone());
+    assert!(!session.apply_transcript_delta(&live_delta(None, None, None)));
+    assert_eq!(session.recap, Some(recap));
+}
+
+#[test]
+fn live_model_keeps_the_context_variant_and_tracks_effort() {
+    let mut session = session();
+    session.model = Some("claude-opus-5-5[1m]".into());
+    assert!(session.apply_transcript_delta(&live_delta(
+        None,
+        None,
+        Some(ModelObservation::new(
+            "claude-opus-5-5",
+            Some("xhigh".into())
+        ))
+    )));
+    assert_eq!(session.model.as_deref(), Some("claude-opus-5-5[1m]"));
+    assert_eq!(session.reasoning_effort.as_deref(), Some("xhigh"));
+    assert_eq!(
+        session.model_label().as_deref(),
+        Some("Opus 5.5 1M \u{b7} xhigh")
+    );
+
+    assert!(session.apply_transcript_delta(&live_delta(
+        None,
+        None,
+        Some(ModelObservation::new("claude-sonnet-5", None))
+    )));
+    assert_eq!(session.model.as_deref(), Some("claude-sonnet-5"));
+    assert_eq!(
+        session.reasoning_effort, None,
+        "a model without effort must not inherit the old one"
+    );
+}
+
+// MARK: - Snapshot: attach-time backfill
+
+#[test]
+fn backfill_is_authoritative_for_the_recap() {
+    let mut session = session();
+    session.recap = Some(SessionRecap::new("persisted", Timestamp(1.0)));
+
+    let superseded = scan(&[
+        recap_line("persisted", "2026-09-12T03:50:00.000Z", false),
+        user_line("typed while Morrow was closed"),
+    ]);
+    assert!(session.apply_transcript_backfill(&superseded));
+    assert_eq!(session.recap, None);
+
+    let fresh = scan(&[
+        user_line("task"),
+        recap_line("fresh", "2026-09-12T03:50:00.000Z", false),
+    ]);
+    assert!(session.apply_transcript_backfill(&fresh));
+    assert_eq!(
+        session.recap.as_ref().map(|recap| recap.text.as_str()),
+        Some("fresh")
+    );
+
+    assert!(session.apply_transcript_backfill(&scan(&[assistant_line(
+        "claude-opus-5-5",
+        None,
+        None,
+        false,
+        "done"
+    )])));
+    assert_eq!(
+        session.recap, None,
+        "no recap in the tail means none is current"
+    );
+}
+
+fn timed_assistant_line(model: &str, effort: &str, at: &str) -> String {
+    json!({
+        "parentUuid": "p1",
+        "isSidechain": false,
+        "message": {
+            "model": model,
+            "id": "msg_1",
+            "type": "message",
+            "role": "assistant",
+            "content": [{"type": "text", "text": "ok"}],
+        },
+        "type": "assistant",
+        "uuid": "u4",
+        "timestamp": at,
+        "effort": effort,
+    })
+    .to_string()
+}
+
+#[test]
+fn backfill_keeps_a_model_a_hook_reported_after_the_scanned_lines() {
+    // `claude --resume --model sonnet` over a transcript that ran on Opus:
+    // SessionStart reported the new model before the attach scan.
+    let mut session = session();
+    session.model = Some("claude-sonnet-5".into());
+    session.model_reported_at = parse_iso8601("2026-09-12T04:00:00.000Z");
+
+    let older = scan(&[timed_assistant_line(
+        "claude-opus-5-5",
+        "xhigh",
+        "2026-09-12T03:59:00.000Z",
+    )]);
+    assert!(!session.apply_transcript_backfill(&older));
+    assert_eq!(session.model.as_deref(), Some("claude-sonnet-5"));
+    assert_eq!(
+        session.reasoning_effort, None,
+        "Opus's effort does not describe Sonnet"
+    );
+
+    // An older line on the same model still lends its effort.
+    let same_model = scan(&[timed_assistant_line(
+        "claude-sonnet-5",
+        "high",
+        "2026-09-12T03:58:00.000Z",
+    )]);
+    assert!(session.apply_transcript_backfill(&same_model));
+    assert_eq!(
+        session.model_label().as_deref(),
+        Some("Sonnet 5 \u{b7} high")
+    );
+
+    // A line written after the report is newer than it.
+    let newer = scan(&[timed_assistant_line(
+        "claude-opus-5-5",
+        "max",
+        "2026-09-12T04:01:00.000Z",
+    )]);
+    assert!(session.apply_transcript_backfill(&newer));
+    assert_eq!(
+        session.model_label().as_deref(),
+        Some("Opus 5.5 \u{b7} max")
+    );
+}
+
+#[test]
+fn backfill_of_a_restored_session_takes_the_transcript_model() {
+    let mut session = session();
+    session.model = Some("claude-sonnet-5".into());
+    let delta = scan(&[timed_assistant_line(
+        "claude-opus-5-5",
+        "xhigh",
+        "2026-09-12T03:59:00.000Z",
+    )]);
+    assert!(session.apply_transcript_backfill(&delta));
+    assert_eq!(
+        session.model_label().as_deref(),
+        Some("Opus 5.5 \u{b7} xhigh")
+    );
+}
+
+#[test]
+fn session_start_hook_records_when_it_reported_the_model() {
+    let sources = SourceCatalog::default();
+    let clock = || Timestamp(1_000.0);
+    let ctx = ReduceContext {
+        clock: &clock,
+        sources: &sources,
+        home_directory: "/home/morrow",
+        max_history: 10,
+        reply_complete_placeholder: "Reply complete",
+    };
+    let event: serde_json::Value = serde_json::from_str(
+        r#"{"hook_event_name":"SessionStart","session_id":"s1","source":"resume","model":"claude-sonnet-5","cwd":"/repo"}"#,
+    )
+    .unwrap();
+    let event = HookEvent::new(event.as_object().unwrap().clone(), &sources).expect("a hook event");
+
+    let mut sessions = Sessions::new();
+    reduce_hook_event(&mut sessions, &event, &ctx);
+    let session = sessions.get("s1").expect("the session");
+    assert_eq!(session.model.as_deref(), Some("claude-sonnet-5"));
+    assert_eq!(session.model_reported_at, Some(Timestamp(1_000.0)));
+}
+
+#[test]
+fn switching_to_and_from_the_1m_variant_relabels_the_session() {
+    let mut session = session();
+    session.model = Some("claude-opus-5-5".into());
+    let live = |long_context: Option<bool>, model: Option<&str>| ScanDelta {
+        configured_long_context: long_context,
+        model_observation: model.map(|model| ModelObservation::new(model, Some("xhigh".into()))),
+        ..ScanDelta::default()
+    };
+
+    assert!(session.apply_transcript_delta(&live(Some(true), None)));
+    assert_eq!(session.model_label().as_deref(), Some("Opus 5.5 1M"));
+    session.apply_transcript_delta(&live(None, Some("claude-opus-5-5")));
+    assert_eq!(
+        session.model_label().as_deref(),
+        Some("Opus 5.5 1M \u{b7} xhigh"),
+        "the bare API id keeps the 1M variant"
+    );
+
+    assert!(session.apply_transcript_delta(&live(Some(false), None)));
+    assert_eq!(
+        session.model_label().as_deref(),
+        Some("Opus 5.5 \u{b7} xhigh")
+    );
+    session.apply_transcript_delta(&live(None, Some("claude-opus-5-5")));
+    assert_eq!(
+        session.model_label().as_deref(),
+        Some("Opus 5.5 \u{b7} xhigh"),
+        "and loses it once switched off"
+    );
+
+    // Switching model and variant at once: the next line names the model.
+    session.model = Some("claude-sonnet-5".into());
+    session.apply_transcript_delta(&live(Some(true), None));
+    session.apply_transcript_delta(&live(None, Some("claude-opus-5")));
+    assert_eq!(session.model.as_deref(), Some("claude-opus-5[1m]"));
+}
+
+// MARK: - Reducer and card state
+
+fn hook_event(payload: Value, sources: &SourceCatalog) -> HookEvent {
+    HookEvent::new(payload.as_object().unwrap().clone(), sources).expect("a hook event")
+}
+
+#[test]
+fn user_prompt_submit_hook_clears_the_recap_but_other_events_keep_it() {
+    let sources = SourceCatalog::default();
+    let clock = || Timestamp(2_000.0);
+    let ctx = ReduceContext {
+        clock: &clock,
+        sources: &sources,
+        home_directory: "/home/morrow",
+        max_history: 10,
+        reply_complete_placeholder: "Reply complete",
+    };
+    let mut first = session();
+    first.recap = Some(SessionRecap::new("r", Timestamp(1_000.0)));
+    let mut sessions: Sessions = [("s1".to_owned(), first)].into_iter().collect();
+
+    let notification = hook_event(
+        json!({"hook_event_name": "Notification", "session_id": "s1", "message": "idle"}),
+        &sources,
+    );
+    reduce_hook_event(&mut sessions, &notification, &ctx);
+    assert!(sessions["s1"].recap.is_some());
+
+    let prompt = hook_event(
+        json!({"hook_event_name": "UserPromptSubmit", "session_id": "s1", "prompt": "next"}),
+        &sources,
+    );
+    reduce_hook_event(&mut sessions, &prompt, &ctx);
+    assert_eq!(sessions["s1"].recap, None);
+}
+
+#[test]
+fn visible_recap_only_while_idle() {
+    let mut session = session();
+    session.recap = Some(SessionRecap::new("r", Timestamp(2_000.0)));
+    session.status = AgentStatus::Idle;
+    assert!(session.visible_recap().is_some());
+    for status in [
+        AgentStatus::Processing,
+        AgentStatus::Running,
+        AgentStatus::WaitingApproval,
+        AgentStatus::WaitingQuestion,
+    ] {
+        session.status = status;
+        assert!(session.visible_recap().is_none(), "{status:?}");
+    }
+}
+
+// MARK: - Subagent models
+
+#[test]
+fn codex_child_keeps_its_own_model_and_never_the_parents() {
+    let sources = SourceCatalog::default();
+    let clock = || Timestamp(1_000.0);
+    let ctx = ReduceContext {
+        clock: &clock,
+        sources: &sources,
+        home_directory: "/home/morrow",
+        max_history: 10,
+        reply_complete_placeholder: "Reply complete",
+    };
+    let mut parent = session();
+    parent.source = "codex".into();
+    parent.model = Some("gpt-5.6-sol".into());
+    let mut sessions: Sessions = [("parent".to_owned(), parent)].into_iter().collect();
+
+    let start = hook_event(
+        json!({
+            "hook_event_name": "SessionStart", "session_id": "parent", "_source": "codex",
+            "agent_id": "child", "agent_type": "worker", "model": "gpt-5.4-mini",
+        }),
+        &sources,
+    );
+    reduce_hook_event(&mut sessions, &start, &ctx);
+    assert_eq!(
+        sessions["parent"].subagents["child"].model.as_deref(),
+        Some("gpt-5.4-mini")
+    );
+    assert_eq!(sessions["parent"].model.as_deref(), Some("gpt-5.6-sol"));
+
+    // Later child hooks without a model leave it alone.
+    let step = hook_event(
+        json!({
+            "hook_event_name": "PreToolUse", "session_id": "parent", "_source": "codex",
+            "agent_id": "child", "tool_name": "Bash", "tool_input": {"command": "ls"},
+        }),
+        &sources,
+    );
+    reduce_hook_event(&mut sessions, &step, &ctx);
+    assert_eq!(
+        sessions["parent"].subagents["child"].model.as_deref(),
+        Some("gpt-5.4-mini")
+    );
+}
+
+#[test]
+fn claude_subagent_without_model_stays_unlabeled() {
+    let sources = SourceCatalog::default();
+    let clock = || Timestamp(1_000.0);
+    let ctx = ReduceContext {
+        clock: &clock,
+        sources: &sources,
+        home_directory: "/home/morrow",
+        max_history: 10,
+        reply_complete_placeholder: "Reply complete",
+    };
+    let mut parent = session();
+    parent.model = Some("claude-opus-5-5".into());
+    parent.reasoning_effort = Some("xhigh".into());
+    let mut sessions: Sessions = [("parent".to_owned(), parent)].into_iter().collect();
+
+    let start = hook_event(
+        json!({
+            "hook_event_name": "SubagentStart", "session_id": "parent",
+            "agent_id": "a1", "agent_type": "Explore",
+        }),
+        &sources,
+    );
+    reduce_hook_event(&mut sessions, &start, &ctx);
+    let subagent = &sessions["parent"].subagents["a1"];
+    assert_eq!(subagent.model, None);
+    assert_eq!(subagent.model_label(), None);
+}
+
+#[test]
+fn claude_subagent_transcript_path_derivation() {
+    assert_eq!(
+        SubagentState::claude_transcript_path(
+            "/u/.claude/projects/-repo/3fdc50ad.jsonl",
+            "a6914a36aae8b67eb"
+        )
+        .as_deref(),
+        Some("/u/.claude/projects/-repo/3fdc50ad/subagents/agent-a6914a36aae8b67eb.jsonl")
+    );
+    assert_eq!(
+        SubagentState::claude_transcript_path("/u/x.json", "a1"),
+        None
+    );
+    assert_eq!(
+        SubagentState::claude_transcript_path("/u/x.jsonl", "../a1"),
+        None
+    );
+    assert_eq!(
+        SubagentState::claude_transcript_path("/u/x.jsonl", ""),
+        None
+    );
 }
 
 // MARK: - The probe keeps the realistic mix fast

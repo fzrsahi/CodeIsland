@@ -129,10 +129,13 @@ The three pieces the transcript's readings are made of:
 that straddles a boundary carried over, exactly as the Swift version does over
 a file handle — the platform hands in the bytes.
 
-Not ported here: how a snapshot absorbs a delta (`applyTranscriptMetadata`,
-`applyTranscriptBackfill`, `visibleRecap`). Those read and write app-side state
-the Rust `SessionSnapshot` does not carry yet (recap, reasoning effort, the
-hook-reported model time); they belong with the card that shows them.
+A snapshot absorbs a delta here too: `apply_transcript_delta`,
+`apply_transcript_backfill`, `apply_backfilled_model_observation`,
+`clear_recap_if_superseded` (called by the reducer's `UserPromptSubmit`),
+`visible_recap` and `model_label`, plus the subagent's
+`claude_transcript_path` and label. `SessionSnapshot` gained `recap`,
+`reasoning_effort` and `configured_long_context` for them — kept, not
+projected, exactly as the reducer contract's `projection_omits` says.
 
 ## Tests
 
@@ -156,9 +159,8 @@ read.
 (9 of 9, plus the depth cap and a standardized `cwd`).
 
 `tests/model_label.rs` is `ModelLabelTests` (22 tests) and
-`tests/session_recap.rs` is the scan-level half of `SessionRecapTests`
-(24 tests); the snapshot-level cases of that suite need the app-side state
-listed above. `tests/transcript_tailer.rs` is `JSONLTailerTests` and
+`tests/session_recap.rs` is `SessionRecapTests` (38 of its 39; the one left
+asserts the checklist, #136). `tests/transcript_tailer.rs` is `JSONLTailerTests` and
 `JSONLTailerCursorQuestionTests` ported: 70 tests, all the parsing ones as
 they are and the attach/replacement ones driven through `TailState` with the
 bytes a watcher would have read. Two Swift tests are the watcher's own and
