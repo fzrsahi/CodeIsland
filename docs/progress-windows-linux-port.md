@@ -1,7 +1,7 @@
 # Progress — Windows & Linux port
 
-**Status:** fase 1 selesai di PR (#120–#125, gate E2E-1 hijau di Xvfb, menunggu X11 nyata); fase 2 mulai (#127, #128; #94 draft di `wip/#94-core-reducer`). Core = **Rust** (#117).
-**Checkpoint terakhir:** 2026-11-19 — kerja dihentikan setelah #93; worktree lokal dibersihkan.
+**Status:** fase 1 selesai di PR (#120–#125, gate E2E-1 hijau di Xvfb, menunggu X11 nyata); fase 2 (#127, #128, #130). Core = **Rust** (#117).
+**Checkpoint terakhir:** 2026-11-20 — PR #130 dibuka untuk #94 (reducer di morrow-core 80/80 + desktop wired, gate E2E-1 27/27 hijau).
 **Fase kanonik:** [`plan-windows-linux.md`](plan-windows-linux.md) §7. Kalau dokumen ini berbeda dengan §7, §7 yang benar.
 
 ---
@@ -44,7 +44,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 1 | #91 → PR #125 | kartu approval dua arah | `PR dibuka` — menunggu run di X11 nyata (@aazhrt) | **`E2E-1`**: 27/27 di Xvfb, approve 35 ms, deny 13 ms |
 | 2 | #92 → PR #127 | ekspor fixture reducer + `AttentionPolicy` | `PR dibuka` | 80 kasus reducer (161 step), 56 attention; `Sources/` tidak berubah |
 | 2 | #93 → PR #128 | `HookIntake` → `morrow-core`; bridge memakainya | `PR dibuka` | 84/84 neutral, 84/84 linux |
-| 2 | #94 | port reducer + `HookEventFacts` | `sedang` — draft belum diverifikasi di `wip/#94-core-reducer` | 100% fixture reducer identik |
+| 2 | #94 → PR #130 | port reducer + `HookEventFacts` + wire morrow-app | `PR dibuka` (stacked on #128) | 80/80 kasus (161 step) fixture reducer identik, gate E2E-1 27/27 |
 | 2 | #95–#97 | attention, git + markdown, transcript live | `belum` | fixture/test port lulus |
 | 3 | #98–#104 | Linux lengkap: installer, adapter, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
@@ -65,6 +65,12 @@ Stack PR dan urutan merge: body #33, bagian **Stack PR**. Ringkas: mandiri #51, 
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 — #94 selesai, PR #130 dibuka (stacked on #128)
+
+- **Sudah:** Port `reduceHookEvent` dan `HookEventFacts` ke `shared/crates/morrow-core` (pure Rust, clock diinjeksi, 20 crate murni). 80 kasus fixture (161 step) dari #127 lulus 100%. Integrasi `shared/desktop` (`morrow-app`) menggunakan reducer murni, `test-desktop.sh` lulus, dan gate `E2E-1` di Xvfb lulus 27/27 (approve 16 ms, deny 10 ms). PR #130 dibuka terhadap base `feat/#93-core-hookintake` (#128).
+- **Berikutnya:** Lanjut Lane A (#95 `AttentionPolicy` di `morrow-core` setelah PR #127 fixture attention ada di stack); atau review stack PR #120–#125, #128, #130; run E2E-1 di X11 nyata (@aazhrt).
+- **Blocker:** Run E2E-1 di X11 nyata (@aazhrt); 3 keputusan kontrak endpoint (#115).
 
 ### 2026-11-19 — fase 1 di PR, fase 2 mulai, kerja dijeda
 
