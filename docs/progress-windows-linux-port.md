@@ -53,7 +53,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 2 | #136 → PR #140 | sisa #97: parsing checklist (`AgentTaskTool`, event hook/transcript, `scan` backfill) | `PR dibuka` (stacked on #137) | 9 test parsing; `ScanDelta.task_events` terisi urut |
 | 2 | #139 → PR #142 | `AgentTaskList` (dedupe, park, undo, pensiun plan per-turn, linger, rebuild attach, persistensi) + `Snapshot.agent_tasks` | `PR dibuka` (stacked on #140) | 38/39 test list-side; `scanFile` tetap di platform |
 | 3 | #98 → PR #145/#146 | installer hook Claude Code: editor + rencana (#144), lalu crate `morrow-platform` + kartu Settings | `PR dibuka` (stacked #142 → #145 → #146) | 14 + 18 + 9 test; sisa hanya **E2E-2** di desktop Linux nyata |
-| 3 | #99 → PR #147/#148 | 7 target JSON hook (Codex, Gemini, Cursor, Qoder, Droid, CodeBuddy, Copilot) + tombol di kartu Settings | `PR dibuka` (stacked #142→#148) | 19 + 15 test; sisa: OpenCode (plugin), flag `hooks = true` Codex (TOML, bersama #100) |
+| 3 | #99 → PR #147/#148 | **sembilan target** hook (Claude, 7 JSON, OpenCode) + flag TOML Codex, semua dari kartu Settings | `PR dibuka` (stacked #142→#148) | 19+15+2(40 fixture)+10+8 test; sisa hanya E2E di desktop Linux |
 | 3 | #100–#104 | Linux lengkap: source YAML/TOML, adapter, tray, hotkey, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
@@ -94,6 +94,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 13) — #99 lengkap di sisi kode (PR #148)
+
+- **Sudah:** dua target terakhir masuk. **Codex** kini juga memasang `features.hooks = true` di `config.toml` lewat `installer::codex_config` (= `CodexHooksConfig`, #354): editor TOML sempit yang menolak layout tak dikenal daripada membuat duplicate key, dan menyembuhkan blok `[features]` yang dulu ditambahkan build lama; ke-40 `CodexTomlHooksFixtures` lulus identik dengan Swift plus idempotensi. **OpenCode** masuk sebagai plugin: `installer::opencode` mendaftarkan referensi di `plugin` (komentar & plugin pengguna tetap, referensi `vibe-island` diganti), `morrow_platform::opencode` menaruh file plugin dari resource macOS via `include_str!` (satu sumber, dua core), memilih `opencode.jsonc` kalau ada, membersihkan registrasi legacy `config.json`, dan mem-backup sekali per file. Kartu Settings kini menampilkan sembilan target. Test baru: 2 + 10 + 8, `hooks_installer` jadi 17. Gate + `npm run build` hijau.
+- **Berikutnya:** #99 tinggal E2E di desktop Linux (milik #98); tiket berikutnya #100 (sumber YAML/TOML, sekarang bisa memakai pola editor `codex_config`), lalu adapter #101–#103 dan packaging #104.
+- **Blocker:** review stack #145–#148; E2E-2 butuh desktop Linux nyata. Dua flake `bridge_process` (anggaran 5 dtk, sentinel gemini 200 ms) muncul sekali masing-masing dan lulus saat diulang — di luar diff ini.
 
 ### 2026-11-20 (lanjutan 12) — #99 target hook bisa dipasang dari Settings (PR #148)
 
