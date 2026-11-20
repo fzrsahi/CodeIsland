@@ -58,7 +58,8 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 3 | #151 | source YAML (Hermes, TraeCli) — keputusan komentar-vs-macOS dulu | `belum` — opsi A/B/C diajukan, rekomendasi B | tiket terpisah supaya #100 bisa ditutup |
 | 3 | #151 → PR #152 | source YAML (Hermes, TraeCli) sebagai blok terkelola — komentar utuh | `PR dibuka` (stacked #142→#152) | 14 + 6 test; keputusan **B** tercatat di tiket |
 | 3 | #101 → PR #153 | Capability table 21 adapter + autostart + settings + **tray + global hotkey** | `PR dibuka` (stacked #142→#153) | 11 test + clippy bersih; **sisa hanya L-006…L-012 di desktop nyata** |
-| 3 | #102–#104 | adapter batch 2/3, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
+| 3 | #102 → PR #154 | kartu musik: MPRIS, ekstrapolasi posisi, lirik lrclib, volume | `PR dibuka` (stacked #142→#154) | 17 + 11 test; sisa: menggambar kartunya (pekerjaan panel) + L-003/L-004 |
+| 3 | #103–#104 | adapter batch 3, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
@@ -98,6 +99,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 18) — #102 kartu musik (PR #154)
+
+- **Sudah:** `morrow_core::music` (murni): parser metadata `playerctl`, `parse_lrc` untuk lrclib, parser volume `wpctl`/`pactl`, dan `Position` — ekstrapolasi posisi karena MPRIS `Position` tidak wajib di-refresh (paused diam, clamp di panjang track, tahan clock skew, dikoreksi bacaan berikutnya setelah loop). `morrow_platform::music` menjalankan `playerctl` (metadata, `Can*`, kontrol, seek `position 10+`/`10-`), `wpctl`/`pactl` (baca+tulis dengan tool yang sama, batas 150%), `curl` untuk lrclib; "no players" dan 404 jadi kartu kosong. Capability Now Playing kini menuntut `playerctl`, dan `CanSeek: false` menyembunyikan kontrol seek. Shell mengekspos sepuluh perintah kartu. Test 17 + 11; gate hijau. **PR #154** terhadap #153.
+- **Berikutnya:** menggambar kartu musik ikut pekerjaan panel (polling, tombol), lalu #103 (adapter batch 3) dan #104 (packaging).
+- **Blocker:** review stack #145–#154; verifikasi di desktop nyata (L-003/L-004, E2E-2, L-006…L-012). Flake `bridge_process` masih perlu tiket sendiri.
 
 ### 2026-11-20 (lanjutan 17) — #101 tray + hotkey (PR #153 lengkap)
 
