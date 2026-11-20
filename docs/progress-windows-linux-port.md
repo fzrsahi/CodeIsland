@@ -30,10 +30,10 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 |---|---|---|---|---|
 | — | PR #49 | `docs(#33)`: ADR, glossary, plan, handoff, setup agent skills | `PR dibuka` — konflik dengan `main` (#119), tertahan guard #124 (fix PR #126) | — |
 | 0 | PR #50 | `test(#33)`: ekspor golden fixtures bridge + schema | `PR dibuka`, approved | `BridgeGoldenTests` hijau; schema memvalidasi semua fixture |
-| 0 | PR #51 | `fix(#33)`: hook Claude Windows tanpa `--source`, precedence = Swift | `PR dibuka`, approved, siap merge | `windows/Morrow.Core.Tests` hijau |
+| 0 | PR #51 | `fix(#33)`: hook Claude Windows tanpa `--source`, precedence = Swift | `merged` (`b314f9c`, 2026-11-20) | `windows/Morrow.Core.Tests` hijau |
 | 0 | PR #52 | `ci(#33)`: pipefail XCTest | `dilewati` — ditutup, digantikan #111 | — |
 | 0 | #78 | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `belum` — menunggu 3 keputusan kontrak di PR #115 | test plugin memakai `fixtures/endpoint/cases.json` |
-| 0.5 | #83 → PR #114 | skrip CI macOS `test`/`package`/`manifest` | `PR dibuka`, approved @aazhrt | pipeline hijau + satu run sengaja merah |
+| 0.5 | #83 → PR #114 | skrip CI macOS `test`/`package`/`manifest` | `merged` (`c695753`, 2026-11-20) | pipeline hijau + satu run sengaja merah |
 | 0.5 | #84 → PR #115 | kontrak endpoint + 38 kasus | `PR dibuka` — 3 open question ditanyakan ke kolaborator | Swift `SocketPath.resolve` lulus kasus macOS |
 | 0.5 | #85 → PR #117 | eksperimen Opsi E | `PR dibuka` — hijau 96,8%, tapi **ditolak → Rust** | ADR-0003 `rejected`, keputusan di ADR-0001 |
 | 0.5 | #86 → PR #118 | layout monorepo (skrip replay) | `PR dibuka` (draft) — dijalankan ulang setelah PR lain merge; bagian `.woodpecker.yaml` perlu @aazhrt | `swift test` + DMG hijau, nol perubahan perilaku |
@@ -53,7 +53,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
 | 6 | #110 | Hapus core C# | `belum` | test Windows hijau; **izin maintainer `windows/`** |
 
-Stack PR dan urutan merge: body #33, bagian **Stack PR**. Ringkas: mandiri #51, #114, #115; docs #49 → #50 → #117 / #127; Rust #120 → #121 → #122 → #123 → #125, cabang #122 → #128; #118 terakhir. Merge pakai *merge commit*, hapus branch setelah merge.
+Stack PR dan urutan merge: body #33, bagian **Stack PR**. Ringkas: **sudah merged di `main`**: #51, #114. Masih menunggu: docs #49 → #50 → #117 / #127; Rust #120 → #121 → #122 → #123 → #125, cabang #122 → #128; #115 (3 OQ); #118 terakhir. Top of `main` saat catatan ini: `c695753`. Merge pakai *merge commit*, hapus branch setelah merge.
 
 ---
 
@@ -71,6 +71,7 @@ Stack PR dan urutan merge: body #33, bagian **Stack PR**. Ringkas: mandiri #51, 
 ### 2026-11-20 (lanjutan 4) — #49 disiapkan, jalur merge dipetakan
 
 - **Sudah:** merge `origin/main` → `docs/#33` dicoba di worktree terpisah (`~/dev/Morrow-49`, siap, belum di-commit). Hasil: **satu** file bentrok, `AGENTS.md` (add/add); versi branch = versi `main` + §7 port + *Agent skills* + aturan resource budget, jadi resolusi = ambil versi branch (tidak ada isi `main` yang hilang). Permintaan aazhrt kedua sudah beres: `.github/workflows` tidak ada di branch maupun di `main`. **Temuan:** commit merge itu ditolak `.githooks/pre-commit` dari `main` (`BLOCKED: .woodpecker.yaml`, #124); dengan diff PR #126 diterapkan, guard lolos — jadi #49 hanya bisa di-push setelah **#126** merge. Komentar tag dipasang di #126, #115, #49, #114, #51, #120 (rantai #120–#125 dan #127–#133).
+- **Koreksi 2026-11-20:** #51 (`b314f9c`) dan #114 (`c695753`) ternyata **sudah merged** ke `main`; snapshot PR yang dipakai saat menulis komentar tag masih basi, jadi komentar "mohon di-merge" di #51 dan #114 salah dan sudah dikoreksi di PR masing-masing. Merge #49 di `~/dev/Morrow-49` sudah diulang terhadap `main` baru (`c695753`): tetap **satu** konflik (`AGENTS.md`), 21 file, +998/−178, guard lolos dengan diff #126.
 - **Berikutnya:** begitu #126 di-approve+merge → commit+push merge #49, minta re-review aazhrt (dismiss `CHANGES_REQUESTED` lama), lalu #114 + #51 di-merge, lalu rantai Rust di-retarget ke `main` dari bawah (#50 → #120 … → #133).
 - **Blocker:** approval #126 (@aazhrt); 3 OQ #115 (@fzrsahi, @agungdunggio); run E2E-1 di X11 nyata. Catatan: worktree `~/dev/Morrow-134` (branch `chore/#134-integrate-stacks`, belum di-push) ada di mesin dev — bukan buatan sesi ini.
 
