@@ -23,7 +23,7 @@ Superseded, still useful for Wayland risks and acceptance criteria: [`docs/archi
 
 ## State
 
-Live state is in [`progress-windows-linux-port.md`](progress-windows-linux-port.md). Summary at this writing (2026-11-20): core language decided **Rust** (#117); phase 1 complete as a PR stack (#120 → #121 → #122 → #123 → #125), with the E2E-1 gate green in Xvfb and waiting for a real X11 run; phase 2 in progress: #127 fixtures, #128 `HookIntake`, #130 `reduceHookEvent` + desktop wired, #131 `AttentionPolicy.intents` + `reduce_event`.
+Live state is in [`progress-windows-linux-port.md`](progress-windows-linux-port.md). Summary at this writing (2026-11-20): core language decided **Rust** (#117); phase 1 complete as a PR stack (#120 → #121 → #122 → #123 → #125), with the E2E-1 gate green in Xvfb and waiting for a real X11 run; phase 2 in progress: #127 fixtures, #128 `HookIntake`, #130 `reduceHookEvent` + desktop wired, #131 `AttentionPolicy.intents` + `reduce_event`, #132 `MarkdownBlockParser` + `GitBranchReader`.
 
 `main` now carries repo-wide agent rules (`AGENTS.md`, from #119): issue-first, 1 issue = 1 PR, stacked PRs, `.woodpecker.yaml` owned by @aazhrt, and a pre-commit `scripts/ci/verify-local.sh`. Until #126 merges, that guard blocks merging `main` into feature branches (#124).
 
@@ -98,11 +98,11 @@ Lanes run side by side; inside a lane, work is sequential. On the dev machine at
 
 | Lane | Kind | Work, in order | Waits on |
 |---|---|---|---|
-| **A. Rust core** | heavy (Docker) | #95 attention (PR #131) → #96 git + markdown (stacked on #131) → #97 transcript | — |
+| **A. Rust core** | heavy (Docker) | #96 git + markdown (PR #132) → #97 transcript | — |
 | **B. Swift fixes** | heavy (host Swift) | #78 plugin endpoint fix → #86 replay of #118 on fresh `main` (split its `.woodpecker.yaml` edits into a PR for @aazhrt) | #115 answers; stack merged |
 | **C. Stack upkeep** | light, but each `git push` is heavy (pre-push `swift build`) | after #126 merges: merge `main` into #49, then each stack PR's base into it, bottom-up; retarget children to `main` as bases merge | PR #126; reviews |
 | **D. Collaborator gates** | other machines | run `linux/ci/e2e1.sh` on real X11 (PR #125); later E2E-2 Linux (#98), Windows VM gates (#105–#108) | — |
-| **E. Next frontier** | heavy (Docker) | after lane A reaches #95: #98 installer + E2E-2, #101 adapter batch 1, #104 Linux packaging, #105 Windows pipe | #91, #93, #83 merged or stacked |
+| **E. Next frontier** | heavy (Docker) | after lane A reaches #96: #98 installer + E2E-2, #101 adapter batch 1, #104 Linux packaging, #105 Windows pipe | #91, #93, #83 merged or stacked |
 
 Safe pairings on the dev machine: A + C(without push), B + C(without push), A + B only with both caps in place (Docker 1.8 GB, Swift `-j 2`) and no push until one finishes. Queue pushes; run them one at a time.
 
