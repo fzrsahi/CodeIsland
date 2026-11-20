@@ -101,6 +101,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 
 ## Log Checkpoint
 
+### 2026-11-20 (lanjutan 22) — #106 panel Windows (PR #158)
+
+- **Sudah:** `windows_panel.rs` (`WM_NCHITTEST` → `HTTRANSPARENT` di luar island membulat, `MA_NOACTIVATE` untuk klik, `WS_EX_NOACTIVATE` dilepas selama Question card terbuka lalu dipasang kembali), geometri di `morrow_platform::panel` (6 test: tengah pill, empat sudut, tepi eksklusif, radius 0/di-clamp, island lebih kecil dari window). `morrow-app` masuk lane Windows (lima crate) — butuh `llvm-rc`, skrip mencetak SKIP bila tidak ada. **Spike input region dicatat** di `docs/spike-windows-input-region.md`: `SetWindowRgn` memotong gambar, layered+alpha tidak bisa host WebView2, jadi `WM_NCHITTEST`; sisa terbuka — child HWND WebView2 bisa mencegat — diputuskan di W-005. Dua bug jahitan diperbaiki: `Connection::set_read_timeout` portabel (no-op di pipe) dan `Send` untuk handle Win32. Gate Unix hijau. **PR #158** terhadap #157.
+- **Berikutnya:** #107 (adapter WinRT + Capability) dan #108 (NSIS + E2E-2), keduanya di belakang #106 → VM Windows.
+- **Blocker:** W-001 & W-005 butuh host Windows; #91 masih OPEN; review stack #145–#158.
+
 ### 2026-11-20 (lanjutan 21) — #105 named pipe Windows (PR #157)
 
 - **Sudah:** `morrow_ipc::windows` (pipe mode pesan; `FILE_FLAG_FIRST_PIPE_INSTANCE` + `PIPE_REJECT_REMOTE_CLIENTS`; descriptor `O:<sid>G:<sid>D:(A;;GA;;;<sid>)`; `ERROR_ACCESS_DENIED` → `AlreadyRunning`), cek identitas server lewat `GetNamedPipeServerProcessId` → token → SID, `pipe::` untuk nama+descriptor (murni, diuji di mesin mana pun, termasuk kecocokan nama dengan `endpoint::resolve`), `is_sid` menolak SID cacat sebelum masuk API. `morrow_ipc` me-re-export satu nama transport, jadi bridge dan shell berhenti menyebut `unix`. Skrip baru `scripts/ci/windows-check.sh`. Bukti: `cargo xwin clippy --target x86_64-pc-windows-msvc -- -D warnings` hijau untuk `morrow-ipc`, `morrow-bridge`, `morrow-core`; gate Unix hijau; 4 test string lulus. **PR #157** terhadap #156.
