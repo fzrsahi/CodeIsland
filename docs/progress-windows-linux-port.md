@@ -52,7 +52,8 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 2 | #135 → PR #137 | sisa #97: `SessionRecap` + `ModelObservation`/`ModelLabel` + `parseISO8601`, termasuk penyerapan delta ke snapshot | `PR dibuka` (stacked on #133) | 22 `ModelLabelTests` + 38/39 `SessionRecapTests`; delta & snapshot lengkap |
 | 2 | #136 → PR #140 | sisa #97: parsing checklist (`AgentTaskTool`, event hook/transcript, `scan` backfill) | `PR dibuka` (stacked on #137) | 9 test parsing; `ScanDelta.task_events` terisi urut |
 | 2 | #139 → PR #142 | `AgentTaskList` (dedupe, park, undo, pensiun plan per-turn, linger, rebuild attach, persistensi) + `Snapshot.agent_tasks` | `PR dibuka` (stacked on #140) | 38/39 test list-side; `scanFile` tetap di platform |
-| 3 | #98–#104 | Linux lengkap: installer, adapter, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
+| 3 | #98 → PR #145 | installer hook Claude Code (bagian kode; E2E-2 menyusul) | `PR dibuka` (stacked on #142) — tiket: #144 | 14 `JSONMinimalEditorTests` + 18 test rencana install/uninstall |
+| 3 | #99–#104 | Linux lengkap: adapter, tray, hotkey, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
 | 6 | #110 | Hapus core C# | `belum` | test Windows hijau; **izin maintainer `windows/`** |
@@ -91,6 +92,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 9) — #144: editor config + rencana hook Claude (PR #145)
+
+- **Sudah:** #98 ternyata masih `blocked by #91`/`#93` (PR #125, #128), jadi bagian kodenya dipecah ke tiket **#144** dan dikerjakan sekarang. Yang diport, murni tanpa I/O: `installer::json_editor` (`JSONMinimalEditor`, hanya mengganti rentang nilai satu kunci level atas — komentar/urutan/escape/indent/newline pengguna utuh, dokumen non-objek ditolak = guard #89; plus `strip_json_comments` karena `settings.json` itu JSONC) dan `installer::claude_hooks` (tabel 13 event + gerbang versi 2.1.89/2.1.78, nama legacy `vibenotch`/`vibe-island`/`vibeisland`, install idempoten, perbaikan `async` basi, uninstall yang menghapus kunci `hooks` kosong sehingga kembali byte-per-byte, aturan backup). Test: **14** + **18**; `linux-test.sh` hijau; 20 crate murni. **PR #145** dibuka terhadap #142.
+- **Berikutnya:** sisi platform #98 (skrip hook + binary bridge, pemanggilan dari Settings shell) baru bisa setelah #91/#93; berikutnya #99–#104 (adapter, tray, hotkey, packaging). Jalur kritis tetap review #49 dan stack-nya.
+- **Blocker:** `CHANGES_REQUESTED` lama di #49; E2E-1/X11 nyata; #91 & #93 belum merge (menahan E2E-2).
 
 ### 2026-11-20 (lanjutan 8) — #115 diputuskan, #139 selesai (PR #142)
 
