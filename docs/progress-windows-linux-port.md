@@ -57,7 +57,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 3 | #100 → PR #149 | source TOML (Kimi) + baris cakupan per agent di Settings | `PR dibuka` (stacked #142→#149) — `Fixes #100` | 8 + 5 test; L-002 lulus untuk JSON + TOML |
 | 3 | #151 | source YAML (Hermes, TraeCli) — keputusan komentar-vs-macOS dulu | `belum` — opsi A/B/C diajukan, rekomendasi B | tiket terpisah supaya #100 bisa ditutup |
 | 3 | #151 → PR #152 | source YAML (Hermes, TraeCli) sebagai blok terkelola — komentar utuh | `PR dibuka` (stacked #142→#152) | 14 + 6 test; keputusan **B** tercatat di tiket |
-| 3 | #101 → PR #153 | Capability table 21 adapter + autostart + settings | `PR dibuka` (stacked #142→#153) | 11 test; sisa: tray + hotkey + L-006…L-012 di desktop nyata |
+| 3 | #101 → PR #153 | Capability table 21 adapter + autostart + settings + **tray + global hotkey** | `PR dibuka` (stacked #142→#153) | 11 test + clippy bersih; **sisa hanya L-006…L-012 di desktop nyata** |
 | 3 | #102–#104 | adapter batch 2/3, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
@@ -98,6 +98,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 17) — #101 tray + hotkey (PR #153 lengkap)
+
+- **Sudah:** dua bagian terakhir batch 1 masuk. `tray` = StatusNotifierItem lewat AppIndicator (menu Show/hide + Quit, klik kiri men-toggle island); tanpa lib hasilnya `Degraded("no tray icon: …")`, dicetak sekali, panel tetap jalan. `hotkey` = `Super+Space` lewat `tauri-plugin-global-shortcut` (satu-satunya plugin, karena Tauri core tidak mengekspos global shortcut); gagal grab (Wayland) jadi `Degraded` dengan saran `morrow toggle`. `capabilities` menimpa dugaan probe dengan hasil runtime untuk kedua adapter itu, jadi Settings melaporkan kenyataan. Gate hijau, `npm run build` hijau, clippy `-D warnings` bersih untuk `morrow-app`.
+- **Berikutnya:** #101 berhenti di verifikasi (L-006…L-012 butuh desktop Linux hidup); berikutnya #102/#103 (adapter batch 2/3, blocked by #101) dan #104 (packaging, blocked by #91) — semuanya berakhir di verifikasi yang sama.
+- **Blocker:** review stack #145–#153; verifikasi desktop Linux; flake `bridge_process` (anggaran 5 dtk + sentinel gemini) masih perlu tiket sendiri.
 
 ### 2026-11-20 (lanjutan 16) — #151 (PR #152) dan #101 batch 1 (PR #153)
 
