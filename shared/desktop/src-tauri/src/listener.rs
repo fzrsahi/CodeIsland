@@ -7,7 +7,7 @@ use std::sync::mpsc::RecvTimeoutError;
 use std::thread;
 use std::time::Duration;
 
-use morrow_ipc::unix::{Connection, Error, Server};
+use morrow_ipc::{Connection, Error, Server};
 use morrow_protocol::{HookPayload, decode_payload};
 
 use crate::feed::Feed;

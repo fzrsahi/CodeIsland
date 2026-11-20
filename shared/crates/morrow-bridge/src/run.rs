@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use morrow_core::intake::{HookIntake, SourceCatalog, admits};
 use morrow_ipc::Endpoint;
-use morrow_ipc::unix::{Client, current_endpoint};
+use morrow_ipc::{Client, current_endpoint};
 use morrow_protocol::{HookPayload, encode_payload};
 
 use crate::deadline::Deadline;

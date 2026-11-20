@@ -13,6 +13,8 @@ peer of the same user. The rule and the checks are
 | `unix::Client`, `unix::PendingReply` | §2.2 / §3.2 client side: `lstat`, private folder, connect timeout, peer uid, one request and its reply (`send_and_wait`, or `send` then `wait` for a caller whose deadline covers only the send) |
 | `unix::Server`, `unix::Connection` | §2.3 / §3.2 listener: private folder, probe before unlink, single instance, umask `077` + `0600`, peer uid on accept, removes only its own file |
 | `unix::Error` | why an endpoint, a peer or a file was refused |
+| `windows::Server`, `windows::Client` | §2.2 / §3.2 on Windows (#105): a message-mode named pipe, `FILE_FLAG_FIRST_PIPE_INSTANCE`, `PIPE_REJECT_REMOTE_CLIENTS`, and a descriptor that names only this user |
+| `pipe::`, `windows::Error` | the pipe's name and descriptor strings (pure, checked on any machine), and why a pipe or a server was refused |
 
 ## Owns
 
@@ -32,13 +34,23 @@ peer of the same user. The rule and the checks are
   `Connection::peer_gone` tells a client that closed (its process gone,
   `POLLHUP`/`POLLERR`) from one that only half-closed and waits, as Swift's
   `HookConnection.finishIfPeerGone` does.
+- The same pair on Windows, where two kernel guarantees have to be rebuilt:
+  the descriptor (`O:<sid>G:<sid>D:(A;;GA;;;<sid>)`) replaces the socket's mode
+  and owner, and the client compares the *server's* token SID with its own in
+  place of `SO_PEERCRED`. Message mode replaces `half-close`: one `WriteFile` is
+  one message, so the request ends where the write ends.
 
 ## Does not own
 
 - What the bytes are (`morrow-protocol`) or mean (HookIntake, `morrow-core`).
-- Named pipes. Windows resolution is here because it is pure; the pipe
-  server and client, with first-instance, reject-remote, DACL and server-SID
-  checks (§4.2), are #105.
+- Byte-level framing other than "one message, one reply" on Windows and
+  "write, half-close, read to EOF" on Unix; a caller that needs more uses bytes
+  it can parse.
+- Named pipes beyond the transport above. Windows resolution is here because it
+  is pure; the pipe server and client, with first-instance, reject-remote, DACL
+  and the server-SID check, are `windows` and are compile-checked by
+  `scripts/ci/windows-check.sh`. W-001 runs them on a real Windows host: the
+  compile lane cannot prove a descriptor actually refuses another user.
 - An async runtime. Calls block; the app runs `Server::accept` on a thread
   of its own until a tokio transport is needed.
 - Logging. `Server::accept` returns `Error::PeerNotUser` for a refused peer,

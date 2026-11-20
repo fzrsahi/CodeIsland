@@ -17,7 +17,7 @@ mod tray;
 use std::process::ExitCode;
 use std::sync::Arc;
 
-use morrow_ipc::unix::{Error, Server, current_endpoint};
+use morrow_ipc::{Error, Server, current_endpoint};
 use tauri::State;
 use tauri::ipc::Channel;
 

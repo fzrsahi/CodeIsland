@@ -19,6 +19,19 @@ thiserror.workspace = true
 libc = "0.2"
 socket2 = "0.6"
 
+# Named pipes, the SIDs behind the descriptor and the peer check (#105). Only
+# the features used are enabled: this crate touches Windows and nothing else.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_Pipes",
+    "Win32_System_Threading",
+] }
+
 [dev-dependencies]
 serde_json.workspace = true
 
