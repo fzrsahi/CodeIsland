@@ -4,16 +4,33 @@
 
 use std::path::PathBuf;
 
-use morrow_platform::{autostart, capability, settings};
+use morrow_platform::capability::{self, Feature};
+use morrow_platform::{autostart, settings};
 use serde_json::Value;
 use tauri::State;
 
 use crate::HooksSite;
 
 /// Every adapter and what it can do on this machine.
+///
+/// The probes read the environment; for the two adapters that register at
+/// startup, what actually happened wins over what was expected — a tray whose
+/// status notifier did not come up says so, rather than repeating the guess.
 #[tauri::command]
 pub fn capabilities() -> Vec<capability::Row> {
-    capability::table(&capability::Environment::probe())
+    let mut rows = capability::table(&capability::Environment::probe());
+    for (feature, outcome) in [
+        (Feature::Tray, crate::tray::outcome()),
+        (Feature::GlobalHotkey, crate::hotkey::outcome()),
+    ] {
+        if let (Some(outcome), Some(row)) = (
+            outcome,
+            rows.iter_mut().find(|row| row.feature == feature.name()),
+        ) {
+            row.capability = outcome;
+        }
+    }
+    rows
 }
 
 /// Whether the autostart entry is there.

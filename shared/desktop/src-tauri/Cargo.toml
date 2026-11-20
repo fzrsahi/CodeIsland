@@ -22,7 +22,10 @@ morrow-platform = { path = "../../crates/morrow-platform" }
 morrow-protocol = { path = "../../crates/morrow-protocol" }
 # Pinned: window plumbing (focusable, skip_taskbar, always-on-top on X11)
 # depends on this tao/GTK3 generation (ADR-0002). No plugins.
-tauri = { version = "=2.12.7", features = [] }
+# `tray-icon`: the status notifier (#101). The plugin is the one exception to
+# "no plugins": a global hotkey is not something Tauri core exposes.
+tauri = { version = "=2.12.7", features = ["tray-icon"] }
+tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json.workspace = true
 

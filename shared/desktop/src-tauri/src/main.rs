@@ -4,11 +4,13 @@
 
 mod feed;
 mod hooks;
+mod hotkey;
 mod island;
 mod listener;
 mod permissions;
 mod sessions;
 mod settings;
+mod tray;
 
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -73,6 +75,7 @@ fn main() -> ExitCode {
     });
 
     let result = tauri::Builder::default()
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(feed)
         .manage(hooks_site)
         .manage(Smoke(smoke))
@@ -99,7 +102,12 @@ fn main() -> ExitCode {
             settings::settings_set,
             settings::settings_path
         ])
-        .setup(|app| Ok(island::create(app)?))
+        .setup(|app| {
+            island::create(app)?;
+            tray::create(app);
+            hotkey::install(app.handle());
+            Ok(())
+        })
         .run(tauri::generate_context!());
     match result {
         Ok(()) => ExitCode::SUCCESS,
