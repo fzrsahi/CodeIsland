@@ -1907,6 +1907,7 @@ name = "morrow-core"
 version = "0.0.0"
 dependencies = [
  "regex",
+ "serde",
  "serde_json",
 ]
 

@@ -162,6 +162,16 @@ Not ported: reading a transcript file at attach time
 (`AgentTaskTranscript.scanFile`) — opening a file belongs to the platform, as
 it does for the tailer.
 
+## `music`: the music card's readings
+
+`parse_metadata` reads the line `playerctl` prints, `parse_lrc` reads lrclib's
+synced lyrics, `parse_wpctl_volume` / `parse_pactl_volume` read the two volume
+tools, and `Position` is the one with the idea in it: MPRIS `Position` is a
+snapshot a player need not refresh, so a card showing it raw freezes between
+updates. Given the position, when it was read and whether the player is
+playing, every later position follows — clamped at the track's length, and
+corrected by the next real reading.
+
 ## `installer`: editing a CLI's config file
 
 `installer::json_editor` is `JSONMinimalEditor` (429 lines of Swift): a
@@ -240,7 +250,8 @@ scans a file on disk has no counterpart here).
 (19 tests: the table, the commands, one install per format, reinstall, a stale
 entry, uninstall), `tests/codex_hooks_config.rs` is `CodexTomlHooksFixtures`
 (all 40 cases, plus idempotence), `tests/opencode_plugin.rs` is the OpenCode
-registration (10 tests), `tests/kimi_hooks.rs` is Kimi's TOML blocks (8), `tests/yaml_sources.rs` is the
+registration (10 tests), `tests/music_card.rs` is the music readings (17), `tests/kimi_hooks.rs` is
+Kimi's TOML blocks (8), `tests/yaml_sources.rs` is the
 managed YAML region (14), `tests/json_minimal_editor.rs` is `JSONMinimalEditorTests`
 (14 of 14), and
 `tests/claude_hooks_installer.rs` is the Claude Code slice of

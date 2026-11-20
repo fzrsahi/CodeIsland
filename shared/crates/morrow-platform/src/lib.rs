@@ -13,6 +13,7 @@ pub mod autostart;
 pub mod capability;
 pub mod hooks;
 pub mod kimi;
+pub mod music;
 pub mod opencode;
 pub mod settings;
 pub mod yaml_hooks;

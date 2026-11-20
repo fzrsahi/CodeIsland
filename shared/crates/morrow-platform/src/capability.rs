@@ -124,10 +124,14 @@ impl Feature {
         match self {
             // The panel is a window: these need a display to do anything.
             Self::NowPlaying => {
-                if environment.has_bus() {
+                if !environment.has_bus() {
+                    Capability::Unsupported("no D-Bus session: MPRIS needs one".into())
+                } else if environment.has("playerctl") {
                     Capability::Supported
                 } else {
-                    Capability::Unsupported("no D-Bus session: MPRIS needs one".into())
+                    // MPRIS is a bus protocol; `playerctl` is the smallest way
+                    // in without a D-Bus library of our own.
+                    Capability::Degraded("needs playerctl: MPRIS is read through it".into())
                 }
             }
             Self::Lyrics => {

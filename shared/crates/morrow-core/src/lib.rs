@@ -31,6 +31,7 @@ pub mod installer;
 pub mod intake;
 pub mod markdown;
 pub mod model_label;
+pub mod music;
 pub mod reduce;
 pub mod session_recap;
 pub mod time;

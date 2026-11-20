@@ -7,6 +7,7 @@ mod hooks;
 mod hotkey;
 mod island;
 mod listener;
+mod music;
 mod permissions;
 mod sessions;
 mod settings;
@@ -100,7 +101,17 @@ fn main() -> ExitCode {
             settings::autostart_set,
             settings::settings_load,
             settings::settings_set,
-            settings::settings_path
+            settings::settings_path,
+            music::music_track,
+            music::music_position,
+            music::music_play_pause,
+            music::music_next,
+            music::music_previous,
+            music::music_seek,
+            music::music_volume,
+            music::music_volume_set,
+            music::music_volume_mute,
+            music::music_lyrics
         ])
         .setup(|app| {
             island::create(app)?;
