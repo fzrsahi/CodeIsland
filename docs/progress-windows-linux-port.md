@@ -101,6 +101,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 
 ## Log Checkpoint
 
+### 2026-11-20 (lanjutan 24) — #108 installer hook Windows (PR #160)
+
+- **Sudah:** `hooks_windows` (policy sama, ejaan Windows: `%USERPROFILE%`, `.cmd`, `.exe`, ACL), dikompilasi di semua platform sehingga bisa diuji di macOS — 6 test terhadap folder profil sementara termasuk penolakan file tak terparse byte for byte dan version-gating 2.1.80. `bundle.windows.nsis` per-user + ikon; `docs/windows-adapters.md` mencatat NSIS per-user dan konsekuensi SmartScreen untuk beta tanpa Authenticode. Shell: lima perintah bercabang per OS, dan Settings di Windows menyatakan hanya Claude Code yang di-hook (delapan target lain menunggu path Windows-nya sendiri).
+- **Berikutnya:** tidak ada lagi yang bisa dikerjakan tanpa host: #108 butuh VM Windows (W-002/4/8, build rilis, E2E-2), #109 butuh container GTK + compositor, #110 butuh izin maintainer.
+- **Blocker:** W-001/002/004/005/006/007/008/009 di host Windows; #91 OPEN; review stack #145–#160.
+
 ### 2026-11-20 (lanjutan 23) — #107 adapter Windows (PR #159)
 
 - **Sudah:** sembilan adapter Windows (SMTC, Core Audio, WTS, `SHQueryUserNotificationState`, toast, registry autostart, rantai proses untuk terminal, `GetCursorPos`, Credential Manager sebagai baris), `Environment.os` sehingga tabel Capability di-probe per platform, `windows_rules` (13 test) untuk tiga keputusan yang bisa salah diam-diam: pid terminal paling luar, arti state notifikasi (unknown = boleh menginterupsi), dan quoting nilai `Run`. `docs/windows-adapters.md` mencatat mekanisme, alasan, dan apa yang hanya bisa dibuktikan host Windows. Shell berhenti menyebut modul Unix; `fullscreen` dan `pointer_position` ditambahkan. Gate Unix hijau, lima crate Windows hijau. **PR #159** terhadap #158.
