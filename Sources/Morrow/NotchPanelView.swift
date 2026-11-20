@@ -3262,6 +3262,28 @@ private struct HeaderNavigationMenuTabs: View {
         appState.transitionToTab(target)
     }
 
+    /// Clips the sliding tab label at the icon's trailing edge so open-right / close-left
+    /// transitions never bleed over or under the tab icon.
+    @ViewBuilder
+    private func clippedTabLabel<Label: View>(
+        isVisible: Bool,
+        leadingSpacing: CGFloat,
+        @ViewBuilder label: () -> Label
+    ) -> some View {
+        HStack(spacing: 0) {
+            if isVisible {
+                label()
+                    .padding(.leading, leadingSpacing)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .leading).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
+            }
+        }
+        .clipped()
+        .zIndex(1)
+    }
+
     @ViewBuilder
     private func mailTabUnreadBadge(count: Int, accentColor: Color, isPixel: Bool) -> some View {
         let badgeFill = AppColorTheme.readableOnDark(accentColor, minimumLuminance: 0.22)
@@ -3307,17 +3329,14 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.agents)
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 0) {
                             Image(systemName: "cpu.fill")
                                 .font(.system(size: 11, weight: .semibold))
-                            if showAgentsLabel {
+                                .zIndex(2)
+                            clippedTabLabel(isVisible: showAgentsLabel, leadingSpacing: 5) {
                                 Text("Agents")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .leading).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
                             }
                         }
                         .foregroundStyle(isAgentsActive ? activeAccentColor : Self.inactiveColor)
@@ -3340,17 +3359,14 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.workspace)
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 0) {
                             Image(systemName: "folder.fill")
                                 .font(.system(size: 11, weight: .semibold))
-                            if showWorkLabel {
+                                .zIndex(2)
+                            clippedTabLabel(isVisible: showWorkLabel, leadingSpacing: 5) {
                                 Text("Work")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .leading).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
                             }
                         }
                         .foregroundStyle(isWorkActive ? activeAccentColor : Self.inactiveColor)
@@ -3373,17 +3389,14 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.music)
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 0) {
                             Image(systemName: "music.note")
                                 .font(.system(size: 11, weight: .semibold))
-                            if showMusicLabel {
+                                .zIndex(2)
+                            clippedTabLabel(isVisible: showMusicLabel, leadingSpacing: 5) {
                                 Text("Music")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .leading).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
                             }
                         }
                         .foregroundStyle(isMusicActive ? activeAccentColor : Self.inactiveColor)
@@ -3406,17 +3419,14 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.prayer)
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 0) {
                             Image(systemName: "moon.stars.fill")
                                 .font(.system(size: 11, weight: .semibold))
-                            if showPrayerLabel {
+                                .zIndex(2)
+                            clippedTabLabel(isVisible: showPrayerLabel, leadingSpacing: 5) {
                                 Text("Prayer")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .leading).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
                             }
                         }
                         .foregroundStyle(isPrayerActive ? activeAccentColor : Self.inactiveColor)
@@ -3441,7 +3451,7 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.mail)
                     } label: {
-                        HStack(spacing: unreadCount > 0 ? 7 : 5) {
+                        HStack(spacing: 0) {
                             Image(systemName: "envelope.fill")
                                 .font(.system(size: 11, weight: .semibold))
                                 .overlay(alignment: .topTrailing) {
@@ -3451,15 +3461,12 @@ private struct HeaderNavigationMenuTabs: View {
                                     }
                                 }
                                 .padding(.trailing, (!showMailLabel && unreadCount > 0) ? 4 : 0)
+                                .zIndex(2)
 
-                            if showMailLabel {
+                            clippedTabLabel(isVisible: showMailLabel, leadingSpacing: unreadCount > 0 ? 7 : 5) {
                                 Text("Mail")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .leading).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
                             }
                         }
                         .foregroundStyle(isMailActive ? mailColor : Self.inactiveColor)
@@ -3482,17 +3489,14 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.game)
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 0) {
                             Image(systemName: "gamecontroller.fill")
                                 .font(.system(size: 11, weight: .semibold))
-                            if showGameLabel {
+                                .zIndex(2)
+                            clippedTabLabel(isVisible: showGameLabel, leadingSpacing: 5) {
                                 Text("Game")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .leading).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
                             }
                         }
                         .foregroundStyle(isGameActive ? activeAccentColor : Self.inactiveColor)
@@ -3519,22 +3523,19 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.agents)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 0) {
                             PixelIcon(
                                 glyph: .agents,
                                 color: isAgentsActive ? activeAccentColor : Self.inactiveColor,
                                 pixelSize: 1.35
                             )
-                            if showAgentsLabel {
+                            .zIndex(2)
+                            clippedTabLabel(isVisible: showAgentsLabel, leadingSpacing: 4) {
                                 PixelText(
                                     text: "AGENTS",
                                     color: activeAccentColor,
                                     pixelSize: 1.15
                                 )
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
                             }
                         }
                         .padding(.horizontal, isAgentsActive ? 7 : 5)
@@ -3556,22 +3557,19 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.workspace)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 0) {
                             PixelIcon(
                                 glyph: .workspace,
                                 color: isWorkActive ? activeAccentColor : Self.inactiveColor,
                                 pixelSize: 1.35
                             )
-                            if showWorkLabel {
+                            .zIndex(2)
+                            clippedTabLabel(isVisible: showWorkLabel, leadingSpacing: 4) {
                                 PixelText(
                                     text: "WORK",
                                     color: activeAccentColor,
                                     pixelSize: 1.15
                                 )
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
                             }
                         }
                         .padding(.horizontal, isWorkActive ? 7 : 5)
@@ -3593,22 +3591,19 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.music)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 0) {
                             PixelIcon(
                                 glyph: .music,
                                 color: isMusicActive ? activeAccentColor : Self.inactiveColor,
                                 pixelSize: 1.35
                             )
-                            if showMusicLabel {
+                            .zIndex(2)
+                            clippedTabLabel(isVisible: showMusicLabel, leadingSpacing: 4) {
                                 PixelText(
                                     text: "MUSIC",
                                     color: activeAccentColor,
                                     pixelSize: 1.15
                                 )
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
                             }
                         }
                         .padding(.horizontal, isMusicActive ? 7 : 5)
@@ -3630,22 +3625,19 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.prayer)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 0) {
                             PixelIcon(
                                 glyph: .prayer,
                                 color: isPrayerActive ? activeAccentColor : Self.inactiveColor,
                                 pixelSize: 1.35
                             )
-                            if showPrayerLabel {
+                            .zIndex(2)
+                            clippedTabLabel(isVisible: showPrayerLabel, leadingSpacing: 4) {
                                 PixelText(
                                     text: "PRAY",
                                     color: activeAccentColor,
                                     pixelSize: 1.15
                                 )
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
                             }
                         }
                         .padding(.horizontal, isPrayerActive ? 7 : 5)
@@ -3669,7 +3661,7 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.mail)
                     } label: {
-                        HStack(spacing: unreadCount > 0 ? 6 : 4) {
+                        HStack(spacing: 0) {
                             PixelIcon(
                                 glyph: .email,
                                 color: isMailActive ? cyberMailColor : Self.inactiveColor,
@@ -3682,17 +3674,14 @@ private struct HeaderNavigationMenuTabs: View {
                                 }
                             }
                             .padding(.trailing, (!showMailLabel && unreadCount > 0) ? 4 : 0)
+                            .zIndex(2)
 
-                            if showMailLabel {
+                            clippedTabLabel(isVisible: showMailLabel, leadingSpacing: unreadCount > 0 ? 6 : 4) {
                                 PixelText(
                                     text: "MAIL",
                                     color: cyberMailColor,
                                     pixelSize: 1.15
                                 )
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
                             }
                         }
                         .padding(.horizontal, isMailActive ? 7 : 5)
@@ -3714,22 +3703,19 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.game)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 0) {
                             PixelIcon(
                                 glyph: .game,
                                 color: isGameActive ? activeAccentColor : Self.inactiveColor,
                                 pixelSize: 1.35
                             )
-                            if showGameLabel {
+                            .zIndex(2)
+                            clippedTabLabel(isVisible: showGameLabel, leadingSpacing: 4) {
                                 PixelText(
                                     text: "GAME",
                                     color: activeAccentColor,
                                     pixelSize: 1.15
                                 )
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
                             }
                         }
                         .padding(.horizontal, isGameActive ? 7 : 5)
