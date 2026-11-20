@@ -74,6 +74,15 @@ if (command == "self-test")
             "Claude native hooks must contain a matcher.");
         Require(claudeEntry?["hooks"]?[0]?["type"]?.GetValue<string>() == "command",
             "Claude native hooks must contain a command hook.");
+        var claudeCommand = claudeEntry?["hooks"]?[0]?["command"]?.GetValue<string>() ?? string.Empty;
+        Require(!claudeCommand.Contains("--source", StringComparison.Ordinal)
+                && claudeCommand.Contains($"--event {claude.Events[0]}", StringComparison.Ordinal),
+            "Claude hook must not declare a source, so Cursor running it is recognised by cursor_version.");
+        var outdated = store.Read(claudeConfig, claude.HookMarker)! with { InstallerVersion = "0.2.1" };
+        store.Install(claudeConfig, outdated);
+        Require(!manager.GetStatus(claude).IsHealthy,
+            "A Claude hook from installer 0.2.1 (with --source claude) must be reported as outdated.");
+        Require(manager.Repair(claude, bridge).IsHealthy, "Repair must bring an outdated Claude hook up to date.");
         Require(!manager.Uninstall(claude).HookInstalled, "Claude uninstall must remove registration.");
 
         var gemini = KnownTools.All.Single(value => value.DisplayName == "Gemini CLI");
