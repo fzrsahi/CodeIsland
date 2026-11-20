@@ -56,7 +56,9 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 3 | #99 → PR #147/#148 | **sembilan target** hook (Claude, 7 JSON, OpenCode) + flag TOML Codex, semua dari kartu Settings | `PR dibuka` (stacked #142→#148) | 19+15+2(40 fixture)+10+8 test; sisa hanya E2E di desktop Linux |
 | 3 | #100 → PR #149 | source TOML (Kimi) + baris cakupan per agent di Settings | `PR dibuka` (stacked #142→#149) — `Fixes #100` | 8 + 5 test; L-002 lulus untuk JSON + TOML |
 | 3 | #151 | source YAML (Hermes, TraeCli) — keputusan komentar-vs-macOS dulu | `belum` — opsi A/B/C diajukan, rekomendasi B | tiket terpisah supaya #100 bisa ditutup |
-| 3 | #101–#104 | adapter, tray, hotkey, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
+| 3 | #151 → PR #152 | source YAML (Hermes, TraeCli) sebagai blok terkelola — komentar utuh | `PR dibuka` (stacked #142→#152) | 14 + 6 test; keputusan **B** tercatat di tiket |
+| 3 | #101 → PR #153 | Capability table 21 adapter + autostart + settings | `PR dibuka` (stacked #142→#153) | 11 test; sisa: tray + hotkey + L-006…L-012 di desktop nyata |
+| 3 | #102–#104 | adapter batch 2/3, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
@@ -96,6 +98,13 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 16) — #151 (PR #152) dan #101 batch 1 (PR #153)
+
+- **#151 selesai:** diputuskan **opsi B** dan dicatat di tiket sebelum kode. `installer::yaml_hooks` hanya memiliki **satu region berpagar** (`# >>> morrow hooks` … `# <<< morrow hooks`) untuk Hermes (peta event → `{command, timeout}`) dan TraeCli (satu item, semua event sebagai matcher, `timeout: '86400s'`); tidak ada parser YAML, jadi tidak ada round-trip yang bisa menulis ulang dokumen. Tiga layout ditolak (`hooks:` inline, `hooks:` bersarang, indentasi tab) dan penolakan tampil di kartu sebagai *Needs a manual merge*. Test 14 + 6.
+- **#101 batch 1:** `capability` (21 fitur, `Supported`/`Degraded`/`Unsupported` dengan alasan, `Environment` di-inject), `autostart` (satu entri FreeDesktop, idempoten), `settings` (`~/.codeisland/settings.json` lewat penulis minimal-diff), semuanya tampil di kartu Settings. Tanpa AppIndicator tray = `Unsupported` tapi adapter lain tetap menjawab. Test 11.
+- **Berikutnya:** sisa #101 = ikon tray + global hotkey + L-006…L-012 (butuh panel dan desktop nyata); lalu #102/#103 (blocked by #101) dan #104 (packaging, blocked by #91).
+- **Blocker:** review stack #145–#153; verifikasi di desktop Linux nyata (E2E-2, L-006…L-012). Flake `bridge_process` (anggaran 5 dtk) muncul lagi saat beban paralel — perlu tiket sendiri bersama flake gemini.
 
 ### 2026-11-20 (lanjutan 15) — #100 ditutup dengan TOML, YAML jadi #151
 
