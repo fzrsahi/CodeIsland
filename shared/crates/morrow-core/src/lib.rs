@@ -27,6 +27,7 @@ pub mod agent_tasks;
 pub mod attention;
 pub mod digest;
 pub mod git;
+pub mod installer;
 pub mod intake;
 pub mod markdown;
 pub mod model_label;

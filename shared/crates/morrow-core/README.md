@@ -162,6 +162,23 @@ Not ported: reading a transcript file at attach time
 (`AgentTaskTranscript.scanFile`) — opening a file belongs to the platform, as
 it does for the tailer.
 
+## `installer`: editing a CLI's config file
+
+`installer::json_editor` is `JSONMinimalEditor` (429 lines of Swift): a
+`set_top_level_value` / `delete_top_level_key` pair that replaces only the text
+range of one top-level key, so comments, key order, escaping, indentation and
+the trailing newline all survive, and a document that is not a JSON object at
+the top level is refused rather than rewritten (#89). `strip_json_comments`
+feeds parses, since Claude Code's `settings.json` is JSONC.
+
+`installer::claude_hooks` is the Claude Code slice of `ConfigInstaller`: the
+13-event table with its timeouts and version gates (`PostToolUseFailure` ≥
+2.1.89, `StopFailure` ≥ 2.1.78), recognition of our own commands and the names
+we used before, `install` (idempotent — a second run over its own output
+changes nothing) and `uninstall` (an emptied `hooks` key is deleted, so a file
+that held only our entries comes back byte for byte), plus the back-up naming
+rule. All of it is a plan over text: the platform reads and writes the file.
+
 ## Tests
 
 `tests/conformance.rs` (the port of `HookIntakeGoldenTests.swift`) runs every
@@ -188,6 +205,12 @@ read.
 asserts the checklist, #136). `tests/agent_task_parsing.rs` is the parsing half of `AgentTaskListTests`
 (9 tests) and `tests/agent_task_list.rs` the list half (38; the Swift test that
 scans a file on disk has no counterpart here).
+`tests/json_minimal_editor.rs` is `JSONMinimalEditorTests` (14 of 14), and
+`tests/claude_hooks_installer.rs` is the Claude Code slice of
+`ConfigInstallerTests` over text instead of a file system (18 tests: the table,
+the version gates, the legacy-name cleanup, install/repair/uninstall and the
+back-up rule).
+
 `tests/transcript_tailer.rs` is `JSONLTailerTests` and
 `JSONLTailerCursorQuestionTests` ported: 70 tests, all the parsing ones as
 they are and the attach/replacement ones driven through `TailState` with the
