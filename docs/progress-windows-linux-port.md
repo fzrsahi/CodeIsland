@@ -49,6 +49,8 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 2 | #95 → PR #131 | `AttentionPolicy.intents` + `EventSoundRouting` + `reduce_event` | `PR dibuka` (stacked on #130) | 56/56 kasus attention; 80/80 + 161 step reducer termasuk intents; `morrow-app` 12/12 |
 | 2 | #96 → PR #132 | `GitBranchReader` + `MarkdownBlockParser` | `PR dibuka` (stacked on #131) | 53/53 test markdown + 9/9 test git diport 1:1; `linux-test.sh` hijau |
 | 2 | #97 → PR #133 | transcript tail: parser JSONL + `TailState` di core | `PR dibuka` (stacked on #132) | 70 test port (2 test `DispatchSource` milik watcher); file diganti → replay sekali lalu live |
+| 2 | #135 → PR #137 | sisa #97: `SessionRecap` + `ModelObservation`/`ModelLabel` + `parseISO8601` | `PR dibuka` (stacked on #133) | 22 test `ModelLabelTests` + 24 test scan-level `SessionRecapTests`; delta kembali lengkap |
+| 2 | #136 | sisa #97: `AgentTaskTranscript` (checklist) | `belum` — tiket dibuat 2026-11-20 | test `AgentTaskListTests` diport |
 | 3 | #98–#104 | Linux lengkap: installer, adapter, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
@@ -88,6 +90,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 6) — #135 dikerjakan, PR #137 dibuka (stacked on #133)
+
+- **Sudah:** dua tiket lanjutan #97 dibuat (#135 recap+label, #136 checklist). #135 diport: `session_recap.rs`, `model_label.rs`, `time.rs` (`parseISO8601`), dan `ScanDelta` kembali membawa `session_recap` / `model_observation` / `configured_long_context`; `quick_type_probe` mem-parse lagi baris `system`+`away_summary` dan `turn_context`. Test baru: **22** (`ModelLabelTests`) + **24** (scan-level `SessionRecapTests`); suite `morrow-core` dan `linux-test.sh` hijau. PR #137 dibuka terhadap base `feat/#97-core-transcript` (#133). 15 test `SessionRecapTests` yang menguji penyerapan delta ke snapshot **belum** diport (butuh state `recap`/`reasoningEffort`/`modelReportedAt` di snapshot Rust) — dicatat di PR + README.
+- **Berikutnya:** #136 (`AgentTaskTranscript`), stacked di atas #137; lalu retarget rantai saat #49 masuk `main`.
+- **Blocker:** review #49 (@aazhrt, dismiss `CHANGES_REQUESTED` lama); 3 OQ #115; run E2E-1 di X11 nyata.
 
 ### 2026-11-20 (lanjutan 5) — #126 merged, #49 lepas dari konflik
 
