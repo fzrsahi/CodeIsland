@@ -35,8 +35,9 @@ The key words MUST, MUST NOT, SHOULD and MAY are used as in RFC 2119.
    absolute). The cases compare strings byte for byte.
 4. **Environment overrides.** On every OS the overrides are, in order,
    `MORROW_SOCKET_PATH`, then `CODEISLAND_SOCKET_PATH`. The first one that
-   applies is returned as is, and no file check is made. When an override
-   *applies* differs per OS today (an empty value), see §2.1 and OQ-1.
+   applies is returned as is, and no file check is made. An empty value counts
+   as unset on every OS (§6); macOS still returns the empty string today and
+   #78 changes it (§2.1).
 5. **One endpoint.** The resolved string is the only endpoint an edge tries
    for the local island. No edge may try a second candidate when the first
    fails its peer check; it sends nothing instead (exit 0, silently, for a
@@ -63,27 +64,30 @@ if not exists(morrow) and exists(legacy): return legacy
 return morrow
 ```
 
-- **"Has key" means set, even to the empty string.** Swift's
+- **"Has key" means set, even to the empty string — today.** Swift's
   `environment["MORROW_SOCKET_PATH"] ?? environment["CODEISLAND_SOCKET_PATH"]`
   returns a non-nil `""` when the variable is set but empty. So
   `MORROW_SOCKET_PATH=` resolves to `""`, and also hides a
   `CODEISLAND_SOCKET_PATH` that is set. `lstat("")` fails, so the bridge
   sees `Holder.nobody` and exits 0, and the app cannot bind: an empty
-  override disables delivery. This is probably a bug; see OQ-1. The cases
-  `macos-empty-*` pin today's behaviour in `expected` and the proposed one
-  in `proposed`.
+  override disables delivery. That is a bug: the contract now says empty is
+  unset (§6). The cases `macos-empty-*` pin today's behaviour in `expected`
+  and the agreed one in `proposed`; #78 changes Swift and moves each
+  `proposed` into `expected`.
 - **"Exists" follows symlinks** (`stat(2)` semantics, what `FileManager`
   does). A path of any kind counts: socket, regular file, directory. A
   symlink counts only when its target exists. So a stray regular file or a
   symlink at the legacy path is *selected* while the morrow path is absent;
-  the peer check (§2.2) then refuses it and the edge sends nothing. See OQ-2.
+  the peer check (§2.2) then refuses it and the edge sends nothing. See §6,
+  *still open*.
 - `uid` is printed in decimal, no padding.
 - `XDG_RUNTIME_DIR` is ignored on macOS.
 
 Edges that do not run Swift (the TypeScript and JavaScript plugins, #78)
-MUST return the same `expected` string for every `macos` case. While OQ-1 is
-open, that means an empty override is used as is (and fails the peer check),
-which differs from the `||` idiom in JavaScript.
+MUST return the same `expected` string for every `macos` case. Each
+`macos-empty-*` case therefore carries both: today's `expected` (the override
+is used as is, which fails the peer check) and the agreed `proposed` (empty is
+unset), which #78 makes real by moving it into `expected`.
 
 ### 2.2 Peer verification (client side)
 
@@ -132,7 +136,7 @@ return "/tmp/morrow-" + decimal(uid) + ".sock"
 ```
 
 - An empty value counts as unset, for both overrides and for
-  `XDG_RUNTIME_DIR` (OQ-1).
+  `XDG_RUNTIME_DIR` (already the case here, and decided for every OS in §6).
 - `XDG_RUNTIME_DIR` is used only when absolute. A relative or empty value
   falls through to `/tmp`.
 - Trailing slashes are removed before joining, so `/run/user/1000/` and
@@ -143,7 +147,7 @@ return "/tmp/morrow-" + decimal(uid) + ".sock"
   listened at `/tmp/codeisland-<uid>.sock`.
 - Linux accepts `CODEISLAND_SOCKET_PATH` too (plan §3.1 listed only
   `MORROW_SOCKET_PATH`) so the shared plugin code has one override rule for
-  every OS.
+  every OS: `MORROW_` first, `CODEISLAND_` as the legacy fallback (§6).
 
 ### 3.2 Peer verification
 
@@ -228,30 +232,34 @@ in `Sources/Morrow/Resources/morrow-remote-hook.py` and
   temporary folder (`RemoteHookSockets`); those are island-internal and no
   edge resolves them.
 
-`docs/hook-edge-protocol.md` §Transport describes this path as
-`/tmp/morrow-<uid>/island.sock`; the code uses `/tmp/codeisland-<uid>/…`.
-See OQ-3.
+`docs/hook-edge-protocol.md` §Transport used to spell this path
+`/tmp/morrow-<uid>/island.sock`; the code (and that document now) says
+`/tmp/codeisland-<uid>/island.sock`. Renaming the remote path to `morrow-` is
+a separate ticket: hosts already set up carry the old path.
 
-## 6. Open questions
+## 6. Decisions and what is still open
 
-- **OQ-1: empty override values.** On macOS, Swift treats a set-but-empty
-  `MORROW_SOCKET_PATH` or `CODEISLAND_SOCKET_PATH` as an override, returning
-  `""` (delivery silently disabled, and a non-empty `CODEISLAND_SOCKET_PATH`
-  is hidden). The Python remote hook and every JS/TS plugin treat empty as
-  unset. **Proposed:** empty counts as unset on every OS (the `proposed`
-  values in the `macos-empty-*` cases). Linux and Windows already follow the
-  proposed rule. Changing macOS is a runtime change, out of scope for #84;
-  when it lands, move each `proposed` into `expected` and delete the
-  `proposed` fields.
-- **OQ-2: legacy selection does not check the file kind.** A regular file or
-  a symlink at `/tmp/codeisland-<uid>.sock` (with no morrow socket) is
+**Decided 2026-11-20** (@aazhrt, approving this PR):
+
+- **Empty overrides.** An empty `MORROW_SOCKET_PATH` / `CODEISLAND_SOCKET_PATH`
+  counts as **unset on every OS**, so an empty value can never silently
+  disable delivery. Linux and Windows already resolve that way; macOS returns
+  the empty string today and changes with #78, when the `macos-empty-*` cases
+  move each `proposed` into `expected`.
+- **Remote socket path.** `docs/hook-edge-protocol.md` now follows the code:
+  `/tmp/codeisland-<uid>/island.sock`. Renaming it to `morrow-` needs its own
+  ticket, because hosts already set up carry the old path.
+- **`CODEISLAND_SOCKET_PATH` on Linux and Windows.** Accepted as a legacy
+  fallback, with `MORROW_SOCKET_PATH` taking precedence, so the shared plugin
+  code has one override rule for all three OSes.
+
+**Still open** (not put to that review, because #84 does not change it):
+
+- **Legacy selection does not check the file kind.** A regular file or a
+  symlink at `/tmp/codeisland-<uid>.sock` (with no morrow socket) is
   selected, then refused by the peer check, so nothing is delivered even if
   the island is listening at the morrow path. Selecting the legacy path only
   when `lstat` says it is a socket this user owns would avoid that. Today's
   behaviour is pinned (`macos-legacy-regular-file-still-selected`,
-  `macos-legacy-symlink-to-existing-target-counts-as-present`).
-- **OQ-3: remote socket path in the protocol doc.** `hook-edge-protocol.md`
-  says `/tmp/morrow-<uid>/island.sock`; the shipped code says
-  `/tmp/codeisland-<uid>/island.sock`. The doc should follow the code unless
-  the remote path is meant to be renamed (which needs a migration for hosts
-  already set up).
+  `macos-legacy-symlink-to-existing-target-counts-as-present`) and stays the
+  contract until someone decides otherwise.
