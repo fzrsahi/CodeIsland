@@ -6,35 +6,9 @@
 //! one running, and so nothing here talks to D-Bus directly — the tools the
 //! desktop already ships do, which keeps the dependency list where it is.
 
-use std::process::Command;
-
 use morrow_core::music::{self, LyricLine, Track, Volume};
 
-/// Runs a program and gives back its stdout. An error is the sentence the card
-/// shows, not a panic.
-pub trait Runner {
-    fn run(&self, program: &str, args: &[&str]) -> Result<String, String>;
-}
-
-/// The real thing.
-pub struct SystemRunner;
-
-impl Runner for SystemRunner {
-    fn run(&self, program: &str, args: &[&str]) -> Result<String, String> {
-        let output = Command::new(program)
-            .args(args)
-            .output()
-            .map_err(|error| format!("{program}: {error}"))?;
-        if !output.status.success() {
-            return Err(format!(
-                "{program} exited {}\n{}",
-                output.status,
-                String::from_utf8_lossy(&output.stderr).trim()
-            ));
-        }
-        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
-    }
-}
+pub use crate::runner::{Runner, SystemRunner};
 
 // MARK: - Now Playing
 

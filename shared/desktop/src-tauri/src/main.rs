@@ -2,6 +2,7 @@
 //! endpoint, reduces each hook into a session list, and shows it in a
 //! tight-fit, nonactivating panel, which answers permission requests.
 
+mod adapters;
 mod feed;
 mod hooks;
 mod hotkey;
@@ -111,7 +112,12 @@ fn main() -> ExitCode {
             music::music_volume,
             music::music_volume_set,
             music::music_volume_mute,
-            music::music_lyrics
+            music::music_lyrics,
+            adapters::terminal_activate,
+            adapters::process_watch,
+            adapters::process_alive,
+            adapters::screen_locked,
+            adapters::notify_send
         ])
         .setup(|app| {
             island::create(app)?;

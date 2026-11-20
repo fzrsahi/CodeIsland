@@ -149,22 +149,16 @@ impl Feature {
                 }
             }
             Self::TerminalActivator => {
-                let mut tools = Vec::new();
-                for tool in ["swaymsg", "hyprctl", "tmux", "kitty", "wezterm"] {
-                    if environment.has(tool) {
-                        tools.push(tool);
-                    }
-                }
-                if !tools.is_empty() {
+                let window_api = environment.has_any(&["swaymsg", "hyprctl", "wmctrl", "xdotool"]);
+                if window_api {
                     Capability::Supported
-                } else if environment.is_x11() {
+                } else if environment.has_any(&["wl-copy", "xclip"]) {
+                    // L-009: the click still lands somewhere useful.
                     Capability::Degraded(
-                        "only X11 window activation: no compositor or terminal IPC found".into(),
+                        "no window API here: a click copies the session's path instead".into(),
                     )
                 } else {
-                    Capability::Unsupported(
-                        "Wayland without a compositor IPC: copy the path instead".into(),
-                    )
+                    Capability::Unsupported("no window API and no clipboard tool".into())
                 }
             }
             Self::TerminalVisibility => {
@@ -212,7 +206,13 @@ impl Feature {
                     Capability::Unsupported("needs logind on the session bus".into())
                 }
             }
-            Self::Notifications => Capability::Supported,
+            Self::Notifications => {
+                if environment.has("notify-send") {
+                    Capability::Supported
+                } else {
+                    Capability::Unsupported("needs notify-send for reminders".into())
+                }
+            }
             Self::SyntheticInput => {
                 if environment.is_x11() {
                     Capability::Supported
