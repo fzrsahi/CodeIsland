@@ -109,11 +109,14 @@ offset, fragment, and one replay of a replaced file — and `scan_tail_for_attac
 is the attach-time backfill. Nothing here opens a file or watches a path: the
 platform watcher reads and hands the bytes in.
 
+The delta also carries the agent's checklist (`task_events`): the events
+TaskCreate/TaskUpdate, TodoWrite, `update_plan` and the prompt/turn boundaries
+carry, in transcript order.
+
 The delta also carries the idle recap and the model tag: `session_recap`
 (`SessionRecap`), `model_observation` (`ModelObservation`), and
 `configured_long_context` (a `/model` switch turning the 1M context variant on
-or off). Their own modules are below. Rows that only carry the agent's
-checklist (`AgentTaskTranscript`, #136) still parse to nothing here.
+or off). Their own modules are below.
 
 ## `session_recap`, `model_label`, `time`
 
@@ -136,6 +139,19 @@ A snapshot absorbs a delta here too: `apply_transcript_delta`,
 `claude_transcript_path` and label. `SessionSnapshot` gained `recap`,
 `reasoning_effort` and `configured_long_context` for them — kept, not
 projected, exactly as the reducer contract's `projection_omits` says.
+
+## `agent_tasks`: the checklist
+
+The vocabulary (`AgentTaskStatus`, `AgentTaskItem`, `AgentTaskDraft`,
+`AgentTaskRowPatch`, `AgentTaskChange`, `AgentTaskEvent`) and — in `parsing` —
+`AgentTaskTool`, the argument helpers (`string`, `id_string`, `json_object`,
+`drafts`, `row_patches`, `created_task_id_from_result_text`), `hook_events`
+and `events_from_line` for transcript rows, plus the backfill `scan` and its
+byte prefilter `may_carry_task_event`.
+
+Not ported yet: `AgentTaskList`, the list that applies the events (dedupe,
+undo, turn retirement, persistence) — #138. `SessionSnapshot` therefore does
+not carry `agentTasks` yet.
 
 ## Tests
 
@@ -160,7 +176,9 @@ read.
 
 `tests/model_label.rs` is `ModelLabelTests` (22 tests) and
 `tests/session_recap.rs` is `SessionRecapTests` (38 of its 39; the one left
-asserts the checklist, #136). `tests/transcript_tailer.rs` is `JSONLTailerTests` and
+asserts the checklist, #136). `tests/agent_task_parsing.rs` is the parsing half of `AgentTaskListTests`
+(9 tests; the ones that assert a built list belong to #138).
+`tests/transcript_tailer.rs` is `JSONLTailerTests` and
 `JSONLTailerCursorQuestionTests` ported: 70 tests, all the parsing ones as
 they are and the attach/replacement ones driven through `TailState` with the
 bytes a watcher would have read. Two Swift tests are the watcher's own and

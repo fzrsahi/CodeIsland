@@ -21,6 +21,7 @@
 
 use serde_json::{Map, Value};
 
+use crate::agent_tasks::{AgentTaskEvent, parsing as agent_tasks};
 use crate::model_label::{self, ModelObservation};
 use crate::reduce::Timestamp;
 use crate::session_recap::SessionRecap;
@@ -63,6 +64,9 @@ pub struct ScanDelta {
     pub model_observation: Option<ModelObservation>,
     /// A `/model` switch in the chunk turned the 1M context variant on or off.
     pub configured_long_context: Option<bool>,
+    /// Checklist events (TaskCreate/TodoWrite/`update_plan` rows, new prompts)
+    /// in transcript order.
+    pub task_events: Vec<AgentTaskEvent>,
 }
 
 impl ScanDelta {
@@ -76,6 +80,7 @@ impl ScanDelta {
             && self.session_recap.is_none()
             && self.model_observation.is_none()
             && self.configured_long_context.is_none()
+            && self.task_events.is_empty()
     }
 
     /// Lines are applied in file order, so a prompt seen after a recap in the
@@ -288,6 +293,12 @@ fn apply(line: &[u8], delta: &mut ScanDelta, observed_at: Timestamp) {
     if root.get("isMeta") == Some(&Value::Bool(true)) {
         return;
     }
+
+    // Checklist progress rides on rows this scanner already decodes, so it
+    // costs no extra JSON parse on the streaming path.
+    delta
+        .task_events
+        .extend(agent_tasks::events_from_line(root));
 
     let payload = root.get("payload").and_then(Value::as_object);
     let message = root
