@@ -19,13 +19,49 @@
   type Snapshot = { sessions: Session[]; permissions: Card[] };
   type Decision = 'allow' | 'deny';
 
+  // `Status` in ../../crates/morrow-platform/src/hooks.rs, by way of
+  // src-tauri/src/hooks.rs. The card only reports and asks.
+  type HooksStatus = {
+    codeisland_dir: string;
+    script_installed: boolean;
+    bridge_installed: boolean;
+    hooks_installed: boolean;
+    settings: string;
+    settings_exists: boolean;
+  };
+  type HooksSnapshot = { status: HooksStatus; version: string | null };
+
   let sessions = $state<Session[]>([]);
   let cards = $state<Card[]>([]);
   let expanded = $state(false);
+  let hooks = $state<HooksSnapshot | null>(null);
+  let hooksBusy = $state(false);
+  let hooksError = $state<string | null>(null);
   let island: HTMLElement;
 
   function answer(id: number, decision: Decision) {
     invoke('answer_permission', { id, decision });
+  }
+
+  async function loadHooks() {
+    try {
+      hooks = await invoke<HooksSnapshot>('hooks_status');
+      hooksError = null;
+    } catch (error) {
+      hooksError = String(error);
+    }
+  }
+
+  async function runHooks(command: 'hooks_install' | 'hooks_uninstall') {
+    hooksBusy = true;
+    try {
+      await invoke(command);
+      await loadHooks();
+    } catch (error) {
+      hooksError = String(error);
+    } finally {
+      hooksBusy = false;
+    }
   }
 
   // For the E2E-1 gate (the shell prints them only with MORROW_SMOKE=1).
@@ -50,6 +86,7 @@
       cards = snapshot.permissions;
     };
     invoke('subscribe', { channel });
+    loadHooks();
 
     // Tight-fit window: the window is as big as the island and no bigger.
     // Measured after every layout change (collapse, expand, a row, a card).
@@ -88,6 +125,33 @@
       </ul>
     {/if}
   </button>
+  {#if expanded}
+    <div class="hooks">
+      <div class="hooks-title">
+        Claude Code hooks{#if hooks?.version}&nbsp;· {hooks.version}{/if}
+      </div>
+      {#if hooks}
+        <div class="hooks-line">
+          {hooks.status.hooks_installed ? 'Installed' : 'Not installed'}
+          {#if hooks.status.script_installed}&nbsp;· script{/if}
+          {#if hooks.status.bridge_installed}&nbsp;· bridge{/if}
+        </div>
+        <div class="hooks-actions">
+          <button class="hooks-button" disabled={hooksBusy} onclick={() => runHooks('hooks_install')}>
+            {hooks.status.hooks_installed ? 'Repair' : 'Install'}
+          </button>
+          {#if hooks.status.hooks_installed || hooks.status.script_installed}
+            <button class="hooks-button" disabled={hooksBusy} onclick={() => runHooks('hooks_uninstall')}>
+              Remove
+            </button>
+          {/if}
+        </div>
+      {:else}
+        <div class="hooks-line">Checking…</div>
+      {/if}
+      {#if hooksError}<div class="hooks-error">{hooksError}</div>{/if}
+    </div>
+  {/if}
   {#each cards as card (card.id)}
     <section class="card" data-card={card.id}>
       <div class="tool"><span class="source">{card.source}</span> {card.tool_name}</div>
@@ -142,6 +206,45 @@
     font: inherit;
     text-align: inherit;
     cursor: default;
+  }
+
+  .hooks {
+    margin: 6px 0 2px;
+    padding-top: 6px;
+    border-top: 1px solid #262626;
+  }
+  .hooks-title {
+    color: #9a9a9a;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .hooks-line {
+    margin: 4px 0 6px;
+    font-size: 12px;
+    color: #d0d0d0;
+  }
+  .hooks-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .hooks-button {
+    padding: 3px 10px;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    background: #1c1c1c;
+    color: #f2f2f2;
+    font: inherit;
+    font-size: 12px;
+    cursor: default;
+  }
+  .hooks-button:disabled {
+    opacity: 0.5;
+  }
+  .hooks-error {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #ff6b6b;
   }
 
   .pill {

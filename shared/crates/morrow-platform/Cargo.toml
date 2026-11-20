@@ -1,0 +1,17 @@
+[package]
+name = "morrow-platform"
+description = "The OS-facing half: paths, files and the hook script the installer writes. No policy — that lives in morrow-core."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+morrow-core = { path = "../morrow-core" }
+# For the shell's Settings card, which shows a `Status` and a `Report`.
+serde = { version = "1", features = ["derive"] }
+
+[lints]
+workspace = true

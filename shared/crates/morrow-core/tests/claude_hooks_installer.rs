@@ -29,7 +29,7 @@ fn event_names(text: &str) -> Vec<String> {
 }
 
 fn installed(version: Option<&str>) -> InstallOutcome {
-    install(None, version).expect("a fresh file installs")
+    install(None, HOOK_COMMAND, version).expect("a fresh file installs")
 }
 
 // MARK: - The table
@@ -193,7 +193,7 @@ fn a_fresh_file_gets_every_event_under_its_own_hook() {
 #[test]
 fn installing_twice_changes_nothing_the_second_time() {
     let first = installed(Some("2.1.89"));
-    let second = install(Some(&first.text), Some("2.1.89")).expect("reinstall");
+    let second = install(Some(&first.text), HOOK_COMMAND, Some("2.1.89")).expect("reinstall");
     assert!(!second.changed);
     assert_eq!(second.text, first.text, "byte for byte");
 }
@@ -210,7 +210,7 @@ fn install_keeps_the_users_own_hooks_and_their_comments() {
   },
   "autoshare": false
 }"#;
-    let outcome = install(Some(original), Some("2.1.89")).expect("install");
+    let outcome = install(Some(original), HOOK_COMMAND, Some("2.1.89")).expect("install");
     assert!(outcome.changed);
     assert!(outcome.text.contains("// my settings"));
     assert!(outcome.text.contains("\"autoshare\": false"));
@@ -241,7 +241,7 @@ fn a_stale_async_key_is_repaired() {
     let hooks = hooks_of(&original);
     assert!(has_stale_async_key(hooks.as_object().unwrap()));
 
-    let outcome = install(Some(&original), Some("2.1.89")).expect("repair");
+    let outcome = install(Some(&original), HOOK_COMMAND, Some("2.1.89")).expect("repair");
     assert!(outcome.changed);
     assert!(!outcome.text.contains("\"async\""), "{}", outcome.text);
     assert!(!has_stale_async_key(
@@ -259,14 +259,14 @@ fn a_stale_async_key_is_repaired() {
 
 #[test]
 fn a_file_that_does_not_parse_is_never_touched() {
-    assert!(install(Some("{ \"hooks\": ["), Some("2.1.89")).is_none());
-    assert!(install(Some("[1, 2, 3]"), Some("2.1.89")).is_none());
-    assert!(install(Some("{ \"a\": 1,"), Some("2.1.89")).is_none());
+    assert!(install(Some("{ \"hooks\": ["), HOOK_COMMAND, Some("2.1.89")).is_none());
+    assert!(install(Some("[1, 2, 3]"), HOOK_COMMAND, Some("2.1.89")).is_none());
+    assert!(install(Some("{ \"a\": 1,"), HOOK_COMMAND, Some("2.1.89")).is_none());
 }
 
 #[test]
 fn an_empty_file_is_treated_as_an_empty_object() {
-    let outcome = install(Some(""), Some("2.1.89")).expect("install");
+    let outcome = install(Some(""), HOOK_COMMAND, Some("2.1.89")).expect("install");
     assert!(outcome.changed);
     assert_eq!(event_names(&outcome.text).len(), CLAUDE_EVENTS.len());
 }
@@ -289,7 +289,7 @@ fn uninstalled(text: &str) -> UninstallOutcome {
 #[test]
 fn uninstall_gives_back_the_original_bytes() {
     let original = "{\n  \"model\": \"sonnet\"\n}\n";
-    let outcome = install(Some(original), Some("2.1.89")).expect("install");
+    let outcome = install(Some(original), HOOK_COMMAND, Some("2.1.89")).expect("install");
     let back = uninstalled(&outcome.text);
     assert!(back.changed);
     assert_eq!(back.text, original, "byte for byte");
@@ -304,7 +304,7 @@ fn uninstall_keeps_a_users_own_hooks() {
     ]
   }
 }"#;
-    let outcome = install(Some(original), Some("2.1.89")).expect("install");
+    let outcome = install(Some(original), HOOK_COMMAND, Some("2.1.89")).expect("install");
     let back = uninstalled(&outcome.text);
     let hooks = hooks_of(&back.text);
     assert_eq!(hooks.as_object().unwrap().len(), 1);

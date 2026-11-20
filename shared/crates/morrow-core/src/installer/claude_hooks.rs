@@ -12,7 +12,9 @@ use super::json_editor::{delete_top_level_key, set_top_level_value, strip_json_c
 /// The top-level key Claude Code keeps hooks under.
 pub const HOOKS_KEY: &str = "hooks";
 
-/// The command those hooks run — the script `installHookScript` writes.
+/// The command those hooks run: the script `installHookScript` writes beside
+/// the bridge. The platform names it, since macOS and Linux install the script
+/// under the same path but keep their own binary naming.
 pub const HOOK_COMMAND: &str = "~/.codeisland/codeisland-hook.sh";
 
 /// One hook event to register.
@@ -180,7 +182,11 @@ pub struct InstallOutcome {
 ///
 /// `None` when the file exists and does not parse as a JSON object: the caller
 /// writes nothing (#89). `existing` is `None` for a file that is not there yet.
-pub fn install(existing: Option<&str>, version: Option<&str>) -> Option<InstallOutcome> {
+pub fn install(
+    existing: Option<&str>,
+    command: &str,
+    version: Option<&str>,
+) -> Option<InstallOutcome> {
     let original = existing.filter(|text| !text.is_empty());
     let source = original.unwrap_or("{}");
 
@@ -203,7 +209,7 @@ pub fn install(existing: Option<&str>, version: Option<&str>) -> Option<InstallO
                         .and_then(Value::as_array)
                         .is_some_and(|hooks| {
                             hooks.iter().any(|hook| {
-                                hook.get("command").and_then(Value::as_str) == Some(HOOK_COMMAND)
+                                hook.get("command").and_then(Value::as_str) == Some(command)
                             })
                         })
                 })
@@ -224,7 +230,7 @@ pub fn install(existing: Option<&str>, version: Option<&str>) -> Option<InstallO
             "matcher": "",
             "hooks": [{
                 "type": "command",
-                "command": HOOK_COMMAND,
+                "command": command,
                 "timeout": expected.timeout,
             }],
         });
@@ -240,6 +246,37 @@ pub fn install(existing: Option<&str>, version: Option<&str>) -> Option<InstallO
         changed: !same_document(source, &text),
         text,
     })
+}
+
+/// Whether every event of this build already carries `command`, with no stale
+/// `async` key left behind (`isHooksInstalled`).
+pub fn is_installed(existing: &str, command: &str, version: Option<&str>) -> bool {
+    let Some(settings) = settings_object(existing) else {
+        return false;
+    };
+    let hooks = settings
+        .get(HOOKS_KEY)
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    let all_present = events_for_version(version).iter().all(|expected| {
+        hooks
+            .get(expected.name)
+            .and_then(Value::as_array)
+            .is_some_and(|entries| {
+                entries.iter().any(|entry| {
+                    entry
+                        .get("hooks")
+                        .and_then(Value::as_array)
+                        .is_some_and(|hooks| {
+                            hooks.iter().any(|hook| {
+                                hook.get("command").and_then(Value::as_str) == Some(command)
+                            })
+                        })
+                })
+            })
+    });
+    all_present && !has_stale_async_key(&hooks)
 }
 
 /// What an uninstall came to.

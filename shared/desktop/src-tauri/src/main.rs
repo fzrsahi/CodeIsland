@@ -3,6 +3,7 @@
 //! tight-fit, nonactivating panel, which answers permission requests.
 
 mod feed;
+mod hooks;
 mod island;
 mod listener;
 mod permissions;
@@ -18,6 +19,13 @@ use tauri::ipc::Channel;
 use crate::feed::{Feed, Snapshot};
 use crate::island::Smoke;
 use crate::permissions::Decision;
+
+/// Where the hook installer works: this user's home and the Claude Code config
+/// directory, resolved once at launch.
+pub struct HooksSite {
+    pub paths: morrow_platform::hooks::Paths,
+    pub bridge_source: Option<std::path::PathBuf>,
+}
 
 /// The frontend's channel for snapshots.
 #[tauri::command]
@@ -51,6 +59,7 @@ fn main() -> ExitCode {
         println!("morrow-smoke: listening {}", server.path());
     }
 
+    let hooks_site = hooks::site();
     let feed = Arc::new(Feed::default());
     listener::spawn(server, Arc::clone(&feed));
     Feed::spawn_pusher(Arc::clone(&feed), move |sessions, cards| {
@@ -61,12 +70,16 @@ fn main() -> ExitCode {
 
     let result = tauri::Builder::default()
         .manage(feed)
+        .manage(hooks_site)
         .manage(Smoke(smoke))
         .invoke_handler(tauri::generate_handler![
             subscribe,
             answer_permission,
             island::set_island_size,
-            island::smoke_card
+            island::smoke_card,
+            hooks::hooks_status,
+            hooks::hooks_install,
+            hooks::hooks_uninstall
         ])
         .setup(|app| Ok(island::create(app)?))
         .run(tauri::generate_context!());
