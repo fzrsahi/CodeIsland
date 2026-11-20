@@ -196,8 +196,15 @@ no hooks key, it loads what `plugin` names. A brand-new file gets a minimal
 document with the schema hint; an existing one keeps its comments and its own
 entries, and an emptied `plugin` key is deleted on uninstall.
 
-Not covered here, on purpose: the YAML/TOML *sources* (#100) — their own
-slice.
+`installer::kimi` is the first TOML source: Kimi reads an array of `[[hooks]]`
+tables, so our blocks are appended and — on uninstall — exactly those blocks
+are cut out, which is what keeps every other byte of a user's `config.toml`
+(comments included) where it was. A legacy scalar `hooks = …` is commented out
+rather than deleted, and uninstall puts it back.
+
+Not covered here, on purpose: the YAML sources (Hermes, TraeCli). macOS
+round-trips those through `Yams`, which already drops the user's comments, and
+that is a decision to make deliberately rather than copy (#100).
 
 ## Tests
 
@@ -229,7 +236,7 @@ scans a file on disk has no counterpart here).
 (19 tests: the table, the commands, one install per format, reinstall, a stale
 entry, uninstall), `tests/codex_hooks_config.rs` is `CodexTomlHooksFixtures`
 (all 40 cases, plus idempotence), `tests/opencode_plugin.rs` is the OpenCode
-registration (10 tests), `tests/json_minimal_editor.rs` is `JSONMinimalEditorTests`
+registration (10 tests), `tests/kimi_hooks.rs` is Kimi's TOML blocks (8), `tests/json_minimal_editor.rs` is `JSONMinimalEditorTests`
 (14 of 14), and
 `tests/claude_hooks_installer.rs` is the Claude Code slice of
 `ConfigInstallerTests` over text instead of a file system (18 tests: the table,

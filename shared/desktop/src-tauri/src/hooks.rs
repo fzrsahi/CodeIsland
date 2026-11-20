@@ -5,6 +5,7 @@
 use std::path::PathBuf;
 
 use morrow_platform::hooks::{self, Paths, Report, Status, TargetStatus};
+use morrow_platform::kimi;
 use morrow_platform::opencode;
 use tauri::State;
 
@@ -18,6 +19,8 @@ pub struct HooksSnapshot {
     targets: Vec<TargetStatus>,
     /// OpenCode: a plugin file rather than a hooks key.
     opencode: opencode::Status,
+    /// Kimi: hooks in a TOML file, appended rather than re-serialised.
+    kimi: kimi::Status,
     /// The Claude Code version the plan was made for, from `claude --version`.
     version: Option<String>,
 }
@@ -30,6 +33,7 @@ pub fn hooks_status(site: State<'_, HooksSite>) -> HooksSnapshot {
         status: hooks::status(&site.paths, version.as_deref()),
         targets: hooks::targets_status(&site.paths),
         opencode: opencode::status(&site.opencode),
+        kimi: kimi::status(&site.kimi),
         version,
     }
 }
@@ -39,6 +43,23 @@ pub fn hooks_status(site: State<'_, HooksSite>) -> HooksSnapshot {
 #[tauri::command]
 pub fn opencode_install(site: State<'_, HooksSite>) -> Result<bool, String> {
     opencode::install(&site.opencode, &stamp())
+        .map(|done| done.is_some())
+        .map_err(|error| error.to_string())
+}
+
+/// Install or repair Kimi's `[[hooks]]` blocks. `false` when Kimi is not on
+/// this machine.
+#[tauri::command]
+pub fn kimi_install(site: State<'_, HooksSite>) -> Result<bool, String> {
+    kimi::install(&site.kimi, &stamp())
+        .map(|done| done.is_some())
+        .map_err(|error| error.to_string())
+}
+
+/// Take Kimi's blocks back out, restoring a legacy scalar if there was one.
+#[tauri::command]
+pub fn kimi_uninstall(site: State<'_, HooksSite>) -> Result<bool, String> {
+    kimi::uninstall(&site.kimi, &stamp())
         .map(|done| done.is_some())
         .map_err(|error| error.to_string())
 }
@@ -98,6 +119,7 @@ pub fn site() -> HooksSite {
         .map(PathBuf::from)
         .filter(|path| !path.as_os_str().is_empty());
     HooksSite {
+        kimi: kimi::Site::new(&home),
         opencode: opencode::Site::new(&home),
         paths: Paths::new(&home, config_dir.as_deref()),
         bridge_source: bridge_source(),
