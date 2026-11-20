@@ -1,10 +1,14 @@
-//! Session reduction backed by `morrow-core::reduce` (`reduceHookEvent`),
-//! projecting `SessionSnapshot` into the panel's `Session` rows.
+//! Session reduction backed by `morrow-core::reduce` (`reduceEvent`): the
+//! reducer, then the attention policy's intents where the reducer used to
+//! put them, projecting `SessionSnapshot` into the panel's `Session` rows.
+//! The shell's outlets for those intents — a sound, a completion card — are
+//! still to come (plan §5.2, Phase 3); the sessions and the cards are what it
+//! runs today.
 
 use std::collections::HashMap;
 
 use morrow_core::intake::SourceCatalog;
-use morrow_core::reduce::{HookEvent, ReduceContext, SideEffect, Timestamp, reduce_hook_event};
+use morrow_core::reduce::{HookEvent, ReduceContext, SideEffect, Timestamp, reduce_event};
 use morrow_protocol::HookPayload;
 use serde::Serialize;
 
@@ -41,7 +45,8 @@ impl Sessions {
     }
 
     /// Reduces `payload` at `now_ms`, applying `RemoveSession` effects locally
-    /// and returning all emitted `SideEffect`s for the shell.
+    /// and returning all emitted `SideEffect`s for the shell — the policy's
+    /// `PlaySound` and `EnqueueCompletion` among them.
     pub fn apply(&mut self, payload: &HookPayload, now_ms: u64) -> Vec<SideEffect> {
         let Some(event) = HookEvent::new(payload.as_object().clone(), &self.sources) else {
             return Vec::new();
@@ -54,8 +59,8 @@ impl Sessions {
             max_history: 50,
             reply_complete_placeholder: "Reply complete",
         };
-        let reduction = reduce_hook_event(&mut self.inner, &event, &ctx);
-        for effect in &reduction.effects {
+        let effects = reduce_event(&mut self.inner, &event, &ctx);
+        for effect in &effects {
             if let SideEffect::RemoveSession { session_id } = effect {
                 self.inner.remove(session_id);
                 self.last_events.remove(session_id);
@@ -66,7 +71,7 @@ impl Sessions {
             self.last_events
                 .insert(card_id.to_owned(), event.event_name);
         }
-        reduction.effects
+        effects
     }
 
     /// Newest first; ties by session id, so the order is stable.

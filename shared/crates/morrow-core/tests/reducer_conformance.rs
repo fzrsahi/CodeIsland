@@ -1,7 +1,8 @@
 //! The reducer on every case of `fixtures/core/reducer.json` (exported from
 //! Swift by `Tests/MorrowCoreTests/CoreContractJSONExporter.swift`): after
-//! each step, every session, the effects and the facts must be what Swift
-//! left, projected the way the exporter projects them.
+//! each step, every session, the effects, the facts and the attention policy's
+//! intents for those facts must be what Swift left, projected the way the
+//! exporter projects them.
 //!
 //! The clock reads `$Tk` during step k (`Timestamp(k)` seconds); a case's
 //! `custom_sources` are the catalog's custom sources, with no custom agent
@@ -12,11 +13,14 @@ use std::path::PathBuf;
 
 use serde_json::{Map, Value, json};
 
+use morrow_core::attention::{AttentionMoment, AttentionSubject, intents};
 use morrow_core::intake::SourceCatalog;
 use morrow_core::reduce::{
     AgentStatus, ChatMessage, HookEvent, HookEventFacts, ReduceContext, SessionSnapshot, Sessions,
     SideEffect, SubagentState, SubsessionKind, Timestamp, ToolHistoryEntry, reduce_hook_event,
 };
+
+mod contracts;
 
 /// Every case and step of the bundle; a change in the bundle shows here.
 const CASES: usize = 80;
@@ -434,6 +438,10 @@ fn run_case(case: &Value) -> Result<usize, String> {
         let event = HookEvent::new(step["event"].as_object().unwrap().clone(), &sources)
             .ok_or_else(|| format!("step {}: not a hook event", index + 1))?;
         let reduction = reduce_hook_event(&mut sessions, &event, &ctx);
+        let step_subject = AttentionSubject {
+            is_child: step["subject"]["is_child"] == true,
+            interrupted: step["subject"]["interrupted"] == true,
+        };
         let got = [
             ("sessions", sessions_document(&sessions)),
             (
@@ -441,6 +449,13 @@ fn run_case(case: &Value) -> Result<usize, String> {
                 Value::Array(reduction.effects.iter().map(effect_document).collect()),
             ),
             ("facts", facts_document(&reduction.facts)),
+            (
+                "intents",
+                contracts::intents_document(&intents(
+                    &AttentionMoment::HookEvent(reduction.facts),
+                    step_subject,
+                )),
+            ),
         ];
         for (key, value) in got {
             if value != step[key] {

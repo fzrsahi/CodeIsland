@@ -25,6 +25,7 @@ pub use session_snapshot::{
     ToolHistoryEntry,
 };
 
+use crate::attention::{AttentionMoment, AttentionSubject, intents as attention_intents};
 use crate::intake::event_normalizer::normalize;
 use crate::intake::{SourceCatalog, normalized_supported_source};
 use hermes::StoreSnapshot;
@@ -111,6 +112,50 @@ pub fn reduce_hook_event(
         facts,
         slots,
     }
+}
+
+/// `reduceEvent`: the reducer followed by [`intents`]' reading of the event.
+/// `PlaySound` and `EnqueueCompletion` are the policy's, put back where the
+/// reducer used to return them, so a shell that wants the whole story of an
+/// event has it in one call. A shell that settles the policy itself — with
+/// the settings and the room it alone knows — calls [`reduce_hook_event`]
+/// and inserts the intents it keeps.
+pub fn reduce_event(
+    sessions: &mut Sessions,
+    event: &HookEvent,
+    ctx: &ReduceContext,
+) -> Vec<SideEffect> {
+    let reduction = reduce_hook_event(sessions, event, ctx);
+    let session_id = event.session_id.as_deref().unwrap_or("default");
+    let intents = attention_intents(
+        &AttentionMoment::HookEvent(reduction.facts),
+        AttentionSubject::from_session(sessions.get(session_id)),
+    );
+    let mut effects = reduction.effects;
+    // Exactly where the reducer used to put them: the sound (later in the
+    // list) first, so the completion's slot still points where it should.
+    if let Some(sound) = intents.sound {
+        let at = reduction
+            .slots
+            .sound
+            .unwrap_or(effects.len())
+            .min(effects.len());
+        effects.insert(at, SideEffect::PlaySound(sound));
+    }
+    if intents.completion.is_some() {
+        let at = reduction
+            .slots
+            .completion
+            .unwrap_or(effects.len())
+            .min(effects.len());
+        effects.insert(
+            at,
+            SideEffect::EnqueueCompletion {
+                session_id: session_id.to_owned(),
+            },
+        );
+    }
+    effects
 }
 
 fn is_waiting(status: AgentStatus) -> bool {
@@ -686,5 +731,57 @@ fn apply_notification(s: &mut SessionSnapshot, event: &HookEvent) {
                 interrupt(s);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::intake::SourceCatalog;
+
+    /// `reduceEvent`: a Stop rings and pops a card, in the order the reducer
+    /// used to return them (the completion first, the sound after it).
+    #[test]
+    fn reduce_event_puts_the_policy_intents_back_in_place() {
+        let sources = SourceCatalog::default();
+        let clock = || Timestamp(1.0);
+        let ctx = ReduceContext {
+            clock: &clock,
+            sources: &sources,
+            home_directory: "/home/morrow",
+            max_history: 10,
+            reply_complete_placeholder: "Reply complete",
+        };
+        let stop = |raw: &str| HookEvent::new(raw.parse().unwrap(), &sources).unwrap();
+
+        let mut sessions = Sessions::new();
+        let effects = reduce_event(
+            &mut sessions,
+            &stop(r#"{"session_id":"a","hook_event_name":"Stop"}"#),
+            &ctx,
+        );
+        assert_eq!(
+            effects,
+            vec![
+                SideEffect::EnqueueCompletion {
+                    session_id: "a".into()
+                },
+                SideEffect::PlaySound("Stop".into()),
+            ]
+        );
+
+        // A turn the user stopped still pops its card, and rings nothing.
+        let mut sessions = Sessions::new();
+        let effects = reduce_event(
+            &mut sessions,
+            &stop(r#"{"session_id":"a","hook_event_name":"Stop","stop_reason":"user"}"#),
+            &ctx,
+        );
+        assert_eq!(
+            effects,
+            vec![SideEffect::EnqueueCompletion {
+                session_id: "a".into()
+            }]
+        );
     }
 }

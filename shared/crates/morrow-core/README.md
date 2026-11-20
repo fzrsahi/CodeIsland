@@ -44,6 +44,37 @@ characters where Swift keeps `CharacterSet.alphanumerics`, which differ on
 some combining marks; paths are standardized lexically, never against a
 working directory.
 
+## `reduce`: the reducer
+
+`reduceHookEvent`: one hook event applied to the sessions, the lifecycle
+`SideEffect`s for the shell, and the `HookEventFacts` the attention policy
+reads. The clock, the custom sources and the home directory come in through
+`ReduceContext`. `reduceEvent` is the reducer plus the policy's intents put
+back where the reducer used to return them (`PlaySound` at the sound slot,
+`EnqueueCompletion` at the completion slot).
+
+## `attention`: AttentionPolicy
+
+What a moment calls for before the user's settings and the room have their
+say — a sound, a completion card, a push, a follow-up reminder. A faithful
+port of `Sources/MorrowCore/AttentionPolicy.swift` and
+`EventSoundRouting.swift`:
+
+| Swift | Rust (`src/attention.rs`) |
+|---|---|
+| `AttentionPolicy.intents(for:subject:)` | `intents` |
+| `EventSoundRouting.soundEvent`, `turnFailed` | `sound_event`, `TURN_FAILED` |
+| `SoundCue` | `sound_cue` |
+| `AttentionMoment`, `TurnEnd`, `TurnHost` | same names |
+| `AttentionSubject`, `AttentionIntents`, `AttentionDecision` | `AttentionSubject`, `AttentionIntents` (`AttentionDecision` is `settle`'s) |
+| `AttentionPushKind`, `FollowUpIntent`, `FollowUpReminderKind` | same names |
+
+`settle(_:context:)` is **not ported yet**: it reads the user's sound
+switches, quiet hours, the lock state, the completion style and Smart
+Suppress, which arrive with the `morrow-platform` adapters (plan §5.2), and
+no fixture covers it. A shell settles what it has in its own outlets until
+then.
+
 ## Tests
 
 `tests/conformance.rs` (the port of `HookIntakeGoldenTests.swift`) runs every
@@ -52,3 +83,10 @@ fixture of `fixtures/neutral/bridge-golden.json` and of
 the forwarded payload (normalized and projected as the bundles define),
 stdout and exit status must match, 84 of 84 in each. `tests/golden/mod.rs`
 reads the bundles; morrow-bridge's conformance test shares it.
+
+`tests/attention_conformance.rs` runs the 56 policy cases of
+`fixtures/core/attention.json` (a moment and a subject, the intents Swift
+returns), and `tests/reducer_conformance.rs` checks the intents of all 161
+reducer steps against `fixtures/core/reducer.json` besides the sessions, the
+effects and the facts. `tests/contracts/mod.rs` holds the projection both
+read.

@@ -6,9 +6,12 @@
 //!   `Sources/MorrowCore`), from the facts an edge observed.
 //! - [`reduce`]: what a hook event does to the sessions (`reduceHookEvent`),
 //!   with the clock and the custom sources handed in.
+//! - [`attention`]: what a moment calls for (`AttentionPolicy.intents`) — a
+//!   sound, a completion card, a push, a follow-up reminder.
 //! - [`digest`]: SHA-256, for the delivery digest of a hook Cursor ran.
 #![forbid(unsafe_code)]
 
+pub mod attention;
 pub mod digest;
 pub mod intake;
 pub mod reduce;
