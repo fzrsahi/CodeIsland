@@ -421,7 +421,13 @@ print(target)
     }
 
     private static func uploadRemoteOpencodePlugin(source: String, host: RemoteHost, remoteSocketPath: String) async -> RemoteCommandResult {
-        let configuredSource = remoteOpencodePluginForInstall(source: source, host: host, remoteSocketPath: remoteSocketPath)
+        guard let configuredSource = remoteOpencodePluginForInstall(source: source, host: host, remoteSocketPath: remoteSocketPath) else {
+            return RemoteCommandResult(
+                stdout: "",
+                stderr: "the remote plugin and this build disagree about its placeholders",
+                exitCode: -1
+            )
+        }
         let encoded = Data(configuredSource.utf8).base64EncodedString()
         let py = """
 import base64, os, pathlib
@@ -1814,25 +1820,28 @@ print(" · ".join(parts))
         return "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
-    static func remoteOpencodePluginForInstall(source: String, host: RemoteHost, remoteSocketPath: String? = nil) -> String {
+    /// Fill the remote plugin's placeholders. Returns `nil` when one is missing,
+    /// which means the shipped resource and this code disagree: silently sending
+    /// a plugin that still contains `__MORROW_SOCKET_PATH__` is what #78 was — the
+    /// plugin ran, sent to a path nobody listens on, and reported nothing.
+    static func remoteOpencodePluginForInstall(source: String, host: RemoteHost, remoteSocketPath: String? = nil) -> String? {
         let socketPath = remoteSocketPath ?? host.remoteSocketPath
-        return source
-            .replacingOccurrences(
-                of: #"const SOCKET_PATH = process.env.CODEISLAND_SOCKET_PATH || "/tmp/codeisland.sock";"#,
-                with: #"const SOCKET_PATH = \#(jsonStringLiteral(socketPath));"#
+        let replacements: [(placeholder: String, value: String)] = [
+            ("__MORROW_SOCKET_PATH__", socketPath),
+            ("__MORROW_REMOTE_HOST_ID__", host.id),
+            ("__MORROW_REMOTE_HOST_NAME__", host.name),
+            ("__MORROW_SOCKET_OWNER_UID__", socketOwnerUID(for: host, remoteSocketPath: socketPath)),
+        ]
+        var configured = source
+        for (placeholder, value) in replacements {
+            let quoted = "\"\(placeholder)\""
+            guard configured.contains(quoted) else { return nil }
+            configured = configured.replacingOccurrences(
+                of: quoted,
+                with: jsonStringLiteral(value)
             )
-            .replacingOccurrences(
-                of: #"const REMOTE_HOST_ID = process.env.CODEISLAND_REMOTE_HOST_ID || "";"#,
-                with: #"const REMOTE_HOST_ID = \#(jsonStringLiteral(host.id));"#
-            )
-            .replacingOccurrences(
-                of: #"const REMOTE_HOST_NAME = process.env.CODEISLAND_REMOTE_HOST_NAME || "";"#,
-                with: #"const REMOTE_HOST_NAME = \#(jsonStringLiteral(host.name));"#
-            )
-            .replacingOccurrences(
-                of: #"const SOCKET_OWNER_UID = process.env.CODEISLAND_SOCKET_OWNER_UID || "";"#,
-                with: #"const SOCKET_OWNER_UID = \#(jsonStringLiteral(socketOwnerUID(for: host, remoteSocketPath: socketPath)));"#
-            )
+        }
+        return configured
     }
 
     private static func jsonStringLiteral(_ value: String) -> String {

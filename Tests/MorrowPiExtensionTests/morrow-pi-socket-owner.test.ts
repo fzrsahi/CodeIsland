@@ -102,8 +102,11 @@ describe("socketIsOwnedByUser", () => {
 
 describe("events", () => {
   test("reach a socket this user owns, and nothing goes through a symlink", async () => {
-    await load(throughLink.default, "via-link")("session_start", { reason: "startup" });
+    // #78: resolved per send, so the environment moves with each send.
+    process.env.CODEISLAND_SOCKET_PATH = socketPath;
     await load(direct.default, "direct")("session_start", { reason: "startup" });
+    process.env.CODEISLAND_SOCKET_PATH = linkPath;
+    await load(direct.default, "via-link")("session_start", { reason: "startup" });
     for (let i = 0; i < 300 && !received.some((p) => p.session_id === "pi-direct"); i++) {
       await new Promise((r) => setTimeout(r, 10));
     }

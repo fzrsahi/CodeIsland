@@ -131,8 +131,14 @@ describe("socketIsOwnedByUser", () => {
 
 describe("events", () => {
   test("reach a socket this user owns, and nothing goes through a symlink", async () => {
-    await load(throughLink.default, "via-link")("session_start");
+    // #78: the path is resolved when an event is sent, not when the module
+    // loads, so the environment is set around each send rather than around each
+    // import. The intent is unchanged: the real socket receives, the symlink
+    // does not.
+    process.env.CODEISLAND_SOCKET_PATH = socketPath;
     await load(direct.default, "direct")("session_start");
+    process.env.CODEISLAND_SOCKET_PATH = linkPath;
+    await load(direct.default, "via-link")("session_start");
     for (let i = 0; i < 300 && !received.some((p) => String(p.session_id).endsWith("direct")); i++) {
       await new Promise((r) => setTimeout(r, 10));
     }

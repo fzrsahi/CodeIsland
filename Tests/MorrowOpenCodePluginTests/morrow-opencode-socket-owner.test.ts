@@ -80,8 +80,11 @@ describe("events", () => {
       const hooks = await mod.default.server({ client: {}, serverUrl: new URL("http://opencode.internal") });
       await hooks.event({ event: { type: "session.created", properties: { info: { id, directory: "/repo" } } } });
     };
-    await start(throughLink, "ses_link");
+    // #78: resolved per send, so the environment moves with each send.
+    process.env.CODEISLAND_SOCKET_PATH = socketPath;
     await start(direct, "ses_direct");
+    process.env.CODEISLAND_SOCKET_PATH = linkPath;
+    await start(direct, "ses_link");
     for (let i = 0; i < 300 && !received.some((p) => p.session_id === "opencode-ses_direct"); i++) {
       await new Promise((r) => setTimeout(r, 10));
     }

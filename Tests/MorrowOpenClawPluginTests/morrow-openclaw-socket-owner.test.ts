@@ -96,8 +96,11 @@ describe("socketIsOwnedByUser", () => {
 
 describe("events", () => {
   test("reach a socket this user owns, and nothing goes through a symlink", async () => {
-    await register(throughLink.default).get("session_start")?.({}, { agentId: "via-link" });
+    // #78: resolved per send, so the environment moves with each send.
+    process.env.CODEISLAND_SOCKET_PATH = socketPath;
     await register(direct.default).get("session_start")?.({}, { agentId: "direct" });
+    process.env.CODEISLAND_SOCKET_PATH = linkPath;
+    await register(direct.default).get("session_start")?.({}, { agentId: "via-link" });
     for (let i = 0; i < 300 && !received.some((p) => p.session_id === "openclaw-direct"); i++) {
       await new Promise((r) => setTimeout(r, 10));
     }

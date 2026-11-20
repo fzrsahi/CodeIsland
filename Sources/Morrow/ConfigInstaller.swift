@@ -1025,7 +1025,7 @@ struct ConfigInstaller {
     }
 
     /// Hook script version — bump this when the script template changes
-    private static let hookScriptVersion = 6
+    private static let hookScriptVersion = 7
 
     /// Hook script for Claude Code (dispatcher: bridge binary → nc fallback).
     /// The fallback, like the bridge, sends only to a socket this user owns
@@ -1037,8 +1037,15 @@ struct ConfigInstaller {
         if [ -x "$BRIDGE" ]; then
           exec "$BRIDGE" "$@"
         fi
-        # Fallback: original shell approach (no binary installed yet)
-        SOCK="/tmp/codeisland-$(id -u).sock"
+        # Fallback: original shell approach (no binary installed yet). The app
+        # listens on `/tmp/morrow-<uid>.sock` since the rename; the old name is
+        # tried only while the new one is absent, which is the same rule
+        # SocketPath.swift applies (#78).
+        UID_NOW="$(id -u)"
+        SOCK="/tmp/morrow-${UID_NOW}.sock"
+        if [ ! -S "$SOCK" ] && [ -S "/tmp/codeisland-${UID_NOW}.sock" ]; then
+          SOCK="/tmp/codeisland-${UID_NOW}.sock"
+        fi
         [ "$(/usr/bin/stat -f '%u %HT' "$SOCK" 2>/dev/null)" = "$(id -u) Socket" ] || exit 0
         INPUT=$(cat)
         _ITERM_GUID="${ITERM_SESSION_ID##*:}"
@@ -3463,13 +3470,13 @@ struct ConfigInstaller {
     // MARK: - pi Extension
 
     /// Current pi extension version — bump when morrow-pi.ts changes.
-    private static let piExtensionVersion = "v6"
+    private static let piExtensionVersion = "v7"
 
     /// Current omp extension version — bump when morrow-omp.ts changes.
     /// Kept independent of pi (OMP reuses the "Morrow pi extension" banner
     /// but ships its own resource file), so a pi-only bump does not false-flag
     /// healthy OMP installs as needing repair.
-    private static let ompExtensionVersion = "v10"
+    private static let ompExtensionVersion = "v11"
 
     private static func piExtensionSource() -> String? {
         for res in ["morrow-pi", "codeisland-pi"] {
@@ -3566,7 +3573,7 @@ struct ConfigInstaller {
 
     // MARK: - OpenClaw plugin (#235)
 
-    private static let openclawPluginVersion = "v2"
+    private static let openclawPluginVersion = "v3"
     private static let openclawPluginFiles = ["index.ts", "openclaw.plugin.json", "package.json"]
 
     private static func openclawPluginSource(_ file: String) -> String? {
@@ -3849,7 +3856,7 @@ struct ConfigInstaller {
 
     /// Current OpenCode plugin version — bump when codeisland-opencode.js changes
     /// (the MiMo Code copy is the same file, so it follows this too).
-    private static let opencodePluginVersion = "v11"
+    private static let opencodePluginVersion = "v12"
 
     private static func isOpencodePluginInstalled(fm: FileManager) -> Bool {
         guard fm.fileExists(atPath: opencodePluginPath) else { return false }

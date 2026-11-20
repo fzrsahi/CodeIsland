@@ -1128,17 +1128,27 @@ hooks:
 
     func testRemoteOpencodePluginCarriesRemoteHostIdentity() throws {
         let host = RemoteHost(id: #"host-"quoted""#, name: "devbox\nwest", host: "example.com")
-        let source = """
-        const SOCKET_PATH = process.env.CODEISLAND_SOCKET_PATH || "/tmp/codeisland.sock";
-        const REMOTE_HOST_ID = process.env.CODEISLAND_REMOTE_HOST_ID || "";
-        const REMOTE_HOST_NAME = process.env.CODEISLAND_REMOTE_HOST_NAME || "";
-        """
+        // The shipped resource, not a hand-written stand-in: the stand-in is why
+        // #78 survived a green suite.
+        let shipped = try XCTUnwrap(RemoteInstaller.remoteOpencodePluginSource())
 
-        let plugin = RemoteInstaller.remoteOpencodePluginForInstall(source: source, host: host)
+        let plugin = try XCTUnwrap(
+            RemoteInstaller.remoteOpencodePluginForInstall(source: shipped, host: host)
+        )
 
         XCTAssertTrue(plugin.contains(#"const SOCKET_PATH = "/tmp/codeisland.sock";"#))
         XCTAssertTrue(plugin.contains(#"const REMOTE_HOST_ID = "host-\"quoted\"";"#))
         XCTAssertTrue(plugin.contains(#"const REMOTE_HOST_NAME = "devbox\nwest";"#))
+        XCTAssertFalse(plugin.contains("__MORROW_"), "no placeholder survives the install")
+    }
+
+    func testRemoteOpencodePluginRefusesASourceWithoutItsPlaceholders() {
+        // A resource that lost a placeholder must stop the install rather than
+        // ship a plugin that sends nowhere (#78).
+        let host = RemoteHost(id: "host-1", name: "devbox", host: "example.com")
+        let stale = #"const SOCKET_PATH = process.env.CODEISLAND_SOCKET_PATH || "/tmp/codeisland.sock";"#
+
+        XCTAssertNil(RemoteInstaller.remoteOpencodePluginForInstall(source: stale, host: host))
     }
 
     func testRemoteInstallerConfigureScriptInjectsPerUserSocketPath() {
@@ -1167,25 +1177,37 @@ hooks:
         let shipped = try XCTUnwrap(RemoteInstaller.remoteOpencodePluginSource())
         let shared = RemoteHost(id: "host-1", name: "devbox", host: "example.com", agentsRunAsOtherUsers: true)
         let socketPath = RemoteInstaller.remoteSocketPath(forUID: "1000")
-        let installed = RemoteInstaller.remoteOpencodePluginForInstall(source: shipped, host: shared, remoteSocketPath: socketPath)
+        let installed = try XCTUnwrap(RemoteInstaller.remoteOpencodePluginForInstall(source: shipped, host: shared, remoteSocketPath: socketPath))
         XCTAssertTrue(installed.contains(#"const SOCKET_OWNER_UID = "1000";"#))
         XCTAssertFalse(installed.contains("process.env.CODEISLAND_SOCKET_OWNER_UID"), "never the agent's environment's")
 
         // Not where agents run as the SSH user, nor for a path that names no
         // user: the plugin then uses only its own user's socket.
         let own = RemoteHost(id: "host-1", name: "devbox", host: "example.com")
-        XCTAssertTrue(RemoteInstaller.remoteOpencodePluginForInstall(source: shipped, host: own, remoteSocketPath: socketPath)
-            .contains(#"const SOCKET_OWNER_UID = "";"#))
-        XCTAssertTrue(RemoteInstaller.remoteOpencodePluginForInstall(source: shipped, host: shared, remoteSocketPath: "/tmp/codeisland.sock")
-            .contains(#"const SOCKET_OWNER_UID = "";"#))
+        XCTAssertEqual(
+            RemoteInstaller.remoteOpencodePluginForInstall(source: shipped, host: own, remoteSocketPath: socketPath)?
+                .contains(#"const SOCKET_OWNER_UID = "";"#),
+            true
+        )
+        XCTAssertEqual(
+            RemoteInstaller.remoteOpencodePluginForInstall(source: shipped, host: shared, remoteSocketPath: "/tmp/codeisland.sock")?
+                .contains(#"const SOCKET_OWNER_UID = "";"#),
+            true
+        )
     }
 
-    func testRemoteOpencodePluginInjectsPerUserSocketPath() {
+    func testRemoteOpencodePluginInjectsPerUserSocketPath() throws {
         // #193
         let host = RemoteHost(id: "host-1", name: "devbox", host: "example.com")
-        let source = #"const SOCKET_PATH = process.env.CODEISLAND_SOCKET_PATH || "/tmp/codeisland.sock";"#
+        let shipped = try XCTUnwrap(RemoteInstaller.remoteOpencodePluginSource())
 
-        let plugin = RemoteInstaller.remoteOpencodePluginForInstall(source: source, host: host, remoteSocketPath: "/tmp/codeisland-1000/island.sock")
+        let plugin = try XCTUnwrap(
+            RemoteInstaller.remoteOpencodePluginForInstall(
+                source: shipped,
+                host: host,
+                remoteSocketPath: "/tmp/codeisland-1000/island.sock"
+            )
+        )
 
         XCTAssertTrue(plugin.contains(#"const SOCKET_PATH = "/tmp/codeisland-1000/island.sock";"#))
     }
@@ -1540,7 +1562,7 @@ hooks:
 
         let contents = try String(contentsOf: piExtensionPath)
         XCTAssertTrue(contents.contains("CodeIsland pi extension"))
-        XCTAssertTrue(contents.contains("// version: v6"))
+        XCTAssertTrue(contents.contains("// version: v7"))
         XCTAssertTrue(contents.contains("__codeislandAllowedToolCalls"))
         XCTAssertTrue(contents.contains("@earendil-works/pi-coding-agent"))
         // pi-subagents children name their parent's card (#378).
@@ -1663,7 +1685,7 @@ hooks:
             )
 
             let rewritten = try String(contentsOf: ompExtensionPath)
-            XCTAssertTrue(rewritten.contains("// version: v10"))
+            XCTAssertTrue(rewritten.contains("// version: v11"))
             XCTAssertTrue(
                 ConfigInstaller.isOmpExtensionInstalled(
                     ompExtensionPath: ompExtensionPath.path,
@@ -1691,7 +1713,7 @@ hooks:
 
         let contents = try String(contentsOf: ompExtensionPath)
         XCTAssertTrue(contents.contains("CodeIsland pi extension"))
-        XCTAssertTrue(contents.contains("// version: v10"))
+        XCTAssertTrue(contents.contains("// version: v11"))
         XCTAssertTrue(contents.contains("@oh-my-pi/pi-coding-agent"))
         XCTAssertFalse(contents.contains("@earendil-works/pi-coding-agent"))
         // OMP subagents name their parent's card (#378).
