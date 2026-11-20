@@ -53,7 +53,8 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 2 | #136 → PR #140 | sisa #97: parsing checklist (`AgentTaskTool`, event hook/transcript, `scan` backfill) | `PR dibuka` (stacked on #137) | 9 test parsing; `ScanDelta.task_events` terisi urut |
 | 2 | #139 → PR #142 | `AgentTaskList` (dedupe, park, undo, pensiun plan per-turn, linger, rebuild attach, persistensi) + `Snapshot.agent_tasks` | `PR dibuka` (stacked on #140) | 38/39 test list-side; `scanFile` tetap di platform |
 | 3 | #98 → PR #145/#146 | installer hook Claude Code: editor + rencana (#144), lalu crate `morrow-platform` + kartu Settings | `PR dibuka` (stacked #142 → #145 → #146) | 14 + 18 + 9 test; sisa hanya **E2E-2** di desktop Linux nyata |
-| 3 | #99–#104 | Linux lengkap: adapter, tray, hotkey, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
+| 3 | #99 → PR #147 | 7 target JSON hook (Codex, Gemini, Cursor, Qoder, Droid, CodeBuddy, Copilot) | `PR dibuka` (stacked #142→#145→#146→#147) | 19 test; sisa: OpenCode, flag TOML Codex, wiring kartu Settings |
+| 3 | #100–#104 | Linux lengkap: source YAML/TOML, adapter, tray, hotkey, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
 | 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
@@ -93,6 +94,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 11) — #99 rencana 7 target hook (PR #147)
+
+- **Sudah:** `installer::targets` — tabel + `install`/`uninstall`/`is_installed` untuk tujuh target JSON hook (Codex nested, Gemini nested dengan timeout milidetik + `--event`, Cursor flat + `--event`, Qoder/Droid/CodeBuddy format Claude, Copilot `bash`+`timeoutSec` dengan `version: 1`). Entri kita diganti per event (bukan ditumpuk) sehingga entri usang diperbaiki; uninstall menghapus kunci `hooks` yang jadi kosong; semuanya lewat `json_editor` jadi komentar JSON5 pengguna utuh; file yang tidak bisa di-parse ditolak. Shared helper baru `installer::settings` dipakai juga oleh `claude_hooks`. Test **19**; gate hijau. **PR #147** terhadap #146.
+- **Berikutnya:** sambungkan ketujuh target ke kartu Settings (sekarang baru Claude), lalu OpenCode (plugin), flag `hooks = true` Codex di `config.toml`, dan #100 (source YAML/TOML).
+- **Blocker:** review stack #145/#146/#147; E2E-2 tetap milik #98 dan butuh desktop Linux nyata.
 
 ### 2026-11-20 (lanjutan 10) — #98 bagian install (PR #146)
 
