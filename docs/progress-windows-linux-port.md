@@ -68,6 +68,12 @@ Stack PR dan urutan merge: body #33, bagian **Stack PR**. Ringkas: mandiri #51, 
 
 ## Log Checkpoint
 
+### 2026-11-20 (lanjutan 4) — #49 disiapkan, jalur merge dipetakan
+
+- **Sudah:** merge `origin/main` → `docs/#33` dicoba di worktree terpisah (`~/dev/Morrow-49`, siap, belum di-commit). Hasil: **satu** file bentrok, `AGENTS.md` (add/add); versi branch = versi `main` + §7 port + *Agent skills* + aturan resource budget, jadi resolusi = ambil versi branch (tidak ada isi `main` yang hilang). Permintaan aazhrt kedua sudah beres: `.github/workflows` tidak ada di branch maupun di `main`. **Temuan:** commit merge itu ditolak `.githooks/pre-commit` dari `main` (`BLOCKED: .woodpecker.yaml`, #124); dengan diff PR #126 diterapkan, guard lolos — jadi #49 hanya bisa di-push setelah **#126** merge. Komentar tag dipasang di #126, #115, #49, #114, #51, #120 (rantai #120–#125 dan #127–#133).
+- **Berikutnya:** begitu #126 di-approve+merge → commit+push merge #49, minta re-review aazhrt (dismiss `CHANGES_REQUESTED` lama), lalu #114 + #51 di-merge, lalu rantai Rust di-retarget ke `main` dari bawah (#50 → #120 … → #133).
+- **Blocker:** approval #126 (@aazhrt); 3 OQ #115 (@fzrsahi, @agungdunggio); run E2E-1 di X11 nyata. Catatan: worktree `~/dev/Morrow-134` (branch `chore/#134-integrate-stacks`, belum di-push) ada di mesin dev — bukan buatan sesi ini.
+
 ### 2026-11-20 (lanjutan 3) — #97 selesai, PR #133 dibuka (stacked on #132)
 
 - **Sudah:** `JSONLTailer` diport ke `shared/crates/morrow-core/src/transcript.rs`: `scan_lines` murni untuk semua bentuk baris (Claude + command echo + wrapper `<system-reminder>`/`<USER_REQUEST>`, Antigravity `USER_INPUT`/`PLANNER_RESPONSE`, Codex `event_msg`/`response_item`, Grok, MiniMax thinking blob, Cursor `role`-keyed + sinyal `AskQuestion`), plus `TailState` (offset, fragment, replay file yang diganti, rewind saat truncate) dan `scan_tail_for_attach` (backfill yang tahu batas jendela). Test: **70** lulus (dua test `DispatchSource` milik watcher tidak diport). `linux-test.sh` hijau; `morrow-core` tetap 20 crate murni. PR #133 dibuka terhadap base `feat/#96-core-git-markdown` (#132).
