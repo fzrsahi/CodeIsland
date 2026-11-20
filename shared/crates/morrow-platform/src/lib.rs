@@ -25,6 +25,7 @@ pub mod lock;
 pub mod music;
 pub mod notify;
 pub mod opencode;
+pub mod panel;
 pub mod process;
 pub mod runner;
 pub mod settings;

@@ -145,6 +145,12 @@ impl Connection {
         &self.stream
     }
 
+    /// Bounds each read of the reply. The portable name for [`Self::stream`]'s
+    /// timeout, because a named pipe has no per-call timeout to set (#105).
+    pub fn set_read_timeout(&self, timeout: Option<Duration>) -> io::Result<()> {
+        self.stream.set_read_timeout(timeout)
+    }
+
     /// Reads the request: everything until the client half-closes.
     pub fn read_request(&mut self) -> io::Result<Vec<u8>> {
         let mut request = Vec::new();

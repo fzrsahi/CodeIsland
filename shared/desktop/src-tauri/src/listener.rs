@@ -21,7 +21,9 @@ const ACCEPT_BACKOFF: Duration = Duration::from_millis(100);
 /// How often a held request checks that its hook is still there.
 const PEER_CHECK: Duration = Duration::from_millis(100);
 
-pub fn spawn(server: Server, feed: Arc<Feed>) {
+// `mut` is for the Windows `accept`, which takes the pipe by `&mut`.
+#[allow(unused_mut)]
+pub fn spawn(mut server: Server, feed: Arc<Feed>) {
     thread::Builder::new()
         .name("morrow-listener".into())
         .spawn(move || {
@@ -42,7 +44,7 @@ pub fn spawn(server: Server, feed: Arc<Feed>) {
 }
 
 fn serve(mut connection: Connection, feed: &Arc<Feed>) {
-    let _ = connection.stream().set_read_timeout(Some(READ_TIMEOUT));
+    let _ = connection.set_read_timeout(Some(READ_TIMEOUT));
     let request = match connection.read_request() {
         Ok(request) => request,
         Err(error) => {

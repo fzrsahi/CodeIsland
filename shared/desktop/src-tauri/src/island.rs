@@ -39,6 +39,12 @@ pub fn create(app: &App) -> tauri::Result<()> {
         .visible(false)
         .build()?;
     fit(&window, COLLAPSED.0, COLLAPSED.1, app.state::<Smoke>().0)?;
+    // A panel without its Windows hooks still shows; it only behaves like an
+    // ordinary window, which is worth a log line rather than no island at all.
+    #[cfg(windows)]
+    if let Err(error) = crate::windows_panel::install(&window) {
+        eprintln!("morrow: the panel's Windows hooks were not installed: {error}");
+    }
     window.show()
 }
 
@@ -64,6 +70,20 @@ pub struct Rect {
     y: f64,
     width: f64,
     height: f64,
+}
+
+/// A Question card opened or closed: on Windows the panel takes keyboard focus
+/// for as long as it is open, and gives it back when it closes (#106). On other
+/// platforms the window can always be focused, so this is a no-op.
+#[tauri::command]
+pub fn island_question_focus(window: WebviewWindow, open: bool) -> Result<(), String> {
+    #[cfg(windows)]
+    return crate::windows_panel::set_question_focus(&window, open);
+    #[cfg(not(windows))]
+    {
+        let _ = (window, open);
+        Ok(())
+    }
 }
 
 /// The frontend laid out card `id` and fitted the window to it. Smoke mode
@@ -125,6 +145,25 @@ fn fit<R: Runtime>(
     })?;
     window.set_size(PhysicalSize::new(w, h))?;
     window.set_position(PhysicalPosition::new(x, y))?;
+    // Windows hit-tests the rounded shape itself (#106); the island fills the
+    // window here, and the two numbers travel together so a click can never be
+    // answered with a stale rectangle.
+    #[cfg(windows)]
+    crate::windows_panel::set_panel(morrow_platform::panel::Panel {
+        window: morrow_platform::panel::Rect::new(
+            x,
+            y,
+            i32::try_from(w).unwrap_or(i32::MAX),
+            i32::try_from(h).unwrap_or(i32::MAX),
+        ),
+        island: morrow_platform::panel::Rect::new(
+            0,
+            0,
+            i32::try_from(w).unwrap_or(i32::MAX),
+            i32::try_from(h).unwrap_or(i32::MAX),
+        ),
+        radius: i32::try_from(h / 2).unwrap_or(i32::MAX),
+    });
     if smoke {
         println!("morrow-smoke: fit x={x} y={y} w={w} h={h}");
     }

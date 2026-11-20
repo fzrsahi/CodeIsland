@@ -34,8 +34,25 @@ cargo xwin --version >/dev/null 2>&1 \
 # resource file and needs `llvm-rc`, which a bare macOS/Linux toolchain does not
 # ship. It joins when the shell carries Windows arms (#106/#107) and the lane's
 # image has LLVM.
+# `morrow-app` needs `llvm-rc` for the Windows resource file tauri-build generates.
+# A toolchain that has it gets the shell checked too; one that does not says so
+# instead of failing on a missing tool.
+LLVM_RC=""
+if command -v llvm-rc >/dev/null; then
+  LLVM_RC="$(command -v llvm-rc)"
+elif [ -x "$(brew --prefix llvm 2>/dev/null)/bin/llvm-rc" ]; then
+  LLVM_RC="$(brew --prefix llvm)/bin/llvm-rc"
+fi
+CRATES=(morrow-ipc morrow-bridge morrow-platform morrow-core)
+if [ -n "$LLVM_RC" ]; then
+  CRATES+=(morrow-app)
+  export PATH="$(dirname "$LLVM_RC"):$PATH"
+else
+  say "SKIP  morrow-app: llvm-rc is not on PATH (brew install llvm), and tauri-build needs it for the Windows resource file"
+fi
+
 failed=0
-for crate in morrow-ipc morrow-bridge morrow-platform morrow-core; do
+for crate in "${CRATES[@]}"; do
   printf '\n==> cargo xwin clippy -p %s --all-targets -- -D warnings\n' "$crate" | tee -a "$LOG"
   if cargo xwin clippy -p "$crate" --all-targets --target "$TARGET" --locked -- -D warnings 2>&1 \
       | tee -a "$LOG"; then

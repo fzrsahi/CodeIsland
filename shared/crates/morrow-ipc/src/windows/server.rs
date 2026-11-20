@@ -134,6 +134,11 @@ impl Server {
     }
 }
 
+// A Win32 handle is valid in any thread of the process: the shell accepts on a
+// thread of its own, so both of these have to cross.
+unsafe impl Send for Server {}
+unsafe impl Send for Connection {}
+
 impl Drop for Server {
     fn drop(&mut self) {
         unsafe {
@@ -188,7 +193,9 @@ impl Connection {
         unsafe { GetNamedPipeClientProcessId(self.handle, &mut pid) }.is_err()
     }
 
-    /// No-op: pipes have no per-call timeout to set, and the caller's own
-    /// deadlines cover the wait.
-    pub fn set_timeouts(&self, _read: Option<Duration>) {}
+    /// No-op: a named pipe has no per-call timeout to set, and the caller's own
+    /// deadline covers the wait. Present so the shell reads the same on both.
+    pub fn set_read_timeout(&self, _timeout: Option<Duration>) -> io::Result<()> {
+        Ok(())
+    }
 }

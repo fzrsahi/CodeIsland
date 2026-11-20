@@ -13,6 +13,8 @@ mod permissions;
 mod sessions;
 mod settings;
 mod tray;
+#[cfg(windows)]
+mod windows_panel;
 
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -117,7 +119,8 @@ fn main() -> ExitCode {
             adapters::process_watch,
             adapters::process_alive,
             adapters::screen_locked,
-            adapters::notify_send
+            adapters::notify_send,
+            island::island_question_focus
         ])
         .setup(|app| {
             island::create(app)?;
