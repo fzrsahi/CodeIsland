@@ -1,7 +1,7 @@
 # Progress — Windows & Linux port
 
-**Status:** fase 1 selesai di PR (#120–#125, gate E2E-1 hijau di Xvfb, menunggu X11 nyata); fase 2 (#127, #128, #130, #131, #132, #133). Core = **Rust** (#117).
-**Checkpoint terakhir:** 2026-11-20 — PR #133 dibuka untuk #97 (transcript tail di `morrow-core`: 70 test, `TailState` murni untuk offset/rotasi).
+**Status:** #126 sudah merged (guard #124 beres); fase 1 selesai di PR (#120–#125, gate E2E-1 hijau di Xvfb, menunggu X11 nyata); fase 2 (#127, #128, #130, #131, #132, #133). Core = **Rust** (#117).
+**Checkpoint terakhir:** 2026-11-20 — #126 merged (`f812e7b`), `main` ditarik ke `docs/#33` (konflik `AGENTS.md` selesai) dan #49 menunggu re-review.
 **Fase kanonik:** [`plan-windows-linux.md`](plan-windows-linux.md) §7. Kalau dokumen ini berbeda dengan §7, §7 yang benar.
 
 ---
@@ -34,6 +34,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 0 | PR #52 | `ci(#33)`: pipefail XCTest | `dilewati` — ditutup, digantikan #111 | — |
 | 0 | #78 | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `belum` — menunggu 3 keputusan kontrak di PR #115 | test plugin memakai `fixtures/endpoint/cases.json` |
 | 0.5 | #83 → PR #114 | skrip CI macOS `test`/`package`/`manifest` | `merged` (`c695753`, 2026-11-20) | pipeline hijau + satu run sengaja merah |
+| 0.5 | #124 → PR #126 | guard `verify-local.sh` mengizinkan merge yang membawa CI upstream | `merged` (`f812e7b`, 2026-11-20) | merge `main` → branch fitur tidak diblokir lagi |
 | 0.5 | #84 → PR #115 | kontrak endpoint + 38 kasus | `PR dibuka` — 3 open question ditanyakan ke kolaborator | Swift `SocketPath.resolve` lulus kasus macOS |
 | 0.5 | #85 → PR #117 | eksperimen Opsi E | `PR dibuka` — hijau 96,8%, tapi **ditolak → Rust** | ADR-0003 `rejected`, keputusan di ADR-0001 |
 | 0.5 | #86 → PR #118 | layout monorepo (skrip replay) | `PR dibuka` (draft) — dijalankan ulang setelah PR lain merge; bagian `.woodpecker.yaml` perlu @aazhrt | `swift test` + DMG hijau, nol perubahan perilaku |
@@ -67,6 +68,12 @@ Stack PR dan urutan merge: body #33, bagian **Stack PR**. Ringkas: **sudah merge
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 5) — #126 merged, #49 lepas dari konflik
+
+- **Sudah:** **#126 merged** (`f812e7b`, branch dihapus), jadi guard `.githooks/pre-commit` tidak lagi memblokir merge `main` ke branch fitur (#124 tutup). `main` (`f812e7b`) ditarik ke `docs/#33`; konflik **satu** file (`AGENTS.md`) diselesaikan dengan versi branch (isi `main` + §7 port + *Agent skills* + batas resource), guard jalur merge lolos (`✅ Local verification passed`), commit `c780771`. Papan diperbarui: #51, #114, #126 merged. Catatan proses: dua komentar tag saya di #51/#114 sempat salah karena memakai snapshot basi; sudah dikoreksi di PR-nya.
+- **Berikutnya:** minta @aazhrt mencabut `CHANGES_REQUESTED` lama di #49 (hanya dia/admin yang bisa) → merge #49 → retarget #50/#117/#127 ke `main` → merge rantai Rust dari bawah (#120 → #125, #127 → #133). E2E-1 di X11 nyata tetap jadi syarat penutup fase 1.
+- **Blocker:** re-review #49 (@aazhrt); 3 OQ #115 (@fzrsahi, @agungdunggio); run E2E-1 di X11 nyata.
 
 ### 2026-11-20 (lanjutan 4) — #49 disiapkan, jalur merge dipetakan
 
