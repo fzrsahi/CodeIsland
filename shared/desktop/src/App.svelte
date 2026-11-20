@@ -29,7 +29,14 @@
     settings: string;
     settings_exists: boolean;
   };
-  type HooksSnapshot = { status: HooksStatus; version: string | null };
+  type TargetStatus = {
+    source: string;
+    name: string;
+    detected: boolean;
+    installed: boolean;
+    path: string;
+  };
+  type HooksSnapshot = { status: HooksStatus; targets: TargetStatus[]; version: string | null };
 
   let sessions = $state<Session[]>([]);
   let cards = $state<Card[]>([]);
@@ -53,9 +60,21 @@
   }
 
   async function runHooks(command: 'hooks_install' | 'hooks_uninstall') {
+    await run(() => invoke(command));
+  }
+
+  // One of the other CLIs: install when its file has no hook of ours, remove
+  // when it has. The shell skips a CLI that is not on this machine.
+  async function toggleTarget(row: TargetStatus) {
+    await run(() =>
+      invoke(row.installed ? 'target_uninstall' : 'target_install', { source: row.source }),
+    );
+  }
+
+  async function run(action: () => Promise<unknown>) {
     hooksBusy = true;
     try {
-      await invoke(command);
+      await action();
       await loadHooks();
     } catch (error) {
       hooksError = String(error);
@@ -146,6 +165,23 @@
             </button>
           {/if}
         </div>
+        {#if hooks.targets.length > 0}
+          <ul class="hooks-targets">
+            {#each hooks.targets as row (row.source)}
+              <li class:missing={!row.detected}>
+                <span class="hooks-name">{row.name}</span>
+                <span class="hooks-state">
+                  {row.installed ? 'Installed' : row.detected ? 'Not installed' : 'Not detected'}
+                </span>
+                {#if row.detected}
+                  <button class="hooks-button" disabled={hooksBusy} onclick={() => toggleTarget(row)}>
+                    {row.installed ? 'Remove' : 'Install'}
+                  </button>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+        {/if}
       {:else}
         <div class="hooks-line">Checking…</div>
       {/if}
@@ -240,6 +276,31 @@
   }
   .hooks-button:disabled {
     opacity: 0.5;
+  }
+  .hooks-targets {
+    margin: 0 0 6px;
+    padding: 0;
+    list-style: none;
+  }
+  .hooks-targets li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+    font-size: 12px;
+  }
+  .hooks-targets li.missing {
+    color: #6a6a6a;
+  }
+  .hooks-name {
+    flex: 0 0 84px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .hooks-state {
+    flex: 1;
+    color: #9a9a9a;
   }
   .hooks-error {
     margin-top: 6px;

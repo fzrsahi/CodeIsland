@@ -12,6 +12,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use morrow_core::installer::claude_hooks;
+use morrow_core::installer::targets::{self, Target};
 
 /// Bumped when the script below changes, so an install from an older build is
 /// rewritten instead of left in place (`hookScriptVersion`).
@@ -33,6 +34,8 @@ pub fn hook_script() -> String {
 /// Where everything lives. `config_dir` is Claude Code's, i.e.
 /// `$CLAUDE_CONFIG_DIR` when set, `~/.claude` otherwise.
 pub struct Paths {
+    /// The user's home: every other CLI's file hangs off it.
+    pub home: PathBuf,
     /// `~/.codeisland` — this user's alone; holds sessions and the hook.
     pub codeisland_dir: PathBuf,
     /// The script every hook command names.
@@ -48,6 +51,7 @@ impl Paths {
         let codeisland_dir = home.join(".codeisland");
         let config_dir = config_dir.map_or_else(|| home.join(".claude"), Path::to_path_buf);
         Self {
+            home: home.to_path_buf(),
             script: codeisland_dir.join("codeisland-hook.sh"),
             bridge: codeisland_dir.join("morrow-bridge"),
             settings: config_dir.join("settings.json"),
@@ -66,6 +70,111 @@ pub struct Status {
     pub hooks_installed: bool,
     pub settings: PathBuf,
     pub settings_exists: bool,
+}
+
+/// One of the other hook targets, and where its file stands.
+#[derive(Debug, PartialEq, Eq, serde::Serialize)]
+pub struct TargetStatus {
+    pub source: &'static str,
+    pub name: &'static str,
+    /// The CLI's own directory is there: without it there is nothing to hook
+    /// (`installExternalHooks` skips rather than creating one).
+    pub detected: bool,
+    pub installed: bool,
+    pub path: PathBuf,
+}
+
+/// Every target the core knows, in table order.
+pub fn targets_status(paths: &Paths) -> Vec<TargetStatus> {
+    targets::TARGETS
+        .iter()
+        .map(|target| {
+            let path = paths.home.join(target.path);
+            let text = read_text(&path).ok().flatten();
+            TargetStatus {
+                source: target.source,
+                name: target.name,
+                detected: cli_dir_exists(paths, target),
+                installed: text
+                    .as_deref()
+                    .is_some_and(|text| targets::is_installed(target, text)),
+                path,
+            }
+        })
+        .collect()
+}
+
+/// The directory each CLI proves itself by. Codex keeps `~/.codex`, Gemini
+/// `~/.gemini`; a file the user has never run their CLI for is ours to leave
+/// alone.
+const CLI_DIRS: &[(&str, &str)] = &[
+    ("codex", ".codex"),
+    ("gemini", ".gemini"),
+    ("cursor", ".cursor"),
+    ("qoder", ".qoder"),
+    ("droid", ".factory"),
+    ("codebuddy", ".codebuddy"),
+    ("copilot", ".copilot"),
+];
+
+/// Install or repair one target. `None` when the CLI is not on this machine, or
+/// when its file does not parse as a JSON object (nothing is written then).
+pub fn install_target(paths: &Paths, source: &str, stamp: &str) -> Result<Option<Report>, Error> {
+    let Some(target) = targets::target_for(source) else {
+        return Err(Error::Io(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("no hook target named {source}"),
+        )));
+    };
+    if !cli_dir_exists(paths, target) {
+        return Ok(None);
+    }
+    let path = paths.home.join(target.path);
+    let existing = read_text(&path)?;
+    let outcome = targets::install(target, existing.as_deref(), claude_hooks::HOOK_COMMAND)
+        .ok_or_else(|| Error::UnparseableSettings(path.clone()))?;
+
+    let mut report = Report::default();
+    if outcome.changed {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        if existing.is_some() {
+            report.backup = back_up(&path, stamp)?;
+        }
+        fs::write(&path, &outcome.text)?;
+        report.settings_changed = true;
+    }
+    Ok(Some(report))
+}
+
+/// Take one target's hook back out.
+pub fn uninstall_target(paths: &Paths, source: &str) -> Result<Option<Report>, Error> {
+    let Some(target) = targets::target_for(source) else {
+        return Err(Error::Io(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("no hook target named {source}"),
+        )));
+    };
+    let path = paths.home.join(target.path);
+    let Some(existing) = read_text(&path)? else {
+        return Ok(None);
+    };
+    let outcome = targets::uninstall(target, &existing)
+        .ok_or_else(|| Error::UnparseableSettings(path.clone()))?;
+    let mut report = Report::default();
+    if outcome.changed {
+        fs::write(&path, &outcome.text)?;
+        report.settings_changed = true;
+    }
+    Ok(Some(report))
+}
+
+fn cli_dir_exists(paths: &Paths, target: &Target) -> bool {
+    CLI_DIRS
+        .iter()
+        .find(|(source, _)| *source == target.source)
+        .is_none_or(|(_, directory)| paths.home.join(directory).is_dir())
 }
 
 /// What an install or uninstall did.

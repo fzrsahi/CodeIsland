@@ -79,7 +79,9 @@ fn main() -> ExitCode {
             island::smoke_card,
             hooks::hooks_status,
             hooks::hooks_install,
-            hooks::hooks_uninstall
+            hooks::hooks_uninstall,
+            hooks::target_install,
+            hooks::target_uninstall
         ])
         .setup(|app| Ok(island::create(app)?))
         .run(tauri::generate_context!());

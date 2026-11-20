@@ -254,3 +254,119 @@ fn a_missing_bridge_source_still_installs_the_script() {
             .contains("[ -x \"$BRIDGE\" ] || exit 0")
     );
 }
+
+// MARK: - The other hook targets (#99)
+
+fn cli_dir(home: &Home, name: &str) {
+    fs::create_dir_all(home.root.join(name)).expect("cli dir");
+}
+
+#[test]
+fn a_target_without_its_cli_is_left_alone() {
+    let home = Home::new("target-absent");
+    let paths = home.paths();
+
+    // `~/.cursor` does not exist: nothing to hook, nothing written.
+    assert_eq!(
+        hooks::install_target(&paths, "cursor", STAMP).expect("no-op"),
+        None
+    );
+    assert!(!home.root.join(".cursor").exists());
+
+    let status = hooks::targets_status(&paths);
+    let cursor = status
+        .iter()
+        .find(|row| row.source == "cursor")
+        .expect("cursor");
+    assert!(!cursor.detected);
+    assert!(!cursor.installed);
+}
+
+#[test]
+fn a_detected_target_gets_its_file_and_its_back_up() {
+    let home = Home::new("target-install");
+    let paths = home.paths();
+    cli_dir(&home, ".cursor");
+    let settings = home.root.join(".cursor/hooks.json");
+    home.write(&settings, "{\n  \"telemetry\": false\n}\n");
+
+    let report = hooks::install_target(&paths, "cursor", STAMP)
+        .expect("install")
+        .expect("a report");
+    assert!(report.settings_changed);
+    let backup = report.backup.expect("a back-up");
+    assert_eq!(home.read(&backup), "{\n  \"telemetry\": false\n}\n");
+
+    let text = home.read(&settings);
+    assert!(text.contains("\"beforeSubmitPrompt\""));
+    assert!(
+        text.contains("--source cursor --event beforeSubmitPrompt"),
+        "{text}"
+    );
+    assert!(text.contains("\"telemetry\": false"));
+
+    // Installed, and a second run changes nothing.
+    let status = hooks::targets_status(&paths);
+    assert!(
+        status
+            .iter()
+            .find(|row| row.source == "cursor")
+            .expect("cursor")
+            .installed
+    );
+    let again = hooks::install_target(&paths, "cursor", "2026-11-21T00:00:00Z")
+        .expect("reinstall")
+        .expect("a report");
+    assert!(!again.settings_changed);
+    assert_eq!(home.read(&settings), text);
+}
+
+#[test]
+fn a_target_install_creates_the_hooks_directory_copilot_needs() {
+    let home = Home::new("target-copilot");
+    let paths = home.paths();
+    cli_dir(&home, ".copilot");
+
+    hooks::install_target(&paths, "copilot", STAMP)
+        .expect("install")
+        .expect("a report");
+    let text = home.read(&home.root.join(".copilot/hooks/codeisland.json"));
+    assert!(text.contains("\"version\""));
+    assert!(text.contains("--event preToolUse"));
+}
+
+#[test]
+fn a_target_uninstall_gives_the_file_back() {
+    let home = Home::new("target-uninstall");
+    let paths = home.paths();
+    cli_dir(&home, ".gemini");
+    let settings = home.root.join(".gemini/settings.json");
+    let original = "{\n  \"theme\": \"dark\"\n}\n";
+    home.write(&settings, original);
+
+    hooks::install_target(&paths, "gemini", STAMP).expect("install");
+    assert_ne!(home.read(&settings), original);
+    hooks::uninstall_target(&paths, "gemini").expect("uninstall");
+    assert_eq!(home.read(&settings), original);
+}
+
+#[test]
+fn an_unparseable_target_file_refuses_and_writes_nothing() {
+    let home = Home::new("target-refuse");
+    let paths = home.paths();
+    cli_dir(&home, ".codex");
+    let settings = home.root.join(".codex/hooks.json");
+    home.write(&settings, "{ \"hooks\": [");
+
+    let error = hooks::install_target(&paths, "codex", STAMP).expect_err("refuses");
+    assert!(matches!(error, Error::UnparseableSettings(_)), "{error}");
+    assert_eq!(home.read(&settings), "{ \"hooks\": [");
+}
+
+#[test]
+fn an_unknown_target_is_an_error_not_a_silent_no_op() {
+    let home = Home::new("target-unknown");
+    let paths = home.paths();
+    assert!(hooks::install_target(&paths, "nope", STAMP).is_err());
+    assert!(hooks::uninstall_target(&paths, "nope").is_err());
+}

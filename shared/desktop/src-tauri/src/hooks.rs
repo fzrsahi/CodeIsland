@@ -4,7 +4,7 @@
 
 use std::path::PathBuf;
 
-use morrow_platform::hooks::{self, Paths, Report, Status};
+use morrow_platform::hooks::{self, Paths, Report, Status, TargetStatus};
 use tauri::State;
 
 use crate::HooksSite;
@@ -13,6 +13,8 @@ use crate::HooksSite;
 #[derive(serde::Serialize)]
 pub struct HooksSnapshot {
     status: Status,
+    /// The other hook targets and where each one's file stands.
+    targets: Vec<TargetStatus>,
     /// The Claude Code version the plan was made for, from `claude --version`.
     version: Option<String>,
 }
@@ -23,6 +25,7 @@ pub fn hooks_status(site: State<'_, HooksSite>) -> HooksSnapshot {
     let version = claude_version();
     HooksSnapshot {
         status: hooks::status(&site.paths, version.as_deref()),
+        targets: hooks::targets_status(&site.paths),
         version,
     }
 }
@@ -39,6 +42,25 @@ pub fn hooks_install(site: State<'_, HooksSite>) -> Result<Report, String> {
         &stamp,
     )
     .map_err(|error| error.to_string())
+}
+
+/// Install or repair one of the other CLIs (`None` when that CLI is not on
+/// this machine, so there is nothing to hook).
+#[tauri::command]
+pub fn target_install(
+    site: State<'_, HooksSite>,
+    source: String,
+) -> Result<Option<Report>, String> {
+    hooks::install_target(&site.paths, &source, &stamp()).map_err(|error| error.to_string())
+}
+
+/// Take one CLI's hook back out.
+#[tauri::command]
+pub fn target_uninstall(
+    site: State<'_, HooksSite>,
+    source: String,
+) -> Result<Option<Report>, String> {
+    hooks::uninstall_target(&site.paths, &source).map_err(|error| error.to_string())
 }
 
 /// Remove: the script, the bridge, and our entries in `settings.json`.
