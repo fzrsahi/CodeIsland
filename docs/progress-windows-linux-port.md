@@ -116,6 +116,14 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 
 ## Log Checkpoint
 
+### 2026-11-20 (lanjutan 28) — korelasi PR ↔ tiket, dan penutupan saat merge
+
+- **Sudah:** 33 PR (stack port + #161) diseragamkan body-nya: baris pertama `Fixes #<tiket>`, lalu `Part of spec #82 · epic #33 · scope #<47|48>`, `Depends on #<PR induk>`, satu baris **Acceptance in this PR** (apa yang terbukti di PR ini vs apa yang masih gate), dan **Merge target** yang menyebut perintah retarget. `#152` menutup dua tiket sekaligus (`Fixes #100` + `Fixes #151`).
+- **Penting soal semantik GitHub:** closing keyword hanya berlaku bila PR di-merge ke **default branch** (`main`). Karena stack ini berantai ke branch induk, setiap PR harus **di-retarget ke `main` lebih dulu** (§5.3) — kalau tidak, tiketnya tetap terbuka meski body memuat `Fixes`. Karena merge memakai *merge commit* yang membawa body PR, keyword itu juga ikut ke pesan merge, jadi tetap berfungsi setelah retarget.
+- **Catatan jujur:** 11 PR belum muncul di daftar *linked issues* GitHub walau body-nya sama bentuknya (#117, #123, #125, #127, #156–#160, #162, plus #50 yang memang bukan `Fixes`). Itu pengindeksan di sisi GitHub, bukan isi body — penutupan tetap terjadi saat merge ke `main` dari keyword yang sama.
+- **Berikutnya:** @aazhrt dismiss #49 → rebase #117/#120 → retarget #50 → merge dari bawah; setiap PR di-retarget ke `main` tepat sebelum merge-nya.
+- **Blocker:** gate hardware tidak berubah.
+
 ### 2026-11-20 (lanjutan 27) — snapshot di Spec #82
 
 - **Sudah:** papan status disegarkan ke keadaan sebenarnya (fase 4 dan 5 tidak lagi `belum`), baris #78 → PR #161, baris #151 duplikat dihapus, dan *Snapshot* ditambahkan — angka yang sama diposkan sebagai komentar di Spec #82. 25 dari 26 tiket spec punya PR; 21 APPROVED, **0 merged**, #49 stale `CHANGES_REQUESTED` masih menahan seluruh rantai.
