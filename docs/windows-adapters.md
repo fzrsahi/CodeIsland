@@ -46,3 +46,33 @@ Core Audio on a device with an endpoint, WTS with a session that can actually lo
 toasts from an installed build, and a terminal whose window comes forward. The
 lane proves the code compiles against the real headers and types; it cannot prove
 the OS agrees.
+
+## The installer and the hook (#108)
+
+NSIS, per-user (`installMode: currentUser`): no administrator prompt, and the app
+writes only inside `%LOCALAPPDATA%`, `%USERPROFILE%` and `HKCU`. That is also why
+start-at-login is a `Run` value rather than a scheduled task or a service.
+
+**Beta is unsigned.** There is no Authenticode certificate, so SmartScreen shows
+"Windows protected your PC" until the user picks *More info → Run anyway*. This is
+a decision recorded for #70, and it is documented on the download page rather than
+worked around: the updater's own Ed25519 signature is separate and cannot be
+switched off.
+
+The hook installer (`morrow-platform::hooks_windows`) writes:
+
+| path | what |
+|---|---|
+| `%USERPROFILE%\.codeisland\morrow-hook.cmd` | the script every hook command names |
+| `%USERPROFILE%\.local\bin\morrow-bridge.exe` | the bridge, copied out of the package |
+| `%CLAUDE_CONFIG_DIR%\settings.json` (or `%USERPROFILE%\.claude\settings.json`) | the user's file, backed up once, never rewritten when it does not parse |
+
+The command recorded in `settings.json` is the **absolute, quoted** path of the
+`.cmd`: Claude Code hands the string to `cmd.exe`, which splits on spaces, and a
+profile folder can contain one. `%USERPROFILE%` would work in most contexts and
+fail in the one nobody tested.
+
+Only Claude Code is hooked by this build. The other eight CLIs' files are read by
+the same core policy, but their Windows locations are a follow-up: a path of
+`~/.codex/config.toml` on Windows names a file that does not exist, and Settings
+says so in a sentence rather than showing eight rows that do nothing.

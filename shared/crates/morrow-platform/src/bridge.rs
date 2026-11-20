@@ -39,11 +39,17 @@ pub struct Placed {
 /// Put `source` at the stable path, unless it is already there with the same
 /// content. An error is the sentence the installer reports.
 pub fn ensure(source: &Path, home: &Path) -> io::Result<Placed> {
-    let path = stable_path(home);
+    ensure_at(source, &stable_path(home))
+}
+
+/// The same copy, to a destination the caller names — `%USERPROFILE%\.local\bin\
+/// morrow-bridge.exe` on Windows, where the file has an extension and the stable
+/// path is spelled with a backslash (#108).
+pub fn ensure_at(source: &Path, path: &Path) -> io::Result<Placed> {
     let wanted = fs::read(source)?;
-    if fs::read(&path).is_ok_and(|current| current == wanted) {
+    if fs::read(path).is_ok_and(|current| current == wanted) {
         return Ok(Placed {
-            path,
+            path: path.to_path_buf(),
             copied: false,
         });
     }
@@ -56,6 +62,9 @@ pub fn ensure(source: &Path, home: &Path) -> io::Result<Placed> {
     // folder's ACLs, which is the same rule (this user, `~/.local/bin`).
     #[cfg(unix)]
     fs::set_permissions(&temp, std::os::unix::fs::PermissionsExt::from_mode(0o755))?;
-    fs::rename(&temp, &path)?;
-    Ok(Placed { path, copied: true })
+    fs::rename(&temp, path)?;
+    Ok(Placed {
+        path: path.to_path_buf(),
+        copied: true,
+    })
 }
