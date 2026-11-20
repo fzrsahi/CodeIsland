@@ -382,7 +382,7 @@ struct NotchPanelView: View {
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if signals.isPlaying || nowPlaying.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner || mailManager.showMailArrivalAnimation { return true }
+        if signals.isPlaying || nowPlaying.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner || mailManager.showMailArrivalAnimation || PrayerTimeManager.shared.testWingThinking { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
@@ -536,7 +536,7 @@ struct NotchPanelView: View {
 
     /// Derived in `AppState.refreshDerivedState()`; walking every session here
     /// ran on each render of the bar.
-    private var isThinking: Bool { appState.isThinking }
+    private var isThinking: Bool { appState.isThinking || PrayerTimeManager.shared.testWingThinking }
 
     private var hasQuotaChip: Bool {
         guard showAgentDetails, showClaudeQuota, !shouldShowExpanded, !nowPlaying.isPlaying,
@@ -602,10 +602,10 @@ struct NotchPanelView: View {
             return isThinking ? 118 : 52
         }
         if prayerManager.isPrayerPrioritized {
-            if rightWingWidth > 0 {
-                return max(92, min(rightWingWidth + 14, 140))
+            if isThinking {
+                return effectiveNaturalLeftWidth + badgeReserve
             }
-            return 96
+            return 56 + badgeReserve
         }
         if signals.isPlaying || nowPlaying.isPlaying {
             if isThinking && !isConnectedChinLyricActive {
@@ -757,7 +757,7 @@ struct NotchPanelView: View {
     /// Idle-indicator wing width that scales across 0%–200% Island Width when no sessions are active.
     private var idleIndicatorWingWidth: CGFloat {
         let minFloor: CGFloat = 32
-        let withPrayer = prayerManager.isEnabled ? max(idleBaseMascotWingWidth, IdleIndicatorBar.idlePrayerWingMinWidth) : idleBaseMascotWingWidth
+        let withPrayer = prayerManager.isPrayerPrioritized ? max(idleBaseMascotWingWidth, IdleIndicatorBar.idlePrayerWingMinWidth) : idleBaseMascotWingWidth
         let desired = mailManager.showMailArrivalAnimation ? max(withPrayer, 52) : withPrayer
         let maxWing = max(minFloor, (maxSafeCollapsedBarWidth - collapsedMinCenterGap) / 2)
         return min(desired, maxWing)
@@ -870,7 +870,7 @@ struct NotchPanelView: View {
                 if mailManager.showMailArrivalAnimation {
                     return min(collapsedNotchGapWidth + 52 * 2, maxSafeCollapsedBarWidth)
                 }
-                if prayerManager.isEnabled {
+                if prayerManager.isPrayerPrioritized {
                     return max(136, compactWingWidth + 96)
                 }
                 return CGFloat(IslandDisplayMetrics.restingWidth(
@@ -1944,7 +1944,7 @@ private struct CompactLeftWing: View {
         return displayStatus
     }
 
-    private var isThinking: Bool { appState.isThinking }
+    private var isThinking: Bool { appState.isThinking || PrayerTimeManager.shared.testWingThinking }
     private var liveTool: String? { displaySession?.currentTool }
     @State private var shownTool: String?
     @State private var lingerTimer: Timer?
@@ -2311,7 +2311,7 @@ private struct CompactRightWing: View {
     }
     /// Derived in `AppState.refreshDerivedState()`; walking every session here
     /// ran on each render of the bar.
-    private var isThinking: Bool { appState.isThinking }
+    private var isThinking: Bool { appState.isThinking || PrayerTimeManager.shared.testWingThinking }
     private var shouldExpandRightWing: Bool {
         isHovered
     }
@@ -2346,12 +2346,13 @@ private struct CompactRightWing: View {
     }
 
     private var rightInnerLeadingPadding: CGFloat {
-        (isNarrowCollapsedWing || (!isThinking && (signals.isPlaying || nowPlaying.isPlaying))) ? 2 : ((signals.isPlaying || nowPlaying.isPlaying) ? 3 : 6)
+        if !isThinking && signals.isPrayerPrioritized { return 0 }
+        return (isNarrowCollapsedWing || (!isThinking && (signals.isPlaying || nowPlaying.isPlaying))) ? 2 : ((signals.isPlaying || nowPlaying.isPlaying) ? 3 : 6)
     }
 
     private var rightInnerTrailingPadding: CGFloat {
         if expanded { return 10 }
-        if isNarrowCollapsedWing || mailManager.showMailArrivalAnimation || (!isThinking && (signals.isPlaying || nowPlaying.isPlaying)) { return 2 }
+        if isNarrowCollapsedWing || mailManager.showMailArrivalAnimation || (!isThinking && (signals.isPlaying || nowPlaying.isPlaying || signals.isPrayerPrioritized)) { return 2 }
         return (signals.isPlaying || nowPlaying.isPlaying) ? 4 : 8
     }
 
@@ -2424,8 +2425,11 @@ private struct CompactRightWing: View {
             .frame(maxWidth: .infinity, alignment: .trailing)
             .transition(.opacity)
         } else if signals.isPrayerPrioritized {
-            // SMART PRIORITY: Prayer countdown takes active priority at T <= 15m
-            PrayerCompactWingView(isHovered: shouldExpandRightWing) {
+            // SMART PRIORITY: Prayer countdown takes active priority at T <= 30m (frameless, strict budget)
+            PrayerCompactWingView(
+                isHovered: shouldExpandRightWing,
+                isWideMode: isThinking && (!isDynamicIslandCompact || hasNotch)
+            ) {
                 expandedTab = .prayer
                 appState.surface = .sessionList
             }
@@ -3857,7 +3861,7 @@ private struct IdleIndicatorBar: View {
         AppColorTheme.accent(for: musicHUDProgressColor, isModern: islandUITheme != IslandUITheme.pixel.rawValue)
     }
 
-    static let idlePrayerWingMinWidth: CGFloat = 124
+    static let idlePrayerWingMinWidth: CGFloat = 56
 
     static func wingWidth(compactWingWidth: CGFloat, hovered: Bool, prayerEnabled: Bool) -> CGFloat {
         let base = hovered ? (compactWingWidth + 6) : compactWingWidth
@@ -3866,7 +3870,7 @@ private struct IdleIndicatorBar: View {
 
     private var effectiveWingWidth: CGFloat {
         let baseRight = rightWingWidth ?? wingWidth
-        let withPrayer = PrayerTimeManager.shared.isEnabled ? max(baseRight, Self.idlePrayerWingMinWidth) : baseRight
+        let withPrayer = PrayerTimeManager.shared.isPrayerPrioritized ? max(baseRight, Self.idlePrayerWingMinWidth) : baseRight
         return mailManager.showMailArrivalAnimation ? max(withPrayer, 52) : withPrayer
     }
 
@@ -3891,8 +3895,8 @@ private struct IdleIndicatorBar: View {
                         .fill(Color.white.opacity(0.16))
                         .frame(width: 1, height: 12)
 
-                    if prayerManager.isEnabled {
-                        PrayerCompactWingView(isHovered: hovered, onExpand: onExpand)
+                    if prayerManager.isPrayerPrioritized {
+                        PrayerCompactWingView(isHovered: hovered, isWideMode: false, onExpand: onExpand)
                     } else {
                         HStack(spacing: 4) {
                             Text("Idle")
@@ -3947,8 +3951,8 @@ private struct IdleIndicatorBar: View {
                             .transition(.opacity)
                         } else {
                             Spacer(minLength: 0)
-                            if prayerManager.isEnabled {
-                                PrayerCompactWingView(isHovered: hovered, onExpand: onExpand)
+                            if prayerManager.isPrayerPrioritized {
+                                PrayerCompactWingView(isHovered: hovered, isWideMode: false, onExpand: onExpand)
                                     .padding(.trailing, trailingOuterPadding)
                             } else {
                                 Image(systemName: "chevron.down")
