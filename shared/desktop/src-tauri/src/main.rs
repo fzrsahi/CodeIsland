@@ -8,6 +8,7 @@ mod island;
 mod listener;
 mod permissions;
 mod sessions;
+mod settings;
 
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -90,7 +91,13 @@ fn main() -> ExitCode {
             hooks::kimi_install,
             hooks::kimi_uninstall,
             hooks::yaml_install,
-            hooks::yaml_uninstall
+            hooks::yaml_uninstall,
+            settings::capabilities,
+            settings::autostart_status,
+            settings::autostart_set,
+            settings::settings_load,
+            settings::settings_set,
+            settings::settings_path
         ])
         .setup(|app| Ok(island::create(app)?))
         .run(tauri::generate_context!());

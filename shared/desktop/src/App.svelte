@@ -63,13 +63,40 @@
   let sessions = $state<Session[]>([]);
   let cards = $state<Card[]>([]);
   let expanded = $state(false);
+  type CapabilityRow = { feature: string; capability: { Supported: null } | { Degraded: string } | { Unsupported: string } };
+  type AutostartStatus = { installed: boolean; path: string };
+
   let hooks = $state<HooksSnapshot | null>(null);
+  let capabilities = $state<CapabilityRow[]>([]);
+  let autostart = $state<AutostartStatus | null>(null);
   let hooksBusy = $state(false);
   let hooksError = $state<string | null>(null);
   let island: HTMLElement;
 
   function answer(id: number, decision: Decision) {
     invoke('answer_permission', { id, decision });
+  }
+
+  // Rust sends `Capability` as an externally tagged enum: one key, an optional
+  // reason.
+  function describe(row: CapabilityRow): { label: string; reason: string | null } {
+    const [kind, reason] = Object.entries(row.capability)[0] ?? ['Supported', null];
+    const label =
+      kind === 'Supported' ? 'Supported' : kind === 'Degraded' ? 'Limited' : 'Not supported';
+    return { label, reason: kind === 'Supported' ? null : String(reason) };
+  }
+
+  async function loadCapabilities() {
+    try {
+      capabilities = await invoke<CapabilityRow[]>('capabilities');
+      autostart = await invoke<AutostartStatus>('autostart_status');
+    } catch (error) {
+      hooksError = String(error);
+    }
+  }
+
+  async function toggleAutostart() {
+    await run(() => invoke('autostart_set', { enabled: !autostart?.installed }));
   }
 
   async function loadHooks() {
@@ -164,6 +191,7 @@
     };
     invoke('subscribe', { channel });
     loadHooks();
+    loadCapabilities();
 
     // Tight-fit window: the window is as big as the island and no bigger.
     // Measured after every layout change (collapse, expand, a row, a card).
@@ -293,6 +321,35 @@
             </ul>
           </div>
         {/each}
+        {#if autostart}
+          <div class="hooks-targets">
+            <ul>
+              <li>
+                <span class="hooks-name">Start at login</span>
+                <span class="hooks-state">{autostart.installed ? 'On' : 'Off'}</span>
+                <button class="hooks-button" disabled={hooksBusy} onclick={toggleAutostart}>
+                  {autostart.installed ? 'Turn off' : 'Turn on'}
+                </button>
+              </li>
+            </ul>
+          </div>
+        {/if}
+        {#if capabilities.length > 0}
+          <div class="hooks-title">Adapters here</div>
+          <div class="hooks-targets">
+            <ul>
+              {#each capabilities as row (row.feature)}
+                {@const described = describe(row)}
+                <li class:missing={described.label === 'Not supported'}>
+                  <span class="hooks-name">{row.feature}</span>
+                  <span class="hooks-state" title={described.reason ?? ''}>
+                    {described.label}{described.reason ? ` — ${described.reason}` : ''}
+                  </span>
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
         {#if hooks.kimi}
           <div class="hooks-targets">
             <ul>
