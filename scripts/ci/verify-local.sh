@@ -72,7 +72,7 @@ if [ -n "$RESTRICTED_FILES" ]; then
     CURRENT_EMAIL=$(git config user.email 2>/dev/null || echo "")
     CURRENT_ACTOR="${GITHUB_ACTOR:-$CURRENT_USER}"
 
-    if [[ "$CURRENT_ACTOR" != *"aazhrt"* && "$CURRENT_EMAIL" != *"aazhrt"* ]]; then
+    if [[ "$CURRENT_ACTOR" != *"aazhrt"* && "$CURRENT_EMAIL" != *"aazhrt"* && "$CURRENT_EMAIL" != *"muhammadazharr"* ]]; then
         echo "======================================================================"
         echo "BLOCKED: Restricted file modification detected!"
         echo "Files:"
