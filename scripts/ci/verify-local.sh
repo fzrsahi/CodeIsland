@@ -53,6 +53,21 @@ fi
 # 3. Guardrail: Protect CI/CD configurations from unauthorized modification
 RESTRICTED_FILES=$(echo "$TARGET_FILES" | grep -E "^(\.woodpecker\.yaml|\.github/workflows/)" || true)
 if [ -n "$RESTRICTED_FILES" ]; then
+    # If a merge is in progress, ignore restricted files whose staged content matches MERGE_HEAD
+    # (i.e. brought in cleanly from the merged branch such as origin/main without local alteration)
+    if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
+        FILTERED_RESTRICTED=""
+        while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            if ! git diff --quiet --cached MERGE_HEAD -- "$f"; then
+                FILTERED_RESTRICTED="${FILTERED_RESTRICTED}${f}"$'\n'
+            fi
+        done <<< "$RESTRICTED_FILES"
+        RESTRICTED_FILES=$(printf "%s" "$FILTERED_RESTRICTED" | sed '/^$/d')
+    fi
+fi
+
+if [ -n "$RESTRICTED_FILES" ]; then
     CURRENT_USER=$(git config user.name 2>/dev/null || echo "")
     CURRENT_EMAIL=$(git config user.email 2>/dev/null || echo "")
     CURRENT_ACTOR="${GITHUB_ACTOR:-$CURRENT_USER}"
@@ -64,7 +79,7 @@ if [ -n "$RESTRICTED_FILES" ]; then
         echo "$RESTRICTED_FILES"
         echo ""
         echo "Policy: CI/CD pipelines (.woodpecker.yaml, .github/) are managed"
-        echo "exclusively by DevOps (@aazhrt). Refer to AGENTS.md §1."
+        echo "exclusively by DevOps (@aazhrt). Refer to AGENTS.md §2."
         echo ""
         echo "To add or modify test steps, provide an independent test script in"
         echo "'scripts/ci/' or coordinate via a GitHub RFC issue."
