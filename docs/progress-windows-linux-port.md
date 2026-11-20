@@ -53,7 +53,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 2 | #136 → PR #140 | sisa #97: parsing checklist (`AgentTaskTool`, event hook/transcript, `scan` backfill) | `PR dibuka` (stacked on #137) | 9 test parsing; `ScanDelta.task_events` terisi urut |
 | 2 | #139 → PR #142 | `AgentTaskList` (dedupe, park, undo, pensiun plan per-turn, linger, rebuild attach, persistensi) + `Snapshot.agent_tasks` | `PR dibuka` (stacked on #140) | 38/39 test list-side; `scanFile` tetap di platform |
 | 3 | #98 → PR #145/#146 | installer hook Claude Code: editor + rencana (#144), lalu crate `morrow-platform` + kartu Settings | `PR dibuka` (stacked #142 → #145 → #146) | 14 + 18 + 9 test; sisa hanya **E2E-2** di desktop Linux nyata |
-| 3 | #99 → PR #147 | 7 target JSON hook (Codex, Gemini, Cursor, Qoder, Droid, CodeBuddy, Copilot) | `PR dibuka` (stacked #142→#145→#146→#147) | 19 test; sisa: OpenCode, flag TOML Codex, wiring kartu Settings |
+| 3 | #99 → PR #147/#148 | 7 target JSON hook (Codex, Gemini, Cursor, Qoder, Droid, CodeBuddy, Copilot) + tombol di kartu Settings | `PR dibuka` (stacked #142→#148) | 19 + 15 test; sisa: OpenCode (plugin), flag `hooks = true` Codex (TOML, bersama #100) |
 | 3 | #100–#104 | Linux lengkap: source YAML/TOML, adapter, tray, hotkey, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
@@ -94,6 +94,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 12) — #99 target hook bisa dipasang dari Settings (PR #148)
+
+- **Sudah:** `morrow_platform::hooks` dapat `targets_status` / `install_target` / `uninstall_target`: target hanya disentuh kalau CLI-nya ada di mesin ini (`~/.cursor` harus ada sebelum `hooks.json` dibuat di dalamnya), source tak dikenal = error, dan aturannya sama dengan Claude Code (rencana dulu → file rusak membatalkan semuanya; backup sekali; tulis hanya kalau berubah). Shell: `target_install`/`target_uninstall`; kartu Settings menampilkan ketujuh target dengan state dan tombol Install/Remove, atau "Not detected" tanpa tombol. Test `hooks_installer.rs` **15**; `linux-test.sh` + `npm run build` hijau. **PR #148** terhadap #147.
+- **Berikutnya:** sisa #99 hanya OpenCode (plugin JS) dan flag `hooks = true` Codex di `config.toml`; keduanya berformat lain, dan yang TOML sebaiknya menyusul #100 (sumber YAML/TOML dengan komentar dipertahankan).
+- **Blocker:** review stack #145–#148; E2E-2 milik #98 (butuh desktop Linux nyata).
 
 ### 2026-11-20 (lanjutan 11) — #99 rencana 7 target hook (PR #147)
 
