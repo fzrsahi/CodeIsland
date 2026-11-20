@@ -54,7 +54,8 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 2 | #139 → PR #142 | `AgentTaskList` (dedupe, park, undo, pensiun plan per-turn, linger, rebuild attach, persistensi) + `Snapshot.agent_tasks` | `PR dibuka` (stacked on #140) | 38/39 test list-side; `scanFile` tetap di platform |
 | 3 | #98 → PR #145/#146 | installer hook Claude Code: editor + rencana (#144), lalu crate `morrow-platform` + kartu Settings | `PR dibuka` (stacked #142 → #145 → #146) | 14 + 18 + 9 test; sisa hanya **E2E-2** di desktop Linux nyata |
 | 3 | #99 → PR #147/#148 | **sembilan target** hook (Claude, 7 JSON, OpenCode) + flag TOML Codex, semua dari kartu Settings | `PR dibuka` (stacked #142→#148) | 19+15+2(40 fixture)+10+8 test; sisa hanya E2E di desktop Linux |
-| 3 | #100 → PR #149 | source TOML (Kimi) + baris cakupan per agent di Settings | `PR dibuka` (stacked #142→#149) | 8 + 5 test; **open question**: source YAML (Hermes/TraeCli) — komentar hilang kalau ikut cara macOS (`Yams` re-dump) |
+| 3 | #100 → PR #149 | source TOML (Kimi) + baris cakupan per agent di Settings | `PR dibuka` (stacked #142→#149) — `Fixes #100` | 8 + 5 test; L-002 lulus untuk JSON + TOML |
+| 3 | #151 | source YAML (Hermes, TraeCli) — keputusan komentar-vs-macOS dulu | `belum` — opsi A/B/C diajukan, rekomendasi B | tiket terpisah supaya #100 bisa ditutup |
 | 3 | #101–#104 | adapter, tray, hotkey, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
 | 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
 | 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
@@ -95,6 +96,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 15) — #100 ditutup dengan TOML, YAML jadi #151
+
+- **Sudah:** diputuskan **opsi C**: #100 selesai lewat PR #149 (TOML Kimi append-only + baris cakupan per agent), dan source YAML dipisah ke tiket **#151** yang memuat tiga opsi (A ikut macOS/re-dump, B blok YAML terkelola, C belum didukung) beserta rekomendasi **B** dan syarat keputusan dicatat sebelum kode. Body #149 diubah jadi `Fixes #100`. Alasannya dicatat di #100: `Yams` di macOS menulis ulang seluruh dokumen dan menghilangkan komentar, jadi menirunya justru melanggar kriteria L-002 tiket itu sendiri.
+- **Berikutnya:** #151 menunggu keputusan (A/B/C); jalur kode lanjut ke adapter #101–#103 (blocked by #91) atau packaging #104. Stack review: #145 → #149.
+- **Blocker:** review stack #145–#149; #101/#104 masih menunggu #91; E2E-2 butuh desktop Linux nyata.
 
 ### 2026-11-20 (lanjutan 14) — #100 TOML (Kimi) + cakupan per agent (PR #149)
 
