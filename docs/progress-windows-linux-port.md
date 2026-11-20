@@ -1,7 +1,7 @@
 # Progress — Windows & Linux port
 
-**Status:** #126 sudah merged (guard #124 beres); fase 1 selesai di PR (#120–#125, gate E2E-1 hijau di Xvfb, menunggu X11 nyata); fase 2 (#127, #128, #130, #131, #132, #133). Core = **Rust** (#117).
-**Checkpoint terakhir:** 2026-11-20 — #126 merged (`f812e7b`), `main` ditarik ke `docs/#33` (konflik `AGENTS.md` selesai) dan #49 menunggu re-review.
+**Status:** seluruh fase 0–4 punya PR (**25 dari 26 tiket spec**), 21 di antaranya `APPROVED`, **belum ada yang di-merge** karena #49 masih `CHANGES_REQUESTED` (stale, hanya @aazhrt/admin yang bisa dismiss). Core = **Rust** (#117).
+**Checkpoint terakhir:** 2026-11-20 — #162 (#109 anchoring) dibuka; sisa #109 butuh keputusan fork tao. Papan di bawah dan *Snapshot* di Spec #82 memuat angka yang sama.
 **Fase kanonik:** [`plan-windows-linux.md`](plan-windows-linux.md) §7. Kalau dokumen ini berbeda dengan §7, §7 yang benar.
 
 ---
@@ -32,7 +32,7 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 0 | PR #50 | `test(#33)`: ekspor golden fixtures bridge + schema | `PR dibuka`, approved | `BridgeGoldenTests` hijau; schema memvalidasi semua fixture |
 | 0 | PR #51 | `fix(#33)`: hook Claude Windows tanpa `--source`, precedence = Swift | `merged` (`b314f9c`, 2026-11-20) | `windows/Morrow.Core.Tests` hijau |
 | 0 | PR #52 | `ci(#33)`: pipefail XCTest | `dilewati` — ditutup, digantikan #111 | — |
-| 0 | #78 | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `siap` — 3 keputusan kontrak sudah dijawab (@aazhrt, 2026-11-20) | test plugin memakai `fixtures/endpoint/cases.json` |
+| 0 | #78 → PR #161 | `fix(#78)`: plugin resolve socket saat kirim (morrow → legacy), versi plugin dinaikkan, remote pakai placeholder | `PR dibuka` ke `main` (di luar stack) | bun 99 lulus (termasuk 6 test default per plugin); swift 84 lulus |
 | 0.5 | #83 → PR #114 | skrip CI macOS `test`/`package`/`manifest` | `merged` (`c695753`, 2026-11-20) | pipeline hijau + satu run sengaja merah |
 | 0.5 | #124 → PR #126 | guard `verify-local.sh` mengizinkan merge yang membawa CI upstream | `merged` (`f812e7b`, 2026-11-20) | merge `main` → branch fitur tidak diblokir lagi |
 | 0.5 | #84 → PR #115 | kontrak endpoint + 38 kasus | `APPROVED` — keputusan tercatat di dokumen (`d947166`) | Swift `SocketPath.resolve` lulus kasus macOS |
@@ -55,18 +55,33 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 3 | #98 → PR #145/#146 | installer hook Claude Code: editor + rencana (#144), lalu crate `morrow-platform` + kartu Settings | `PR dibuka` (stacked #142 → #145 → #146) | 14 + 18 + 9 test; sisa hanya **E2E-2** di desktop Linux nyata |
 | 3 | #99 → PR #147/#148 | **sembilan target** hook (Claude, 7 JSON, OpenCode) + flag TOML Codex, semua dari kartu Settings | `PR dibuka` (stacked #142→#148) | 19+15+2(40 fixture)+10+8 test; sisa hanya E2E di desktop Linux |
 | 3 | #100 → PR #149 | source TOML (Kimi) + baris cakupan per agent di Settings | `PR dibuka` (stacked #142→#149) — `Fixes #100` | 8 + 5 test; L-002 lulus untuk JSON + TOML |
-| 3 | #151 | source YAML (Hermes, TraeCli) — keputusan komentar-vs-macOS dulu | `belum` — opsi A/B/C diajukan, rekomendasi B | tiket terpisah supaya #100 bisa ditutup |
 | 3 | #151 → PR #152 | source YAML (Hermes, TraeCli) sebagai blok terkelola — komentar utuh | `PR dibuka` (stacked #142→#152) | 14 + 6 test; keputusan **B** tercatat di tiket |
 | 3 | #101 → PR #153 | Capability table 21 adapter + autostart + settings + **tray + global hotkey** | `PR dibuka` (stacked #142→#153) | 11 test + clippy bersih; **sisa hanya L-006…L-012 di desktop nyata** |
 | 3 | #102 → PR #154 | kartu musik: MPRIS, ekstrapolasi posisi, lirik lrclib, volume | `PR dibuka` (stacked #142→#154) | 17 + 11 test; sisa: menggambar kartunya (pekerjaan panel) + L-003/L-004 |
 | 3 | #103 → PR #155 | terminal jump (L-009), process watch, screen lock, notifikasi | `PR dibuka` (stacked #142→#155) | 14 test; sisa: perilaku panel yang memakainya |
 | 3 | #104 → PR #156 | packaging deb/rpm/AppImage + feed per format + bridge di luar paket | `PR dibuka` (stacked #142→#156) | skrip + 5 test; sisa: L-011 smoke & `E2E-2` di host Debian |
 | 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
-| 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
-| 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
-| 6 | #110 | Hapus core C# | `belum` | test Windows hijau; **izin maintainer `windows/`** |
+| 4 | #105 → PR #157 | named pipe Windows (DACL, cek SID server) + lane kompilasi | `PR dibuka` (stacked #142→#157) | ter-compile MSVC; sisa **W-001** di host Windows |
+| 4 | #106 → PR #158 | panel Windows: hit-test sudut, no-activate, keyboard Question, spike input region | `PR dibuka` (stacked #142→#158) | shell ter-compile Windows; sisa **W-005** + pilihan click-through |
+| 4 | #107 → PR #159 | sembilan adapter Windows + tabel Capability per-OS | `PR dibuka` (stacked #142→#159) | ter-compile + 13 test keputusan; sisa **W-006/7/9** |
+| 4 | #108 → PR #160 | installer hook Windows (`.cmd`, `%USERPROFILE%`) + NSIS per-user | `PR dibuka` (stacked #142→#160) | 6 test installer; sisa **W-002/4/8**, build rilis, E2E-2 |
+| 5 | #109 → PR #162 | anchoring: deteksi compositor, degradasi GNOME, baris Capability | `PR dibuka` (stacked #142→#162) | 8 test; **layer surface/input region/Portal menunggu keputusan fork tao** |
+| 6 | #110 | Hapus core C# setelah migrasi | `tidak bisa dikerjakan agen` | butuh **izin tertulis maintainer `windows/`** + #108 lulus |
 
-Stack PR dan urutan merge: body #33, bagian **Stack PR**. Ringkas: **sudah merged di `main`**: #51, #114. Masih menunggu: docs #49 → #50 → #117 / #127; Rust #120 → #121 → #122 → #123 → #125, cabang #122 → #128; #115 (3 OQ); #118 terakhir. Top of `main` saat catatan ini: `c695753`. Merge pakai *merge commit*, hapus branch setelah merge.
+Stack PR dan urutan merge: body #33, bagian **Stack PR**. Merge pakai *merge commit*, hapus branch setelah merge.
+
+### Snapshot 2026-11-20 (sama dengan komentar di Spec #82)
+
+| | |
+|---|---|
+| PR terbuka | **30**, 21 `APPROVED`, 3 `REVIEW_REQUIRED`, 6 belum di-review (#156–#160, #162) |
+| PR di-merge | **0** — yang sudah masuk `main`: #51 (`b314f9c`), #114 (`c695753`), #126 (`f812e7b`) |
+| Konflik | #117, #120 — keduanya basis lama; selesai saat #50 masuk lalu di-rebase |
+| Penghalang struktur | **#49** `CHANGES_REQUESTED` stale — hanya @aazhrt/admin yang bisa dismiss |
+| Tiket spec tanpa PR | #109 (layer surface-nya; decision half ada di #162) |
+| Tiket yang agen tidak boleh kerjakan | #110 (izin tertulis maintainer `windows/`) |
+| Gate hardware terbuka | E2E-1 (#91), E2E-2 (#98/#108), L-003/L-004 (#102), L-006…L-012 (#101), L-011 (#104), W-001 (#105), W-005 (#106), W-006/7/9 (#107), W-002/4/8 (#108), Sway/Hyprland/KDE (#109) |
+| Gate hijau lokal | `linux-test.sh` (fmt/clippy/test/purity), `windows-check.sh` (5 crate MSVC), bun 99, swift 84 |
 
 ---
 
@@ -100,6 +115,12 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 ---
 
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 27) — snapshot di Spec #82
+
+- **Sudah:** papan status disegarkan ke keadaan sebenarnya (fase 4 dan 5 tidak lagi `belum`), baris #78 → PR #161, baris #151 duplikat dihapus, dan *Snapshot* ditambahkan — angka yang sama diposkan sebagai komentar di Spec #82. 25 dari 26 tiket spec punya PR; 21 APPROVED, **0 merged**, #49 stale `CHANGES_REQUESTED` masih menahan seluruh rantai.
+- **Berikutnya:** @aazhrt dismiss #49 → rebase #117/#120 → retarget #50/#117 ke `main` → merge dari bawah stack; review 6 PR terakhir (#156–#160, #162).
+- **Blocker:** gate hardware (Windows, Debian, X11 nyata, Sway/Hyprland/KDE); keputusan fork tao untuk sisa #109; suite layout `CompletionCardLayoutTests`/`CompactSessionListLayoutTests` gagal juga di `origin/main`.
 
 ### 2026-11-20 (lanjutan 26) — #109 anchoring Wayland (PR #162)
 
