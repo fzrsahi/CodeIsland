@@ -12,7 +12,8 @@ public sealed record HookTool(
     HookConfigurationFormat Format,
     int CommandTimeout,
     HookTimeoutUnit TimeoutUnit,
-    string? SourceTag = null);
+    string? SourceTag = null,
+    bool DeclaresSource = true);
 
 public enum HookConfigurationFormat { Claude, EventMap, Cursor, OpenCode }
 
@@ -31,9 +32,13 @@ public static class KnownTools
 {
     public static IReadOnlyList<HookTool> All { get; } =
     [
+        // Installed without --source, as on macOS: Cursor imports and runs Claude Code's hooks,
+        // and only an undeclared hook lets cursor_version mark the event as Cursor's
+        // (docs/hook-edge-protocol.md, rule 2).
         new(AgentKind.Claude, "Claude Code", ["claude.exe", "claude.cmd", "claude"],
             [@".claude\settings.json", @".claude.json"], "morrow-claude",
-            ["SessionStart", "PreToolUse", "PostToolUse", "PermissionRequest", "Stop"], HookConfigurationFormat.Claude, 5, HookTimeoutUnit.Seconds),
+            ["SessionStart", "PreToolUse", "PostToolUse", "PermissionRequest", "Stop"], HookConfigurationFormat.Claude, 5, HookTimeoutUnit.Seconds,
+            DeclaresSource: false),
         new(AgentKind.Codex, "Codex", ["codex.exe", "codex.cmd", "codex"],
             [@".codex\hooks.json", @".codex\config.json"], "morrow-codex",
             ["SessionStart", "SessionEnd", "UserPromptSubmit", "PreToolUse", "PostToolUse", "PermissionRequest", "Stop"],
