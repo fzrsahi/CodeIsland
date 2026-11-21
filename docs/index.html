@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Morrow — Dynamic Island for MacBook & Desktop</title>
+  <meta name="description" content="Your AI coding agents, interactive Git graph, and floating music lyrics — live in the MacBook notch. Free, open-source, and native.">
+  
+  <!-- OpenGraph / Twitter -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Morrow — Dynamic Island for MacBook & Desktop">
+  <meta property="og:description" content="AI coding agents, interactive Git graph, and floating synced lyrics tucked into your notch. Zero Electron bloat.">
+  <meta property="og:image" content="https://fzrsahi.github.io/Morrow/images/readme-hero.png">
+  <meta property="og:url" content="https://fzrsahi.github.io/Morrow/">
+  <meta name="twitter:card" content="summary_large_image">
+  
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Background Ambience Glow -->
+  <div class="ambient-glow" aria-hidden="true"></div>
+
+  <!-- Top Navigation -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="#" class="brand">
+        <img src="logo.svg" alt="Morrow Logo" width="28" height="28" class="brand-logo">
+        <span class="brand-name">Morrow</span>
+      </a>
+
+      <nav class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#notch-demo">Simulator</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/fzrsahi/Morrow" target="_blank" rel="noopener noreferrer" class="nav-gh">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <span id="gh-star-count">GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main>
+    <section class="hero-section">
+      <div class="hero-badge-wrap">
+        <a href="https://github.com/fzrsahi/Morrow/releases" target="_blank" rel="noopener noreferrer" class="hero-badge">
+          <span class="badge-dot"></span>
+          <span id="release-version-pill">v1.0.41 Release Live</span>
+          <span class="badge-arrow">→</span>
+        </a>
+      </div>
+
+      <h1 class="hero-title">
+        The Living Notch for <span class="text-gradient">MacBook & Beyond</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        Your AI coding agents, floating synced lyrics, and interactive Git graphs — tucked right into the physical MacBook notch. Native, lightweight, and always one hover away.
+      </p>
+
+      <!-- Primary Smart Download CTA -->
+      <div class="cta-group">
+        <a href="https://github.com/fzrsahi/Morrow/releases/latest" id="primary-download-btn" class="btn-primary" data-track="download-cta">
+          <span class="btn-icon" id="os-icon">🍏</span>
+          <span class="btn-content">
+            <span class="btn-title" id="download-title">Download for macOS</span>
+            <span class="btn-subtext" id="download-arch">Universal .dmg • macOS 14+ Sonoma</span>
+          </span>
+        </a>
+
+        <div class="platform-alternatives">
+          <span class="alt-label">Also available for:</span>
+          <a href="https://github.com/fzrsahi/Morrow/releases/latest" class="alt-link" id="alt-mac" data-os="macos">macOS (.dmg)</a>
+          <span class="alt-sep">•</span>
+          <a href="https://github.com/fzrsahi/Morrow/releases/latest" class="alt-link" id="alt-win" data-os="windows">Windows (.exe)</a>
+          <span class="alt-sep">•</span>
+          <a href="https://github.com/fzrsahi/Morrow/releases/latest" class="alt-link" id="alt-linux" data-os="linux">Linux (.AppImage)</a>
+        </div>
+
+        <div class="download-stats" id="download-stats-container">
+          <span class="stats-counter" id="total-downloads-text">⚡ 2,500+ downloads across all platforms</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Notch Simulator (Nusa + Isle Style) -->
+    <section class="demo-section" id="notch-demo">
+      <div class="section-header">
+        <h2 class="section-title">Interactive Notch Simulator</h2>
+        <p class="section-desc">Experience how Morrow wraps the notch. Click tabs to inspect live agent telemetry, floating lyrics, or the visual Git tree.</p>
+      </div>
+
+      <!-- Segmented Chapter Tabs -->
+      <div class="demo-tabs" role="tablist">
+        <button class="demo-tab active" data-tab="agents" role="tab" aria-selected="true">
+          <span class="tab-icon">🤖</span> AI Agents
+        </button>
+        <button class="demo-tab" data-tab="lyrics" role="tab" aria-selected="false">
+          <span class="tab-icon">🎵</span> Synced Lyrics
+        </button>
+        <button class="demo-tab" data-tab="git" role="tab" aria-selected="false">
+          <span class="tab-icon">🌿</span> Git Graph
+        </button>
+      </div>
+
+      <!-- Hardware Screen Bezel Mockup -->
+      <div class="mockup-screen">
+        <div class="macbook-notch-housing">
+          <!-- Physical Notch Cutout -->
+          <div class="physical-cutout">
+            <div class="camera-lens"></div>
+            <div class="green-indicator"></div>
+          </div>
+
+          <!-- Dynamic Island Shell (Living Notch) -->
+          <div class="island-card" id="island-card">
+            
+            <!-- Pane 1: AI Agents Telemetry -->
+            <div class="pane-content active" id="pane-agents">
+              <div class="island-header">
+                <div class="agent-identity">
+                  <span class="agent-chip claude">Claude Code</span>
+                  <span class="agent-task">feat(#24): website deployment</span>
+                </div>
+                <span class="telemetry-pill">34 tok/s</span>
+              </div>
+              <div class="terminal-stream">
+                <div class="term-line"><span class="t-dim">15:58:12</span> <span class="t-cyan">git checkout</span> <span class="t-white">-b feat/#24-website-landing-page</span></div>
+                <div class="term-line"><span class="t-dim">15:58:14</span> <span class="t-green">✔</span> Verified Swift build &amp; appcast signature</div>
+                <div class="term-line t-active"><span class="t-dim">15:58:19</span> Serving docs on localhost:8080 <span class="cursor-blink">▌</span></div>
+              </div>
+              <div class="island-footer">
+                <div class="status-indicator">
+                  <span class="dot-green"></span>
+                  <span>Session Running (Cursor / Codex idle)</span>
+                </div>
+                <button class="pill-btn">Inspect</button>
+              </div>
+            </div>
+
+            <!-- Pane 2: Floating Synced Lyrics -->
+            <div class="pane-content" id="pane-lyrics">
+              <div class="lyrics-header">
+                <div class="track-info">
+                  <span class="track-title">Starboy</span>
+                  <span class="track-artist">The Weeknd, Daft Punk</span>
+                </div>
+                <span class="audio-waves">
+                  <span></span><span></span><span></span><span></span>
+                </span>
+              </div>
+              <div class="lyrics-body">
+                <div class="lyric-line passed">I'm tryna put you in the worst mood, ah</div>
+                <div class="lyric-line current">P1 cleaner than your church shoes, ah</div>
+                <div class="lyric-line next">Milli point two just to hurt you, ah</div>
+              </div>
+              <div class="lyrics-footer">
+                <span class="preset-badge">Preset: frostedGlass • 0ms offset</span>
+                <span class="music-source">Apple Music</span>
+              </div>
+            </div>
+
+            <!-- Pane 3: Git Tree HUD -->
+            <div class="pane-content" id="pane-git">
+              <div class="git-header">
+                <div class="branch-pill">
+                  <span class="git-icon">⎇</span>
+                  <span>feat/#24-website-landing-page</span>
+                </div>
+                <span class="sync-status">Ahead: 1 • Clean</span>
+              </div>
+              <div class="git-tree-graph">
+                <div class="git-node active">
+                  <span class="git-dot"></span>
+                  <span class="git-hash">74918aa</span>
+                  <span class="git-msg">feat(#24): create Morrow landing page &amp; telemetry</span>
+                </div>
+                <div class="git-node">
+                  <span class="git-dot"></span>
+                  <span class="git-hash">814a969</span>
+                  <span class="git-msg">Merge pull request #67 from fix/#56-ci-status</span>
+                </div>
+              </div>
+              <div class="git-footer">
+                <span>Working tree: Clean</span>
+                <span class="t-dim">origin/main in sync</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Pillars / Features -->
+    <section class="features-section" id="features">
+      <div class="section-header">
+        <h2 class="section-title">Built for Flow. Engineered for Speed.</h2>
+        <p class="section-desc">Morrow replaces distracting floating HUDs with hardware-level integration.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="card-icon">⚡</div>
+          <h3 class="card-title">100% Native Swift &amp; Rust</h3>
+          <p class="card-desc">Zero Electron overhead. Idles at under 1% CPU and less than 35MB RAM. Won't drain your MacBook battery during all-day coding sprints.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="card-icon">🎵</div>
+          <h3 class="card-title">Sub-Notch Synced Lyrics</h3>
+          <p class="card-desc">Smooth floating subtitle pill anchored directly underneath the physical camera cutout. Zero horizontal marquee scrolling, driven by spring physics.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="card-icon">🤖</div>
+          <h3 class="card-title">AI Agent Telemetry</h3>
+          <p class="card-desc">Direct telemetry integration for Claude Code, Codex, Cursor, and Gemini CLI. Inspect running commands and token velocity with a single hover.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="card-icon">🌐</div>
+          <h3 class="card-title">Multiplatform Monorepo</h3>
+          <p class="card-desc">Designed natively for macOS Sonoma/Sequoia, with official companion builds for Windows and Linux desktops in the same unified release.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Installation Guide -->
+    <section class="install-section" id="install">
+      <div class="section-header">
+        <h2 class="section-title">Ready in Seconds</h2>
+        <p class="section-desc">Get Morrow running in three painless steps.</p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num">01</div>
+          <h4 class="step-title">Download Installer</h4>
+          <p class="step-desc">Grab the latest <code>.dmg</code> (macOS), <code>.exe</code> (Windows), or <code>.AppImage</code> (Linux) from GitHub Releases.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">02</div>
+          <h4 class="step-title">Install &amp; Launch</h4>
+          <p class="step-desc">Drag Morrow to your <code>/Applications</code> folder. On first launch, grant Accessibility permissions for notch HUD overlay.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">03</div>
+          <h4 class="step-title">Enjoy the Notch</h4>
+          <p class="step-desc">Morrow tucks itself into your top notch automatically. Start your music or coding agents to see it come to life.</p>
+        </div>
+      </div>
+
+      <!-- Terminal Alternative -->
+      <div class="terminal-box">
+        <div class="term-header">
+          <span class="term-dot red"></span>
+          <span class="term-dot yellow"></span>
+          <span class="term-dot green"></span>
+          <span class="term-title">Build from Source (Terminal)</span>
+        </div>
+        <pre class="term-code"><code>git clone https://github.com/fzrsahi/Morrow.git
+cd Morrow && swift build -c release
+open .build/release/Morrow.app</code></pre>
+      </div>
+    </section>
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img src="logo.svg" alt="Morrow" width="24" height="24">
+        <span>Morrow</span>
+      </div>
+      <p class="footer-copy">
+        Free and open-source under the MIT License. Built with craft by the Morrow community.
+      </p>
+      <div class="footer-links">
+        <a href="https://github.com/fzrsahi/Morrow" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://github.com/fzrsahi/Morrow/releases" target="_blank" rel="noopener noreferrer">Releases</a>
+        <a href="https://github.com/fzrsahi/Morrow/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a>
+        <a href="https://github.com/fzrsahi/Morrow/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
