@@ -1,7 +1,7 @@
 # Progress — Windows & Linux port
 
-**Status:** seluruh fase 0–4 punya PR (**25 dari 26 tiket spec**), 21 di antaranya `APPROVED`, **belum ada yang di-merge** karena #49 masih `CHANGES_REQUESTED` (stale, hanya @aazhrt/admin yang bisa dismiss). Core = **Rust** (#117).
-**Checkpoint terakhir:** 2026-11-20 — #162 (#109 anchoring) dibuka; sisa #109 butuh keputusan fork tao. Papan di bawah dan *Snapshot* di Spec #82 memuat angka yang sama.
+**Status:** fase 0–5 **sudah di `main`**. Stack #55 (28 PR) merge sebagai `90cdbbf`; setelahnya #115, #117, #123, #127, #161 dan #169 masuk. **25 tiket tertutup otomatis** + #84/#85/#90/#92/#78 ditutup menyusul. Core = **Rust**.
+**Checkpoint terakhir:** 2026-11-21 — stack #55 merge; yang tersisa hanya gate hardware (#91 E2E-1, L-011, W-001…W-009), #118 (replay monorepo), dan #110 (izin maintainer).
 **Fase kanonik:** [`plan-windows-linux.md`](plan-windows-linux.md) §7. Kalau dokumen ini berbeda dengan §7, §7 yang benar.
 
 ---
