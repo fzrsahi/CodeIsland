@@ -115,7 +115,7 @@ p1_step_names = list(p1_steps.keys())
 p1_when = p1.get('when', [])
 p1_push_has_path = any('path' in c for c in p1_when if c.get('event') == 'push' or ('push' in c.get('event', []) if isinstance(c.get('event'), list) else False))
 p1_pr_when = [c for c in p1_when if 'pull_request' in c.get('event', [])]
-p1_pr_paths = p1_pr_when[0].get('path', {}).get('include', []) if p1_pr_when else []
+p1_pr_has_path = any('path' in c for c in p1_pr_when)
 p1_test_linux = p1_steps.get('test-linux', {})
 p1_check_windows = p1_steps.get('check-windows', {})
 p1_test_linux_cmds = "\n".join(str(c) for c in p1_test_linux.get('commands', []))
@@ -124,14 +124,16 @@ p1_check_win_cmds = "\n".join(str(c) for c in p1_check_windows.get('commands', [
 print(f'P1_PLATFORM={p1_platform}')
 print(f'P1_STEPS={",".join(p1_step_names)}')
 print(f'P1_PUSH_PATH_FILTER={"YES" if p1_push_has_path else "NO"}')
+print(f'P1_PR_PATH_FILTER={"YES" if p1_pr_has_path else "NO"}')
 print(f'P1_TEST_LINUX_IMAGE={p1_test_linux.get("image", "")}')
-print(f'P1_PR_PATHS={",".join(p1_pr_paths)}')
 print(f'P1_LINUX_HARNESS_CONTEXT={"YES" if "Morrow / Linux & Rust Harness" in p1_test_linux_cmds else "NO"}')
 print(f'P1_LINUX_DISPATCH={"YES" if "linux/ci/test.sh" in p1_test_linux_cmds else "NO"}')
 print(f'P1_TEST_LINUX_POSIX={"YES" if "set -e" in p1_test_linux_cmds and "set -eo pipefail" not in p1_test_linux_cmds else "NO"}')
+print(f'P1_LINUX_FAST_BYPASS={"YES" if "Fast-bypass" in p1_test_linux_cmds or "CI_PIPELINE_FILES" in p1_test_linux_cmds else "NO"}')
 print(f'P1_WINDOWS_HARNESS_CONTEXT={"YES" if "Morrow / Windows MSVC Check" in p1_check_win_cmds else "NO"}')
 print(f'P1_WINDOWS_DISPATCH={"YES" if "windows/ci/check.sh" in p1_check_win_cmds else "NO"}')
 print(f'P1_CHECK_WIN_POSIX={"YES" if "set -e" in p1_check_win_cmds and "set -eo pipefail" not in p1_check_win_cmds else "NO"}')
+print(f'P1_WINDOWS_FAST_BYPASS={"YES" if "Fast-bypass" in p1_check_win_cmds or "CI_PIPELINE_FILES" in p1_check_win_cmds else "NO"}')
 
 # Pipeline 2: macOS
 p2 = docs[1]
@@ -141,15 +143,16 @@ p2_step_names = list(p2_steps.keys())
 p2_when = p2.get('when', [])
 p2_push_has_path = any('path' in c for c in p2_when if c.get('event') == 'push' or ('push' in c.get('event', []) if isinstance(c.get('event'), list) else False))
 p2_pr_when = [c for c in p2_when if 'pull_request' in c.get('event', [])]
-p2_pr_paths = p2_pr_when[0].get('path', {}).get('include', []) if p2_pr_when else []
+p2_pr_has_path = any('path' in c for c in p2_pr_when)
 p2_test = p2_steps.get('test', {})
 p2_test_cmds = "\n".join(str(c) for c in p2_test.get('commands', []))
 
 print(f'P2_PLATFORM={p2_platform}')
 print(f'P2_STEPS={",".join(p2_step_names)}')
 print(f'P2_PUSH_PATH_FILTER={"YES" if p2_push_has_path else "NO"}')
-print(f'P2_PR_PATHS={",".join(p2_pr_paths)}')
+print(f'P2_PR_PATH_FILTER={"YES" if p2_pr_has_path else "NO"}')
 print(f'P2_MACOS_DISPATCH={"YES" if "macos/ci/test.sh" in p2_test_cmds else "NO"}')
+print(f'P2_MACOS_FAST_BYPASS={"YES" if "Fast-bypass" in p2_test_cmds or "CI_PIPELINE_FILES" in p2_test_cmds else "NO"}')
 
 # Pipeline 3: Release
 p3 = docs[2]
@@ -170,10 +173,10 @@ EOF
     assert_contains "Pipeline 1 has test-linux step" "test-linux" "$YAML_REPORT"
     assert_contains "Pipeline 1 has check-windows step" "check-windows" "$YAML_REPORT"
     assert_contains "Pipeline 1 push event has no path constraint" "P1_PUSH_PATH_FILTER=NO" "$YAML_REPORT"
+    assert_contains "Pipeline 1 pull_request event has no path constraint" "P1_PR_PATH_FILTER=NO" "$YAML_REPORT"
     assert_contains "Pipeline 1 test-linux uses rust:1.98-bookworm" "P1_TEST_LINUX_IMAGE=rust:1.98-bookworm" "$YAML_REPORT"
-    assert_contains "Pipeline 1 includes shared/**" "shared/**" "$YAML_REPORT"
-    assert_contains "Pipeline 1 includes linux/**" "linux/**" "$YAML_REPORT"
-    assert_contains "Pipeline 1 includes windows/**" "windows/**" "$YAML_REPORT"
+    assert_contains "Pipeline 1 test-linux has smart fast-bypass detection" "P1_LINUX_FAST_BYPASS=YES" "$YAML_REPORT"
+    assert_contains "Pipeline 1 check-windows has smart fast-bypass detection" "P1_WINDOWS_FAST_BYPASS=YES" "$YAML_REPORT"
     assert_contains "Pipeline 1 reports Linux & Rust Harness context" "P1_LINUX_HARNESS_CONTEXT=YES" "$YAML_REPORT"
     assert_contains "Pipeline 1 dispatches to linux/ci/test.sh" "P1_LINUX_DISPATCH=YES" "$YAML_REPORT"
     assert_contains "Pipeline 1 reports Windows MSVC Check context" "P1_WINDOWS_HARNESS_CONTEXT=YES" "$YAML_REPORT"
@@ -181,10 +184,11 @@ EOF
     assert_contains "Pipeline 1 test-linux complies with POSIX set -e" "P1_TEST_LINUX_POSIX=YES" "$YAML_REPORT"
     assert_contains "Pipeline 1 check-windows complies with POSIX set -e" "P1_CHECK_WIN_POSIX=YES" "$YAML_REPORT"
     assert_contains "Pipeline 2 push event has no path constraint" "P2_PUSH_PATH_FILTER=NO" "$YAML_REPORT"
+    assert_contains "Pipeline 2 pull_request event has no path constraint" "P2_PR_PATH_FILTER=NO" "$YAML_REPORT"
     assert_contains "Pipeline 2 targets darwin/amd64" "P2_PLATFORM=darwin/amd64" "$YAML_REPORT"
     assert_contains "Pipeline 2 has test step" "test" "$YAML_REPORT"
-    assert_contains "Pipeline 2 includes macos/**" "macos/**" "$YAML_REPORT"
     assert_contains "Pipeline 2 dispatches to macos/ci/test.sh" "P2_MACOS_DISPATCH=YES" "$YAML_REPORT"
+    assert_contains "Pipeline 2 has smart fast-bypass detection" "P2_MACOS_FAST_BYPASS=YES" "$YAML_REPORT"
     assert_contains "Pipeline 3 targets darwin/amd64" "P3_PLATFORM=darwin/amd64" "$YAML_REPORT"
     assert_contains "Pipeline 3 has build-dev-dmg step" "build-dev-dmg" "$YAML_REPORT"
     assert_contains "Pipeline 3 has build-release-dmg step" "build-release-dmg" "$YAML_REPORT"
@@ -194,6 +198,35 @@ else
     echo "  [FAIL] .woodpecker.yaml does not exist"
     FAILED=$((FAILED + 1))
 fi
+
+# ------------------------------------------------------------------------------
+# Test Suite 4: Smart Fast-Bypass Monorepo Change Detection Logic
+# ------------------------------------------------------------------------------
+echo "--- Suite 4: Smart Fast-Bypass Change Detection Logic ---"
+
+LINUX_REGEX='Cargo\.|rust-toolchain|shared/|crates/|linux/|windows/|scripts/ci/(linux|windows|verify|test-multiplatform)|\.woodpecker'
+MACOS_REGEX='Sources/|Tests/|macos/|Package\.|Info\.plist|scripts/.*macos|scripts/run-xctest-runner|\.woodpecker'
+
+# Case 1: Swift only PR
+SWIFT_FILES='["macos/Sources/Morrow/NotchView.swift","macos/Tests/NotchTests.swift"]'
+SWIFT_LINUX_MATCH=$(echo "$SWIFT_FILES" | grep -Eq "$LINUX_REGEX" && echo "YES" || echo "NO")
+SWIFT_MACOS_MATCH=$(echo "$SWIFT_FILES" | grep -Eq "$MACOS_REGEX" && echo "YES" || echo "NO")
+assert_eq "Swift-only PR triggers fast-bypass on Linux (NO run)" "NO" "$SWIFT_LINUX_MATCH"
+assert_eq "Swift-only PR runs on macOS (YES run)" "YES" "$SWIFT_MACOS_MATCH"
+
+# Case 2: Rust only PR
+RUST_FILES='["crates/morrow-core/src/lib.rs","linux/src/main.rs"]'
+RUST_LINUX_MATCH=$(echo "$RUST_FILES" | grep -Eq "$LINUX_REGEX" && echo "YES" || echo "NO")
+RUST_MACOS_MATCH=$(echo "$RUST_FILES" | grep -Eq "$MACOS_REGEX" && echo "YES" || echo "NO")
+assert_eq "Rust-only PR runs on Linux (YES run)" "YES" "$RUST_LINUX_MATCH"
+assert_eq "Rust-only PR triggers fast-bypass on macOS (NO run)" "NO" "$RUST_MACOS_MATCH"
+
+# Case 3: Shared monorepo change (.woodpecker.yaml or shared/crates)
+SHARED_FILES='[".woodpecker.yaml"]'
+SHARED_LINUX_MATCH=$(echo "$SHARED_FILES" | grep -Eq "$LINUX_REGEX" && echo "YES" || echo "NO")
+SHARED_MACOS_MATCH=$(echo "$SHARED_FILES" | grep -Eq "$MACOS_REGEX" && echo "YES" || echo "NO")
+assert_eq ".woodpecker.yaml change runs on Linux (YES run)" "YES" "$SHARED_LINUX_MATCH"
+assert_eq ".woodpecker.yaml change runs on macOS (YES run)" "YES" "$SHARED_MACOS_MATCH"
 
 echo "======================================================================"
 echo "TDD Test Results: $PASSED passed, $FAILED failed"

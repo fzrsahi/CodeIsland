@@ -8,16 +8,6 @@
 # ==============================================================================
 when:
   - event: [pull_request, tag]
-    path:
-      include:
-        - "Cargo.*"
-        - "rust-toolchain.toml"
-        - "shared/**"
-        - "crates/**"
-        - "linux/**"
-        - "windows/**"
-        - "scripts/ci/**"
-        - ".woodpecker.yaml"
   - event: push
     branch: [dev, main]
 
@@ -36,6 +26,14 @@ steps:
         report() {
           python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Linux & Rust Harness" --state "$1" --description "$2" || true
         }
+        # Smart Fast-Bypass for Monorepo PRs:
+        if [ "${CI_PIPELINE_EVENT:-}" = "pull_request" ] && [ -n "${CI_PIPELINE_FILES:-}" ]; then
+          if ! echo "$CI_PIPELINE_FILES" | grep -Eq 'Cargo\.|rust-toolchain|shared/|crates/|linux/|windows/|scripts/ci/(linux|windows|verify|test-multiplatform)|\.woodpecker'; then
+            echo "Notice: No Linux/Rust changes detected in PR. Fast-bypass skipping."
+            report success "Skipped — No Linux/Rust changes in this PR"
+            exit 0
+          fi
+        fi
         report pending "Running cargo test, fmt, clippy, purity..."
         if [ -f "./linux/ci/test.sh" ]; then
           TEST_SCRIPT="./linux/ci/test.sh"
@@ -64,6 +62,14 @@ steps:
         report() {
           python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Windows MSVC Check" --state "$1" --description "$2" || true
         }
+        # Smart Fast-Bypass for Monorepo PRs:
+        if [ "${CI_PIPELINE_EVENT:-}" = "pull_request" ] && [ -n "${CI_PIPELINE_FILES:-}" ]; then
+          if ! echo "$CI_PIPELINE_FILES" | grep -Eq 'Cargo\.|rust-toolchain|shared/|crates/|linux/|windows/|scripts/ci/(linux|windows|verify|test-multiplatform)|\.woodpecker'; then
+            echo "Notice: No Windows changes detected in PR. Fast-bypass skipping."
+            report success "Skipped — No Windows changes in this PR"
+            exit 0
+          fi
+        fi
         report pending "Running cargo-xwin clippy for x86_64-pc-windows-msvc..."
         if [ ! -f "./Cargo.toml" ]; then
           echo "Notice: Cargo.toml not found in this commit. Skipping."
@@ -96,16 +102,6 @@ steps:
 # ==============================================================================
 when:
   - event: [pull_request, tag]
-    path:
-      include:
-        - "Sources/**"
-        - "Tests/**"
-        - "macos/**"
-        - "Package.*"
-        - "Info.plist"
-        - "scripts/*macos*"
-        - "scripts/run-xctest-runner.py"
-        - ".woodpecker.yaml"
   - event: push
     branch: [dev, main]
 
@@ -122,7 +118,17 @@ steps:
       GITHUB_TOKEN:
         from_secret: github_token
     commands:
-      - set -eo pipefail
+      - set -e
+      - |
+        # Smart Fast-Bypass for Monorepo PRs:
+        if [ "${CI_PIPELINE_EVENT:-}" = "pull_request" ] && [ -n "${CI_PIPELINE_FILES:-}" ]; then
+          if ! echo "$CI_PIPELINE_FILES" | grep -Eq 'Sources/|Tests/|macos/|Package\.|Info\.plist|scripts/.*macos|scripts/run-xctest-runner|\.woodpecker'; then
+            echo "Notice: No macOS changes detected in PR. Fast-bypass skipping."
+            python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Syntax & Git Hygiene Guard" --state success --description "Skipped — No macOS changes in this PR" || true
+            python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state success --description "Skipped — No macOS changes in this PR" || true
+            exit 0
+          fi
+        fi
       - echo "==> Running Swift tests on macOS Sonoma runner..."
       - swift --version
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Syntax & Git Hygiene Guard" --state success --description "Pre-commit syntax and git hygiene clean" || true
