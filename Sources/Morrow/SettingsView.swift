@@ -1,7 +1,6 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
-import UserNotifications
 import MorrowCore
 
 // MARK: - Navigation Model
@@ -2026,6 +2025,53 @@ private struct WorkspaceSettingsPage: View {
                 }
             }
             .disabled(!workspaceEnabled)
+
+            Section("Right Wing Preview (10s)") {
+                HStack(spacing: 8) {
+                    Button {
+                        WorkspaceMonitorManager.shared.triggerRightWingPreview(.nonGitIdle)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "folder")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                            Text("Non-Git (Idle)")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        WorkspaceMonitorManager.shared.triggerRightWingPreview(.nonGitThinking)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "folder.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                            Text("Non-Git (Thinking)")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        WorkspaceMonitorManager.shared.triggerRightWingPreview(.emptyIdle)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                            Text("Empty Idle")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                }
+
+                Text("Temporarily previews Non-Git standby or Empty Idle states on the right notch wing for 10 seconds.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+            }
         }
         .formStyle(.grouped)
     }
@@ -4032,6 +4078,7 @@ private struct ShortcutRow: View {
 private struct PrayerSettingsPage: View {
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var locationService = PrayerLocationService.shared
+    @ObservedObject private var prayerManager = PrayerTimeManager.shared
 
     @AppStorage(SettingsKey.prayerEnabled) private var prayerEnabled = SettingsDefaults.prayerEnabled
     @AppStorage(SettingsKey.prayerCalculationMethod) private var calculationMethod = SettingsDefaults.prayerCalculationMethod
@@ -4039,9 +4086,7 @@ private struct PrayerSettingsPage: View {
     @AppStorage(SettingsKey.prayerHijriDayOffset) private var hijriDayOffset = SettingsDefaults.prayerHijriDayOffset
     @AppStorage(SettingsKey.prayerLocationMode) private var locationMode = SettingsDefaults.prayerLocationMode
     @AppStorage(SettingsKey.prayerManualCityId) private var manualCityId = SettingsDefaults.prayerManualCityId
-    @AppStorage(SettingsKey.prayerAlertBeforeMinutes) private var alertBeforeMinutes = SettingsDefaults.prayerAlertBeforeMinutes
     @AppStorage(SettingsKey.prayerSoundEnabled) private var soundEnabled = SettingsDefaults.prayerSoundEnabled
-    @AppStorage(SettingsKey.prayerSystemNotificationEnabled) private var systemNotificationEnabled = SettingsDefaults.prayerSystemNotificationEnabled
     @AppStorage(SettingsKey.prayerUsePreciseLocation) private var usePreciseLocation = SettingsDefaults.prayerUsePreciseLocation
     @AppStorage(SettingsKey.prayerCardDisplayMode) private var prayerCardDisplayMode = SettingsDefaults.prayerCardDisplayMode
 
@@ -4071,9 +4116,9 @@ private struct PrayerSettingsPage: View {
 
                 Section(header: Text("Calculation Method")) {
                     Picker("Method", selection: $calculationMethod) {
-                        Text("Ministry of Religious Affairs (Fajr -20°, +2m safety margin)").tag("kemenag")
-                        Text("Nahdlatul Ulama / LF PBNU (Fajr -20°, elevation dip correction)").tag("nuLFPBNU")
-                        Text("Muhammadiyah / MTT (Fajr -18°, astronomical reckoning)").tag("muhammadiyah")
+                        Text("Kemenag (Ministry of Religious Affairs)").tag("kemenag")
+                        Text("NU / LF PBNU").tag("nuLFPBNU")
+                        Text("Muhammadiyah / MTT").tag("muhammadiyah")
                     }
                     .pickerStyle(.menu)
 
@@ -4082,28 +4127,43 @@ private struct PrayerSettingsPage: View {
 
                 Section(header: Text("Hijri Calendar")) {
                     Picker("Calendar Standard", selection: $hijriSource) {
-                        Text("Global Unified Hijri Calendar (KHGT)").tag("khgt")
-                        Text("Indonesia Standard Calendar (Neo-MABIMS)").tag("neoMABIMS")
+                        Text("KHGT (Global Unified)").tag("khgt")
+                        Text("Neo-MABIMS (Indonesia)").tag("neoMABIMS")
                     }
                     .pickerStyle(.menu)
 
                     Stepper(value: $hijriDayOffset, in: -2...2) {
                         HStack {
-                            Text("Manual Day Adjustment:")
+                            Text("Manual Day Adjustment")
                             Spacer()
-                            Text(hijriDayOffset == 0 ? "0 days" : (hijriDayOffset > 0 ? "+\(hijriDayOffset) days" : "\(hijriDayOffset) days"))
+                            let absDays = abs(hijriDayOffset)
+                            let unit = absDays == 1 ? "day" : "days"
+                            Text(hijriDayOffset == 0 ? "0 days" : (hijriDayOffset > 0 ? "+\(hijriDayOffset) \(unit)" : "\(hijriDayOffset) \(unit)"))
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    Text("Use manual adjustment if official crescent sighting (Rukyatul Hilal) announcement differs by 1 day from calculated calendar.")
+
+                    if !prayerManager.hijriDateString.isEmpty {
+                        HStack {
+                            Text("Today")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(prayerManager.hijriDateString)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Text("Adjust if official crescent sighting (Rukyatul Hilal) differs from the calculated Hijri date.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 Section(header: Text("Device Location")) {
                     Picker("Location Mode", selection: $locationMode) {
-                        Text("Automatic (CoreLocation)").tag("automatic")
-                        Text("Manual (Select City)").tag("manual")
+                        Text("Automatic").tag("automatic")
+                        Text("Manual").tag("manual")
                     }
                     .pickerStyle(.segmented)
                     .onChange(of: locationMode) { _, _ in
@@ -4111,41 +4171,98 @@ private struct PrayerSettingsPage: View {
                     }
 
                     if locationMode == "automatic" {
-                        Toggle("Use Precise Coordinates & Elevation", isOn: $usePreciseLocation)
-                            .font(.system(size: 12))
-                        Text("Uses actual device GPS/Wi-Fi coordinates and altitude for precise astronomical calculation down to local minutes.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        Toggle(isOn: $usePreciseLocation) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Precise Coordinates & Elevation")
+                                Text("Uses device Wi-Fi/GPS coordinates and altitude for minute-accurate prayer times.")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
 
-                        HStack {
-                            switch locationService.authorizationStatus {
-                            case .authorizedAlways, .authorized:
-                                Label("Location Access: Authorized", systemImage: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
-                                    .font(.caption)
-                            case .notDetermined:
-                                Button("Request Location Access") {
-                                    locationService.requestAuthorization()
+                        HStack(spacing: 12) {
+                            if !PrayerLocationService.canUseCoreLocation {
+                                Label {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("CoreLocation Unavailable in Debug Binary")
+                                            .font(.system(size: 12, weight: .medium))
+                                        Text("Run Morrow.app (./build.sh) for automatic location, or switch to Manual.")
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                } icon: {
+                                    Image(systemName: "info.circle.fill")
+                                        .foregroundStyle(.orange)
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .controlSize(.small)
-                            case .denied, .restricted:
-                                Label("Access Denied (Open System Settings > Privacy)", systemImage: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(.orange)
-                                    .font(.caption)
-                            @unknown default:
-                                EmptyView()
+                            } else if locationService.isLocating {
+                                HStack(spacing: 8) {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                    Text("Detecting current location…")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.secondary)
+                                }
+                            } else {
+                                switch locationService.authorizationStatus {
+                                case .authorizedAlways, .authorized:
+                                    Label("Location Access Granted", systemImage: "checkmark.circle.fill")
+                                        .foregroundStyle(.green)
+                                        .font(.system(size: 12, weight: .medium))
+                                case .notDetermined:
+                                    Label("Location Permission Required", systemImage: "location.slash")
+                                        .foregroundStyle(.secondary)
+                                        .font(.system(size: 12, weight: .medium))
+                                case .denied, .restricted:
+                                    Label("Location Access Denied", systemImage: "exclamationmark.triangle.fill")
+                                        .foregroundStyle(.orange)
+                                        .font(.system(size: 12, weight: .medium))
+                                @unknown default:
+                                    EmptyView()
+                                }
                             }
 
                             Spacer()
 
-                            Button {
-                                locationService.requestCurrentLocation(force: true)
-                            } label: {
-                                Label("Refresh Location", systemImage: "arrow.clockwise")
+                            if !PrayerLocationService.canUseCoreLocation {
+                                Button("Switch to Manual") {
+                                    locationMode = "manual"
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            } else {
+                                switch locationService.authorizationStatus {
+                                case .notDetermined:
+                                    Button("Allow Access…") {
+                                        locationService.requestAuthorization()
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .controlSize(.small)
+                                    .disabled(locationService.isLocating)
+                                case .denied, .restricted:
+                                    Button("Open Privacy Settings…") {
+                                        locationService.openSystemLocationSettings()
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                case .authorizedAlways, .authorized:
+                                    Button {
+                                        locationService.requestCurrentLocation(force: true)
+                                    } label: {
+                                        Label("Refresh", systemImage: "arrow.clockwise")
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                    .disabled(locationService.isLocating)
+                                @unknown default:
+                                    EmptyView()
+                                }
                             }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
+                        }
+
+                        if PrayerLocationService.canUseCoreLocation, let error = locationService.locationError {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.orange)
                         }
                     } else {
                         Picker("Reference City", selection: $manualCityId) {
@@ -4159,61 +4276,103 @@ private struct PrayerSettingsPage: View {
                         }
                     }
 
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "location.fill")
-                            .foregroundStyle(.tint)
-                            .padding(.top, 2)
+                    let isFallback = locationMode == "automatic" && !locationService.hasResolvedAutomaticLocation
+                    HStack(alignment: .center, spacing: 10) {
+                        Image(systemName: isFallback ? "location" : "location.fill")
+                            .font(.system(size: 13))
+                            .foregroundStyle(isFallback ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
+                            .frame(width: 18)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Region: \(locationService.displayName)")
-                                .font(.system(size: 13, weight: .medium))
+                            HStack(spacing: 6) {
+                                Text(locationService.displayName)
+                                    .font(.system(size: 13, weight: .medium))
+                                if isFallback {
+                                    Text("Default Fallback")
+                                        .font(.system(size: 10, weight: .medium))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 1)
+                                        .background(Color.primary.opacity(0.08), in: Capsule())
+                                }
+                            }
                             let coords = locationService.effectiveCoordinates
                             let elev = locationService.effectiveElevation
-                            Text(String(format: "Coordinates: %.4f°, %.4f° · Elevation: %.0fm (%@)",
+                            Text(String(format: "%.4f°, %.4f° · %.0fm · %@",
                                         coords.latitude,
                                         coords.longitude,
                                         elev,
                                         locationService.activeCity.provinceOrCountry))
-                                .font(.caption2)
+                                .font(.system(size: 11))
                                 .foregroundStyle(.secondary)
                         }
                     }
                 }
 
                 Section(header: Text("Notifications & Alerts")) {
-                    Picker("Alert Before Prayer", selection: $alertBeforeMinutes) {
-                        Text("Off").tag(0)
-                        Text("5 Minutes Before").tag(5)
-                        Text("10 Minutes Before").tag(10)
-                        Text("15 Minutes Before").tag(15)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Prayer Time Chime")
+                            Text("Plays a subtle chime when prayer time arrives")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                        }
+                        Spacer(minLength: 16)
+                        Button {
+                            PrayerTimeManager.shared.previewChime()
+                        } label: {
+                            Image(systemName: "play.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        Toggle("", isOn: $soundEnabled)
+                            .labelsHidden()
                     }
-                    .pickerStyle(.menu)
 
-                    Toggle("Play Subtle Chime", isOn: $soundEnabled)
-                    Toggle("Send macOS System Notifications", isOn: $systemNotificationEnabled)
-                        .onChange(of: systemNotificationEnabled) { _, isEnabled in
-                            if isEnabled {
-                                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
-                                    if !granted {
-                                        Task { @MainActor in
-                                            systemNotificationEnabled = false
-                                        }
-                                    }
-                                }
+                    Text("Right wing countdown appears automatically 30 minutes before prayer; the notch banner appears at prayer time.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            PrayerTimeManager.shared.triggerTestBanner()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "bell.badge")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
+                                Text("Test Prayer Notification Banner")
+                                    .font(.system(size: 11, weight: .medium))
                             }
                         }
+                        .buttonStyle(.bordered)
 
-                    Button(action: {
-                        PrayerTimeManager.shared.triggerTestBanner()
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "bell.badge")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(Color(red: 0.12, green: 0.84, blue: 0.38))
-                            Text("Test Prayer Notification Banner")
-                                .font(.system(size: 11, weight: .medium))
+                        Button(action: {
+                            PrayerTimeManager.shared.triggerTestCompactWing(thinking: false)
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "sun.horizon.fill")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(Color(red: 1.0, green: 0.72, blue: 0.20))
+                                Text("Test Wing (Idle)")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
                         }
+                        .buttonStyle(.bordered)
+
+                        Button(action: {
+                            PrayerTimeManager.shared.triggerTestCompactWing(thinking: true)
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(Color(red: 0.0, green: 0.96, blue: 0.83))
+                                Text("Test Wing (Thinking)")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
                 }
             }
         }
