@@ -10,6 +10,78 @@ import sys
 import subprocess
 import argparse
 
+def locate_frameworks_dir():
+    """
+    Dynamically locates the directory containing XCTest.framework.
+    Supports Xcode, Command Line Tools, and environment overrides.
+    Returns (frameworks_dir, checked_paths).
+    """
+    checked = []
+
+    env_dir = os.environ.get("XCTEST_FRAMEWORK_DIR")
+    if env_dir:
+        checked.append(f"$XCTEST_FRAMEWORK_DIR ({env_dir})")
+        if os.path.exists(os.path.join(env_dir, "XCTest.framework")):
+            return env_dir, checked
+
+    def check_cand(path, label):
+        if not path:
+            return None
+        checked.append(f"{label}: {path}")
+        if os.path.exists(os.path.join(path, "XCTest.framework")):
+            return path
+        return None
+
+    # 1. xcrun --sdk macosx --show-sdk-platform-path
+    try:
+        res = subprocess.run(["xcrun", "--sdk", "macosx", "--show-sdk-platform-path"],
+                             capture_output=True, text=True, check=True)
+        cand = os.path.join(res.stdout.strip(), "Developer", "Library", "Frameworks")
+        found = check_cand(cand, "xcrun platform Developer/Library/Frameworks")
+        if found:
+            return found, checked
+    except Exception:
+        pass
+
+    # 2. xcrun --sdk macosx --show-sdk-path
+    try:
+        res = subprocess.run(["xcrun", "--sdk", "macosx", "--show-sdk-path"],
+                             capture_output=True, text=True, check=True)
+        cand = os.path.join(res.stdout.strip(), "Developer", "Library", "Frameworks")
+        found = check_cand(cand, "xcrun sdk Developer/Library/Frameworks")
+        if found:
+            return found, checked
+    except Exception:
+        pass
+
+    # 3. xcode-select -p
+    try:
+        res = subprocess.run(["xcode-select", "-p"],
+                             capture_output=True, text=True, check=True)
+        dev = res.stdout.strip()
+        for cand in [
+            os.path.join(dev, "Platforms", "MacOSX.platform", "Developer", "Library", "Frameworks"),
+            os.path.join(dev, "Library", "Developer", "Frameworks")
+        ]:
+            found = check_cand(cand, "xcode-select candidate")
+            if found:
+                return found, checked
+    except Exception:
+        pass
+
+    # 4. Standard static CLT & Xcode paths
+    static_cands = [
+        "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "/Applications/Xcode.app/Contents/Developer/Library/Frameworks",
+    ]
+    for cand in static_cands:
+        found = check_cand(cand, "static candidate")
+        if found:
+            return found, checked
+
+    return None, checked
+
 def discover_tests_from_binary(binary_path, target_modules=None, filter_pattern=None):
     """
     Extracts all test methods and their signatures directly from the Mach-O binary
@@ -108,18 +180,46 @@ def main():
     build_dir = os.path.join(repo_root, ".build")
 
     # 1. Build test targets if not skipped
+    # Pin native build system to guarantee consistent Mach-O artifacts and Objects.LinkFileList
+    build_system_flags = ["--build-system", "native"]
     if not args.skip_build:
-        print("==> Building test targets with SwiftPM...")
-        cmd = ["swift", "build", "--build-tests"]
+        print("==> Building test targets with SwiftPM (native build system)...")
+        cmd = ["swift", "build", "--build-tests"] + build_system_flags
         res = subprocess.run(cmd, cwd=repo_root)
         if res.returncode != 0:
-            print("ERROR: swift build --build-tests failed", file=sys.stderr)
+            print("ERROR: [Toolchain] 'swift build --build-tests --build-system native' failed.", file=sys.stderr)
             sys.exit(res.returncode)
+
+    # Locate bin_dir via SwiftPM if available
+    bin_dir = None
+    try:
+        res = subprocess.run(
+            ["swift", "build", "--show-bin-path"] + build_system_flags,
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        cand = res.stdout.strip()
+        if os.path.isdir(cand):
+            bin_dir = cand
+    except Exception:
+        pass
 
     # 2. Locate Objects.LinkFileList and test bundle binary
     linkfile = None
     bundle_bin = None
     linkfile_candidates = {}
+
+    # Quick check in bin_dir if known
+    if bin_dir:
+        cand_bin = os.path.join(bin_dir, "MorrowPackageTests.xctest", "Contents", "MacOS", "MorrowPackageTests")
+        if os.path.isfile(cand_bin):
+            bundle_bin = cand_bin
+        cand_lf = os.path.join(bin_dir, "MorrowPackageTests.build", "Objects.LinkFileList")
+        if os.path.isfile(cand_lf):
+            linkfile_candidates["morrow"] = cand_lf
+
     for root, dirs, files in os.walk(build_dir):
         if "Objects.LinkFileList" in files and "PackageTests" in root:
             if "MorrowPackageTests" in root:
@@ -140,16 +240,36 @@ def main():
     linkfile = linkfile_candidates.get("morrow") or linkfile_candidates.get("codeisland") or linkfile_candidates.get("generic")
 
     if not linkfile or not os.path.isfile(linkfile):
-        print("ERROR: Objects.LinkFileList not found in .build. Run 'swift test' first.", file=sys.stderr)
+        print("ERROR: [Toolchain] Objects.LinkFileList not found in .build.", file=sys.stderr)
+        print(f"Searched build directory: {build_dir}", file=sys.stderr)
+        if bin_dir:
+            print(f"SwiftPM bin directory: {bin_dir}", file=sys.stderr)
+        print("Diagnosis: SwiftPM did not produce native link file list. Verify build system is native.", file=sys.stderr)
         sys.exit(1)
 
     if not bundle_bin or not os.path.isfile(bundle_bin):
-        print("ERROR: MorrowPackageTests / CodeIslandPackageTests binary not found in .build.", file=sys.stderr)
+        print("ERROR: [Toolchain] MorrowPackageTests binary not found in .build.", file=sys.stderr)
+        print(f"Searched build directory: {build_dir}", file=sys.stderr)
         sys.exit(1)
 
     debug_dir = os.path.dirname(os.path.dirname(linkfile))
     modules_dir = os.path.join(debug_dir, "Modules")
-    frameworks_dir = "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"
+
+    # Locate frameworks directory dynamically (Xcode vs CLT vs custom override)
+    frameworks_dir, checked_paths = locate_frameworks_dir()
+    if not frameworks_dir:
+        print("ERROR: [Toolchain] Could not locate 'XCTest.framework'.", file=sys.stderr)
+        print("Checked candidate paths:", file=sys.stderr)
+        for p in checked_paths:
+            print(f"  - {p}", file=sys.stderr)
+        print("\nDiagnosis: Neither Xcode.app nor CommandLineTools with XCTest was found.", file=sys.stderr)
+        print("Remedy:", file=sys.stderr)
+        print("  - On developer Mac with Xcode: run 'sudo xcode-select -s /Applications/Xcode.app'", file=sys.stderr)
+        print("  - On headless CLT CI runner: ensure 'scripts/setup-macos-runner.sh' has run.", file=sys.stderr)
+        print("  - Or specify path manually: export XCTEST_FRAMEWORK_DIR=/path/to/Frameworks", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"==> Using XCTest.framework from: {frameworks_dir}")
 
     # Filter object files (exclude existing synthetic runner)
     with open(linkfile, "r") as f:
@@ -210,7 +330,9 @@ def main():
 
     res = subprocess.run(compile_cmd)
     if res.returncode != 0:
-        print("ERROR: Failed to compile test runner", file=sys.stderr)
+        print(f"ERROR: [Toolchain] swiftc failed to compile test runner (exit code {res.returncode}).", file=sys.stderr)
+        print(f"Frameworks directory: {frameworks_dir}", file=sys.stderr)
+        print(f"Debug products directory: {debug_dir}", file=sys.stderr)
         sys.exit(res.returncode)
 
     # 5. Execute the test runner
