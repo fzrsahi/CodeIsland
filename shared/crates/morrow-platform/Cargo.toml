@@ -1,0 +1,41 @@
+[package]
+name = "morrow-platform"
+description = "The OS-facing half: paths, files and the hook script the installer writes. No policy — that lives in morrow-core."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+morrow-core = { path = "../morrow-core" }
+# For the shell's Settings card, which shows a `Status` and a `Report`.
+serde = { version = "1", features = ["derive"] }
+serde_json.workspace = true
+
+# #107: the Windows adapters talk to the OS APIs directly — SMTC, Core Audio,
+# WTS, the shell's notification state, toasts — because there is no `playerctl`
+# or `loginctl` equivalent to run instead. Only the features used are enabled.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Data_Xml_Dom",
+    "Foundation",
+    "Media_Control",
+    "UI_Notifications",
+    "Win32_Foundation",
+    "Win32_Media_Audio",
+    "Win32_Media_Audio_Endpoints",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Variant",
+    "Win32_System_RemoteDesktop",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+# The WinRT calls above are asynchronous; `join()` is how a blocking caller
+# waits for one in windows 0.62.
+windows-future = "0.3"
+
+[lints]
+workspace = true

@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://morrow.dev/schemas/golden-fixture.schema.json",
+  "title": "Morrow Golden Fixture Bundle",
+  "description": "Per-scope bundle of morrow-bridge golden fixtures. The neutral bundle carries each fixture's input and OS-independent expectation; macos/linux/windows bundles carry only per-OS expectations and refer to the neutral fixture by name.",
+  "type": "object",
+  "required": ["scope", "omitted_keys", "omitted_values", "fixtures"],
+  "additionalProperties": false,
+  "properties": {
+    "scope": {
+      "type": "string",
+      "enum": ["neutral", "macos", "linux", "windows"]
+    },
+    "omitted_keys": {
+      "description": "Forwarded-payload keys this scope's projection drops from the macOS recording. No expectation in the bundle may contain them.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^_" },
+      "uniqueItems": true
+    },
+    "omitted_values": {
+      "description": "Forwarded-payload keys this scope keeps only when the (string) value is not listed, e.g. macOS-only _term_app values on linux.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" },
+        "uniqueItems": true
+      }
+    },
+    "fixtures": {
+      "type": "array",
+      "items": { "type": "object" }
+    }
+  },
+  "if": { "properties": { "scope": { "const": "neutral" } } },
+  "then": { "properties": { "fixtures": { "items": { "$ref": "#/$defs/neutralFixture" } } } },
+  "else": { "properties": { "fixtures": { "items": { "$ref": "#/$defs/osFixture" } } } },
+  "$defs": {
+    "neutralFixture": {
+      "type": "object",
+      "required": ["name", "input", "expectation"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": { "$ref": "#/$defs/input" },
+        "expectation": { "$ref": "#/$defs/expectation" }
+      }
+    },
+    "osFixture": {
+      "description": "Per-OS expectation for the neutral fixture with the same name.",
+      "type": "object",
+      "required": ["name", "expectation"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "expectation": { "$ref": "#/$defs/expectation" }
+      }
+    },
+    "input": {
+      "type": "object",
+      "required": [
+        "arguments",
+        "environment",
+        "stdin",
+        "ancestors",
+        "bundle_identifiers",
+        "reply",
+        "files",
+        "has_socket"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "arguments": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "stdin": { "type": "string" },
+        "ancestors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "arguments"],
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "arguments": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "bundle_identifiers": {
+          "description": "macOS app bundle id per ancestor path. Only the macOS bridge reads it.",
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "reply": { "type": "string" },
+        "files": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "has_socket": { "type": "boolean" }
+      }
+    },
+    "expectation": {
+      "type": "object",
+      "required": ["forwarded", "stdout", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "forwarded": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "hook-payload.schema.json" }
+          ]
+        },
+        "stdout": { "type": "string" },
+        "status": { "type": "integer" }
+      }
+    }
+  }
+}

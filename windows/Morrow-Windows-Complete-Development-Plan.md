@@ -1,5 +1,10 @@
 # Morrow Windows 完整复刻开发计划
 
+> **SUPERSEDED (2026-11-16).** 本文档的 WPF / .NET 8 技术选型已作废。
+> 现行计划见 [`docs/plan-windows-linux.md`](../docs/plan-windows-linux.md) §7（正典阶段）与 [issue #47](https://github.com/fzrsahi/Morrow/issues/47)。
+> 决策依据：[ADR-0001](../docs/adr/0001-two-cores-one-contract.md)、[ADR-0002](../docs/adr/0002-tauri-v2-shell.md)。
+> 本文档仅保留作历史参考 —— 其中的分层思路与验收清单仍有参考价值，但技术栈已全部更换。
+
 ## 1. 项目目标与边界
 
 ### 1.1 目标

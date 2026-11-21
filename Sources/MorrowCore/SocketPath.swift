@@ -3,12 +3,27 @@ import Darwin
 
 public enum SocketPath {
     public static var path: String {
-        if let env = ProcessInfo.processInfo.environment["MORROW_SOCKET_PATH"] ?? ProcessInfo.processInfo.environment["CODEISLAND_SOCKET_PATH"] {
+        resolve(
+            environment: ProcessInfo.processInfo.environment,
+            uid: getuid(),
+            fileExists: { FileManager.default.fileExists(atPath: $0) }
+        )
+    }
+
+    /// The endpoint rule for macOS (docs/endpoint-contract.md), with what it
+    /// reads from the system passed in. An override that is set wins even
+    /// when empty; `fileExists` follows symlinks, as `FileManager` does.
+    public static func resolve(
+        environment: [String: String],
+        uid: uid_t,
+        fileExists: (String) -> Bool
+    ) -> String {
+        if let env = environment["MORROW_SOCKET_PATH"] ?? environment["CODEISLAND_SOCKET_PATH"] {
             return env
         }
-        let morrowSocket = "/tmp/morrow-\(getuid()).sock"
-        let legacySocket = "/tmp/codeisland-\(getuid()).sock"
-        if !FileManager.default.fileExists(atPath: morrowSocket) && FileManager.default.fileExists(atPath: legacySocket) {
+        let morrowSocket = "/tmp/morrow-\(uid).sock"
+        let legacySocket = "/tmp/codeisland-\(uid).sock"
+        if !fileExists(morrowSocket) && fileExists(legacySocket) {
             return legacySocket
         }
         return morrowSocket

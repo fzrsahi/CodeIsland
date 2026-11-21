@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://morrow.dev/schemas/hook-payload.schema.json",
+  "title": "Morrow Hook Payload",
+  "description": "Forwarded hook payload sent by morrow-bridge or produced by HookIntake for the island.",
+  "type": "object",
+  "required": ["hook_event_name", "session_id"],
+  "additionalProperties": true,
+  "$defs": {
+    "pidOrToken": {
+      "oneOf": [
+        { "type": "integer", "minimum": 0 },
+        { "type": "string", "pattern": "^\\$PID[0-9]+$" }
+      ]
+    }
+  },
+  "properties": {
+    "hook_event_name": { "type": "string" },
+    "session_id": { "type": "string", "minLength": 1 },
+    "_source": { "type": "string", "minLength": 1 },
+    "_ppid": { "$ref": "#/$defs/pidOrToken" },
+    "_hook_ppid": { "$ref": "#/$defs/pidOrToken" },
+    "_via_plugin": { "type": "boolean" },
+    "_cursor_payload_digest": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" },
+    "_term_app": { "type": "string" },
+    "_term_bundle": { "type": "string" },
+    "_iterm_session": { "type": "string" },
+    "_kitty_window": { "type": "string" },
+    "_tmux": { "type": "string" },
+    "_tmux_pane": { "type": "string" },
+    "_tmux_client_tty": { "type": "string" },
+    "_tty": { "type": ["string", "null"] },
+    "_cmux_surface_id": { "type": "string" },
+    "_cmux_workspace_id": { "type": "string" },
+    "_zellij": { "type": "string" },
+    "_zellij_pane_id": { "type": "string" },
+    "_zellij_session_name": { "type": "string" },
+    "_wezterm_pane": { "type": "string" },
+    "_herdr_pane_id": { "type": "string" },
+    "_herdr_socket_path": { "type": "string" },
+    "_herdr_bin_path": { "type": "string" },
+    "_superset_workspace_id": { "type": "string" },
+    "_superset_pane_id": { "type": "string" },
+    "_orca_terminal_handle": { "type": "string" },
+    "_orca_worktree_id": { "type": "string" },
+    "_claude_desktop_session": { "type": "string" },
+    "_hermes_home": { "type": "string" },
+    "_hermes_store": { "type": "object" },
+    "_remote_host_id": { "type": "string" },
+    "_remote_host_name": { "type": "string" },
+    "_untracked_process": { "type": "boolean" },
+    "_pi_tool_call_id": { "type": "string" },
+    "_env": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "_server_port": { "type": "integer", "minimum": 0 },
+    "cwd": { "type": "string" },
+    "transcript_path": { "type": "string" },
+    "tool_name": { "type": ["string", "null"] },
+    "tool_input": { "type": ["object", "null"] },
+    "tool_use_id": { "type": "string" },
+    "cursor_version": { "type": "string" },
+    "conversation_id": { "type": "string" },
+    "question": { "type": ["string", "object"] },
+    "options": { "type": "array" },
+    "prompt": { "type": ["string", "array"] }
+  },
+  "patternProperties": {
+    "^_cmux_": { "type": "string" },
+    "^_zellij": { "type": "string" },
+    "^_herdr_": { "type": "string" },
+    "^_superset_": { "type": "string" },
+    "^_orca_": { "type": "string" }
+  }
+}

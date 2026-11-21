@@ -1,0 +1,21 @@
+[package]
+name = "morrow-protocol"
+description = "Morrow's hook payload, edge facts and IPC envelope: encoding, decoding and versioning."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+# `raw_value` lets the conformance tests read a fixture's payload as the exact
+# text it was recorded as. No new crate.
+serde_json = { workspace = true, features = ["raw_value"] }
+
+[lints]
+workspace = true
