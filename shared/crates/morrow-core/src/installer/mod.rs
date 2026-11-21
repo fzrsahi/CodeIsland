@@ -10,6 +10,7 @@
 pub mod claude_hooks;
 pub mod codex_config;
 pub mod json_editor;
+pub mod kimi;
 pub mod opencode;
 pub mod settings;
 pub mod targets;
