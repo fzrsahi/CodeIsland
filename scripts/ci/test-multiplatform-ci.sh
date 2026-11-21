@@ -92,10 +92,12 @@ echo "--- Suite 3: .woodpecker.yaml Multi-Pipeline Structure ---"
 WP_YAML="$ROOT/.woodpecker.yaml"
 
 if [ -f "$WP_YAML" ]; then
-    PYTHON_VALIDATOR="
-import yaml, sys
+    YAML_REPORT=$(python3 - "$WP_YAML" << 'EOF'
+import sys
+import yaml
 
-with open('$WP_YAML') as f:
+wp_yaml = sys.argv[1]
+with open(wp_yaml) as f:
     docs = list(yaml.safe_load_all(f))
 
 # Document count check
@@ -108,43 +110,86 @@ print(f'DOCS_COUNT={len(docs)}')
 # Pipeline 1: Linux
 p1 = docs[0]
 p1_platform = p1.get('labels', {}).get('platform', '')
-p1_steps = [s.get('name') for s in p1.get('steps', [])]
+p1_steps = {s.get('name'): s for s in p1.get('steps', [])}
+p1_step_names = list(p1_steps.keys())
 p1_when = p1.get('when', [])
 p1_push_has_path = any('path' in c for c in p1_when if c.get('event') == 'push' or ('push' in c.get('event', []) if isinstance(c.get('event'), list) else False))
+p1_pr_when = [c for c in p1_when if 'pull_request' in c.get('event', [])]
+p1_pr_paths = p1_pr_when[0].get('path', {}).get('include', []) if p1_pr_when else []
+p1_test_linux = p1_steps.get('test-linux', {})
+p1_check_windows = p1_steps.get('check-windows', {})
+p1_test_linux_cmds = "\n".join(str(c) for c in p1_test_linux.get('commands', []))
+p1_check_win_cmds = "\n".join(str(c) for c in p1_check_windows.get('commands', []))
+
 print(f'P1_PLATFORM={p1_platform}')
-print(f'P1_STEPS={\",\".join(p1_steps)}')
-print(f'P1_PUSH_PATH_FILTER={\"YES\" if p1_push_has_path else \"NO\"}')
+print(f'P1_STEPS={",".join(p1_step_names)}')
+print(f'P1_PUSH_PATH_FILTER={"YES" if p1_push_has_path else "NO"}')
+print(f'P1_TEST_LINUX_IMAGE={p1_test_linux.get("image", "")}')
+print(f'P1_PR_PATHS={",".join(p1_pr_paths)}')
+print(f'P1_LINUX_HARNESS_CONTEXT={"YES" if "Morrow / Linux & Rust Harness" in p1_test_linux_cmds else "NO"}')
+print(f'P1_LINUX_DISPATCH={"YES" if "linux/ci/test.sh" in p1_test_linux_cmds else "NO"}')
+print(f'P1_TEST_LINUX_POSIX={"YES" if "set -e" in p1_test_linux_cmds and "set -eo pipefail" not in p1_test_linux_cmds else "NO"}')
+print(f'P1_WINDOWS_HARNESS_CONTEXT={"YES" if "Morrow / Windows MSVC Check" in p1_check_win_cmds else "NO"}')
+print(f'P1_WINDOWS_DISPATCH={"YES" if "windows/ci/check.sh" in p1_check_win_cmds else "NO"}')
+print(f'P1_CHECK_WIN_POSIX={"YES" if "set -e" in p1_check_win_cmds and "set -eo pipefail" not in p1_check_win_cmds else "NO"}')
 
 # Pipeline 2: macOS
 p2 = docs[1]
 p2_platform = p2.get('labels', {}).get('platform', '')
-p2_steps = [s.get('name') for s in p2.get('steps', [])]
+p2_steps = {s.get('name'): s for s in p2.get('steps', [])}
+p2_step_names = list(p2_steps.keys())
 p2_when = p2.get('when', [])
 p2_push_has_path = any('path' in c for c in p2_when if c.get('event') == 'push' or ('push' in c.get('event', []) if isinstance(c.get('event'), list) else False))
+p2_pr_when = [c for c in p2_when if 'pull_request' in c.get('event', [])]
+p2_pr_paths = p2_pr_when[0].get('path', {}).get('include', []) if p2_pr_when else []
+p2_test = p2_steps.get('test', {})
+p2_test_cmds = "\n".join(str(c) for c in p2_test.get('commands', []))
+
 print(f'P2_PLATFORM={p2_platform}')
-print(f'P2_STEPS={\",\".join(p2_steps)}')
-print(f'P2_PUSH_PATH_FILTER={\"YES\" if p2_push_has_path else \"NO\"}')
+print(f'P2_STEPS={",".join(p2_step_names)}')
+print(f'P2_PUSH_PATH_FILTER={"YES" if p2_push_has_path else "NO"}')
+print(f'P2_PR_PATHS={",".join(p2_pr_paths)}')
+print(f'P2_MACOS_DISPATCH={"YES" if "macos/ci/test.sh" in p2_test_cmds else "NO"}')
 
 # Pipeline 3: Release
 p3 = docs[2]
 p3_platform = p3.get('labels', {}).get('platform', '')
-p3_steps = [s.get('name') for s in p3.get('steps', [])]
+p3_steps = {s.get('name'): s for s in p3.get('steps', [])}
+p3_step_names = list(p3_steps.keys())
+p3_build_dev = p3_steps.get('build-dev-dmg', {})
+p3_dev_cmds = "\n".join(str(c) for c in p3_build_dev.get('commands', []))
 print(f'P3_PLATFORM={p3_platform}')
-print(f'P3_STEPS={\",\".join(p3_steps)}')
-"
-    YAML_REPORT=$(python3 -c "$PYTHON_VALIDATOR" 2>&1 || echo "ERROR")
+print(f'P3_STEPS={",".join(p3_step_names)}')
+print(f'P3_MANIFEST_DISPATCH={"YES" if "shared/ci/manifest.sh" in p3_dev_cmds else "NO"}')
+print(f'P3_INFO_PLIST={"YES" if "macos/Info.plist" in p3_dev_cmds else "NO"}')
+EOF
+)
     
     assert_contains "woodpecker config defines exactly 3 pipelines" "DOCS_COUNT=3" "$YAML_REPORT"
     assert_contains "Pipeline 1 targets linux/amd64" "P1_PLATFORM=linux/amd64" "$YAML_REPORT"
     assert_contains "Pipeline 1 has test-linux step" "test-linux" "$YAML_REPORT"
     assert_contains "Pipeline 1 has check-windows step" "check-windows" "$YAML_REPORT"
     assert_contains "Pipeline 1 push event has no path constraint" "P1_PUSH_PATH_FILTER=NO" "$YAML_REPORT"
+    assert_contains "Pipeline 1 test-linux uses rust:1.98-bookworm" "P1_TEST_LINUX_IMAGE=rust:1.98-bookworm" "$YAML_REPORT"
+    assert_contains "Pipeline 1 includes shared/**" "shared/**" "$YAML_REPORT"
+    assert_contains "Pipeline 1 includes linux/**" "linux/**" "$YAML_REPORT"
+    assert_contains "Pipeline 1 includes windows/**" "windows/**" "$YAML_REPORT"
+    assert_contains "Pipeline 1 reports Linux & Rust Harness context" "P1_LINUX_HARNESS_CONTEXT=YES" "$YAML_REPORT"
+    assert_contains "Pipeline 1 dispatches to linux/ci/test.sh" "P1_LINUX_DISPATCH=YES" "$YAML_REPORT"
+    assert_contains "Pipeline 1 reports Windows MSVC Check context" "P1_WINDOWS_HARNESS_CONTEXT=YES" "$YAML_REPORT"
+    assert_contains "Pipeline 1 dispatches to windows/ci/check.sh" "P1_WINDOWS_DISPATCH=YES" "$YAML_REPORT"
+    assert_contains "Pipeline 1 test-linux complies with POSIX set -e" "P1_TEST_LINUX_POSIX=YES" "$YAML_REPORT"
+    assert_contains "Pipeline 1 check-windows complies with POSIX set -e" "P1_CHECK_WIN_POSIX=YES" "$YAML_REPORT"
     assert_contains "Pipeline 2 push event has no path constraint" "P2_PUSH_PATH_FILTER=NO" "$YAML_REPORT"
     assert_contains "Pipeline 2 targets darwin/amd64" "P2_PLATFORM=darwin/amd64" "$YAML_REPORT"
     assert_contains "Pipeline 2 has test step" "test" "$YAML_REPORT"
+    assert_contains "Pipeline 2 includes macos/**" "macos/**" "$YAML_REPORT"
+    assert_contains "Pipeline 2 dispatches to macos/ci/test.sh" "P2_MACOS_DISPATCH=YES" "$YAML_REPORT"
     assert_contains "Pipeline 3 targets darwin/amd64" "P3_PLATFORM=darwin/amd64" "$YAML_REPORT"
     assert_contains "Pipeline 3 has build-dev-dmg step" "build-dev-dmg" "$YAML_REPORT"
     assert_contains "Pipeline 3 has build-release-dmg step" "build-release-dmg" "$YAML_REPORT"
+    assert_contains "Pipeline 3 dispatches to shared/ci/manifest.sh" "P3_MANIFEST_DISPATCH=YES" "$YAML_REPORT"
+    assert_contains "Pipeline 3 reads macos/Info.plist" "P3_INFO_PLIST=YES" "$YAML_REPORT"
 else
     echo "  [FAIL] .woodpecker.yaml does not exist"
     FAILED=$((FAILED + 1))
