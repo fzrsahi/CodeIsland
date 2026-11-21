@@ -37,8 +37,8 @@
 #   scripts/smoke-companion.sh           -> macos/scripts/  swift test + iOS companion build
 #   scripts/smoke-companion-ui.sh        -> macos/scripts/  iOS simulator smoke (Apple companion)
 #   scripts/smoke-companion-watch-ui.sh  -> macos/scripts/  watchOS simulator smoke (Apple companion)
-#   scripts/run-macos-builder.sh         -> macos/scripts/  launches the macOS CI runner VM
-#   scripts/setup-macos-runner.sh        -> macos/scripts/  CommandLineTools/XCTest setup on that runner
+#   scripts/run-macos-builder.sh         stays scripts/    launches the macOS CI runner VM (CODEOWNERS)
+#   scripts/setup-macos-runner.sh        stays scripts/    CommandLineTools/XCTest on that runner (CODEOWNERS)
 #   scripts/run-xctest-runner.py         -> macos/scripts/  XCTest harness for the Swift package
 #   scripts/report-status.py             stays scripts/     GitHub commit status, any platform's CI
 #   scripts/report-pr-failure.py         stays scripts/     posts a CI log excerpt to the PR, any platform
@@ -94,10 +94,11 @@ for p in Package.swift Package.resolved Sources Tests Info.plist Morrow.entitlem
     move "$p" "macos/$p"
 done
 move_optional appcast-dev.xml macos/appcast-dev.xml
+# run-macos-builder.sh and setup-macos-runner.sh stay in scripts/: CODEOWNERS pins
+# them to @aazhrt, and a git mv of an owned file is still an edit of an owned file.
 for p in build-dmg.sh swiftpm-release.sh update-appcast.sh dev-hot-restart.sh perf \
          check-companion-ui-regressions.sh smoke-companion.sh smoke-companion-ui.sh \
-         smoke-companion-watch-ui.sh run-macos-builder.sh setup-macos-runner.sh \
-         run-xctest-runner.py; do
+         smoke-companion-watch-ui.sh run-xctest-runner.py; do
     move "scripts/$p" "macos/scripts/$p"
 done
 

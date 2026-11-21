@@ -32,7 +32,7 @@ Never execute destructive commands or attempt privilege escalation:
 The following files and systems are **STRICTLY OFF-LIMITS** to modifications by anyone except `@aazhrt`:
 - `.woodpecker.yaml`
 - `.github/workflows/*`
-- `macos/scripts/setup-macos-runner.sh` and runner/VM infrastructure scripts.
+- `scripts/setup-macos-runner.sh` and runner/VM infrastructure scripts.
 - Release credentials, secrets, EC2 deployment manifests, and auto-update appcast feeds.
 
 **Instructions for AI Agents:**  
