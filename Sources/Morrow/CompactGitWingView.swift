@@ -97,7 +97,10 @@ struct CompactGitStandbyWingView: View {
     }
 
     private var displayState: CompactGitDisplayState {
-        CompactGitStatusModel.state(
+        if workspaceManager.testWingPreview == .nonGitIdle || workspaceManager.testWingPreview == .nonGitThinking {
+            return .nonRepo
+        }
+        return CompactGitStatusModel.state(
             isGitRepo: workspaceManager.isGitRepo,
             aheadCount: workspaceManager.aheadCount,
             changedCount: workspaceManager.changedFiles.count
@@ -114,8 +117,8 @@ struct CompactGitStandbyWingView: View {
                 compactBody(fontSize: fontSize)
             }
         }
-        .fixedSize(horizontal: !isWideMode, vertical: false)
-        .frame(maxWidth: isWideMode ? maxContentWidth : nil, alignment: .trailing)
+        .fixedSize(horizontal: !isWideMode && displayState != .nonRepo, vertical: false)
+        .frame(maxWidth: displayState == .nonRepo ? (isWideMode ? maxContentWidth : .infinity) : (isWideMode ? maxContentWidth : nil), alignment: displayState == .nonRepo ? .center : .trailing)
         .contentShape(Rectangle())
         .onAppear {
             if workspaceManager.currentCwd.isEmpty || !workspaceManager.isGitRepo {
@@ -153,11 +156,11 @@ struct CompactGitStandbyWingView: View {
                 }
             case .nonRepo:
                 if isPixel {
-                    WorkspacePixelIcon(glyph: .folder, color: Pixel16Palette.textDim, pixelSize: 1.25)
+                    WorkspacePixelIcon(glyph: .folder, color: Pixel16Palette.textDim, pixelSize: 1.75)
                 } else {
-                    Image(systemName: "folder")
-                        .font(.system(size: 9.5, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.45))
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.68))
                 }
             }
         }
@@ -193,7 +196,11 @@ struct CompactGitStandbyWingView: View {
         case .ahead(let ahead):
             return 10 + 2 + CGFloat("\(ahead)".count) * charStep
         case .clean:
-            return 10
+            let behind = max(0, workspaceManager.behindCount)
+            if behind > 0 {
+                return 10 + 2 + CGFloat("\(behind)".count) * charStep
+            }
+            return CGFloat("SYNC".count) * charStep
         case .nonRepo:
             return 0
         }
@@ -219,19 +226,19 @@ struct CompactGitStandbyWingView: View {
         let projectLabel = rawProject.isEmpty ? "Workspace" : rawProject
         let maxPixelChars = pixelWideMaxBranchChars
 
-        HStack(spacing: isPixel ? 5 : 6) {
+        HStack(spacing: isPixel ? 6 : 6) {
             switch displayState {
             case .nonRepo:
                 if isPixel {
-                    WorkspacePixelIcon(glyph: .folder, color: Pixel16Palette.textMuted, pixelSize: 1.1)
+                    WorkspacePixelIcon(glyph: .folder, color: Pixel16Palette.textMuted, pixelSize: 1.5)
                     PixelText(text: projectLabel, color: Pixel16Palette.textWhite, pixelSize: 1.0, maxChars: maxPixelChars)
                 } else {
                     Image(systemName: "folder.fill")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.65))
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.78))
                     Text(projectLabel)
                         .font(labelFont)
-                        .foregroundStyle(Color.white.opacity(0.85))
+                        .foregroundStyle(Color.white.opacity(0.9))
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
@@ -312,14 +319,32 @@ struct CompactGitStandbyWingView: View {
             .foregroundStyle(isPixel ? Pixel16Palette.cyan : primaryAutoColor)
             .fixedSize()
         case .clean:
-            if isPixel {
-                WorkspacePixelIcon(glyph: .check, color: Pixel16Palette.cyan, pixelSize: 1.05)
-                    .fixedSize()
+            let behind = max(0, workspaceManager.behindCount)
+            if behind > 0 {
+                HStack(spacing: isPixel ? 2 : 1) {
+                    if isPixel {
+                        WorkspacePixelIcon(glyph: .sync, color: Pixel16Palette.amber, pixelSize: 1.05)
+                        PixelText(text: "\(behind)", color: Pixel16Palette.amber, pixelSize: 1.0)
+                    } else {
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 8, weight: .bold))
+                        Text("\(behind)")
+                            .font(statFont)
+                            .monospacedDigit()
+                    }
+                }
+                .foregroundStyle(isPixel ? Pixel16Palette.amber : secondaryAutoColor)
+                .fixedSize()
             } else {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 8.5, weight: .bold))
-                    .foregroundStyle(cleanColor)
-                    .fixedSize()
+                if isPixel {
+                    PixelText(text: "SYNC", color: Pixel16Palette.cyan, pixelSize: 1.0)
+                        .fixedSize()
+                } else {
+                    Text("SYNC")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(cleanColor)
+                        .fixedSize()
+                }
             }
         case .nonRepo:
             EmptyView()
