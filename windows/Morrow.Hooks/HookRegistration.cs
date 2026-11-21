@@ -8,7 +8,9 @@ public sealed record HookRegistration(
     string InstallerVersion)
 {
     public const int CurrentProtocolVersion = 1;
-    public const string CurrentInstallerVersion = "0.2.1";
+    // 0.2.2: the Claude Code hook no longer passes --source (see KnownTools); bumping marks
+    // existing installs outdated so App.RepairOutdatedHooks rewrites them on next launch.
+    public const string CurrentInstallerVersion = "0.2.2";
 
     public static HookRegistration Create(HookTool tool, string bridgePath) => new(
         tool.HookMarker,
