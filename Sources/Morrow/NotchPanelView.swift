@@ -378,11 +378,14 @@ struct NotchPanelView: View {
     /// First launch / no-session state should still render a visible marker so the app
     /// doesn't disappear completely behind the physical notch.
     private var showIdleIndicator: Bool {
-        !isActive && !hideWhenNoSession
+        if workspaceManager.testWingPreview == .emptyIdle { return true }
+        return !isActive && !hideWhenNoSession
     }
     /// Whether the bar content should be visible (respects hideWhenNoSession)
     private var showBar: Bool {
-        if signals.isPlaying || nowPlaying.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner || mailManager.showMailArrivalAnimation { return true }
+        if workspaceManager.testWingPreview == .emptyIdle { return false }
+        if workspaceManager.testWingPreview == .nonGitIdle || workspaceManager.testWingPreview == .nonGitThinking { return true }
+        if signals.isPlaying || nowPlaying.isPlaying || signals.showMiniPeekBanner || signals.showChargingBanner || mailManager.showMailArrivalAnimation || PrayerTimeManager.shared.testWingThinking { return true }
         return isActive && !(hideWhenNoSession && appState.activeSessionCount == 0)
     }
     private var shouldShowExpanded: Bool {
@@ -536,7 +539,13 @@ struct NotchPanelView: View {
 
     /// Derived in `AppState.refreshDerivedState()`; walking every session here
     /// ran on each render of the bar.
-    private var isThinking: Bool { appState.isThinking }
+    private var isThinking: Bool {
+        switch workspaceManager.testWingPreview {
+        case .nonGitIdle: return false
+        case .nonGitThinking: return true
+        case .emptyIdle, .none: return appState.isThinking || PrayerTimeManager.shared.testWingThinking
+        }
+    }
 
     private var hasQuotaChip: Bool {
         guard showAgentDetails, showClaudeQuota, !shouldShowExpanded, !nowPlaying.isPlaying,
@@ -602,10 +611,10 @@ struct NotchPanelView: View {
             return isThinking ? 118 : 52
         }
         if prayerManager.isPrayerPrioritized {
-            if rightWingWidth > 0 {
-                return max(92, min(rightWingWidth + 14, 140))
+            if isThinking {
+                return effectiveNaturalLeftWidth + badgeReserve
             }
-            return 96
+            return 56 + badgeReserve
         }
         if signals.isPlaying || nowPlaying.isPlaying {
             if isThinking && !isConnectedChinLyricActive {
@@ -757,7 +766,7 @@ struct NotchPanelView: View {
     /// Idle-indicator wing width that scales across 0%–200% Island Width when no sessions are active.
     private var idleIndicatorWingWidth: CGFloat {
         let minFloor: CGFloat = 32
-        let withPrayer = prayerManager.isEnabled ? max(idleBaseMascotWingWidth, IdleIndicatorBar.idlePrayerWingMinWidth) : idleBaseMascotWingWidth
+        let withPrayer = prayerManager.isPrayerPrioritized ? max(idleBaseMascotWingWidth, IdleIndicatorBar.idlePrayerWingMinWidth) : idleBaseMascotWingWidth
         let desired = mailManager.showMailArrivalAnimation ? max(withPrayer, 52) : withPrayer
         let maxWing = max(minFloor, (maxSafeCollapsedBarWidth - collapsedMinCenterGap) / 2)
         return min(desired, maxWing)
@@ -870,7 +879,7 @@ struct NotchPanelView: View {
                 if mailManager.showMailArrivalAnimation {
                     return min(collapsedNotchGapWidth + 52 * 2, maxSafeCollapsedBarWidth)
                 }
-                if prayerManager.isEnabled {
+                if prayerManager.isPrayerPrioritized {
                     return max(136, compactWingWidth + 96)
                 }
                 return CGFloat(IslandDisplayMetrics.restingWidth(
@@ -1944,7 +1953,13 @@ private struct CompactLeftWing: View {
         return displayStatus
     }
 
-    private var isThinking: Bool { appState.isThinking }
+    private var isThinking: Bool {
+        switch (workspaceManager ?? .shared).testWingPreview {
+        case .nonGitIdle: return false
+        case .nonGitThinking: return true
+        case .emptyIdle, .none: return appState.isThinking || PrayerTimeManager.shared.testWingThinking
+        }
+    }
     private var liveTool: String? { displaySession?.currentTool }
     @State private var shownTool: String?
     @State private var lingerTimer: Timer?
@@ -2311,7 +2326,13 @@ private struct CompactRightWing: View {
     }
     /// Derived in `AppState.refreshDerivedState()`; walking every session here
     /// ran on each render of the bar.
-    private var isThinking: Bool { appState.isThinking }
+    private var isThinking: Bool {
+        switch workspaceManager.testWingPreview {
+        case .nonGitIdle: return false
+        case .nonGitThinking: return true
+        case .emptyIdle, .none: return appState.isThinking || PrayerTimeManager.shared.testWingThinking
+        }
+    }
     private var shouldExpandRightWing: Bool {
         isHovered
     }
@@ -2346,12 +2367,13 @@ private struct CompactRightWing: View {
     }
 
     private var rightInnerLeadingPadding: CGFloat {
-        (isNarrowCollapsedWing || (!isThinking && (signals.isPlaying || nowPlaying.isPlaying))) ? 2 : ((signals.isPlaying || nowPlaying.isPlaying) ? 3 : 6)
+        if !isThinking && signals.isPrayerPrioritized { return 0 }
+        return (isNarrowCollapsedWing || (!isThinking && (signals.isPlaying || nowPlaying.isPlaying))) ? 2 : ((signals.isPlaying || nowPlaying.isPlaying) ? 3 : 6)
     }
 
     private var rightInnerTrailingPadding: CGFloat {
         if expanded { return 10 }
-        if isNarrowCollapsedWing || mailManager.showMailArrivalAnimation || (!isThinking && (signals.isPlaying || nowPlaying.isPlaying)) { return 2 }
+        if isNarrowCollapsedWing || mailManager.showMailArrivalAnimation || (!isThinking && (signals.isPlaying || nowPlaying.isPlaying || signals.isPrayerPrioritized)) { return 2 }
         return (signals.isPlaying || nowPlaying.isPlaying) ? 4 : 8
     }
 
@@ -2407,7 +2429,9 @@ private struct CompactRightWing: View {
 
     @ViewBuilder
     private var collapsedWingContent: some View {
-        if mailManager.showMailArrivalAnimation {
+        if workspaceManager.testWingPreview == .nonGitIdle || workspaceManager.testWingPreview == .nonGitThinking {
+            standbyPill
+        } else if mailManager.showMailArrivalAnimation {
             // MAIL ARRIVAL MICRO-INTERACTION: compact sealed envelope (52pt) when idle, roller-coaster mailbox (118pt) when thinking
             MailArrivalWingView(
                 isRetro: isPixel,
@@ -2424,8 +2448,11 @@ private struct CompactRightWing: View {
             .frame(maxWidth: .infinity, alignment: .trailing)
             .transition(.opacity)
         } else if signals.isPrayerPrioritized {
-            // SMART PRIORITY: Prayer countdown takes active priority at T <= 15m
-            PrayerCompactWingView(isHovered: shouldExpandRightWing) {
+            // SMART PRIORITY: Prayer countdown takes active priority at T <= 30m (frameless, strict budget)
+            PrayerCompactWingView(
+                isHovered: shouldExpandRightWing,
+                isWideMode: isThinking && (!isDynamicIslandCompact || hasNotch)
+            ) {
                 expandedTab = .prayer
                 appState.surface = .sessionList
             }
@@ -3235,6 +3262,28 @@ private struct HeaderNavigationMenuTabs: View {
         appState.transitionToTab(target)
     }
 
+    /// Clips the sliding tab label at the icon's trailing edge so open-right / close-left
+    /// transitions never bleed over or under the tab icon.
+    @ViewBuilder
+    private func clippedTabLabel<Label: View>(
+        isVisible: Bool,
+        leadingSpacing: CGFloat,
+        @ViewBuilder label: () -> Label
+    ) -> some View {
+        HStack(spacing: 0) {
+            if isVisible {
+                label()
+                    .padding(.leading, leadingSpacing)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .leading).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
+            }
+        }
+        .clipped()
+        .zIndex(1)
+    }
+
     @ViewBuilder
     private func mailTabUnreadBadge(count: Int, accentColor: Color, isPixel: Bool) -> some View {
         let badgeFill = AppColorTheme.readableOnDark(accentColor, minimumLuminance: 0.22)
@@ -3280,17 +3329,14 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.agents)
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 0) {
                             Image(systemName: "cpu.fill")
                                 .font(.system(size: 11, weight: .semibold))
-                            if showAgentsLabel {
+                                .zIndex(2)
+                            clippedTabLabel(isVisible: showAgentsLabel, leadingSpacing: 5) {
                                 Text("Agents")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .leading).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
                             }
                         }
                         .foregroundStyle(isAgentsActive ? activeAccentColor : Self.inactiveColor)
@@ -3313,17 +3359,14 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.workspace)
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 0) {
                             Image(systemName: "folder.fill")
                                 .font(.system(size: 11, weight: .semibold))
-                            if showWorkLabel {
+                                .zIndex(2)
+                            clippedTabLabel(isVisible: showWorkLabel, leadingSpacing: 5) {
                                 Text("Work")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .leading).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
                             }
                         }
                         .foregroundStyle(isWorkActive ? activeAccentColor : Self.inactiveColor)
@@ -3346,17 +3389,14 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.music)
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 0) {
                             Image(systemName: "music.note")
                                 .font(.system(size: 11, weight: .semibold))
-                            if showMusicLabel {
+                                .zIndex(2)
+                            clippedTabLabel(isVisible: showMusicLabel, leadingSpacing: 5) {
                                 Text("Music")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .leading).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
                             }
                         }
                         .foregroundStyle(isMusicActive ? activeAccentColor : Self.inactiveColor)
@@ -3379,17 +3419,14 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.prayer)
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 0) {
                             Image(systemName: "moon.stars.fill")
                                 .font(.system(size: 11, weight: .semibold))
-                            if showPrayerLabel {
+                                .zIndex(2)
+                            clippedTabLabel(isVisible: showPrayerLabel, leadingSpacing: 5) {
                                 Text("Prayer")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .leading).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
                             }
                         }
                         .foregroundStyle(isPrayerActive ? activeAccentColor : Self.inactiveColor)
@@ -3414,7 +3451,7 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.mail)
                     } label: {
-                        HStack(spacing: unreadCount > 0 ? 7 : 5) {
+                        HStack(spacing: 0) {
                             Image(systemName: "envelope.fill")
                                 .font(.system(size: 11, weight: .semibold))
                                 .overlay(alignment: .topTrailing) {
@@ -3424,15 +3461,12 @@ private struct HeaderNavigationMenuTabs: View {
                                     }
                                 }
                                 .padding(.trailing, (!showMailLabel && unreadCount > 0) ? 4 : 0)
+                                .zIndex(2)
 
-                            if showMailLabel {
+                            clippedTabLabel(isVisible: showMailLabel, leadingSpacing: unreadCount > 0 ? 7 : 5) {
                                 Text("Mail")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .leading).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
                             }
                         }
                         .foregroundStyle(isMailActive ? mailColor : Self.inactiveColor)
@@ -3455,17 +3489,14 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.game)
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: 0) {
                             Image(systemName: "gamecontroller.fill")
                                 .font(.system(size: 11, weight: .semibold))
-                            if showGameLabel {
+                                .zIndex(2)
+                            clippedTabLabel(isVisible: showGameLabel, leadingSpacing: 5) {
                                 Text("Game")
                                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                                     .lineLimit(1)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .leading).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
                             }
                         }
                         .foregroundStyle(isGameActive ? activeAccentColor : Self.inactiveColor)
@@ -3492,22 +3523,19 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.agents)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 0) {
                             PixelIcon(
                                 glyph: .agents,
                                 color: isAgentsActive ? activeAccentColor : Self.inactiveColor,
                                 pixelSize: 1.35
                             )
-                            if showAgentsLabel {
+                            .zIndex(2)
+                            clippedTabLabel(isVisible: showAgentsLabel, leadingSpacing: 4) {
                                 PixelText(
                                     text: "AGENTS",
                                     color: activeAccentColor,
                                     pixelSize: 1.15
                                 )
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
                             }
                         }
                         .padding(.horizontal, isAgentsActive ? 7 : 5)
@@ -3529,22 +3557,19 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.workspace)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 0) {
                             PixelIcon(
                                 glyph: .workspace,
                                 color: isWorkActive ? activeAccentColor : Self.inactiveColor,
                                 pixelSize: 1.35
                             )
-                            if showWorkLabel {
+                            .zIndex(2)
+                            clippedTabLabel(isVisible: showWorkLabel, leadingSpacing: 4) {
                                 PixelText(
                                     text: "WORK",
                                     color: activeAccentColor,
                                     pixelSize: 1.15
                                 )
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
                             }
                         }
                         .padding(.horizontal, isWorkActive ? 7 : 5)
@@ -3566,22 +3591,19 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.music)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 0) {
                             PixelIcon(
                                 glyph: .music,
                                 color: isMusicActive ? activeAccentColor : Self.inactiveColor,
                                 pixelSize: 1.35
                             )
-                            if showMusicLabel {
+                            .zIndex(2)
+                            clippedTabLabel(isVisible: showMusicLabel, leadingSpacing: 4) {
                                 PixelText(
                                     text: "MUSIC",
                                     color: activeAccentColor,
                                     pixelSize: 1.15
                                 )
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
                             }
                         }
                         .padding(.horizontal, isMusicActive ? 7 : 5)
@@ -3603,22 +3625,19 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.prayer)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 0) {
                             PixelIcon(
                                 glyph: .prayer,
                                 color: isPrayerActive ? activeAccentColor : Self.inactiveColor,
                                 pixelSize: 1.35
                             )
-                            if showPrayerLabel {
+                            .zIndex(2)
+                            clippedTabLabel(isVisible: showPrayerLabel, leadingSpacing: 4) {
                                 PixelText(
                                     text: "PRAY",
                                     color: activeAccentColor,
                                     pixelSize: 1.15
                                 )
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
                             }
                         }
                         .padding(.horizontal, isPrayerActive ? 7 : 5)
@@ -3642,7 +3661,7 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.mail)
                     } label: {
-                        HStack(spacing: unreadCount > 0 ? 6 : 4) {
+                        HStack(spacing: 0) {
                             PixelIcon(
                                 glyph: .email,
                                 color: isMailActive ? cyberMailColor : Self.inactiveColor,
@@ -3655,17 +3674,14 @@ private struct HeaderNavigationMenuTabs: View {
                                 }
                             }
                             .padding(.trailing, (!showMailLabel && unreadCount > 0) ? 4 : 0)
+                            .zIndex(2)
 
-                            if showMailLabel {
+                            clippedTabLabel(isVisible: showMailLabel, leadingSpacing: unreadCount > 0 ? 6 : 4) {
                                 PixelText(
                                     text: "MAIL",
                                     color: cyberMailColor,
                                     pixelSize: 1.15
                                 )
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
                             }
                         }
                         .padding(.horizontal, isMailActive ? 7 : 5)
@@ -3687,22 +3703,19 @@ private struct HeaderNavigationMenuTabs: View {
                     Button {
                         switchToTab(.game)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 0) {
                             PixelIcon(
                                 glyph: .game,
                                 color: isGameActive ? activeAccentColor : Self.inactiveColor,
                                 pixelSize: 1.35
                             )
-                            if showGameLabel {
+                            .zIndex(2)
+                            clippedTabLabel(isVisible: showGameLabel, leadingSpacing: 4) {
                                 PixelText(
                                     text: "GAME",
                                     color: activeAccentColor,
                                     pixelSize: 1.15
                                 )
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .leading).combined(with: .opacity)
-                                ))
                             }
                         }
                         .padding(.horizontal, isGameActive ? 7 : 5)
@@ -3857,7 +3870,7 @@ private struct IdleIndicatorBar: View {
         AppColorTheme.accent(for: musicHUDProgressColor, isModern: islandUITheme != IslandUITheme.pixel.rawValue)
     }
 
-    static let idlePrayerWingMinWidth: CGFloat = 124
+    static let idlePrayerWingMinWidth: CGFloat = 56
 
     static func wingWidth(compactWingWidth: CGFloat, hovered: Bool, prayerEnabled: Bool) -> CGFloat {
         let base = hovered ? (compactWingWidth + 6) : compactWingWidth
@@ -3866,7 +3879,7 @@ private struct IdleIndicatorBar: View {
 
     private var effectiveWingWidth: CGFloat {
         let baseRight = rightWingWidth ?? wingWidth
-        let withPrayer = PrayerTimeManager.shared.isEnabled ? max(baseRight, Self.idlePrayerWingMinWidth) : baseRight
+        let withPrayer = PrayerTimeManager.shared.isPrayerPrioritized ? max(baseRight, Self.idlePrayerWingMinWidth) : baseRight
         return mailManager.showMailArrivalAnimation ? max(withPrayer, 52) : withPrayer
     }
 
@@ -3881,8 +3894,9 @@ private struct IdleIndicatorBar: View {
 
     var body: some View {
         let prayerManager = PrayerTimeManager.shared
+        let forceEmptyIdle = WorkspaceMonitorManager.shared.testWingPreview == .emptyIdle
         Group {
-            if displayMode == .dynamicIsland && !hasNotch && !mailManager.showMailArrivalAnimation {
+            if displayMode == .dynamicIsland && !hasNotch && (forceEmptyIdle || !mailManager.showMailArrivalAnimation) {
                 HStack(spacing: 10) {
                     MascotView(source: defaultSource, status: .idle, size: mascotSize)
                         .opacity(hovered ? 0.95 : 0.72)
@@ -3891,17 +3905,13 @@ private struct IdleIndicatorBar: View {
                         .fill(Color.white.opacity(0.16))
                         .frame(width: 1, height: 12)
 
-                    if prayerManager.isEnabled {
-                        PrayerCompactWingView(isHovered: hovered, onExpand: onExpand)
+                    if !forceEmptyIdle && prayerManager.isPrayerPrioritized {
+                        PrayerCompactWingView(isHovered: hovered, isWideMode: false, onExpand: onExpand)
                     } else {
-                        HStack(spacing: 4) {
-                            Text("Idle")
-                                .font(.system(size: 10, weight: .medium, design: .rounded))
-                                .foregroundStyle(Color.white.opacity(hovered ? 0.92 : 0.68))
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 7.5, weight: .semibold))
-                                .foregroundStyle(Color.white.opacity(hovered ? 0.85 : 0.45))
-                        }
+                        Text("IDLE")
+                            .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                            .tracking(0.6)
+                            .foregroundStyle(Color.white.opacity(hovered ? 0.88 : 0.55))
                     }
                 }
                 .padding(.horizontal, trailingOuterPadding)
@@ -3931,7 +3941,7 @@ private struct IdleIndicatorBar: View {
 
                     // Right Wing: mail arrival badge, prayer pill, or expand indicator
                     HStack(spacing: 4) {
-                        if mailManager.showMailArrivalAnimation {
+                        if !forceEmptyIdle && mailManager.showMailArrivalAnimation {
                             MailArrivalWingView(
                                 isRetro: islandUITheme == IslandUITheme.pixel.rawValue,
                                 accentColor: mailAccentColor,
@@ -3947,19 +3957,26 @@ private struct IdleIndicatorBar: View {
                             .transition(.opacity)
                         } else {
                             Spacer(minLength: 0)
-                            if prayerManager.isEnabled {
-                                PrayerCompactWingView(isHovered: hovered, onExpand: onExpand)
+                            if !forceEmptyIdle && prayerManager.isPrayerPrioritized {
+                                PrayerCompactWingView(isHovered: hovered, isWideMode: false, onExpand: onExpand)
                                     .padding(.trailing, trailingOuterPadding)
                             } else {
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: hovered ? 8 : 7.5, weight: .semibold))
-                                    .foregroundStyle(Color.white.opacity(hovered ? 0.9 : 0.45))
-                                    .frame(width: 18, height: 18)
-                                    .background(
-                                        Circle()
-                                            .fill(Color.white.opacity(hovered ? 0.12 : 0))
-                                    )
-                                    .padding(.trailing, trailingOuterPadding)
+                                Group {
+                                    if islandUITheme == IslandUITheme.pixel.rawValue {
+                                        PixelText(
+                                            text: "IDLE",
+                                            color: Color.white.opacity(hovered ? 0.88 : 0.55),
+                                            pixelSize: 1.0
+                                        )
+                                    } else {
+                                        Text("IDLE")
+                                            .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                                            .tracking(0.6)
+                                            .foregroundStyle(Color.white.opacity(hovered ? 0.88 : 0.55))
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.trailing, trailingOuterPadding)
                             }
                         }
                     }
@@ -6500,6 +6517,26 @@ private struct UsageSparkline: View {
     }
 }
 
+/// Routes horizontal trackpad swipes out of `NSScrollView` so tab navigation works anywhere over the Agents list.
+enum ThinScrollSwipePolicy {
+    static func decision(
+        deltaX: CGFloat,
+        deltaY: CGFloat,
+        isForwardingHorizontal: Bool,
+        isPhaseBegin: Bool,
+        isPhaseEnd: Bool
+    ) -> (forward: Bool, nextForwardingState: Bool) {
+        let isHorizontal = abs(deltaX) > abs(deltaY) && abs(deltaX) > 0.4
+        if isPhaseBegin {
+            return (isHorizontal, isHorizontal && !isPhaseEnd)
+        }
+        if isHorizontal || isForwardingHorizontal {
+            return (true, !isPhaseEnd)
+        }
+        return (false, false)
+    }
+}
+
 /// Thin overlay scrollbar via NSScrollView — ignores system "show scrollbar" preference.
 private struct ThinScrollView<Content: View>: NSViewRepresentable {
     let maxHeight: CGFloat
@@ -6509,9 +6546,31 @@ private struct ThinScrollView<Content: View>: NSViewRepresentable {
     /// attached or "Show scroll bars: Always") on its own schedule; a legacy
     /// scroller took 13pt off the session list's width until the next update.
     private final class OverlayScrollView: NSScrollView {
+        private var forwardingHorizontalSwipe = false
+
         override var scrollerStyle: NSScroller.Style {
             get { super.scrollerStyle }
             set { super.scrollerStyle = .overlay }
+        }
+
+        override func scrollWheel(with event: NSEvent) {
+            let isPhaseEnd = event.phase == .ended
+                || event.phase == .cancelled
+                || event.momentumPhase == .ended
+                || event.momentumPhase == .cancelled
+            let result = ThinScrollSwipePolicy.decision(
+                deltaX: event.scrollingDeltaX,
+                deltaY: event.scrollingDeltaY,
+                isForwardingHorizontal: forwardingHorizontalSwipe,
+                isPhaseBegin: event.phase == .began,
+                isPhaseEnd: isPhaseEnd
+            )
+            forwardingHorizontalSwipe = result.nextForwardingState
+            if result.forward {
+                nextResponder?.scrollWheel(with: event)
+                return
+            }
+            super.scrollWheel(with: event)
         }
     }
 
