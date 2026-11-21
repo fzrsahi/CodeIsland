@@ -21,11 +21,16 @@ function resolveHookPath() {
 
 const HOOK_PATH = resolveHookPath();
 
-const SOCKET_PATH = process.env.MORROW_SOCKET_PATH || process.env.CODEISLAND_SOCKET_PATH || "/tmp/morrow.sock";
-const REMOTE_HOST_ID = process.env.MORROW_REMOTE_HOST_ID || process.env.CODEISLAND_REMOTE_HOST_ID || "";
-const REMOTE_HOST_NAME = process.env.MORROW_REMOTE_HOST_NAME || process.env.CODEISLAND_REMOTE_HOST_NAME || "";
+// Filled in by the installer before this file reaches the host (#78). Literals,
+// not `process.env` fallbacks: the installer has to be *able to fail* when it
+// cannot find what it replaces, and a fallback chain that looks like a default
+// hides exactly that — the rebrand left these four lines un-replaced and the
+// remote plugin sent to a path that never existed, silently.
+const SOCKET_PATH = "__MORROW_SOCKET_PATH__";
+const REMOTE_HOST_ID = "__MORROW_REMOTE_HOST_ID__";
+const REMOTE_HOST_NAME = "__MORROW_REMOTE_HOST_NAME__";
 // The SSH user's uid, on a host whose agents run as other users; else empty.
-const SOCKET_OWNER_UID = process.env.MORROW_SOCKET_OWNER_UID || process.env.CODEISLAND_SOCKET_OWNER_UID || "";
+const SOCKET_OWNER_UID = "__MORROW_SOCKET_OWNER_UID__";
 
 // Who owns the island's socket here: sshd makes it as the SSH user. Unless the
 // installer named that user's uid (a host whose agents run as other users, so

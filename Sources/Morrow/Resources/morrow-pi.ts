@@ -1,5 +1,5 @@
 // Morrow pi extension (CodeIsland pi extension)
-// version: v6
+// version: v7
 
 /**
  * @fileoverview CodeIsland Integration Extension.
@@ -65,10 +65,40 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 // ── Socket / bridge constants ─────────────────────────────────────────────────
 
-/** Unix socket path CodeIsland listens on (user-scoped). */
 const userId = getuid?.() ?? 0;
-const SOCKET_PATH =
-  process.env.CODEISLAND_SOCKET_PATH || `/tmp/codeisland-${userId}.sock`;
+
+/**
+ * The socket the island listens on, resolved where it is needed rather than once
+ * at load (#78): the app may start after this plugin, and after the Morrow
+ * rename the app listens on `/tmp/morrow-<uid>.sock` while this plugin kept
+ * sending to `/tmp/codeisland-<uid>.sock` — every event and every permission
+ * request disappeared, and nothing reported it.
+ *
+ * The legacy name is still used when it exists and the new one does not, so a
+ * machine whose island has not been restarted keeps working. Exported for tests,
+ * which pass their own `env`, `uid` and `exists`.
+ */
+export function resolveSocketPath(
+  env: {
+    MORROW_SOCKET_PATH?: string;
+    CODEISLAND_SOCKET_PATH?: string;
+  } = process.env,
+  uid: number | undefined = getuid?.(),
+  exists: (path: string) => boolean = existsSync,
+): string {
+  const override = env.MORROW_SOCKET_PATH || env.CODEISLAND_SOCKET_PATH;
+  if (override) return override;
+  const morrow = `/tmp/morrow-${uid ?? 0}.sock`;
+  const legacy = `/tmp/codeisland-${uid ?? 0}.sock`;
+  try {
+    return !exists(morrow) && exists(legacy) ? legacy : morrow;
+  } catch {
+    return morrow;
+  }
+}
+
+/** The path to use right now. */
+export const socketPath = (): string => resolveSocketPath();
 
 /**
  * Whether the socket at `path` is one this user owns. The default path is a
@@ -228,12 +258,12 @@ function detectTty(): string | null {
  */
 function sendToSocket(payload: object): Promise<boolean> {
   return new Promise((resolve) => {
-    if (!socketIsOwnedByUser(SOCKET_PATH)) {
+    if (!socketIsOwnedByUser(socketPath())) {
       resolve(false);
       return;
     }
     try {
-      const sock = connect({ path: SOCKET_PATH }, () => {
+      const sock = connect({ path: socketPath() }, () => {
         sock.write(JSON.stringify(payload));
         sock.end();
         resolve(true);
@@ -262,7 +292,7 @@ function sendAndWaitResponse(
   timeoutMs = 30_000,
 ): Promise<Record<string, unknown> | null> {
   return new Promise((resolve) => {
-    if (!existsSync(BRIDGE_PATH) || !socketIsOwnedByUser(SOCKET_PATH)) {
+    if (!existsSync(BRIDGE_PATH) || !socketIsOwnedByUser(socketPath())) {
       resolve(null);
       return;
     }

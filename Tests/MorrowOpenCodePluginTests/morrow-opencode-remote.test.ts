@@ -29,11 +29,7 @@ function standInHome(dir: string, out: string) {
 }
 standInHome(home, received);
 
-const saved = {
-  HOME: process.env.HOME,
-  CODEISLAND_SOCKET_PATH: process.env.CODEISLAND_SOCKET_PATH,
-  CODEISLAND_SOCKET_OWNER_UID: process.env.CODEISLAND_SOCKET_OWNER_UID,
-};
+const saved = { HOME: process.env.HOME };
 const restore = () => {
   for (const [key, value] of Object.entries(saved)) {
     if (value === undefined) delete process.env[key];
@@ -41,13 +37,66 @@ const restore = () => {
   }
 };
 process.env.HOME = home;
-process.env.CODEISLAND_SOCKET_PATH = socketPath;
-const { default: plugin } = await import("../../Sources/Morrow/Resources/morrow-opencode-remote.js");
+
+// The installer fills four placeholders before the file reaches the host (#78),
+// so this reads the shipped resource and does exactly what
+// `RemoteInstaller.remoteOpencodePluginForInstall` does — including failing when
+// a placeholder is missing.
+const source = readFileSync(
+  join(import.meta.dir, "../../Sources/Morrow/Resources/morrow-opencode-remote.js"),
+  "utf8",
+);
+const configured = [
+  ["__MORROW_SOCKET_PATH__", socketPath],
+  ["__MORROW_REMOTE_HOST_ID__", "host-test"],
+  ["__MORROW_REMOTE_HOST_NAME__", "devbox"],
+  ["__MORROW_SOCKET_OWNER_UID__", ""],
+].reduce((text, [placeholder, value]) => {
+  const quoted = JSON.stringify(placeholder);
+  expect(text).toContain(quoted);
+  return text.replaceAll(quoted, JSON.stringify(value));
+}, source);
+const configuredDirs: string[] = [];
+
+/**
+ * A copy of the shipped plugin with the installer's four values filled in, in a
+ * file of its own so a test can have several with different settings (#78).
+ */
+async function loadConfigured(options: {
+  socketPath: string;
+  ownerUid?: string;
+  hostId?: string;
+  hostName?: string;
+  name: string;
+}) {
+  const filled = [
+    ["__MORROW_SOCKET_PATH__", options.socketPath],
+    ["__MORROW_REMOTE_HOST_ID__", options.hostId ?? "host-test"],
+    ["__MORROW_REMOTE_HOST_NAME__", options.hostName ?? "devbox"],
+    ["__MORROW_SOCKET_OWNER_UID__", options.ownerUid ?? ""],
+  ].reduce((text, [placeholder, value]) => {
+    const quoted = JSON.stringify(placeholder);
+    expect(text).toContain(quoted);
+    return text.replaceAll(quoted, JSON.stringify(value));
+  }, source);
+  // A folder of its own: bun caches a directory's listing from the first import
+  // in it, so a second file added later is "not found" even though it exists.
+  const dir = mkdtempSync(join(tmpdir(), `morrow-remote-${options.name}-`));
+  configuredDirs.push(dir);
+  const path = join(dir, "plugin.js");
+  writeFileSync(path, filled);
+  return (await import(path)).default;
+}
+
+const configuredPath = join(home, "opencode-remote.js");
+writeFileSync(configuredPath, configured);
+const { default: plugin } = await import(configuredPath);
 restore();
 
 afterAll(async () => {
   await new Promise<void>((resolve) => island.close(() => resolve()));
   rmSync(home, { recursive: true, force: true });
+  for (const dir of configuredDirs) rmSync(dir, { recursive: true, force: true });
 });
 
 const forwarded = async (count: number) => {
@@ -152,9 +201,7 @@ describe("remote OpenCode plugin", () => {
       ].join("\n"));
       chmodSync(hook, 0o755);
       process.env.HOME = otherHome;
-      process.env.CODEISLAND_SOCKET_PATH = socketPath;
-      process.env.CODEISLAND_SOCKET_OWNER_UID = owner;
-      const { default: other } = await import(`../../Sources/Morrow/Resources/morrow-opencode-remote.js?${name}`);
+      const other = await loadConfigured({ socketPath, ownerUid: owner, name });
       restore();
 
       const hooks = await other.server({ client: undefined, serverUrl: undefined });
@@ -190,8 +237,7 @@ describe("remote OpenCode plugin", () => {
       const handedOn = join(otherHome, "received.jsonl");
       standInHome(otherHome, handedOn);
       process.env.HOME = otherHome;
-      process.env.CODEISLAND_SOCKET_PATH = legacy;
-      const { default: other } = await import("../../Sources/Morrow/Resources/morrow-opencode-remote.js?older-install");
+      const other = await loadConfigured({ socketPath: legacy, name: "older-install" });
       restore();
 
       expect(existsSync(legacy)).toBe(false);
