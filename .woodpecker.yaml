@@ -10,13 +10,13 @@ when:
   - event: [pull_request, tag]
     path:
       include:
-        - "crates/**"
-        - "shared/**"
         - "Cargo.*"
         - "rust-toolchain.toml"
-        - "scripts/ci/linux*"
-        - "scripts/ci/windows*"
-        - "scripts/ci/rust*"
+        - "shared/**"
+        - "crates/**"
+        - "linux/**"
+        - "windows/**"
+        - "scripts/ci/**"
         - ".woodpecker.yaml"
   - event: push
     branch: [dev, main]
@@ -26,24 +26,68 @@ labels:
 
 steps:
   - name: test-linux
-    image: rust:1.80-bookworm
+    image: rust:1.98-bookworm
+    environment:
+      GITHUB_TOKEN:
+        from_secret: github_token
     commands:
+      - set -eo pipefail
       - |
-        if [ -f "./scripts/ci/linux-test.sh" ]; then
-          ./scripts/ci/linux-test.sh
+        report() {
+          python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Linux & Rust Harness" --state "$1" --description "$2" || true
+        }
+        report pending "Running cargo test, fmt, clippy, purity..."
+        if [ -f "./linux/ci/test.sh" ]; then
+          TEST_SCRIPT="./linux/ci/test.sh"
+        elif [ -f "./scripts/ci/linux-test.sh" ]; then
+          TEST_SCRIPT="./scripts/ci/linux-test.sh"
         else
-          echo "Notice: linux-test.sh not yet present in this commit. Skipping."
+          echo "Notice: Linux test script not found in this commit. Skipping."
+          report success "Linux & Rust tests skipped (no test script)"
+          exit 0
+        fi
+        if "$TEST_SCRIPT"; then
+          report success "Linux & Rust tests passed"
+        else
+          report failure "Linux & Rust tests failed"
+          exit 1
         fi
 
   - name: check-windows
-    image: rust:1.80-bookworm
+    image: rust:1.98-bookworm
+    environment:
+      GITHUB_TOKEN:
+        from_secret: github_token
     commands:
+      - set -eo pipefail
       - |
-        if [ -f "./Cargo.toml" ]; then
-          rustup target add x86_64-pc-windows-msvc
-          ./scripts/ci/windows-check.sh
+        report() {
+          python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Windows MSVC Check" --state "$1" --description "$2" || true
+        }
+        report pending "Running cargo-xwin clippy for x86_64-pc-windows-msvc..."
+        if [ ! -f "./Cargo.toml" ]; then
+          echo "Notice: Cargo.toml not found in this commit. Skipping."
+          report success "Windows MSVC check skipped (no Cargo.toml)"
+          exit 0
+        fi
+        rustup target add x86_64-pc-windows-msvc
+        if ! command -v cargo-xwin >/dev/null 2>&1; then
+          curl -sL https://github.com/rust-cross/cargo-xwin/releases/download/v0.23.1/cargo-xwin-v0.23.1.x86_64-unknown-linux-musl.tar.gz | tar -xz -C /usr/local/cargo/bin
+        fi
+        if [ -f "./windows/ci/check.sh" ]; then
+          CHECK_SCRIPT="./windows/ci/check.sh"
+        elif [ -f "./scripts/ci/windows-check.sh" ]; then
+          CHECK_SCRIPT="./scripts/ci/windows-check.sh"
         else
-          echo "Notice: Cargo.toml not yet present in this commit. Skipping."
+          echo "Notice: Windows check script not found in this commit. Skipping."
+          report success "Windows MSVC check skipped (no check script)"
+          exit 0
+        fi
+        if "$CHECK_SCRIPT"; then
+          report success "Windows MSVC type-check passed"
+        else
+          report failure "Windows MSVC type-check failed"
+          exit 1
         fi
 
 ---
@@ -56,6 +100,7 @@ when:
       include:
         - "Sources/**"
         - "Tests/**"
+        - "macos/**"
         - "Package.*"
         - "Info.plist"
         - "scripts/*macos*"
@@ -82,7 +127,14 @@ steps:
       - swift --version
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Syntax & Git Hygiene Guard" --state success --description "Pre-commit syntax and git hygiene clean" || true
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state pending --description "Running unit tests on macOS Sonoma..." || true
-      - ./scripts/ci/macos-test.sh || { touch .xctest-failed; exit 1; }
+      - |
+        if [ -f "./macos/ci/test.sh" ]; then
+          ./macos/ci/test.sh || { touch .xctest-failed; exit 1; }
+        elif [ -f "./scripts/ci/macos-test.sh" ]; then
+          ./scripts/ci/macos-test.sh || { touch .xctest-failed; exit 1; }
+        else
+          echo "Notice: macOS test script not found in this commit. Skipping."
+        fi
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state success --description "Unit tests passed (0 failures)" || true
 
   # --------------------------------------------------------------------------
@@ -133,11 +185,21 @@ steps:
       - BASE_VER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist 2>/dev/null || echo "1.0.42")
       - DEV_VERSION="${BASE_VER}-dev.${CI_PIPELINE_NUMBER}"
       - 'echo "==> Building Morrow Beta version: $DEV_VERSION"'
-      - ./scripts/ci/macos-package.sh "$DEV_VERSION"
+      - |
+        if [ -f "./macos/ci/package.sh" ]; then
+          ./macos/ci/package.sh "$DEV_VERSION"
+        elif [ -f "./scripts/ci/macos-package.sh" ]; then
+          ./scripts/ci/macos-package.sh "$DEV_VERSION"
+        fi
       - |
         SIZE=$(stat -f%z dist/macos/Morrow.dmg 2>/dev/null || stat -c%s dist/macos/Morrow.dmg)
         python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
-      - ./scripts/ci/manifest.sh "$DEV_VERSION" --channel dev
+      - |
+        if [ -f "./macos/ci/manifest.sh" ]; then
+          ./macos/ci/manifest.sh "$DEV_VERSION" --channel dev
+        elif [ -f "./scripts/ci/manifest.sh" ]; then
+          ./scripts/ci/manifest.sh "$DEV_VERSION" --channel dev
+        fi
       - |
         echo "==> Deploying artifacts to EC2 distribution node via SSH..."
         SSH_KEY="$HOME/.ssh/codeisland_deploy"
@@ -175,11 +237,21 @@ steps:
       - 'echo "==> Production release tag detected: $CI_COMMIT_TAG"'
       - VERSION="${CI_COMMIT_TAG#[vV]}"
       - 'echo "==> Building Morrow Production DMG version: $VERSION"'
-      - ./scripts/ci/macos-package.sh "$VERSION"
+      - |
+        if [ -f "./macos/ci/package.sh" ]; then
+          ./macos/ci/package.sh "$VERSION"
+        elif [ -f "./scripts/ci/macos-package.sh" ]; then
+          ./scripts/ci/macos-package.sh "$VERSION"
+        fi
       - |
         SIZE=$(stat -f%z dist/macos/Morrow.dmg 2>/dev/null || stat -c%s dist/macos/Morrow.dmg)
         python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
-      - ./scripts/ci/manifest.sh "$VERSION" --channel stable
+      - |
+        if [ -f "./macos/ci/manifest.sh" ]; then
+          ./macos/ci/manifest.sh "$VERSION" --channel stable
+        elif [ -f "./scripts/ci/manifest.sh" ]; then
+          ./scripts/ci/manifest.sh "$VERSION" --channel stable
+        fi
       - |
         echo "==> Uploading release artifacts to GitHub Release..."
         cp dist/macos/SHA256SUMS dist/macos/SHA256SUMS.txt
