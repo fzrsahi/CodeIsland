@@ -117,8 +117,8 @@ public enum PrayerCardDisplayMode: String, CaseIterable, Identifiable, Sendable 
 
     public var title: String {
         switch self {
-        case .compact: return "Compact Ribbon (120pt)"
-        case .panoramic: return "Panoramic Diorama (242pt)"
+        case .compact: return "Compact (120pt)"
+        case .panoramic: return "Panoramic (242pt)"
         }
     }
 

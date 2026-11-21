@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://morrow.dev/schemas/hook-envelope.schema.json",
+  "title": "Morrow Hook & IPC Envelope",
+  "description": "Versioned IPC and edge envelopes shared across Morrow cores.",
+  "oneOf": [
+    { "$ref": "#/$defs/edgePayload" },
+    { "$ref": "#/$defs/ipcEnvelopeV1" }
+  ],
+  "$defs": {
+    "edgeFacts": {
+      "type": "object",
+      "required": ["v"],
+      "additionalProperties": true,
+      "properties": {
+        "v": { "type": "integer", "minimum": 1 },
+        "source": { "type": "string" },
+        "event": { "type": "string" },
+        "cwd": { "type": "string" },
+        "tty": { "type": "string" },
+        "stdin_sha256": { "type": "string", "pattern": "^[0-9a-fA-F]+$" },
+        "waits": { "type": "boolean" },
+        "host": {
+          "type": "object",
+          "required": ["id"],
+          "additionalProperties": true,
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" }
+          }
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "tmux_client_tty": { "type": "string" },
+        "ppid": false
+      }
+    },
+    "edgePayload": {
+      "type": "object",
+      "required": ["_edge"],
+      "additionalProperties": true,
+      "properties": {
+        "_edge": { "$ref": "#/$defs/edgeFacts" }
+      }
+    },
+    "ipcEnvelopeV1": {
+      "type": "object",
+      "required": ["v", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "v": { "type": "integer", "const": 1 },
+        "payload": { "$ref": "hook-payload.schema.json" }
+      }
+    }
+  }
+}

@@ -13,9 +13,12 @@ quirk is then fixed once, in HookIntake, for every edge.
 
 ## Transport
 
+The endpoint rule per OS (overrides, legacy fallback, peer checks, case table) is in [`endpoint-contract.md`](endpoint-contract.md).
+
 - One Unix-domain stream connection per hook invocation, to
   `$MORROW_SOCKET_PATH`, else `/tmp/morrow-<uid>.sock` (on a remote
-  host, the path the installer forwarded: `/tmp/morrow-<uid>/island.sock`).
+  host, the path the installer forwarded:
+  `/tmp/codeisland-<uid>/island.sock`, see `endpoint-contract.md` §6).
 - On a remote host that socket sits in a folder of the SSH user's own,
   which the island makes on the host, as that user, before anything is
   forwarded there: 0700 — 0711 where agents run as other users, who may then
@@ -30,7 +33,7 @@ quirk is then fixed once, in HookIntake, for every edge.
   wrote names `/tmp/morrow-<uid>.sock`, and an agent started before the
   reinstall still runs it. The remote hook on the host is the one the
   newest island installed, and only such an island listens in the folder:
-  for that command it tries `/tmp/morrow-<uid>/island.sock` first, and
+  for that command it tries `/tmp/codeisland-<uid>/island.sock` first, and
   the old path only where no island answers in the folder (nothing there,
   or the socket a finished tunnel left behind), for an older island that
   still forwards to it. Whatever else still listens at the old path — the
@@ -237,7 +240,7 @@ From the facts and the stdin, in this order (HookIntake is normative):
   it is: hooks installed before this protocol keep working unchanged.
 - The Mac's end of a host's forward moved to the host's own socket, and the
   remote end from `/tmp/morrow-<uid>.sock` into the SSH user's folder
-  (`/tmp/morrow-<uid>/island.sock`). Each connect reinstalls the remote
+  (`/tmp/codeisland-<uid>/island.sock`). Each connect reinstalls the remote
   hook and rewrites every hook command; an agent started before that still
   runs a command naming the old path, which the reinstalled hook takes to
   the folder (*Transport*). What a remote hook of any version names as its

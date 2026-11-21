@@ -1,7 +1,7 @@
 # Progress — Windows & Linux port
 
-**Status:** fase 1 selesai di PR (#120–#125, gate E2E-1 hijau di Xvfb, menunggu X11 nyata); fase 2 mulai (#127, #128; #94 draft di `wip/#94-core-reducer`). Core = **Rust** (#117).
-**Checkpoint terakhir:** 2026-11-19 — kerja dihentikan setelah #93; worktree lokal dibersihkan.
+**Status:** seluruh fase 0–4 punya PR (**25 dari 26 tiket spec**), 21 di antaranya `APPROVED`, **belum ada yang di-merge** karena #49 masih `CHANGES_REQUESTED` (stale, hanya @aazhrt/admin yang bisa dismiss). Core = **Rust** (#117).
+**Checkpoint terakhir:** 2026-11-20 — #162 (#109 anchoring) dibuka; sisa #109 butuh keputusan fork tao. Papan di bawah dan *Snapshot* di Spec #82 memuat angka yang sama.
 **Fase kanonik:** [`plan-windows-linux.md`](plan-windows-linux.md) §7. Kalau dokumen ini berbeda dengan §7, §7 yang benar.
 
 ---
@@ -30,11 +30,12 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 |---|---|---|---|---|
 | — | PR #49 | `docs(#33)`: ADR, glossary, plan, handoff, setup agent skills | `PR dibuka` — konflik dengan `main` (#119), tertahan guard #124 (fix PR #126) | — |
 | 0 | PR #50 | `test(#33)`: ekspor golden fixtures bridge + schema | `PR dibuka`, approved | `BridgeGoldenTests` hijau; schema memvalidasi semua fixture |
-| 0 | PR #51 | `fix(#33)`: hook Claude Windows tanpa `--source`, precedence = Swift | `PR dibuka`, approved, siap merge | `windows/Morrow.Core.Tests` hijau |
+| 0 | PR #51 | `fix(#33)`: hook Claude Windows tanpa `--source`, precedence = Swift | `merged` (`b314f9c`, 2026-11-20) | `windows/Morrow.Core.Tests` hijau |
 | 0 | PR #52 | `ci(#33)`: pipefail XCTest | `dilewati` — ditutup, digantikan #111 | — |
-| 0 | #78 | `fix(#78)`: endpoint plugin pasca-rebrand (plan §12) | `belum` — menunggu 3 keputusan kontrak di PR #115 | test plugin memakai `fixtures/endpoint/cases.json` |
-| 0.5 | #83 → PR #114 | skrip CI macOS `test`/`package`/`manifest` | `PR dibuka`, approved @aazhrt | pipeline hijau + satu run sengaja merah |
-| 0.5 | #84 → PR #115 | kontrak endpoint + 38 kasus | `PR dibuka` — 3 open question ditanyakan ke kolaborator | Swift `SocketPath.resolve` lulus kasus macOS |
+| 0 | #78 → PR #161 | `fix(#78)`: plugin resolve socket saat kirim (morrow → legacy), versi plugin dinaikkan, remote pakai placeholder | `PR dibuka` ke `main` (di luar stack) | bun 99 lulus (termasuk 6 test default per plugin); swift 84 lulus |
+| 0.5 | #83 → PR #114 | skrip CI macOS `test`/`package`/`manifest` | `merged` (`c695753`, 2026-11-20) | pipeline hijau + satu run sengaja merah |
+| 0.5 | #124 → PR #126 | guard `verify-local.sh` mengizinkan merge yang membawa CI upstream | `merged` (`f812e7b`, 2026-11-20) | merge `main` → branch fitur tidak diblokir lagi |
+| 0.5 | #84 → PR #115 | kontrak endpoint + 38 kasus | `APPROVED` — keputusan tercatat di dokumen (`d947166`) | Swift `SocketPath.resolve` lulus kasus macOS |
 | 0.5 | #85 → PR #117 | eksperimen Opsi E | `PR dibuka` — hijau 96,8%, tapi **ditolak → Rust** | ADR-0003 `rejected`, keputusan di ADR-0001 |
 | 0.5 | #86 → PR #118 | layout monorepo (skrip replay) | `PR dibuka` (draft) — dijalankan ulang setelah PR lain merge; bagian `.woodpecker.yaml` perlu @aazhrt | `swift test` + DMG hijau, nol perubahan perilaku |
 | 1 | #87 → PR #120 | workspace Rust + `morrow-protocol` + purity check | `PR dibuka` | 300 payload round-trip identik; `cargo tree` bersih |
@@ -44,14 +45,43 @@ Status: `belum` · `sedang` · `PR dibuka` · `revisi` · `merged` · `gagal` ·
 | 1 | #91 → PR #125 | kartu approval dua arah | `PR dibuka` — menunggu run di X11 nyata (@aazhrt) | **`E2E-1`**: 27/27 di Xvfb, approve 35 ms, deny 13 ms |
 | 2 | #92 → PR #127 | ekspor fixture reducer + `AttentionPolicy` | `PR dibuka` | 80 kasus reducer (161 step), 56 attention; `Sources/` tidak berubah |
 | 2 | #93 → PR #128 | `HookIntake` → `morrow-core`; bridge memakainya | `PR dibuka` | 84/84 neutral, 84/84 linux |
-| 2 | #94 | port reducer + `HookEventFacts` | `sedang` — draft belum diverifikasi di `wip/#94-core-reducer` | 100% fixture reducer identik |
-| 2 | #95–#97 | attention, git + markdown, transcript live | `belum` | fixture/test port lulus |
-| 3 | #98–#104 | Linux lengkap: installer, adapter, packaging | `belum` | `L-001…L-012` + **`E2E-2`** |
-| 4 | #105–#108 | Windows | `belum` | `W-001…W-009` + **`E2E-2`** |
-| 5 | #109 | Wayland | `belum` | Sway/Hyprland/KDE jalan; GNOME menyatakan tidak didukung |
-| 6 | #110 | Hapus core C# | `belum` | test Windows hijau; **izin maintainer `windows/`** |
+| 2 | #94 → PR #130 | port reducer + `HookEventFacts` + wire morrow-app | `PR dibuka` (stacked on #128) | 80/80 kasus (161 step) fixture reducer identik, gate E2E-1 27/27 |
+| 2 | #95 → PR #131 | `AttentionPolicy.intents` + `EventSoundRouting` + `reduce_event` | `PR dibuka` (stacked on #130) | 56/56 kasus attention; 80/80 + 161 step reducer termasuk intents; `morrow-app` 12/12 |
+| 2 | #96 → PR #132 | `GitBranchReader` + `MarkdownBlockParser` | `PR dibuka` (stacked on #131) | 53/53 test markdown + 9/9 test git diport 1:1; `linux-test.sh` hijau |
+| 2 | #97 → PR #133 | transcript tail: parser JSONL + `TailState` di core | `PR dibuka` (stacked on #132) | 70 test port (2 test `DispatchSource` milik watcher); file diganti → replay sekali lalu live |
+| 2 | #135 → PR #137 | sisa #97: `SessionRecap` + `ModelObservation`/`ModelLabel` + `parseISO8601`, termasuk penyerapan delta ke snapshot | `PR dibuka` (stacked on #133) | 22 `ModelLabelTests` + 38/39 `SessionRecapTests`; delta & snapshot lengkap |
+| 2 | #136 → PR #140 | sisa #97: parsing checklist (`AgentTaskTool`, event hook/transcript, `scan` backfill) | `PR dibuka` (stacked on #137) | 9 test parsing; `ScanDelta.task_events` terisi urut |
+| 2 | #139 → PR #142 | `AgentTaskList` (dedupe, park, undo, pensiun plan per-turn, linger, rebuild attach, persistensi) + `Snapshot.agent_tasks` | `PR dibuka` (stacked on #140) | 38/39 test list-side; `scanFile` tetap di platform |
+| 3 | #98 → PR #145/#146 | installer hook Claude Code: editor + rencana (#144), lalu crate `morrow-platform` + kartu Settings | `PR dibuka` (stacked #142 → #145 → #146) | 14 + 18 + 9 test; sisa hanya **E2E-2** di desktop Linux nyata |
+| 3 | #99 → PR #147/#148 | **sembilan target** hook (Claude, 7 JSON, OpenCode) + flag TOML Codex, semua dari kartu Settings | `PR dibuka` (stacked #142→#148) | 19+15+2(40 fixture)+10+8 test; sisa hanya E2E di desktop Linux |
+| 3 | #100 → PR #149 | source TOML (Kimi) + baris cakupan per agent di Settings | `PR dibuka` (stacked #142→#149) — `Fixes #100` | 8 + 5 test; L-002 lulus untuk JSON + TOML |
+| 3 | #151 → PR #152 | source YAML (Hermes, TraeCli) sebagai blok terkelola — komentar utuh | `PR dibuka` (stacked #142→#152) | 14 + 6 test; keputusan **B** tercatat di tiket |
+| 3 | #101 → PR #153 | Capability table 21 adapter + autostart + settings + **tray + global hotkey** | `PR dibuka` (stacked #142→#153) | 11 test + clippy bersih; **sisa hanya L-006…L-012 di desktop nyata** |
+| 3 | #102 → PR #154 | kartu musik: MPRIS, ekstrapolasi posisi, lirik lrclib, volume | `PR dibuka` (stacked #142→#154) | 17 + 11 test; sisa: menggambar kartunya (pekerjaan panel) + L-003/L-004 |
+| 3 | #103 → PR #155 | terminal jump (L-009), process watch, screen lock, notifikasi | `PR dibuka` (stacked #142→#155) | 14 test; sisa: perilaku panel yang memakainya |
+| 3 | #104 → PR #156 | packaging deb/rpm/AppImage + feed per format + bridge di luar paket | `PR dibuka` (stacked #142→#156) | skrip + 5 test; sisa: L-011 smoke & `E2E-2` di host Debian |
+| 3 | #98 (lanjutan) | E2E-2: `claude` asli → kartu → Approve/Deny, tanpa event dobel | `belum` — butuh desktop Linux nyata | satu-satunya sisa #98 |
+| 4 | #105 → PR #157 | named pipe Windows (DACL, cek SID server) + lane kompilasi | `PR dibuka` (stacked #142→#157) | ter-compile MSVC; sisa **W-001** di host Windows |
+| 4 | #106 → PR #158 | panel Windows: hit-test sudut, no-activate, keyboard Question, spike input region | `PR dibuka` (stacked #142→#158) | shell ter-compile Windows; sisa **W-005** + pilihan click-through |
+| 4 | #107 → PR #159 | sembilan adapter Windows + tabel Capability per-OS | `PR dibuka` (stacked #142→#159) | ter-compile + 13 test keputusan; sisa **W-006/7/9** |
+| 4 | #108 → PR #160 | installer hook Windows (`.cmd`, `%USERPROFILE%`) + NSIS per-user | `PR dibuka` (stacked #142→#160) | 6 test installer; sisa **W-002/4/8**, build rilis, E2E-2 |
+| 5 | #109 → PR #162 | anchoring: deteksi compositor, degradasi GNOME, baris Capability | `PR dibuka` (stacked #142→#162) | 8 test; **layer surface/input region/Portal menunggu keputusan fork tao** |
+| 6 | #110 | Hapus core C# setelah migrasi | `tidak bisa dikerjakan agen` | butuh **izin tertulis maintainer `windows/`** + #108 lulus |
 
-Stack PR dan urutan merge: body #33, bagian **Stack PR**. Ringkas: mandiri #51, #114, #115; docs #49 → #50 → #117 / #127; Rust #120 → #121 → #122 → #123 → #125, cabang #122 → #128; #118 terakhir. Merge pakai *merge commit*, hapus branch setelah merge.
+Stack PR dan urutan merge: body #33, bagian **Stack PR**. Merge pakai *merge commit*, hapus branch setelah merge.
+
+### Snapshot 2026-11-20 (sama dengan komentar di Spec #82)
+
+| | |
+|---|---|
+| PR terbuka | **30**, 21 `APPROVED`, 3 `REVIEW_REQUIRED`, 6 belum di-review (#156–#160, #162) |
+| PR di-merge | **0** — yang sudah masuk `main`: #51 (`b314f9c`), #114 (`c695753`), #126 (`f812e7b`) |
+| Konflik | #117, #120 — keduanya basis lama; selesai saat #50 masuk lalu di-rebase |
+| Penghalang struktur | **#49** `CHANGES_REQUESTED` stale — hanya @aazhrt/admin yang bisa dismiss |
+| Tiket spec tanpa PR | #109 (layer surface-nya; decision half ada di #162) |
+| Tiket yang agen tidak boleh kerjakan | #110 (izin tertulis maintainer `windows/`) |
+| Gate hardware terbuka | E2E-1 (#91), E2E-2 (#98/#108), L-003/L-004 (#102), L-006…L-012 (#101), L-011 (#104), W-001 (#105), W-005 (#106), W-006/7/9 (#107), W-002/4/8 (#108), Sway/Hyprland/KDE (#109) |
+| Gate hijau lokal | `linux-test.sh` (fmt/clippy/test/purity), `windows-check.sh` (5 crate MSVC), bun 99, swift 84 |
 
 ---
 
@@ -64,7 +94,205 @@ Stack PR dan urutan merge: body #33, bagian **Stack PR**. Ringkas: mandiri #51, 
 
 ---
 
+## Uji kering retarget (2026-11-20, belum di-push)
+
+Diuji dengan `git merge-tree --write-tree` terhadap `main` = `f812e7b`; worktree tidak disentuh, tidak ada push. Polanya sama di semua branch, jadi retarget nanti hanya menyelesaikan 2–3 file yang sama:
+
+| PR / branch | Bentrok | Penyelesaian |
+|---|---|---|
+| #49 `docs/#33` | — (sudah di-merge, `cad7ba7`) | — |
+| #50 `test/#33`, #117 `research/#85` | `AGENTS.md`, `GEMINI.md` | ambil versi `main` (setelah #49: `AGENTS.md` lengkap dengan §7; `GEMINI.md` sudah jadi 1 baris penunjuk) |
+| #120–#125, #128, #130–#133 | `AGENTS.md`, `GEMINI.md`, `.gitignore` | dua file pertama ambil `main`; `.gitignore` **pertahankan** versi branch (`target/`, `CLAUDE.md`) |
+| #127 `test/#92` | `AGENTS.md`, `GEMINI.md` | ambil versi `main` |
+| #118 `chore/#86` (draft) | `.woodpecker.yaml`, `GEMINI.md` | `.woodpecker.yaml` = zona @aazhrt, jangan disentuh agen |
+
+Sebabnya: branch-branch ini dibuat sebelum `main` punya `AGENTS.md` (git melihatnya add/add), `GEMINI.md` sudah diringkas di #119, dan `.gitignore` versi Rust menambah `target/` + `CLAUDE.md`. `rerere.enabled` sudah aktif di clone ini dan resolusi `AGENTS.md` dari merge #49 sudah terekam, jadi konflik yang sama akan diputar ulang otomatis.
+
+Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 → sisanya tetap menumpang induknya, retarget hanya saat induknya masuk `main`. Biaya per push: build Swift ~1,5 menit, dan `swift test` branch ikut menjalankan suite Swift terbaru.
+
+**Catatan: bagian ini sengaja belum di-push** (permintaan pemilik repo, 2026-11-20). Push menyusul bersama update berikutnya.
+
+---
+
 ## Log Checkpoint
+
+### 2026-11-20 (lanjutan 28) — korelasi PR ↔ tiket, dan penutupan saat merge
+
+- **Sudah:** 33 PR (stack port + #161) diseragamkan body-nya: baris pertama `Fixes #<tiket>`, lalu `Part of spec #82 · epic #33 · scope #<47|48>`, `Depends on #<PR induk>`, satu baris **Acceptance in this PR** (apa yang terbukti di PR ini vs apa yang masih gate), dan **Merge target** yang menyebut perintah retarget. `#152` menutup dua tiket sekaligus (`Fixes #100` + `Fixes #151`).
+- **Penting soal semantik GitHub:** closing keyword hanya berlaku bila PR di-merge ke **default branch** (`main`). Karena stack ini berantai ke branch induk, setiap PR harus **di-retarget ke `main` lebih dulu** (§5.3) — kalau tidak, tiketnya tetap terbuka meski body memuat `Fixes`. Karena merge memakai *merge commit* yang membawa body PR, keyword itu juga ikut ke pesan merge, jadi tetap berfungsi setelah retarget.
+- **Catatan jujur:** 11 PR belum muncul di daftar *linked issues* GitHub walau body-nya sama bentuknya (#117, #123, #125, #127, #156–#160, #162, plus #50 yang memang bukan `Fixes`). Itu pengindeksan di sisi GitHub, bukan isi body — penutupan tetap terjadi saat merge ke `main` dari keyword yang sama.
+- **Berikutnya:** @aazhrt dismiss #49 → rebase #117/#120 → retarget #50 → merge dari bawah; setiap PR di-retarget ke `main` tepat sebelum merge-nya.
+- **Blocker:** gate hardware tidak berubah.
+
+### 2026-11-20 (lanjutan 27) — snapshot di Spec #82
+
+- **Sudah:** papan status disegarkan ke keadaan sebenarnya (fase 4 dan 5 tidak lagi `belum`), baris #78 → PR #161, baris #151 duplikat dihapus, dan *Snapshot* ditambahkan — angka yang sama diposkan sebagai komentar di Spec #82. 25 dari 26 tiket spec punya PR; 21 APPROVED, **0 merged**, #49 stale `CHANGES_REQUESTED` masih menahan seluruh rantai.
+- **Berikutnya:** @aazhrt dismiss #49 → rebase #117/#120 → retarget #50/#117 ke `main` → merge dari bawah stack; review 6 PR terakhir (#156–#160, #162).
+- **Blocker:** gate hardware (Windows, Debian, X11 nyata, Sway/Hyprland/KDE); keputusan fork tao untuk sisa #109; suite layout `CompletionCardLayoutTests`/`CompactSessionListLayoutTests` gagal juga di `origin/main`.
+
+### 2026-11-20 (lanjutan 26) — #109 anchoring Wayland (PR #162)
+
+- **Sudah:** `morrow_platform::compositor` (deteksi Sway/Hyprland/KDE/COSMIC/niri/labwc/Wayfire/river vs GNOME vs Wayland tak dikenal vs X11; AppImage di Wayland dapat kalimat sendiri karena `tauri#15781` memaksa X11), `Anchoring` dengan **satu string** yang dipakai Settings dan log, baris Capability "Panel anchoring", perintah `island::anchoring`, dan 8 test yang jalan di mesin tanpa Wayland. Gate Unix + lane Windows hijau. **PR #162** terhadap #160.
+- **Berikutnya:** sisa #109 (layer surface, input region, Portal) menunggu keputusan fork/pin tao — bukan pekerjaan kode yang bisa dimulai jujur. Selain itu review stack dan gate hardware.
+- **Blocker:** patch tao/tauri (upstream menutup PR-nya), compositor Sway/Hyprland/KDE, host Windows, desktop Linux.
+
+### 2026-11-20 (lanjutan 25) — #78 bug socket path plugin (PR #161)
+
+- **Sudah:** keempat plugin (OMP, pi, OpenCode, OpenClaw) me-resolve socket **saat kirim** lewat `resolveSocketPath()` bersama: `MORROW_SOCKET_PATH` → `CODEISLAND_SOCKET_PATH` → `/tmp/morrow-<uid>.sock`, dengan nama lama hanya selama nama baru tidak ada (aturan `SocketPath.swift`). Versi plugin dinaikkan agar salinan terpasang minta repair. Plugin OpenCode remote memakai placeholder `__MORROW_...__` dan `RemoteInstaller` **gagal keras** bila placeholder hilang. Fallback shell hookScript mencoba path baru dulu (v7). Bukti: bun 99 lulus (termasuk 6 test default per plugin yang sebelumnya tidak ada), swift 84 lulus (ConfigInstaller memuat resource asli). **PR #161** ke `main`, terpisah dari stack port.
+- **Berikutnya:** perilaku panel/musik (#102/#103), #109 (policy Wayland), dan review stack.
+- **Blocker:** suite layout `CompletionCardLayoutTests`/`CompactSessionListLayoutTests` gagal juga di `origin/main` (pre-existing, terverifikasi di worktree bersih) — perlu tiket sendiri.
+
+### 2026-11-20 (lanjutan 24) — #108 installer hook Windows (PR #160)
+
+- **Sudah:** `hooks_windows` (policy sama, ejaan Windows: `%USERPROFILE%`, `.cmd`, `.exe`, ACL), dikompilasi di semua platform sehingga bisa diuji di macOS — 6 test terhadap folder profil sementara termasuk penolakan file tak terparse byte for byte dan version-gating 2.1.80. `bundle.windows.nsis` per-user + ikon; `docs/windows-adapters.md` mencatat NSIS per-user dan konsekuensi SmartScreen untuk beta tanpa Authenticode. Shell: lima perintah bercabang per OS, dan Settings di Windows menyatakan hanya Claude Code yang di-hook (delapan target lain menunggu path Windows-nya sendiri).
+- **Berikutnya:** tidak ada lagi yang bisa dikerjakan tanpa host: #108 butuh VM Windows (W-002/4/8, build rilis, E2E-2), #109 butuh container GTK + compositor, #110 butuh izin maintainer.
+- **Blocker:** W-001/002/004/005/006/007/008/009 di host Windows; #91 OPEN; review stack #145–#160.
+
+### 2026-11-20 (lanjutan 23) — #107 adapter Windows (PR #159)
+
+- **Sudah:** sembilan adapter Windows (SMTC, Core Audio, WTS, `SHQueryUserNotificationState`, toast, registry autostart, rantai proses untuk terminal, `GetCursorPos`, Credential Manager sebagai baris), `Environment.os` sehingga tabel Capability di-probe per platform, `windows_rules` (13 test) untuk tiga keputusan yang bisa salah diam-diam: pid terminal paling luar, arti state notifikasi (unknown = boleh menginterupsi), dan quoting nilai `Run`. `docs/windows-adapters.md` mencatat mekanisme, alasan, dan apa yang hanya bisa dibuktikan host Windows. Shell berhenti menyebut modul Unix; `fullscreen` dan `pointer_position` ditambahkan. Gate Unix hijau, lima crate Windows hijau. **PR #159** terhadap #158.
+- **Berikutnya:** #108 (installer hook + NSIS + E2E-2 di Windows) — butuh VM; lalu Fase 5/6.
+- **Blocker:** W-001, W-005, W-006, W-007, W-009 di host Windows; #91 masih OPEN; review stack #145–#159.
+
+### 2026-11-20 (lanjutan 22) — #106 panel Windows (PR #158)
+
+- **Sudah:** `windows_panel.rs` (`WM_NCHITTEST` → `HTTRANSPARENT` di luar island membulat, `MA_NOACTIVATE` untuk klik, `WS_EX_NOACTIVATE` dilepas selama Question card terbuka lalu dipasang kembali), geometri di `morrow_platform::panel` (6 test: tengah pill, empat sudut, tepi eksklusif, radius 0/di-clamp, island lebih kecil dari window). `morrow-app` masuk lane Windows (lima crate) — butuh `llvm-rc`, skrip mencetak SKIP bila tidak ada. **Spike input region dicatat** di `docs/spike-windows-input-region.md`: `SetWindowRgn` memotong gambar, layered+alpha tidak bisa host WebView2, jadi `WM_NCHITTEST`; sisa terbuka — child HWND WebView2 bisa mencegat — diputuskan di W-005. Dua bug jahitan diperbaiki: `Connection::set_read_timeout` portabel (no-op di pipe) dan `Send` untuk handle Win32. Gate Unix hijau. **PR #158** terhadap #157.
+- **Berikutnya:** #107 (adapter WinRT + Capability) dan #108 (NSIS + E2E-2), keduanya di belakang #106 → VM Windows.
+- **Blocker:** W-001 & W-005 butuh host Windows; #91 masih OPEN; review stack #145–#158.
+
+### 2026-11-20 (lanjutan 21) — #105 named pipe Windows (PR #157)
+
+- **Sudah:** `morrow_ipc::windows` (pipe mode pesan; `FILE_FLAG_FIRST_PIPE_INSTANCE` + `PIPE_REJECT_REMOTE_CLIENTS`; descriptor `O:<sid>G:<sid>D:(A;;GA;;;<sid>)`; `ERROR_ACCESS_DENIED` → `AlreadyRunning`), cek identitas server lewat `GetNamedPipeServerProcessId` → token → SID, `pipe::` untuk nama+descriptor (murni, diuji di mesin mana pun, termasuk kecocokan nama dengan `endpoint::resolve`), `is_sid` menolak SID cacat sebelum masuk API. `morrow_ipc` me-re-export satu nama transport, jadi bridge dan shell berhenti menyebut `unix`. Skrip baru `scripts/ci/windows-check.sh`. Bukti: `cargo xwin clippy --target x86_64-pc-windows-msvc -- -D warnings` hijau untuk `morrow-ipc`, `morrow-bridge`, `morrow-core`; gate Unix hijau; 4 test string lulus. **PR #157** terhadap #156.
+- **Berikutnya:** #106 (window plumbing, butuh #91 dan #105) dan #107 (WinRT + Capability) — keduanya berakhir di VM Windows; #108 (NSIS) di belakangnya.
+- **Blocker:** **W-001** butuh host Windows dengan dua akun; lane Windows belum dipasang di `.woodpecker.yaml` (@aazhrt); review stack #145–#157. Lokal butuh `rustup target add x86_64-pc-windows-msvc` + `cargo install cargo-xwin --locked` (~1,5 GB).
+
+### 2026-11-20 (lanjutan 20) — #104 packaging Linux (PR #156)
+
+- **Sudah:** tiga skrip di kontrak §8.1 — `linux-package.sh` (semver tanpa `v`, signing key wajib di awal, tiap format butuh artefak + `.sig`, `SHA256SUMS` hanya kalau set lengkap), `linux-manifest.sh` (satu feed per format, **all-or-nothing**: validasi semua format dulu, tulis kedua, tiap dokumen di-parse ulang lalu di-rename), `linux-smoke.sh` (install → launch → tunggu copy-out bridge → satu hook sintetis berwaktu → uninstall; keluar **77** kalau host tidak punya display, karena lulus diam-diam lebih buruk daripada jujur tidak bisa). `morrow-platform::bridge` menyalin bridge ke `~/.local/bin/morrow-bridge` secara atomik; skrip hook memakai path stabil dulu, `~/.codeisland` cadangan, versi skrip v2. `tauri.conf.json` dapat `bundle.active`, tiga target, `externalBin`, updater artifacts, dependensi deb/rpm. Test `bridge_placement` 5; gate hijau. **PR #156** terhadap #155.
+- **Berikutnya:** tidak ada tiket implementasi Linux yang bisa jalan tanpa desktop. Sisa Fase 3 = verifikasi: L-011 (smoke), E2E-2, L-003/L-004/L-006…L-012, plus perilaku panel yang memakai adapter #102/#103.
+- **Blocker:** review stack #145–#156; host Debian/VM untuk semua gate di atas; gate **#91 masih OPEN**; `.woodpecker.yaml` (memasang tiga skrip) milik @aazhrt. Flake `bridge_process::gemini_permission_answer_is_put_as_gemini_reads_it` muncul lagi hari ini — perlu tiket sendiri.
+
+### 2026-11-20 (lanjutan 19) — #103 empat adapter (PR #155)
+
+- **Sudah:** `runner` dipindah jadi seam bersama, lalu empat adapter: `terminal` (sway `con_id` → Hyprland `address` → `wmctrl`/`xdotool` by class → **copy path/tty** sebagai lantai L-009 → penjelasan kalau dua-duanya tidak ada), `process` (satu angka dari `/proc/<pid>/stat` + start time agar pid daur ulang tidak menahan kartu mati; tanpa menelusuri tabel proses), `lock` (`loginctl … LockedHint`, tidak bisa menjawab = tidak terkunci), `notify` (`notify-send`, 8 dtk). Capability mengikuti: tanpa window API tapi ada clipboard = `Degraded` dengan jalur copy; tanpa `notify-send` = `Unsupported`. Shell mengekspos lima perintah. Test 14; gate hijau. **PR #155** terhadap #154.
+- **Berikutnya:** #104 (packaging deb/AppImage/rpm + feed update + smoke install) — masih `blocked by #91`; sisanya adalah verifikasi desktop: L-003/L-004/L-006…L-012, E2E-2, dan perilaku panel yang memakai adapter #102/#103.
+- **Blocker:** review stack #145–#155; verifikasi di desktop Linux nyata. Flake `bridge_process` (anggaran 5 dtk + sentinel gemini) masih perlu tiket sendiri.
+
+### 2026-11-20 (lanjutan 18) — #102 kartu musik (PR #154)
+
+- **Sudah:** `morrow_core::music` (murni): parser metadata `playerctl`, `parse_lrc` untuk lrclib, parser volume `wpctl`/`pactl`, dan `Position` — ekstrapolasi posisi karena MPRIS `Position` tidak wajib di-refresh (paused diam, clamp di panjang track, tahan clock skew, dikoreksi bacaan berikutnya setelah loop). `morrow_platform::music` menjalankan `playerctl` (metadata, `Can*`, kontrol, seek `position 10+`/`10-`), `wpctl`/`pactl` (baca+tulis dengan tool yang sama, batas 150%), `curl` untuk lrclib; "no players" dan 404 jadi kartu kosong. Capability Now Playing kini menuntut `playerctl`, dan `CanSeek: false` menyembunyikan kontrol seek. Shell mengekspos sepuluh perintah kartu. Test 17 + 11; gate hijau. **PR #154** terhadap #153.
+- **Berikutnya:** menggambar kartu musik ikut pekerjaan panel (polling, tombol), lalu #103 (adapter batch 3) dan #104 (packaging).
+- **Blocker:** review stack #145–#154; verifikasi di desktop nyata (L-003/L-004, E2E-2, L-006…L-012). Flake `bridge_process` masih perlu tiket sendiri.
+
+### 2026-11-20 (lanjutan 17) — #101 tray + hotkey (PR #153 lengkap)
+
+- **Sudah:** dua bagian terakhir batch 1 masuk. `tray` = StatusNotifierItem lewat AppIndicator (menu Show/hide + Quit, klik kiri men-toggle island); tanpa lib hasilnya `Degraded("no tray icon: …")`, dicetak sekali, panel tetap jalan. `hotkey` = `Super+Space` lewat `tauri-plugin-global-shortcut` (satu-satunya plugin, karena Tauri core tidak mengekspos global shortcut); gagal grab (Wayland) jadi `Degraded` dengan saran `morrow toggle`. `capabilities` menimpa dugaan probe dengan hasil runtime untuk kedua adapter itu, jadi Settings melaporkan kenyataan. Gate hijau, `npm run build` hijau, clippy `-D warnings` bersih untuk `morrow-app`.
+- **Berikutnya:** #101 berhenti di verifikasi (L-006…L-012 butuh desktop Linux hidup); berikutnya #102/#103 (adapter batch 2/3, blocked by #101) dan #104 (packaging, blocked by #91) — semuanya berakhir di verifikasi yang sama.
+- **Blocker:** review stack #145–#153; verifikasi desktop Linux; flake `bridge_process` (anggaran 5 dtk + sentinel gemini) masih perlu tiket sendiri.
+
+### 2026-11-20 (lanjutan 16) — #151 (PR #152) dan #101 batch 1 (PR #153)
+
+- **#151 selesai:** diputuskan **opsi B** dan dicatat di tiket sebelum kode. `installer::yaml_hooks` hanya memiliki **satu region berpagar** (`# >>> morrow hooks` … `# <<< morrow hooks`) untuk Hermes (peta event → `{command, timeout}`) dan TraeCli (satu item, semua event sebagai matcher, `timeout: '86400s'`); tidak ada parser YAML, jadi tidak ada round-trip yang bisa menulis ulang dokumen. Tiga layout ditolak (`hooks:` inline, `hooks:` bersarang, indentasi tab) dan penolakan tampil di kartu sebagai *Needs a manual merge*. Test 14 + 6.
+- **#101 batch 1:** `capability` (21 fitur, `Supported`/`Degraded`/`Unsupported` dengan alasan, `Environment` di-inject), `autostart` (satu entri FreeDesktop, idempoten), `settings` (`~/.codeisland/settings.json` lewat penulis minimal-diff), semuanya tampil di kartu Settings. Tanpa AppIndicator tray = `Unsupported` tapi adapter lain tetap menjawab. Test 11.
+- **Berikutnya:** sisa #101 = ikon tray + global hotkey + L-006…L-012 (butuh panel dan desktop nyata); lalu #102/#103 (blocked by #101) dan #104 (packaging, blocked by #91).
+- **Blocker:** review stack #145–#153; verifikasi di desktop Linux nyata (E2E-2, L-006…L-012). Flake `bridge_process` (anggaran 5 dtk) muncul lagi saat beban paralel — perlu tiket sendiri bersama flake gemini.
+
+### 2026-11-20 (lanjutan 15) — #100 ditutup dengan TOML, YAML jadi #151
+
+- **Sudah:** diputuskan **opsi C**: #100 selesai lewat PR #149 (TOML Kimi append-only + baris cakupan per agent), dan source YAML dipisah ke tiket **#151** yang memuat tiga opsi (A ikut macOS/re-dump, B blok YAML terkelola, C belum didukung) beserta rekomendasi **B** dan syarat keputusan dicatat sebelum kode. Body #149 diubah jadi `Fixes #100`. Alasannya dicatat di #100: `Yams` di macOS menulis ulang seluruh dokumen dan menghilangkan komentar, jadi menirunya justru melanggar kriteria L-002 tiket itu sendiri.
+- **Berikutnya:** #151 menunggu keputusan (A/B/C); jalur kode lanjut ke adapter #101–#103 (blocked by #91) atau packaging #104. Stack review: #145 → #149.
+- **Blocker:** review stack #145–#149; #101/#104 masih menunggu #91; E2E-2 butuh desktop Linux nyata.
+
+### 2026-11-20 (lanjutan 14) — #100 TOML (Kimi) + cakupan per agent (PR #149)
+
+- **Sudah:** `installer::kimi` — source pertama yang bukan JSON: blok `[[hooks]]` **ditambahkan** dan saat uninstall tepat blok itu dipotong, jadi komentar/urutan key pengguna selamat (L-002) tanpa parser TOML yang menulis ulang file; scalar legacy `hooks = …` dikomentari (bisa dipulihkan), dan hanya event tool yang membawa `matcher = ".*"`. `morrow_platform::kimi` memilih `~/.kimi-code` atau legacy `~/.kimi`, backup sekali, tulis hanya kalau berubah. Kartu Settings dapat baris Kimi + baris cakupan per agent ("N of M agents found here are hooked"). Test 8 + 5; gate & `npm run build` hijau. **PR #149** terhadap #148.
+- **Berikutnya:** keputusan untuk source YAML (Hermes, TraeCli) — di macOS lewat `Yams` yang justru menghilangkan komentar; saya ajukan tiga opsi di #100 dan condong ke "tunda YAML, buka tiket kecil". Setelah itu #101–#103 (adapter) dan #104 (packaging).
+- **Blocker:** jawaban atas pertanyaan YAML di #100; review stack #145–#149; E2E-2 butuh desktop Linux nyata. Flake `morrow-ipc` (`set_read_timeout` EINVAL) muncul sekali dan lulus saat diulang — di luar diff ini.
+
+### 2026-11-20 (lanjutan 13) — #99 lengkap di sisi kode (PR #148)
+
+- **Sudah:** dua target terakhir masuk. **Codex** kini juga memasang `features.hooks = true` di `config.toml` lewat `installer::codex_config` (= `CodexHooksConfig`, #354): editor TOML sempit yang menolak layout tak dikenal daripada membuat duplicate key, dan menyembuhkan blok `[features]` yang dulu ditambahkan build lama; ke-40 `CodexTomlHooksFixtures` lulus identik dengan Swift plus idempotensi. **OpenCode** masuk sebagai plugin: `installer::opencode` mendaftarkan referensi di `plugin` (komentar & plugin pengguna tetap, referensi `vibe-island` diganti), `morrow_platform::opencode` menaruh file plugin dari resource macOS via `include_str!` (satu sumber, dua core), memilih `opencode.jsonc` kalau ada, membersihkan registrasi legacy `config.json`, dan mem-backup sekali per file. Kartu Settings kini menampilkan sembilan target. Test baru: 2 + 10 + 8, `hooks_installer` jadi 17. Gate + `npm run build` hijau.
+- **Berikutnya:** #99 tinggal E2E di desktop Linux (milik #98); tiket berikutnya #100 (sumber YAML/TOML, sekarang bisa memakai pola editor `codex_config`), lalu adapter #101–#103 dan packaging #104.
+- **Blocker:** review stack #145–#148; E2E-2 butuh desktop Linux nyata. Dua flake `bridge_process` (anggaran 5 dtk, sentinel gemini 200 ms) muncul sekali masing-masing dan lulus saat diulang — di luar diff ini.
+
+### 2026-11-20 (lanjutan 12) — #99 target hook bisa dipasang dari Settings (PR #148)
+
+- **Sudah:** `morrow_platform::hooks` dapat `targets_status` / `install_target` / `uninstall_target`: target hanya disentuh kalau CLI-nya ada di mesin ini (`~/.cursor` harus ada sebelum `hooks.json` dibuat di dalamnya), source tak dikenal = error, dan aturannya sama dengan Claude Code (rencana dulu → file rusak membatalkan semuanya; backup sekali; tulis hanya kalau berubah). Shell: `target_install`/`target_uninstall`; kartu Settings menampilkan ketujuh target dengan state dan tombol Install/Remove, atau "Not detected" tanpa tombol. Test `hooks_installer.rs` **15**; `linux-test.sh` + `npm run build` hijau. **PR #148** terhadap #147.
+- **Berikutnya:** sisa #99 hanya OpenCode (plugin JS) dan flag `hooks = true` Codex di `config.toml`; keduanya berformat lain, dan yang TOML sebaiknya menyusul #100 (sumber YAML/TOML dengan komentar dipertahankan).
+- **Blocker:** review stack #145–#148; E2E-2 milik #98 (butuh desktop Linux nyata).
+
+### 2026-11-20 (lanjutan 11) — #99 rencana 7 target hook (PR #147)
+
+- **Sudah:** `installer::targets` — tabel + `install`/`uninstall`/`is_installed` untuk tujuh target JSON hook (Codex nested, Gemini nested dengan timeout milidetik + `--event`, Cursor flat + `--event`, Qoder/Droid/CodeBuddy format Claude, Copilot `bash`+`timeoutSec` dengan `version: 1`). Entri kita diganti per event (bukan ditumpuk) sehingga entri usang diperbaiki; uninstall menghapus kunci `hooks` yang jadi kosong; semuanya lewat `json_editor` jadi komentar JSON5 pengguna utuh; file yang tidak bisa di-parse ditolak. Shared helper baru `installer::settings` dipakai juga oleh `claude_hooks`. Test **19**; gate hijau. **PR #147** terhadap #146.
+- **Berikutnya:** sambungkan ketujuh target ke kartu Settings (sekarang baru Claude), lalu OpenCode (plugin), flag `hooks = true` Codex di `config.toml`, dan #100 (source YAML/TOML).
+- **Blocker:** review stack #145/#146/#147; E2E-2 tetap milik #98 dan butuh desktop Linux nyata.
+
+### 2026-11-20 (lanjutan 10) — #98 bagian install (PR #146)
+
+- **Sudah:** crate baru **`morrow-platform`** (plan §5.2) berisi `hooks::install/uninstall/status`: `~/.codeisland` 0700, skrip `codeisland-hook.sh` (ditulis hanya kalau penanda versi hilang), binary `morrow-bridge` (hanya kalau byte beda, temp+rename), backup `settings.json.codeisland.bak.<stamp>` sekali saja, tulis lewat symlink, dan `$CLAUDE_CONFIG_DIR` dihormati. Rencana perubahan settings dibuat **dulu** — file yang tidak bisa di-parse membatalkan seluruh install tanpa meninggalkan skrip/binary (#89). Versi `claude` jadi input (`None` → event bergerbang dilewati); `morrow-core`'s `install()` kini menerima nama perintah dari platform. Shell: `hooks_status`/`hooks_install`/`hooks_uninstall` + kartu "Claude Code hooks" di tampilan island yang diperluas. Test **9** (home sementara); `linux-test.sh` + `npm run build` hijau. **PR #146** terhadap #145.
+- **Berikutnya:** #98 tinggal **E2E-2** (`claude` asli → kartu → Approve/Deny, tanpa event dobel) di desktop Linux nyata; lalu #99–#104 (adapter, tray, hotkey, packaging).
+- **Blocker:** desktop Linux nyata untuk E2E-2; review stack (#145, #146) dan `CHANGES_REQUESTED` lama di #49. Catatan: dua test anggaran waktu `bridge_process` sempat flaky saat seluruh workspace dites paralel (`took 5.05s` vs batas 4,5 dtk); lulus 3/3 sendiri dan gate hijau saat mesin idle — bukan dari diff ini, kandidat tiket sendiri bersama flake gemini.
+
+### 2026-11-20 (lanjutan 9) — #144: editor config + rencana hook Claude (PR #145)
+
+- **Sudah:** #98 ternyata masih `blocked by #91`/`#93` (PR #125, #128), jadi bagian kodenya dipecah ke tiket **#144** dan dikerjakan sekarang. Yang diport, murni tanpa I/O: `installer::json_editor` (`JSONMinimalEditor`, hanya mengganti rentang nilai satu kunci level atas — komentar/urutan/escape/indent/newline pengguna utuh, dokumen non-objek ditolak = guard #89; plus `strip_json_comments` karena `settings.json` itu JSONC) dan `installer::claude_hooks` (tabel 13 event + gerbang versi 2.1.89/2.1.78, nama legacy `vibenotch`/`vibe-island`/`vibeisland`, install idempoten, perbaikan `async` basi, uninstall yang menghapus kunci `hooks` kosong sehingga kembali byte-per-byte, aturan backup). Test: **14** + **18**; `linux-test.sh` hijau; 20 crate murni. **PR #145** dibuka terhadap #142.
+- **Berikutnya:** sisi platform #98 (skrip hook + binary bridge, pemanggilan dari Settings shell) baru bisa setelah #91/#93; berikutnya #99–#104 (adapter, tray, hotkey, packaging). Jalur kritis tetap review #49 dan stack-nya.
+- **Blocker:** `CHANGES_REQUESTED` lama di #49; E2E-1/X11 nyata; #91 & #93 belum merge (menahan E2E-2).
+
+### 2026-11-20 (lanjutan 8) — #115 diputuskan, #139 selesai (PR #142)
+
+- **Sudah:** @aazhrt **APPROVED** #115 dan menjawab ketiganya (kosong = unset di semua OS; path remote ikut kode `/tmp/codeisland-<uid>/island.sock`, rename ke tiket sendiri; `CODEISLAND_SOCKET_PATH` fallback legacy). Keputusan itu **masuk dokumen**, bukan cuma komentar: `§1.4`/`§2.1`/`§3.1`/`§4`, dua tempat di `hook-edge-protocol.md`, dan `§6` yang kini berjudul *Decisions and what is still open* (satu pertanyaan lama — seleksi path legacy tak memeriksa jenis file — tetap terbuka dan dipatok dua kasus `macos-legacy-*`). Lalu #139 diport: `AgentTaskList` utuh (dedupe per op, park sampai create tiba, undo saat panggilan gagal, pensiun plan snapshot per-turn, linger 8 dtk, `rebuilt` untuk attach, persistensi bergaya `Codable` dengan epoch 2001), `SessionSnapshot.agent_tasks`, wiring reducer (subagent lewat `apply_shared_updates`, `SessionStart` memulihkan kecuali `/clear`). Test **38** baru; `linux-test.sh` hijau; `morrow-core` tetap 20 crate murni. **PR #142** dibuka terhadap #140.
+- **Berikutnya:** fase 2 tuntas di sisi core (#131–#133, #137, #140, #142). Fokus pindah ke jalur merge: cabut `CHANGES_REQUESTED` #49 → merge #49 → retarget #50/#117/#127 + stack Rust ke `main`. Setelah itu #78 (keputusan #115 sudah ada) dan #105.
+- **Blocker:** `CHANGES_REQUESTED` lama di #49 (hanya @aazhrt/admin bisa cabut); run E2E-1 di X11 nyata; `scanFile` + watcher transcript kini satu-satunya sisa fase 2 yang tinggal di platform.
+
+### 2026-11-20 (lanjutan 7) — #135 lengkap, #136 parsing, #139 dibuat
+
+- **Sudah:** #135 dilengkapi: `SessionSnapshot` dapat `recap`/`reasoning_effort`/`configured_long_context` (disimpan, tidak diproyeksikan), penyerapan delta (`apply_transcript_delta`, `apply_transcript_backfill`, `apply_backfilled_model_observation`, `clear_recap_if_superseded` yang kini dipanggil reducer pada `UserPromptSubmit`, `visible_recap`, `model_label`), plus `SubagentState.reasoning_effort`/`model_label`/`claude_transcript_path`. Test `session_recap` 24 → **38/39**. Push ke #137. Lalu #136 dipecah (1.220 baris sumber + 812 test): parsing diport (**PR #140**, 9 test, `ScanDelta.task_events`), state machine daftar jadi tiket **#139**.
+- **Berikutnya:** #139 (`AgentTaskList` + `agentTasks` di snapshot + wiring reducer/transcript). Setelah itu fase 2 tuntas di sisi core dan fokus pindah ke jalur review/merge.
+- **Blocker:** review #49 (@aazhrt), 3 OQ #115, E2E-1 di X11. Catatan proses: komentar scope di #136 dan body #139 sempat rusak karena backtick dieksekusi shell; sudah dikoreksi, dan nomor tiket lanjutan yang benar adalah **#139** (bukan #138).
+
+### 2026-11-20 (lanjutan 6) — #135 dikerjakan, PR #137 dibuka (stacked on #133)
+
+- **Sudah:** dua tiket lanjutan #97 dibuat (#135 recap+label, #136 checklist). #135 diport: `session_recap.rs`, `model_label.rs`, `time.rs` (`parseISO8601`), dan `ScanDelta` kembali membawa `session_recap` / `model_observation` / `configured_long_context`; `quick_type_probe` mem-parse lagi baris `system`+`away_summary` dan `turn_context`. Test baru: **22** (`ModelLabelTests`) + **24** (scan-level `SessionRecapTests`); suite `morrow-core` dan `linux-test.sh` hijau. PR #137 dibuka terhadap base `feat/#97-core-transcript` (#133). 15 test `SessionRecapTests` yang menguji penyerapan delta ke snapshot **belum** diport (butuh state `recap`/`reasoningEffort`/`modelReportedAt` di snapshot Rust) — dicatat di PR + README.
+- **Berikutnya:** #136 (`AgentTaskTranscript`), stacked di atas #137; lalu retarget rantai saat #49 masuk `main`.
+- **Blocker:** review #49 (@aazhrt, dismiss `CHANGES_REQUESTED` lama); 3 OQ #115; run E2E-1 di X11 nyata.
+
+### 2026-11-20 (lanjutan 5) — #126 merged, #49 lepas dari konflik
+
+- **Sudah:** **#126 merged** (`f812e7b`, branch dihapus), jadi guard `.githooks/pre-commit` tidak lagi memblokir merge `main` ke branch fitur (#124 tutup). `main` (`f812e7b`) ditarik ke `docs/#33`; konflik **satu** file (`AGENTS.md`) diselesaikan dengan versi branch (isi `main` + §7 port + *Agent skills* + batas resource), guard jalur merge lolos (`✅ Local verification passed`), commit `c780771`. Papan diperbarui: #51, #114, #126 merged. Catatan proses: dua komentar tag saya di #51/#114 sempat salah karena memakai snapshot basi; sudah dikoreksi di PR-nya.
+- **Berikutnya:** minta @aazhrt mencabut `CHANGES_REQUESTED` lama di #49 (hanya dia/admin yang bisa) → merge #49 → retarget #50/#117/#127 ke `main` → merge rantai Rust dari bawah (#120 → #125, #127 → #133). E2E-1 di X11 nyata tetap jadi syarat penutup fase 1.
+- **Blocker:** re-review #49 (@aazhrt); 3 OQ #115 (@fzrsahi, @agungdunggio); run E2E-1 di X11 nyata.
+
+### 2026-11-20 (lanjutan 4) — #49 disiapkan, jalur merge dipetakan
+
+- **Sudah:** merge `origin/main` → `docs/#33` dicoba di worktree terpisah (`~/dev/Morrow-49`, siap, belum di-commit). Hasil: **satu** file bentrok, `AGENTS.md` (add/add); versi branch = versi `main` + §7 port + *Agent skills* + aturan resource budget, jadi resolusi = ambil versi branch (tidak ada isi `main` yang hilang). Permintaan aazhrt kedua sudah beres: `.github/workflows` tidak ada di branch maupun di `main`. **Temuan:** commit merge itu ditolak `.githooks/pre-commit` dari `main` (`BLOCKED: .woodpecker.yaml`, #124); dengan diff PR #126 diterapkan, guard lolos — jadi #49 hanya bisa di-push setelah **#126** merge. Komentar tag dipasang di #126, #115, #49, #114, #51, #120 (rantai #120–#125 dan #127–#133).
+- **Koreksi 2026-11-20:** #51 (`b314f9c`) dan #114 (`c695753`) ternyata **sudah merged** ke `main`; snapshot PR yang dipakai saat menulis komentar tag masih basi, jadi komentar "mohon di-merge" di #51 dan #114 salah dan sudah dikoreksi di PR masing-masing. Merge #49 di `~/dev/Morrow-49` sudah diulang terhadap `main` baru (`c695753`): tetap **satu** konflik (`AGENTS.md`), 21 file, +998/−178, guard lolos dengan diff #126.
+- **Berikutnya:** begitu #126 di-approve+merge → commit+push merge #49, minta re-review aazhrt (dismiss `CHANGES_REQUESTED` lama), lalu #114 + #51 di-merge, lalu rantai Rust di-retarget ke `main` dari bawah (#50 → #120 … → #133).
+- **Blocker:** approval #126 (@aazhrt); 3 OQ #115 (@fzrsahi, @agungdunggio); run E2E-1 di X11 nyata. Catatan: worktree `~/dev/Morrow-134` (branch `chore/#134-integrate-stacks`, belum di-push) ada di mesin dev — bukan buatan sesi ini.
+
+### 2026-11-20 (lanjutan 3) — #97 selesai, PR #133 dibuka (stacked on #132)
+
+- **Sudah:** `JSONLTailer` diport ke `shared/crates/morrow-core/src/transcript.rs`: `scan_lines` murni untuk semua bentuk baris (Claude + command echo + wrapper `<system-reminder>`/`<USER_REQUEST>`, Antigravity `USER_INPUT`/`PLANNER_RESPONSE`, Codex `event_msg`/`response_item`, Grok, MiniMax thinking blob, Cursor `role`-keyed + sinyal `AskQuestion`), plus `TailState` (offset, fragment, replay file yang diganti, rewind saat truncate) dan `scan_tail_for_attach` (backfill yang tahu batas jendela). Test: **70** lulus (dua test `DispatchSource` milik watcher tidak diport). `linux-test.sh` hijau; `morrow-core` tetap 20 crate murni. PR #133 dibuka terhadap base `feat/#96-core-git-markdown` (#132).
+- **Berikutnya:** fase 2 selesai di sisi core begitu #131–#133 di-review. Kandidat berikut: watcher transcript di platform (bagian yang sengaja ditinggal di #97), atau tiga payload app-side yang ditunda (checklist, recap, label model) sebagai tiket sendiri; lalu Lane E: #98 installer + E2E-2, #101 adapter batch 1.
+- **Blocker:** run E2E-1 di X11 nyata (@aazhrt); 3 keputusan kontrak endpoint (#115); review stack #120–#125, #128, #130–#133. **Bug baru ditemukan:** `bridge_process::gemini_permission_answer_is_put_as_gemini_reads_it` flaky — fallback sentinel 200 ms di test harness balapan delay 250 ms hook Gemini; perlu tiket sendiri (di luar #96/#97).
+
+### 2026-11-20 (lanjutan 2) — #96 selesai, PR #132 dibuka (stacked on #131)
+
+- **Sudah:** `MarkdownBlockParser` diport ke `shared/crates/morrow-core/src/markdown.rs` (blok saja: heading, paragraf, list bersarang + task, fenced code, tabel GFM, quote, thematic break; inline tetap Markdown mentah, **nol HTML**) dan `GitBranchReader` ke `src/git.rs` (baca `.git` tanpa spawn `git`; disk masuk lewat trait `git::Disk`; path lewat `Path`/`PathBuf` per segmen; worktree dikenali dari pasangan segmen `.git/worktrees`, bukan substring). Test: **53/53** test `MarkdownBlockParserTests` (satu test cache milik app macOS tidak diport) dan **9/9** `GitBranchReaderTests` di disk in-memory, plus batas kedalaman 12 dan cwd yang perlu distandardisasi. `linux-test.sh` hijau (fmt, clippy, test, purity). PR #132 dibuka terhadap base `feat/#95-core-attention` (#131).
+- **Berikutnya:** #97 `JSONLTailer` (parser JSONL transcript di core + watcher di platform), stacked di atas #132. Catatan terbuka: test `morrow-bridge` `gemini_permission_answer_is_put_as_gemini_reads_it` **flaky** di run suite penuh (lolos 3/3 saat sendiri) — perlu tiket sendiri, bukan bagian #96.
+- **Blocker:** run E2E-1 di X11 nyata (@aazhrt); 3 keputusan kontrak endpoint (#115); review stack #120–#125, #128, #130, #131, #132.
+
+### 2026-11-20 (lanjutan) — #95 selesai, PR #131 dibuka (stacked on #130)
+
+- **Sudah:** `AttentionPolicy.intents` dan `EventSoundRouting.soundEvent` diport ke `shared/crates/morrow-core/src/attention.rs` bersama tipe yang dipakainya (moment, subject, intents, push kind, follow-up intent). Fixture `fixtures/core/attention.json` lulus **56/56** (hook 29, request 11, elsewhere 11, reminder 5). 161 step `fixtures/core/reducer.json` kini juga membandingkan intents, tetap **80/80**. `reduce_event` (= `reduceEvent` Swift) menaruh `PlaySound`/`EnqueueCompletion` di slot reducer dan `morrow-app` memakainya (12/12 test). `./scripts/ci/linux-test.sh` hijau (fmt, clippy, test, purity: morrow-core 20 crate, tidak ada yang terlarang). PR #131 dibuka terhadap base `feat/#94-core-reducer` (#130). Catatan: `settle(_:context:)` **belum** diport — butuh adapter setelan/scene `morrow-platform` (plan §5.2, #101) dan tidak ada fixture-nya.
+- **Berikutnya:** #96 `GitBranchReader` + `MarkdownBlockParser`, lalu #97 `JSONLTailer`, keduanya di-stack di atas #131. Jalur kritis tetap di luar kode: approval + merge #126 (guard #124), resolve konflik #49, jawab 3 OQ #115.
+- **Blocker:** run E2E-1 di X11 nyata (@aazhrt); 3 keputusan kontrak endpoint (#115); review stack #120–#125, #128, #130, #131.
+
+### 2026-11-20 — #94 selesai, PR #130 dibuka (stacked on #128)
+
+- **Sudah:** Port `reduceHookEvent` dan `HookEventFacts` ke `shared/crates/morrow-core` (pure Rust, clock diinjeksi, 20 crate murni). 80 kasus fixture (161 step) dari #127 lulus 100%. Integrasi `shared/desktop` (`morrow-app`) menggunakan reducer murni, `test-desktop.sh` lulus, dan gate `E2E-1` di Xvfb lulus 27/27 (approve 16 ms, deny 10 ms). PR #130 dibuka terhadap base `feat/#93-core-hookintake` (#128).
+- **Berikutnya:** Lanjut Lane A (#95 `AttentionPolicy` di `morrow-core` setelah PR #127 fixture attention ada di stack); atau review stack PR #120–#125, #128, #130; run E2E-1 di X11 nyata (@aazhrt).
+- **Blocker:** Run E2E-1 di X11 nyata (@aazhrt); 3 keputusan kontrak endpoint (#115).
 
 ### 2026-11-19 — fase 1 di PR, fase 2 mulai, kerja dijeda
 

@@ -1,0 +1,404 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://morrow.dev/schemas/core-fixture.schema.json",
+  "title": "Morrow Core Contract Fixture Bundle",
+  "description": "fixtures/core/reducer.json (hook events through the reducer: sessions, effects, facts, and the AttentionPolicy intents of each step) or fixtures/core/attention.json (AttentionPolicy moments and their intents), exported from Swift by CoreContractJSONExporter. Dates are clock tokens: $T0 while the initial sessions were built, $Tk while step k (1-based) was applied; a fixed seeded instant is ISO 8601.",
+  "type": "object",
+  "required": ["contract"],
+  "properties": { "contract": { "enum": ["reducer", "attention"] } },
+  "if": { "properties": { "contract": { "const": "reducer" } } },
+  "then": { "$ref": "#/$defs/reducerBundle" },
+  "else": { "$ref": "#/$defs/attentionBundle" },
+  "$defs": {
+    "reducerBundle": {
+      "type": "object",
+      "required": ["contract", "projection_omits", "cases"],
+      "additionalProperties": false,
+      "properties": {
+        "contract": { "const": "reducer" },
+        "projection_omits": {
+          "description": "SessionSnapshot state the session projection leaves out.",
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/reducerCase" } }
+      }
+    },
+    "reducerCase": {
+      "type": "object",
+      "required": ["name", "origin", "max_history", "reply_complete_placeholder", "custom_sources", "sessions", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z]+/[a-z0-9-]+$" },
+        "origin": { "description": "The Swift test or bridge golden fixture the payloads come from.", "type": "string" },
+        "max_history": { "type": "integer", "minimum": 1 },
+        "reply_complete_placeholder": { "type": "string" },
+        "custom_sources": {
+          "description": "The user's custom CLI sources (custom_cli_configs_v1) during the case. Custom agent commands are always none.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "sessions": { "$ref": "#/$defs/sessions" },
+        "steps": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/step" } }
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": ["event", "sessions", "effects", "facts", "subject", "intents"],
+      "additionalProperties": false,
+      "properties": {
+        "event": {
+          "description": "The raw hook payload, as the bridge forwards it.",
+          "type": "object",
+          "anyOf": [
+            { "required": ["hook_event_name"] },
+            { "required": ["hookEventName"] },
+            { "required": ["event_name"] },
+            { "required": ["eventName"] }
+          ]
+        },
+        "sessions": { "$ref": "#/$defs/sessions" },
+        "effects": { "type": "array", "items": { "$ref": "#/$defs/effect" } },
+        "facts": { "$ref": "#/$defs/facts" },
+        "subject": { "$ref": "#/$defs/subject" },
+        "intents": { "$ref": "#/$defs/intents" }
+      }
+    },
+    "clock": {
+      "type": "string",
+      "pattern": "^(\\$T[0-9]+|[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)$"
+    },
+    "status": { "enum": ["idle", "processing", "running", "waitingApproval", "waitingQuestion"] },
+    "sessions": {
+      "description": "Every session by card id.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/session" }
+    },
+    "session": {
+      "description": "SessionSnapshot's projection. A field other than status, source, start_time and last_activity is absent while it is nil, false, zero or empty.",
+      "type": "object",
+      "required": ["status", "source", "start_time", "last_activity"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "source": { "type": "string" },
+        "start_time": { "$ref": "#/$defs/clock" },
+        "last_activity": { "$ref": "#/$defs/clock" },
+        "model_reported_at": { "$ref": "#/$defs/clock" },
+        "cli_start_time": { "$ref": "#/$defs/clock" },
+        "cli_pid": { "type": "integer" },
+        "remote_pid": { "type": "integer" },
+        "total_tool_call_count": { "type": "integer", "minimum": 1 },
+        "interrupted": { "const": true },
+        "last_turn_failed": { "const": true },
+        "task_round_ended": { "const": true },
+        "hermes_hooks_report_prompts": { "const": true },
+        "hermes_hooks_report_replies": { "const": true },
+        "hermes_chat_elsewhere": { "const": true },
+        "current_tool": { "type": "string" },
+        "current_tool_use_id": { "type": "string" },
+        "tool_description": { "type": "string" },
+        "cwd": { "type": "string" },
+        "model": { "type": "string" },
+        "permission_mode": { "type": "string" },
+        "transcript_path": { "type": "string" },
+        "last_user_prompt": { "type": "string" },
+        "last_assistant_message": { "type": "string" },
+        "live_codex_output": { "type": "string" },
+        "session_title": { "type": "string" },
+        "provider_session_id": { "type": "string" },
+        "parent_session_id": { "type": "string" },
+        "remote_host_id": { "type": "string" },
+        "remote_host_name": { "type": "string" },
+        "term_app": { "type": "string" },
+        "iterm_session_id": { "type": "string" },
+        "tty_path": { "type": "string" },
+        "kitty_window_id": { "type": "string" },
+        "tmux_pane": { "type": "string" },
+        "tmux_client_tty": { "type": "string" },
+        "tmux_env": { "type": "string" },
+        "term_bundle_id": { "type": "string" },
+        "cmux_surface_id": { "type": "string" },
+        "cmux_workspace_id": { "type": "string" },
+        "zellij_pane_id": { "type": "string" },
+        "zellij_session_name": { "type": "string" },
+        "wezterm_pane_id": { "type": "string" },
+        "herdr_pane_id": { "type": "string" },
+        "herdr_socket_path": { "type": "string" },
+        "herdr_binary_path": { "type": "string" },
+        "superset_workspace_id": { "type": "string" },
+        "superset_pane_id": { "type": "string" },
+        "orca_terminal_handle": { "type": "string" },
+        "orca_worktree_id": { "type": "string" },
+        "claude_desktop_session_id": { "type": "string" },
+        "recent_messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["is_user", "text"],
+            "additionalProperties": false,
+            "properties": { "is_user": { "type": "boolean" }, "text": { "type": "string" } }
+          }
+        },
+        "tool_history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["tool", "success", "timestamp"],
+            "additionalProperties": false,
+            "properties": {
+              "tool": { "type": "string" },
+              "description": { "type": "string" },
+              "success": { "type": "boolean" },
+              "agent_type": { "type": "string" },
+              "timestamp": { "$ref": "#/$defs/clock" }
+            }
+          }
+        },
+        "subagents": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["agent_type", "status", "start_time", "last_activity"],
+            "additionalProperties": false,
+            "properties": {
+              "agent_type": { "type": "string" },
+              "status": { "$ref": "#/$defs/status" },
+              "start_time": { "$ref": "#/$defs/clock" },
+              "last_activity": { "$ref": "#/$defs/clock" },
+              "current_tool": { "type": "string" },
+              "current_tool_use_id": { "type": "string" },
+              "tool_description": { "type": "string" },
+              "model": { "type": "string" },
+              "subsession_kind": { "enum": ["declared", "cursor", "codex", "plugin"] }
+            }
+          }
+        },
+        "closed_subagent_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "agent_tasks": {
+          "type": "object",
+          "required": ["items"],
+          "additionalProperties": false,
+          "properties": {
+            "items": { "type": "array", "items": { "type": "object" } },
+            "completed_at": { "$ref": "#/$defs/clock" }
+          }
+        }
+      }
+    },
+    "sessionId": { "type": "string" },
+    "effect": {
+      "description": "SideEffect, tagged by its Swift case name.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "session_id"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "enum": ["tryMonitorSession", "stopMonitor", "removeSession", "enqueueCompletion"] },
+            "session_id": { "$ref": "#/$defs/sessionId" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "session_id"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "setActiveSession" },
+            "session_id": { "type": ["string", "null"] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "sound"],
+          "additionalProperties": false,
+          "properties": { "type": { "const": "playSound" }, "sound": { "type": "string" } }
+        }
+      ]
+    },
+    "facts": {
+      "description": "HookEventFacts.",
+      "type": "object",
+      "required": ["raw_event_name", "event_name", "applied_to_session", "ended_turn", "held_elsewhere", "turn_error", "subagent_turn"],
+      "additionalProperties": false,
+      "properties": {
+        "raw_event_name": { "type": "string" },
+        "event_name": { "type": "string" },
+        "applied_to_session": { "type": "boolean" },
+        "ended_turn": { "type": "boolean" },
+        "held_elsewhere": { "type": "boolean" },
+        "turn_error": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["type", "detail"],
+              "additionalProperties": false,
+              "properties": { "type": { "type": ["string", "null"] }, "detail": { "type": ["string", "null"] } }
+            }
+          ]
+        },
+        "subagent_turn": { "type": "boolean" }
+      }
+    },
+    "subject": {
+      "description": "AttentionSubject.",
+      "type": "object",
+      "required": ["is_child", "interrupted"],
+      "additionalProperties": false,
+      "properties": { "is_child": { "type": "boolean" }, "interrupted": { "type": "boolean" } }
+    },
+    "reminderKind": { "enum": ["approval", "question", "completion"] },
+    "intents": {
+      "description": "AttentionIntents.",
+      "type": "object",
+      "required": ["sound", "completion", "push", "follow_up"],
+      "additionalProperties": false,
+      "properties": {
+        "sound": { "type": ["string", "null"] },
+        "completion": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["turn_failed"],
+              "additionalProperties": false,
+              "properties": { "turn_failed": { "type": "boolean" } }
+            }
+          ]
+        },
+        "push": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["kind", "smart_suppressible"],
+              "additionalProperties": false,
+              "properties": { "kind": { "$ref": "#/$defs/pushKind" }, "smart_suppressible": { "type": "boolean" } }
+            }
+          ]
+        },
+        "follow_up": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["type", "turn_failed"],
+              "additionalProperties": false,
+              "properties": { "type": { "const": "trackCompletion" }, "turn_failed": { "type": "boolean" } }
+            },
+            {
+              "type": "object",
+              "required": ["type", "kind"],
+              "additionalProperties": false,
+              "properties": { "type": { "const": "restartWait" }, "kind": { "$ref": "#/$defs/reminderKind" } }
+            }
+          ]
+        }
+      }
+    },
+    "pushKind": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": { "type": { "enum": ["error", "approval", "question", "displayOnlyWait"] } }
+        },
+        {
+          "type": "object",
+          "required": ["type", "is_subagent", "interrupted"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "completion" },
+            "is_subagent": { "type": "boolean" },
+            "interrupted": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "attentionBundle": {
+      "type": "object",
+      "required": ["contract", "cases"],
+      "additionalProperties": false,
+      "properties": {
+        "contract": { "const": "attention" },
+        "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/attentionCase" } }
+      }
+    },
+    "attentionCase": {
+      "type": "object",
+      "required": ["name", "moment", "subject", "intents"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "moment": { "$ref": "#/$defs/moment" },
+        "subject": { "$ref": "#/$defs/subject" },
+        "intents": { "$ref": "#/$defs/intents" }
+      }
+    },
+    "moment": {
+      "description": "AttentionMoment, tagged by its Swift case name.",
+      "type": "object",
+      "required": ["type"],
+      "oneOf": [
+        {
+          "required": ["facts"],
+          "additionalProperties": false,
+          "properties": { "type": { "const": "hookEvent" }, "facts": { "$ref": "#/$defs/facts" } }
+        },
+        {
+          "required": ["first_of_burst"],
+          "additionalProperties": false,
+          "properties": { "type": { "const": "approvalQueued" }, "first_of_burst": { "type": "boolean" } }
+        },
+        {
+          "required": ["first_of_burst", "smart_suppressible"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "questionQueued" },
+            "first_of_burst": { "type": "boolean" },
+            "smart_suppressible": { "type": "boolean" }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "properties": { "type": { "enum": ["requestRaisedElsewhere", "appLaunched"] } }
+        },
+        {
+          "required": ["kind", "announce"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "displayOnlyWaitBegan" },
+            "kind": { "$ref": "#/$defs/reminderKind" },
+            "announce": { "type": "boolean" }
+          }
+        },
+        {
+          "required": ["new_session"],
+          "additionalProperties": false,
+          "properties": { "type": { "const": "turnStarted" }, "new_session": { "type": "boolean" } }
+        },
+        {
+          "required": ["end", "host"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "turnEnded" },
+            "end": { "enum": ["completed", "failed", "stopped"] },
+            "host": { "enum": ["claudeDesktop", "aiwork"] }
+          }
+        },
+        {
+          "required": ["kind", "turn_failed"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "const": "reminderDue" },
+            "kind": { "$ref": "#/$defs/reminderKind" },
+            "turn_failed": { "type": "boolean" }
+          }
+        }
+      ]
+    }
+  }
+}

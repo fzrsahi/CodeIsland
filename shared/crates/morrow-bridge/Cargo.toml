@@ -1,0 +1,27 @@
+[package]
+name = "morrow-bridge"
+description = "The hook command Claude Code runs on Linux: stdin to the island, the island's answer to stdout."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "morrow-bridge"
+path = "src/main.rs"
+
+[dependencies]
+morrow-core = { path = "../morrow-core" }
+morrow-ipc = { path = "../morrow-ipc" }
+morrow-protocol = { path = "../morrow-protocol" }
+serde_json.workspace = true
+
+# Not core (GLOSSARY.md): the bridge is an OS edge. `libc` for getuid only;
+# already in the tree through morrow-ipc.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[lints]
+workspace = true
