@@ -1,0 +1,32 @@
+[package]
+name = "morrow-app"
+description = "Morrow's Tauri v2 shell for Linux (X11 first): the panel, the island and the endpoint listener."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "morrow-app"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.6", features = [] }
+
+[dependencies]
+morrow-ipc = { path = "../../crates/morrow-ipc" }
+morrow-protocol = { path = "../../crates/morrow-protocol" }
+# Pinned: window plumbing (focusable, skip_taskbar, always-on-top on X11)
+# depends on this tao/GTK3 generation (ADR-0002). No plugins.
+tauri = { version = "=2.12.7", features = [] }
+serde = { version = "1", features = ["derive"] }
+
+[features]
+default = ["custom-protocol"]
+# Serve the embedded ../dist instead of a dev server URL.
+custom-protocol = ["tauri/custom-protocol"]
+
+[lints]
+workspace = true

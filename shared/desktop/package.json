@@ -1,0 +1,17 @@
+{
+  "name": "morrow-desktop",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.5"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "svelte": "5.58.0",
+    "vite": "8.3.8"
+  }
+}
