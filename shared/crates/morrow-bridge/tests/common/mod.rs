@@ -11,7 +11,7 @@ use serde_json::Value;
 
 /// `fixtures/` at the repository root. #86 moves it to `shared/contract/`.
 pub fn fixtures_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../fixtures")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../shared/contract/fixtures")
 }
 
 pub fn bundle(scope: &str) -> Value {

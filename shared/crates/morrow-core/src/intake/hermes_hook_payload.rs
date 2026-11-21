@@ -1,4 +1,4 @@
-//! Hermes Agent's shell-hook payload (`Sources/MorrowCore/HermesHookPayload.swift`):
+//! Hermes Agent's shell-hook payload (`macos/Sources/MorrowCore/HermesHookPayload.swift`):
 //! the part the bridge needs.
 
 use serde_json::Value;

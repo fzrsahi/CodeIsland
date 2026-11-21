@@ -116,6 +116,13 @@ Urutan yang disarankan: merge #49 → retarget + merge `main` ke #50 dan #117 �
 
 ## Log Checkpoint
 
+### 2026-11-21 — #86, tata letak monorepo dipindahkan
+
+- **Sudah:** `macos/` (paket Swift + aset), `shared/contract` (protokol, skema, fixture), `shared/ci` (gerbang lintas platform), `linux/ci` + `windows/ci` (skrip lane). 712 file, +1083/−346; tidak ada perubahan isi `macos/Sources`. `scripts/dev/monorepo-move.sh` menyimpan langkahnya dan menolak jalan kalau satu string saja tidak cocok.
+- **Bukti:** `linux/ci/test.sh` hijau (fmt · clippy · test · purity), `windows/ci/check.sh` hijau (5 crate, `x86_64-pc-windows-msvc`), `swift build --build-tests` + `swift test` = 1123 tes dengan **6 kegagalan layout yang sama seperti `main`** (diukur di worktree `main` bersih: 6 vs 6), dua suite skrip CI hijau.
+- **Berikutnya:** @aazhrt menerapkan `docs/ci/woodpecker-monorepo-paths.patch` (satu `git apply`), lalu PR #86 keluar dari draft. `scripts/ci/verify-local.sh` dan skrip runner sengaja tidak dipindah — CODEOWNERS memaku path-nya.
+- **Blocker:** patch pipeline di atas; tanpa itu CI memanggil path yang sudah pindah.
+
 ### 2026-11-20 (lanjutan 28) — korelasi PR ↔ tiket, dan penutupan saat merge
 
 - **Sudah:** 33 PR (stack port + #161) diseragamkan body-nya: baris pertama `Fixes #<tiket>`, lalu `Part of spec #82 · epic #33 · scope #<47|48>`, `Depends on #<PR induk>`, satu baris **Acceptance in this PR** (apa yang terbukti di PR ini vs apa yang masih gate), dan **Merge target** yang menyebut perintah retarget. `#152` menutup dua tiket sekaligus (`Fixes #100` + `Fixes #151`).

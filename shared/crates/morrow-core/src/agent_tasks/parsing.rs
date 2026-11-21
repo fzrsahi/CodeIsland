@@ -1,6 +1,6 @@
 //! Reading checklist observations out of hooks and transcript rows
 //! (`AgentTaskParsing`, `AgentTaskTool`, `AgentTaskHookParser`,
-//! `AgentTaskTranscript`, `Sources/MorrowCore/AgentTaskParsing.swift`).
+//! `AgentTaskTranscript`, `macos/Sources/MorrowCore/AgentTaskParsing.swift`).
 //!
 //! The list that applies the events is [`super::list::AgentTaskList`].
 

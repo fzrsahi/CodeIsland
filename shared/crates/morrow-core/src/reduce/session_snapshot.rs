@@ -1,5 +1,5 @@
 //! A session's card as the reducer keeps it (`SessionSnapshot`,
-//! `Sources/MorrowCore/SessionSnapshot.swift`; `SubagentState`,
+//! `macos/Sources/MorrowCore/SessionSnapshot.swift`; `SubagentState`,
 //! `ToolHistoryEntry`, `ChatMessage`, `AgentStatus` in `Models.swift`).
 //!
 //! Only the state the reducer reads or writes. Left out, as the contract's

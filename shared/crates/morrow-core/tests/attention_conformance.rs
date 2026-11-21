@@ -1,5 +1,5 @@
 //! `AttentionPolicy.intents` on every case of `fixtures/core/attention.json`
-//! (exported from Swift by `Tests/MorrowCoreTests/CoreContractJSONExporter.swift`
+//! (exported from Swift by `macos/Tests/MorrowCoreTests/CoreContractJSONExporter.swift`
 //! out of `AttentionPolicyTests`): the intents Swift returns for a moment and
 //! a subject must be the ones morrow-core returns.
 //!
@@ -23,8 +23,8 @@ mod contracts;
 const CASES: usize = 56;
 
 fn bundle() -> Value {
-    let path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../fixtures/core/attention.json");
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../shared/contract/fixtures/core/attention.json");
     let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
     serde_json::from_str(&text).expect("attention.json")
 }

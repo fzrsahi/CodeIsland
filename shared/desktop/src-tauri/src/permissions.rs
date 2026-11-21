@@ -16,7 +16,7 @@ const SUMMARY_CHARS: usize = 120;
 /// Whether the island holds `payload` for an answer. `TODO(#93)`: HookIntake
 /// in morrow-core decides (aliases, questions); E2E-1 serves Claude Code's
 /// `PermissionRequest`. A hook Cursor ran is never held: Cursor reads its
-/// stdout against its own schema (docs/hook-edge-protocol.md).
+/// stdout against its own schema (shared/contract/hook-edge-protocol.md).
 pub fn waits(payload: &HookPayload) -> bool {
     let cursor = payload
         .get("cursor_version")
@@ -228,7 +228,7 @@ mod tests {
     /// the monorepo layout.
     #[test]
     fn replies_are_the_macos_islands_bytes() {
-        let swift = include_str!("../../../../Sources/Morrow/AppState.swift");
+        let swift = include_str!("../../../../macos/Sources/Morrow/AppState.swift");
         for decision in [Decision::Allow, Decision::Deny] {
             let reply = std::str::from_utf8(decision.reply()).unwrap();
             assert!(swift.contains(&format!("#\"{reply}\"#")), "{reply}");

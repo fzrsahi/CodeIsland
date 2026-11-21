@@ -1,4 +1,4 @@
-//! `ModelLabelTests` (`Tests/MorrowCoreTests/ModelLabelTests.swift`), ported
+//! `ModelLabelTests` (`macos/Tests/MorrowCoreTests/ModelLabelTests.swift`), ported
 //! one test to one test: the friendly model tag, the merge rules a transcript
 //! line obeys, and the two backward searches over transcript rows (fed bytes
 //! here, where Swift reads a file).

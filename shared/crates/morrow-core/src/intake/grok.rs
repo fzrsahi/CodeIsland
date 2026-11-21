@@ -1,4 +1,4 @@
-//! Grok Build (`Sources/MorrowCore/GrokHookForwardingPolicy.swift`,
+//! Grok Build (`macos/Sources/MorrowCore/GrokHookForwardingPolicy.swift`,
 //! `GrokSessionPaths.swift`).
 
 use std::collections::HashMap;

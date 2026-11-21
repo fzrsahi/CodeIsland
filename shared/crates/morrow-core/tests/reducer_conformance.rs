@@ -1,5 +1,5 @@
 //! The reducer on every case of `fixtures/core/reducer.json` (exported from
-//! Swift by `Tests/MorrowCoreTests/CoreContractJSONExporter.swift`): after
+//! Swift by `macos/Tests/MorrowCoreTests/CoreContractJSONExporter.swift`): after
 //! each step, every session, the effects, the facts and the attention policy's
 //! intents for those facts must be what Swift left, projected the way the
 //! exporter projects them.
@@ -30,8 +30,8 @@ const STEPS: usize = 161;
 const HOME: &str = "/home/morrow-contract";
 
 fn bundle() -> Value {
-    let path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../fixtures/core/reducer.json");
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../shared/contract/fixtures/core/reducer.json");
     let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
     serde_json::from_str(&text).expect("reducer.json")
 }

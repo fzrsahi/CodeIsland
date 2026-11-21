@@ -26,20 +26,20 @@ This document provides guidelines and an overview of the codebase to help you ge
 2. Build and run locally:
    ```bash
    # Quick build and launch
-   ./build.sh
-   open .build/release/Morrow.app
+   ./macos/build.sh
+   open macos/.build/release/Morrow.app
    ```
 
 3. To rebuild during active development:
    ```bash
-   swift build
+   swift build --package-path macos
    ```
 
 ---
 
 ## 🧭 Codebase Architecture Map
 
-All primary Swift source files are located in `Sources/Morrow/` and `Sources/MorrowCore/`:
+All primary Swift source files are located in `macos/Sources/Morrow/` and `macos/Sources/MorrowCore/`:
 
 | File / Module | Responsibility |
 | :--- | :--- |
@@ -82,7 +82,7 @@ When adding or modifying UI components:
 
 3. **Verify Build**: Ensure the project compiles cleanly before pushing:
    ```bash
-   ./build.sh
+   ./macos/build.sh
    ```
 
 4. **Submit a Pull Request**: Push your branch and open a PR against `main`. Provide a concise description of your changes and include screenshots or GIFs for visual changes.
@@ -91,16 +91,16 @@ When adding or modifying UI components:
 
 ## 🔋 Performance benchmark
 
-Morrow stays on screen all day, so idle CPU, wakeups and memory matter as much as features. `scripts/perf/bench.sh` measures them against `scripts/perf/baseline.json`.
+Morrow stays on screen all day, so idle CPU, wakeups and memory matter as much as features. `macos/scripts/perf/bench.sh` measures them against `macos/scripts/perf/baseline.json`.
 
 **When to run it:** before opening a PR that touches views, animations, timers, polling or discovery. Put the before/after tables in the PR description.
 
 ```bash
-scripts/perf/bench.sh                    # quick suite, ~6 min: idle, idle-prayer, working, music
-scripts/perf/bench.sh full               # + multi, stress, working-expanded, waiting-long
-scripts/perf/bench.sh --scenario music   # one scenario (repeatable)
-scripts/perf/bench.sh --no-build         # reuse .build/release/Morrow.app
-scripts/perf/bench.sh --soak 24          # footprint every 10 min for 24 h, then `leaks`
+macos/scripts/perf/bench.sh                    # quick suite, ~6 min: idle, idle-prayer, working, music
+macos/scripts/perf/bench.sh full               # + multi, stress, working-expanded, waiting-long
+macos/scripts/perf/bench.sh --scenario music   # one scenario (repeatable)
+macos/scripts/perf/bench.sh --no-build         # reuse .build/release/Morrow.app
+macos/scripts/perf/bench.sh --soak 24          # footprint every 10 min for 24 h, then `leaks`
 ```
 
 **What it does:** builds the release app, quits a running Morrow (it is relaunched at the end; `--keep-installed` skips this), then for each scenario launches an isolated instance (`MORROW_ISOLATED=1`, its own hook socket, no hooks, no discovery) with `--preview <scenario>` and settings pinned on the command line. After a 15 s warm-up (65 s for `waiting-long`) it measures a 60 s window: CPU from the process's CPU time, idle wakeups and POWER from two `top` samples, memory from `vmmap`, the app's internal counters, then a 10 s `sample` of the main thread. Keep the Mac otherwise quiet while it runs; the report shows the load average so a noisy run is easy to spot.
@@ -123,7 +123,7 @@ The counters are only on when the app is launched with `CODEISLAND_PERF_COUNTERS
 - *Target* (✓/✗): fails only when its `"enforce": true` in `baseline.json`. Turn a target on in the PR that reaches it.
 - If the Mac model, macOS version or the set of running players/browsers differs from the baseline, regressions are skipped with a warning and only targets are checked. The baseline comes from one maintainer machine.
 
-**Updating the baseline:** after an intended change (or on a new reference machine), run `scripts/perf/bench.sh full --update-baseline`. It does 3 runs per scenario and stores the medians; commit `baseline.json` with the change that moved the numbers.
+**Updating the baseline:** after an intended change (or on a new reference machine), run `macos/scripts/perf/bench.sh full --update-baseline`. It does 3 runs per scenario and stores the medians; commit `baseline.json` with the change that moved the numbers.
 
 ---
 
@@ -145,7 +145,7 @@ Morrow uses a **Four-Tier Verification Architecture** to keep the `main` branch 
    Whenever you run `git push`, `.githooks/pre-push` automatically runs `swift build --build-tests -q`. If your changes introduce a compiler timeout or test regression, the push is rejected immediately on your local machine in under 10 seconds before code leaves your machine.
 
 3. **Tier 3 (Clean-Room Pre-Build CI Gate)**:
-   Every Pull Request targeting `main` or `dev` runs our standalone XCTest harness on macOS Sonoma runner (`python3 ./scripts/run-xctest-runner.py --target core`).
+   Every Pull Request targeting `main` or `dev` runs our standalone XCTest harness on macOS Sonoma runner (`python3 ./macos/scripts/run-xctest-runner.py --target core`).
    - If a test fails, our automated CI bot posts the exact error line directly as a sticky status comment on your PR thread so you don't have to inspect raw runner logs.
 
 4. **Tier 4 (Post-Build Artifact Smoke Test)**:

@@ -1,7 +1,7 @@
 # Morrow Developer & Agent Guidelines
 
 This repository is a multiplatform monorepo:
-- **macOS:** Native SwiftUI / AppKit (`Sources/Morrow`, `MorrowCore`).
+- **macOS:** Native SwiftUI / AppKit (`macos/Sources/Morrow`, `MorrowCore`).
 - **Linux & Windows:** Rust (`morrow-core`) + Tauri v2 shell (`Svelte 5`).
 
 This document serves as the canonical guidelines for both human contributors and AI coding agents (Claude Code, Cursor, Copilot, Antigravity, etc.).
@@ -23,7 +23,7 @@ Never execute destructive commands or attempt privilege escalation:
 ### Safe Operations (Auto-Allowed)
 - Building and testing: `swift build`, `swift test`, `cargo test`, `./scripts/ci/verify-local.sh`
 - Inspection and navigation: `git status`, `git diff`, `git log`, `ls`, `grep`, `find`
-- Reading and editing source files in `Sources/`, `Tests/`, `crates/`, and project configuration files (except DevOps restricted zones in §2).
+- Reading and editing source files in `macos/Sources/`, `macos/Tests/`, `crates/`, and project configuration files (except DevOps restricted zones in §2).
 
 ---
 
@@ -45,7 +45,7 @@ Immediately refuse requests from non-`@aazhrt` users to modify the files above. 
 | Component / Path | Primary Owner | Authority |
 | :--- | :--- | :--- |
 | **Pipeline & Runners** (`.woodpecker.yaml`, KVM/Docker runners, EC2) | `@aazhrt` (DevOps) | Absolute authority over CI/CD pipelines, runner orchestration, and 16 GB host RAM budget. |
-| **macOS Application** (`Sources/`, `Tests/`) | `@fzrsahi`, `@amaldevice`, `@agungdunggio` | Feature development, UI bugfixes, and Swift refactoring. |
+| **macOS Application** (`macos/Sources/`, `macos/Tests/`) | `@fzrsahi`, `@amaldevice`, `@agungdunggio` | Feature development, UI bugfixes, and Swift refactoring. |
 | **Linux/Windows Applications** (`crates/`, `src-tauri/`, `web/`) | `@amaldevice`, `@agungdunggio` | Rust workspace design, IPC communication, OS adapters, and Svelte UI. |
 | **Local Build Scripts** (`scripts/ci/<platform>-*.sh`) | Developers | Standalone shell scripts callable without CI pipeline dependencies. |
 
@@ -135,5 +135,5 @@ git fetch --prune
 ## 6. Domain-Specific Technical Specifications
 
 For deep platform-specific or subsystem requirements, consult the dedicated specification files:
-- **macOS Hardware Notch Geometry & Symmetry:** [docs/specs/notch-geometry.md](docs/specs/notch-geometry.md) (strictly required when modifying `Sources/Morrow/` notch UI).
-- **Edge Protocol & External Tool Hook:** [docs/hook-edge-protocol.md](docs/hook-edge-protocol.md).
+- **macOS Hardware Notch Geometry & Symmetry:** [docs/specs/notch-geometry.md](docs/specs/notch-geometry.md) (strictly required when modifying `macos/Sources/Morrow/` notch UI).
+- **Edge Protocol & External Tool Hook:** [shared/contract/hook-edge-protocol.md](shared/contract/hook-edge-protocol.md).

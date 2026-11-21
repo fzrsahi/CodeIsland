@@ -14,7 +14,7 @@
 
 ## 协议兼容
 
-该应用与 `Sources/MorrowCore/ESP32Protocol.swift` 保持一致：
+该应用与 `macos/Sources/MorrowCore/ESP32Protocol.swift` 保持一致：
 
 - Service UUID：`0000beef-0000-1000-8000-00805f9b34fb`
 - Write Characteristic：`0000beef-0001-1000-8000-00805f9b34fb`

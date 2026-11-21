@@ -159,14 +159,14 @@ It works with **30+ AI coding tools**, installs its hooks for you, and keeps eve
 <td align="center"><img src="docs/images/mascots/pi.gif" width="48" alt=""><br><sub><b>Pi / Oh My Pi</b></sub></td>
 <td align="center"><img src="docs/images/mascots/hermes.gif" width="48" alt=""><br><sub><b>Hermes</b></sub></td>
 <td align="center"><img src="docs/images/mascots/openclaw.gif" width="48" alt=""><br><sub><b>OpenClaw</b></sub></td>
-<td align="center"><img src="Sources/Morrow/Resources/cli-icons/antigravity.png" width="40" alt=""><br><sub><b>Google Antigravity</b></sub></td>
+<td align="center"><img src="macos/Sources/Morrow/Resources/cli-icons/antigravity.png" width="40" alt=""><br><sub><b>Google Antigravity</b></sub></td>
 </tr>
 <tr>
 <td align="center"><img src="docs/images/mascots/kiro.gif" width="48" alt=""><br><sub><b>Kiro CLI</b></sub></td>
 <td align="center"><img src="docs/images/mascots/stepfun.gif" width="48" alt=""><br><sub><b>StepFun</b></sub></td>
 <td align="center"><img src="docs/images/mascots/workbuddy.gif" width="48" alt=""><br><sub><b>WorkBuddy</b></sub></td>
-<td align="center"><img src="Sources/Morrow/Resources/cli-icons/minimax.png" width="40" alt=""><br><sub><b>MiniMax Code CLI</b></sub></td>
-<td align="center"><img src="Sources/Morrow/Resources/cli-icons/dsh.png" width="40" alt=""><br><sub><b>DeepSeek Harness</b></sub></td>
+<td align="center"><img src="macos/Sources/Morrow/Resources/cli-icons/minimax.png" width="40" alt=""><br><sub><b>MiniMax Code CLI</b></sub></td>
+<td align="center"><img src="macos/Sources/Morrow/Resources/cli-icons/dsh.png" width="40" alt=""><br><sub><b>DeepSeek Harness</b></sub></td>
 <td align="center"><img src="docs/images/mascots/aiwork.gif" width="48" alt=""><br><sub><b>AiWork</b></sub></td>
 </tr>
 <tr>
@@ -393,7 +393,7 @@ Requires **macOS 14+** and **Swift 5.9+**.
 
 ```bash
 git clone git@github.com:fzrsahi/morrow.git
-cd morrow
+cd morrow/macos
 
 # Development: debug build + launch
 swift build && ./.build/debug/Morrow

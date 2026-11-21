@@ -74,7 +74,7 @@ if curl -fsSL "$APPCAST_URL" -o appcast.xml 2>/dev/null; then
     echo "Downloaded new appcast.xml from release."
 else
     echo "Notice: appcast.xml not in release asset; checking repository raw feed..."
-    curl -fsSL "https://raw.githubusercontent.com/$REPO/main/appcast.xml" -o appcast.xml || true
+    curl -fsSL "https://raw.githubusercontent.com/$REPO/main/macos/appcast.xml" -o appcast.xml || true
 fi
 
 # 3. Atomic Web Root Updates

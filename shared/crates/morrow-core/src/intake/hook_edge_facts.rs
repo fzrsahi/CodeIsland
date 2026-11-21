@@ -1,7 +1,7 @@
 //! What an edge that cannot run HookIntake sends instead: the facts it
 //! observed, in its payload's `_edge` object, next to the agent's stdin
-//! object (`HookEdgeFacts`, `Sources/MorrowCore/HookEdgeFacts.swift`;
-//! `docs/hook-edge-protocol.md`). The island runs HookIntake on them as a
+//! object (`HookEdgeFacts`, `macos/Sources/MorrowCore/HookEdgeFacts.swift`;
+//! `shared/contract/hook-edge-protocol.md`). The island runs HookIntake on them as a
 //! bridge does on its own side.
 //!
 //! Every edge that sends facts runs on another machine: a bridge reads its

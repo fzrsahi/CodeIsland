@@ -1,6 +1,6 @@
 # Morrow macOS Hardware Notch Geometry & Symmetry Rules
 
-This specification is strictly mandatory when developing or modifying macOS notch bar components (`Sources/Morrow/`):
+This specification is strictly mandatory when developing or modifying macOS notch bar components (`macos/Sources/Morrow/`):
 
 1. **Strict Left/Right Symmetry (`leftWidth == rightWidth`, `centerShift == 0`):**
    - Left and right wings **must remain strictly equal in width** across all 3 primary states (**Idle**, **Thinking**, **HUD/Expanded**).

@@ -1,6 +1,6 @@
 //! The agent's own checklist (`AgentTaskStatus`, `AgentTaskItem`,
 //! `AgentTaskDraft`, `AgentTaskRowPatch`, `AgentTaskChange`, `AgentTaskEvent`,
-//! `Sources/MorrowCore/AgentTaskList.swift`): TaskCreate/TaskUpdate (Claude
+//! `macos/Sources/MorrowCore/AgentTaskList.swift`): TaskCreate/TaskUpdate (Claude
 //! Code), TodoWrite (older Claude Code and forks), `update_plan` (Codex),
 //! `write_todos` / `todowrite` (Gemini / OpenCode).
 //!

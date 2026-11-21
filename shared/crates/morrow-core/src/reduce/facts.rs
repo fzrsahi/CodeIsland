@@ -1,5 +1,5 @@
 //! What a hook event did, for the attention policy to read
-//! (`HookEventFacts`, `Sources/MorrowCore/AttentionPolicy.swift`), and the
+//! (`HookEventFacts`, `macos/Sources/MorrowCore/AttentionPolicy.swift`), and the
 //! `PushEventClassifier` readings it is built from (`PushPolicy.swift`).
 
 use serde_json::Value;

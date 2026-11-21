@@ -7,7 +7,7 @@ use crate::shape::{self, Kind};
 use crate::{JsonObject, ProtocolError};
 
 /// The keys HookIntake's terminal context writes
-/// (`HookIntake.addTerminalContext`, `Sources/MorrowCore/HookIntake.swift`):
+/// (`HookIntake.addTerminalContext`, `macos/Sources/MorrowCore/HookIntake.swift`):
 /// terminal app, multiplexer panes and tty.
 pub const TERMINAL_KEYS: &[&str] = &[
     "_term_app",

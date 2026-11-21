@@ -1,5 +1,5 @@
 //! The block structure of an assistant reply (`MarkdownBlockParser`,
-//! `Sources/MorrowCore/MarkdownBlockParser.swift`): ATX/setext headings,
+//! `macos/Sources/MorrowCore/MarkdownBlockParser.swift`): ATX/setext headings,
 //! paragraphs, bullet/ordered/task lists with nesting, fenced code, GFM
 //! tables, block quotes and thematic breaks.
 //!

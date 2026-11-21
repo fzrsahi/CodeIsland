@@ -1,4 +1,4 @@
-//! `JSONMinimalEditorTests` (`Tests/MorrowTests/JSONMinimalEditorTests.swift`)
+//! `JSONMinimalEditorTests` (`macos/Tests/MorrowTests/JSONMinimalEditorTests.swift`)
 //! ported test for test: 15 of 15.
 
 use serde_json::{Value, json};

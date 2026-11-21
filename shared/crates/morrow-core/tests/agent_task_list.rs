@@ -1,4 +1,4 @@
-//! `AgentTaskList` against `Tests/MorrowCoreTests/AgentTaskListTests.swift`: the
+//! `AgentTaskList` against `macos/Tests/MorrowCoreTests/AgentTaskListTests.swift`: the
 //! state machine's own tests, plus the reducer and transcript wiring that feeds
 //! it. The parsing half of the same file is `agent_task_parsing.rs`.
 //!

@@ -1,4 +1,4 @@
-//! `CodexTomlHooksFixtures` (`Tests/MorrowTests/CodexTomlHooksFixtures.swift`)
+//! `CodexTomlHooksFixtures` (`macos/Tests/MorrowTests/CodexTomlHooksFixtures.swift`)
 //! ported case for case, plus the idempotence the Swift loop checks: a second
 //! pass over its own output changes nothing.
 

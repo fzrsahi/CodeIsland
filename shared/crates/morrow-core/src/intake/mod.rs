@@ -1,7 +1,7 @@
 //! One hook delivery, interpreted (`HookIntake`,
-//! `Sources/MorrowCore/HookIntake.swift`): the event the island gets,
+//! `macos/Sources/MorrowCore/HookIntake.swift`): the event the island gets,
 //! whether the hook waits for the island's answer, and how that answer
-//! reaches its agent (`docs/hook-edge-protocol.md`, *What the island
+//! reaches its agent (`shared/contract/hook-edge-protocol.md`, *What the island
 //! derives*).
 //!
 //! It reads nothing but the [`Facts`] it is handed. The ones that cost a

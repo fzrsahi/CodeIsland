@@ -54,7 +54,7 @@ public static class RawAgentEventNormalizer
 
     // Same precedence as the Swift bridge (MorrowCore Models.swift bridgeSource): a declared
     // --source wins, then a supported `_source` in the payload, then a non-blank cursor_version
-    // marks a hook Cursor ran (docs/hook-edge-protocol.md, rule 2). The Claude Code hook is
+    // marks a hook Cursor ran (shared/contract/hook-edge-protocol.md, rule 2). The Claude Code hook is
     // installed without --source so that Cursor running it can be told apart.
     private static string? ResolveSource(JsonElement root, string? sourceTag)
     {

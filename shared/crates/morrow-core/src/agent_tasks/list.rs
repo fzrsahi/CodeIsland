@@ -1,5 +1,5 @@
 //! An agent's own task checklist (`AgentTaskList`,
-//! `Sources/MorrowCore/AgentTaskList.swift:227-684`).
+//! `macos/Sources/MorrowCore/AgentTaskList.swift:227-684`).
 //!
 //! A pure value: the reducer applies hook events to it and the shell applies
 //! transcript events, both through [`AgentTaskList::apply`]. Only `items` and

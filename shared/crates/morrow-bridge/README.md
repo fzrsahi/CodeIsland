@@ -1,10 +1,10 @@
 # morrow-bridge
 
-The hook command agents run on Linux (`docs/hook-edge-protocol.md`).
+The hook command agents run on Linux (`shared/contract/hook-edge-protocol.md`).
 Claude Code's hook is installed without `--source`, as on macOS (PR #51);
 every other agent's with `--source <agent>` (and `--event` where its stdin
 names no event). What a hook means is HookIntake's call
-(`morrow_core::intake`, the port of `Sources/MorrowCore/HookIntake.swift`);
+(`morrow_core::intake`, the port of `macos/Sources/MorrowCore/HookIntake.swift`);
 the bridge gathers the facts and does the I/O. Per invocation it:
 
 1. prints the answer that cannot wait (Google Antigravity's PreToolUse,
@@ -48,7 +48,7 @@ and a macOS `_term_app`, which a macOS recording cannot vouch for here.
 
 ## Tests
 
-- `tests/conformance.rs`: every fixture of `fixtures/linux/bridge-golden.json`
+- `tests/conformance.rs`: every fixture of `shared/contract/fixtures/linux/bridge-golden.json`
   (84, every source), in process with the fixture's process tree behind
   `ProcessFacts`: forwarded payload as it goes on the wire, stdout, status.
   It shares the golden harness of morrow-core (`#[path]`).

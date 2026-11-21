@@ -1,4 +1,4 @@
-//! `SessionRecapTests` (`Tests/MorrowCoreTests/SessionRecapTests.swift`), the
+//! `SessionRecapTests` (`macos/Tests/MorrowCoreTests/SessionRecapTests.swift`), the
 //! scan-level half: recap parsing and cleaning, the byte probe that lets only
 //! `away_summary` system rows through, the supersede rule inside one chunk,
 //! the model observation each line carries, and the 1M `/model` switch.

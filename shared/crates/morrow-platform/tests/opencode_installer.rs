@@ -188,7 +188,7 @@ fn status_reports_a_stale_plugin_file() {
 /// failed on `main`.
 #[test]
 fn the_shipped_plugin_carries_the_versions_the_installer_expects() {
-    let resource = include_str!("../../../../Sources/Morrow/Resources/morrow-opencode.js");
+    let resource = include_str!("../../../../macos/Sources/Morrow/Resources/morrow-opencode.js");
     assert!(
         resource.contains(&format!("// version: {}", opencode::PLUGIN_VERSION)),
         "the resource says something else than PLUGIN_VERSION ({})",

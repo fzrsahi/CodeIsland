@@ -19,26 +19,26 @@ targets:
     sources:
       - path: MorrowCompanion
       - path: Shared
-      - path: ../../Sources/Morrow/AiWorkView.swift
-      - path: ../../Sources/Morrow/AntiGravityView.swift
-      - path: ../../Sources/Morrow/BuddyView.swift
-      - path: ../../Sources/Morrow/ClineView.swift
-      - path: ../../Sources/Morrow/CopilotView.swift
-      - path: ../../Sources/Morrow/CursorView.swift
-      - path: ../../Sources/Morrow/DexView.swift
-      - path: ../../Sources/Morrow/DroidView.swift
-      - path: ../../Sources/Morrow/GeminiView.swift
-      - path: ../../Sources/Morrow/HermesView.swift
-      - path: ../../Sources/Morrow/KimiView.swift
-      - path: ../../Sources/Morrow/MascotMotion.swift
-      - path: ../../Sources/Morrow/MascotTimeline.swift
-      - path: ../../Sources/Morrow/OpenCodeView.swift
-      - path: ../../Sources/Morrow/PixelCharacterView.swift
-      - path: ../../Sources/Morrow/QoderView.swift
-      - path: ../../Sources/Morrow/QwenView.swift
-      - path: ../../Sources/Morrow/StepFunView.swift
-      - path: ../../Sources/Morrow/TraeView.swift
-      - path: ../../Sources/Morrow/WorkBuddyView.swift
+      - path: ../../macos/Sources/Morrow/AiWorkView.swift
+      - path: ../../macos/Sources/Morrow/AntiGravityView.swift
+      - path: ../../macos/Sources/Morrow/BuddyView.swift
+      - path: ../../macos/Sources/Morrow/ClineView.swift
+      - path: ../../macos/Sources/Morrow/CopilotView.swift
+      - path: ../../macos/Sources/Morrow/CursorView.swift
+      - path: ../../macos/Sources/Morrow/DexView.swift
+      - path: ../../macos/Sources/Morrow/DroidView.swift
+      - path: ../../macos/Sources/Morrow/GeminiView.swift
+      - path: ../../macos/Sources/Morrow/HermesView.swift
+      - path: ../../macos/Sources/Morrow/KimiView.swift
+      - path: ../../macos/Sources/Morrow/MascotMotion.swift
+      - path: ../../macos/Sources/Morrow/MascotTimeline.swift
+      - path: ../../macos/Sources/Morrow/OpenCodeView.swift
+      - path: ../../macos/Sources/Morrow/PixelCharacterView.swift
+      - path: ../../macos/Sources/Morrow/QoderView.swift
+      - path: ../../macos/Sources/Morrow/QwenView.swift
+      - path: ../../macos/Sources/Morrow/StepFunView.swift
+      - path: ../../macos/Sources/Morrow/TraeView.swift
+      - path: ../../macos/Sources/Morrow/WorkBuddyView.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: top.fengye.MorrowCompanion
@@ -60,26 +60,26 @@ targets:
     sources:
       - path: MorrowCompanionWidget
       - path: Shared
-      - path: ../../Sources/Morrow/AiWorkView.swift
-      - path: ../../Sources/Morrow/AntiGravityView.swift
-      - path: ../../Sources/Morrow/BuddyView.swift
-      - path: ../../Sources/Morrow/ClineView.swift
-      - path: ../../Sources/Morrow/CopilotView.swift
-      - path: ../../Sources/Morrow/CursorView.swift
-      - path: ../../Sources/Morrow/DexView.swift
-      - path: ../../Sources/Morrow/DroidView.swift
-      - path: ../../Sources/Morrow/GeminiView.swift
-      - path: ../../Sources/Morrow/HermesView.swift
-      - path: ../../Sources/Morrow/KimiView.swift
-      - path: ../../Sources/Morrow/MascotMotion.swift
-      - path: ../../Sources/Morrow/MascotTimeline.swift
-      - path: ../../Sources/Morrow/OpenCodeView.swift
-      - path: ../../Sources/Morrow/PixelCharacterView.swift
-      - path: ../../Sources/Morrow/QoderView.swift
-      - path: ../../Sources/Morrow/QwenView.swift
-      - path: ../../Sources/Morrow/StepFunView.swift
-      - path: ../../Sources/Morrow/TraeView.swift
-      - path: ../../Sources/Morrow/WorkBuddyView.swift
+      - path: ../../macos/Sources/Morrow/AiWorkView.swift
+      - path: ../../macos/Sources/Morrow/AntiGravityView.swift
+      - path: ../../macos/Sources/Morrow/BuddyView.swift
+      - path: ../../macos/Sources/Morrow/ClineView.swift
+      - path: ../../macos/Sources/Morrow/CopilotView.swift
+      - path: ../../macos/Sources/Morrow/CursorView.swift
+      - path: ../../macos/Sources/Morrow/DexView.swift
+      - path: ../../macos/Sources/Morrow/DroidView.swift
+      - path: ../../macos/Sources/Morrow/GeminiView.swift
+      - path: ../../macos/Sources/Morrow/HermesView.swift
+      - path: ../../macos/Sources/Morrow/KimiView.swift
+      - path: ../../macos/Sources/Morrow/MascotMotion.swift
+      - path: ../../macos/Sources/Morrow/MascotTimeline.swift
+      - path: ../../macos/Sources/Morrow/OpenCodeView.swift
+      - path: ../../macos/Sources/Morrow/PixelCharacterView.swift
+      - path: ../../macos/Sources/Morrow/QoderView.swift
+      - path: ../../macos/Sources/Morrow/QwenView.swift
+      - path: ../../macos/Sources/Morrow/StepFunView.swift
+      - path: ../../macos/Sources/Morrow/TraeView.swift
+      - path: ../../macos/Sources/Morrow/WorkBuddyView.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: top.fengye.MorrowCompanion.Widget
@@ -98,26 +98,26 @@ targets:
       - path: Shared/SharedMascotView.swift
       - path: Shared/WatchStateStore.swift
       - path: Shared/L10n.swift
-      - path: ../../Sources/Morrow/AiWorkView.swift
-      - path: ../../Sources/Morrow/AntiGravityView.swift
-      - path: ../../Sources/Morrow/BuddyView.swift
-      - path: ../../Sources/Morrow/ClineView.swift
-      - path: ../../Sources/Morrow/CopilotView.swift
-      - path: ../../Sources/Morrow/CursorView.swift
-      - path: ../../Sources/Morrow/DexView.swift
-      - path: ../../Sources/Morrow/DroidView.swift
-      - path: ../../Sources/Morrow/GeminiView.swift
-      - path: ../../Sources/Morrow/HermesView.swift
-      - path: ../../Sources/Morrow/KimiView.swift
-      - path: ../../Sources/Morrow/MascotMotion.swift
-      - path: ../../Sources/Morrow/MascotTimeline.swift
-      - path: ../../Sources/Morrow/OpenCodeView.swift
-      - path: ../../Sources/Morrow/PixelCharacterView.swift
-      - path: ../../Sources/Morrow/QoderView.swift
-      - path: ../../Sources/Morrow/QwenView.swift
-      - path: ../../Sources/Morrow/StepFunView.swift
-      - path: ../../Sources/Morrow/TraeView.swift
-      - path: ../../Sources/Morrow/WorkBuddyView.swift
+      - path: ../../macos/Sources/Morrow/AiWorkView.swift
+      - path: ../../macos/Sources/Morrow/AntiGravityView.swift
+      - path: ../../macos/Sources/Morrow/BuddyView.swift
+      - path: ../../macos/Sources/Morrow/ClineView.swift
+      - path: ../../macos/Sources/Morrow/CopilotView.swift
+      - path: ../../macos/Sources/Morrow/CursorView.swift
+      - path: ../../macos/Sources/Morrow/DexView.swift
+      - path: ../../macos/Sources/Morrow/DroidView.swift
+      - path: ../../macos/Sources/Morrow/GeminiView.swift
+      - path: ../../macos/Sources/Morrow/HermesView.swift
+      - path: ../../macos/Sources/Morrow/KimiView.swift
+      - path: ../../macos/Sources/Morrow/MascotMotion.swift
+      - path: ../../macos/Sources/Morrow/MascotTimeline.swift
+      - path: ../../macos/Sources/Morrow/OpenCodeView.swift
+      - path: ../../macos/Sources/Morrow/PixelCharacterView.swift
+      - path: ../../macos/Sources/Morrow/QoderView.swift
+      - path: ../../macos/Sources/Morrow/QwenView.swift
+      - path: ../../macos/Sources/Morrow/StepFunView.swift
+      - path: ../../macos/Sources/Morrow/TraeView.swift
+      - path: ../../macos/Sources/Morrow/WorkBuddyView.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: top.fengye.MorrowCompanion.watchkitapp
@@ -140,26 +140,26 @@ targets:
       - path: Shared/SharedMascotView.swift
       - path: Shared/WatchStateStore.swift
       - path: Shared/L10n.swift
-      - path: ../../Sources/Morrow/AiWorkView.swift
-      - path: ../../Sources/Morrow/AntiGravityView.swift
-      - path: ../../Sources/Morrow/BuddyView.swift
-      - path: ../../Sources/Morrow/ClineView.swift
-      - path: ../../Sources/Morrow/CopilotView.swift
-      - path: ../../Sources/Morrow/CursorView.swift
-      - path: ../../Sources/Morrow/DexView.swift
-      - path: ../../Sources/Morrow/DroidView.swift
-      - path: ../../Sources/Morrow/GeminiView.swift
-      - path: ../../Sources/Morrow/HermesView.swift
-      - path: ../../Sources/Morrow/KimiView.swift
-      - path: ../../Sources/Morrow/MascotMotion.swift
-      - path: ../../Sources/Morrow/MascotTimeline.swift
-      - path: ../../Sources/Morrow/OpenCodeView.swift
-      - path: ../../Sources/Morrow/PixelCharacterView.swift
-      - path: ../../Sources/Morrow/QoderView.swift
-      - path: ../../Sources/Morrow/QwenView.swift
-      - path: ../../Sources/Morrow/StepFunView.swift
-      - path: ../../Sources/Morrow/TraeView.swift
-      - path: ../../Sources/Morrow/WorkBuddyView.swift
+      - path: ../../macos/Sources/Morrow/AiWorkView.swift
+      - path: ../../macos/Sources/Morrow/AntiGravityView.swift
+      - path: ../../macos/Sources/Morrow/BuddyView.swift
+      - path: ../../macos/Sources/Morrow/ClineView.swift
+      - path: ../../macos/Sources/Morrow/CopilotView.swift
+      - path: ../../macos/Sources/Morrow/CursorView.swift
+      - path: ../../macos/Sources/Morrow/DexView.swift
+      - path: ../../macos/Sources/Morrow/DroidView.swift
+      - path: ../../macos/Sources/Morrow/GeminiView.swift
+      - path: ../../macos/Sources/Morrow/HermesView.swift
+      - path: ../../macos/Sources/Morrow/KimiView.swift
+      - path: ../../macos/Sources/Morrow/MascotMotion.swift
+      - path: ../../macos/Sources/Morrow/MascotTimeline.swift
+      - path: ../../macos/Sources/Morrow/OpenCodeView.swift
+      - path: ../../macos/Sources/Morrow/PixelCharacterView.swift
+      - path: ../../macos/Sources/Morrow/QoderView.swift
+      - path: ../../macos/Sources/Morrow/QwenView.swift
+      - path: ../../macos/Sources/Morrow/StepFunView.swift
+      - path: ../../macos/Sources/Morrow/TraeView.swift
+      - path: ../../macos/Sources/Morrow/WorkBuddyView.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: top.fengye.MorrowCompanion.watchkitapp.Widget

@@ -1,4 +1,4 @@
-//! The endpoint rule of the contract (`docs/endpoint-contract.md`), as a pure
+//! The endpoint rule of the contract (`shared/contract/endpoint-contract.md`), as a pure
 //! function of what it reads: the environment, the user's id and, on macOS,
 //! whether two fixed paths exist. No I/O here; the caller passes those in.
 

@@ -1,5 +1,5 @@
 //! The Codex hooks feature flag, edited in place
-//! (`Sources/MorrowCore/CodexHooksConfig.swift`, #354).
+//! (`macos/Sources/MorrowCore/CodexHooksConfig.swift`, #354).
 //!
 //! Codex only reads `hooks.json` when `config.toml` says `features.hooks =
 //! true`. This is deliberately **not** a TOML parser: values stay opaque, and a

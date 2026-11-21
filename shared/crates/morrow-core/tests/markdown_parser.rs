@@ -1,4 +1,4 @@
-//! `MarkdownBlockParserTests` (`Tests/MorrowCoreTests/MarkdownBlockParserTests.swift`),
+//! `MarkdownBlockParserTests` (`macos/Tests/MorrowCoreTests/MarkdownBlockParserTests.swift`),
 //! ported one test to one test: every reply-shaped input the Swift suite pins
 //! must give the same blocks here.
 //!

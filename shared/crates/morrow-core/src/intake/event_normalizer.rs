@@ -1,5 +1,5 @@
 //! Event names in the island's terms (`EventNormalizer`,
-//! `Sources/MorrowCore/EventNormalizer.swift`), verbatim.
+//! `macos/Sources/MorrowCore/EventNormalizer.swift`), verbatim.
 
 /// The island's PascalCase name for `name`; `name` itself when it has none.
 pub fn normalize(name: &str) -> &str {

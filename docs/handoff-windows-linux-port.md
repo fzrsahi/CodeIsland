@@ -52,17 +52,17 @@ Every PR that needs another machine ships a script that runs its gate and prints
 
 ## Traps
 
-- **`HookIntake` is pure, with injected facts.** It imports only Foundation, and every process lookup arrives as a closure in `Facts` (`Sources/MorrowCore/HookIntake.swift:13-15`; line 551 calls `facts.tmuxClientTTY`). It belongs in `core`. The real Darwin calls (`proc_pidpath`, `proc_pidinfo`, `sysctl(KERN_PROCARGS2)`, `/dev/tty`) are in `Sources/MorrowBridge/main.swift:41-114`. An earlier version of this handoff had this backwards.
+- **`HookIntake` is pure, with injected facts.** It imports only Foundation, and every process lookup arrives as a closure in `Facts` (`macos/Sources/MorrowCore/HookIntake.swift:13-15`; line 551 calls `facts.tmuxClientTTY`). It belongs in `core`. The real Darwin calls (`proc_pidpath`, `proc_pidinfo`, `sysctl(KERN_PROCARGS2)`, `/dev/tty`) are in `macos/Sources/MorrowBridge/main.swift:41-114`. An earlier version of this handoff had this backwards.
 - **`reduceHookEvent` is not fully pure.** It calls `Date()` throughout and reads `UserDefaults.standard` for custom sources (`SessionSnapshot.swift:451,463`). Inject a clock and the custom-source list, or conformance runs are flaky.
 - **Two fixture sets, two seams.** #50 covers the bridge (stdin → forwarded payload/stdout); #127 covers the reducer and `AttentionPolicy`, with clock tokens `$Tk` and per-case `custom_sources`. A core port is done only when its fixture set passes 100%.
 - **The "neutral" fixtures are a macOS projection.** Inputs carry iTerm env and `/Users/...` paths; `_tty` in the Linux bundle is `/dev/ttys009`. Do not treat the per-OS bundles as real Linux/Windows behaviour.
 - **Click-through does not come for free.** The macOS panel is a large transparent rectangle that relies on WindowServer pass-through (`PanelWindowController.swift:191-206`); no `ignoresMouseEvents` anywhere. `HTTRANSPARENT` is same-thread only. Use a tight-fit window (plan §6.1).
 - **There is no global pointer on Wayland.** Outside-click collapse (`PanelWindowController.swift:374`) and lyrics hover-hide (`CyberMusicView.swift:2280-2350`) only see events on our own surface there.
 - **tauri#15913 closed without merging.** Layer-shell is a patch we maintain. AppImage forces X11 (tauri#15781).
-- **Endpoints are already divergent.** Plugins default to `/tmp/codeisland-<uid>.sock`, the app listens on `/tmp/morrow-<uid>.sock` (bug #78). Every edge follows the endpoint contract (PR #115, `fixtures/endpoint/cases.json`); resolve the path at send time.
+- **Endpoints are already divergent.** Plugins default to `/tmp/codeisland-<uid>.sock`, the app listens on `/tmp/morrow-<uid>.sock` (bug #78). Every edge follows the endpoint contract (PR #115, `shared/contract/fixtures/endpoint/cases.json`); resolve the path at send time.
 - **The Windows pipe can be squatted.** `windows/Morrow.Ipc/PipeEndpoint.cs` sets no `PipeSecurity`/`CurrentUserOnly` and the client never verifies the server. The Rust implementation must.
 - **Core scope is about twice what it looks like.** ~15–18K LOC of domain logic lives in the app target (`ConfigInstaller`, `Discovery/`, `RemoteInstaller`, `HookServer`, …), not in `MorrowCore`.
-- **`morrow-core` stays pure.** OS-specific code lives in `morrow-platform`/`morrow-bridge`; `scripts/ci/rust-purity.sh` checks the dependency tree (it cannot see direct `std::process` use — review for it).
+- **`morrow-core` stays pure.** OS-specific code lives in `morrow-platform`/`morrow-bridge`; `shared/ci/rust-purity.sh` checks the dependency tree (it cannot see direct `std::process` use — review for it).
 - **The pre-commit guard blocks merging `main`** into feature branches while `main` brings `.woodpecker.yaml` changes (#124, fix in PR #126). Use merges, never `--no-verify`.
 - **SwiftPM cache breaks in fresh worktrees** ("unable to read tree"), which also fails the pre-push hook. Run `swift package resolve --disable-dependency-cache` once per new worktree.
 - **Bridge language is not a performance question.** Go 5.31 ms vs Rust 4.49 ms vs Swift 5.3 ms median cold start; all at the `fork/exec` floor.

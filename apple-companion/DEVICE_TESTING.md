@@ -27,10 +27,10 @@
 在真机前先确认代码本身是干净的：
 
 ```bash
-swift test -c release
-scripts/check-companion-ui-regressions.sh
-scripts/smoke-companion-ui.sh
-scripts/smoke-companion-watch-ui.sh
+swift test --package-path macos -c release
+macos/scripts/check-companion-ui-regressions.sh
+macos/scripts/smoke-companion-ui.sh
+macos/scripts/smoke-companion-watch-ui.sh
 xcodebuild -project ios/MorrowCompanion/MorrowCompanion.xcodeproj \
   -scheme MorrowCompanion \
   -configuration Debug \

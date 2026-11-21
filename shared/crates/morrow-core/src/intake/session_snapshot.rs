@@ -1,5 +1,5 @@
 //! Source names (`SessionSnapshot.supportedSources`, `ideHostSources` and
-//! `normalizedSupportedSource` in `Sources/MorrowCore/SessionSnapshot.swift`).
+//! `normalizedSupportedSource` in `macos/Sources/MorrowCore/SessionSnapshot.swift`).
 //!
 //! Swift reads the custom sources and custom agent commands from
 //! `UserDefaults`; here they come in as a [`SourceCatalog`].

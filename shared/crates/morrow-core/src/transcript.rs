@@ -1,4 +1,4 @@
-//! The live transcript tail (`JSONLTailer`, `Sources/MorrowCore/JSONLTailer.swift`):
+//! The live transcript tail (`JSONLTailer`, `macos/Sources/MorrowCore/JSONLTailer.swift`):
 //! the newest user prompt, assistant reply, turn status and trailing Cursor
 //! question, derived from the JSONL a CLI appends to its session file.
 //!

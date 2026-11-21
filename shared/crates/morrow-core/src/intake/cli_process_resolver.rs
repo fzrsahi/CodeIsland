@@ -1,5 +1,5 @@
 //! Which process belongs to which agent (`CLIProcessResolver` in
-//! `Sources/MorrowCore/Models.swift`): matching an executable path to a
+//! `macos/Sources/MorrowCore/Models.swift`): matching an executable path to a
 //! source, inferring the source from the ancestry, and the pid the island
 //! tracks. The ancestry is HookIntake's [`Ancestor`] list, nearest first.
 
