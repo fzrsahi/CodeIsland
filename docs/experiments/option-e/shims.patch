@@ -1,0 +1,677 @@
+diff -ruN opte-pristine/Sources/CSQLite/module.modulemap opte/Sources/CSQLite/module.modulemap
+--- opte-pristine/Sources/CSQLite/module.modulemap	1970-01-01 08:00:00
++++ opte/Sources/CSQLite/module.modulemap	2026-11-19 13:30:59
+@@ -0,0 +1,5 @@
++module CSQLite [system] {
++    header "shim.h"
++    link "sqlite3"
++    export *
++}
+diff -ruN opte-pristine/Sources/CSQLite/shim.h opte/Sources/CSQLite/shim.h
+--- opte-pristine/Sources/CSQLite/shim.h	1970-01-01 08:00:00
++++ opte/Sources/CSQLite/shim.h	2026-11-19 13:30:59
+@@ -0,0 +1 @@
++#include <sqlite3.h>
+diff -ruN opte-pristine/Sources/MorrowCore/AgentTaskParsing.swift opte/Sources/MorrowCore/AgentTaskParsing.swift
+--- opte-pristine/Sources/MorrowCore/AgentTaskParsing.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/AgentTaskParsing.swift	2026-11-19 13:34:19
+@@ -1,5 +1,14 @@
+ import Foundation
++#if canImport(Darwin)
+ import Darwin
++#elseif canImport(Glibc)
++import Glibc
++// Option E shim: glibc has memmem(3) but only under _GNU_SOURCE, so Swift's
++// Glibc module does not export it. Bind the symbol directly.
++@_silgen_name("memmem")
++private func memmem(_ haystack: UnsafeRawPointer?, _ haystackLength: Int,
++                    _ needle: UnsafeRawPointer?, _ needleLength: Int) -> UnsafeMutableRawPointer?
++#endif
+ 
+ /// A checklist tool an agent can call. Names are matched case- and
+ /// separator-insensitively because forks re-spell them (`todo_write`,
+diff -ruN opte-pristine/Sources/MorrowCore/AiWorkWatchClient.swift opte/Sources/MorrowCore/AiWorkWatchClient.swift
+--- opte-pristine/Sources/MorrowCore/AiWorkWatchClient.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/AiWorkWatchClient.swift	2026-11-19 13:34:19
+@@ -1,4 +1,20 @@
+ import Foundation
++#if canImport(Glibc)
++import Glibc
++// Option E shim: Glibc imports SOCK_STREAM as an enum and has no SO_NOSIGPIPE;
++// Linux suppresses SIGPIPE per send() with MSG_NOSIGNAL instead.
++private let streamSocketType = Int32(SOCK_STREAM.rawValue)
++private let sendFlags = Int32(MSG_NOSIGNAL)
++private func sysConnect(_ fd: Int32, _ addr: UnsafePointer<sockaddr>, _ len: socklen_t) -> Int32 { Glibc.connect(fd, addr, len) }
++private func sysSend(_ fd: Int32, _ buf: UnsafeRawPointer, _ len: Int, _ flags: Int32) -> Int { Glibc.send(fd, buf, len, flags) }
++private func sysRecv(_ fd: Int32, _ buf: UnsafeMutableRawPointer, _ len: Int, _ flags: Int32) -> Int { Glibc.recv(fd, buf, len, flags) }
++#else
++private let streamSocketType = SOCK_STREAM
++private let sendFlags: Int32 = 0
++private func sysConnect(_ fd: Int32, _ addr: UnsafePointer<sockaddr>, _ len: socklen_t) -> Int32 { Darwin.connect(fd, addr, len) }
++private func sysSend(_ fd: Int32, _ buf: UnsafeRawPointer, _ len: Int, _ flags: Int32) -> Int { Darwin.send(fd, buf, len, flags) }
++private func sysRecv(_ fd: Int32, _ buf: UnsafeMutableRawPointer, _ len: Int, _ flags: Int32) -> Int { Darwin.recv(fd, buf, len, flags) }
++#endif
+ 
+ /// A parsed Agentix daemon V2 frame (`ResponseEnvelopeV2` or `StreamEventV2`).
+ ///
+@@ -104,7 +120,7 @@
+             throw AiWorkWatchError.socketMissing(socketPath)
+         }
+ 
+-        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
++        let fd = socket(AF_UNIX, streamSocketType, 0)
+         guard fd >= 0 else {
+             lock.unlock()
+             throw AiWorkWatchError.connectFailed("socket() failed: \(errno)")
+@@ -113,8 +129,10 @@
+         // that can hang up at any moment (restart, quit). Without this, a send()
+         // racing that hang-up delivers SIGPIPE and kills CodeIsland; with it, send()
+         // fails with EPIPE and writeEnvelope throws.
++        #if !os(Linux)
+         var noSigPipe: Int32 = 1
+         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
++        #endif
+ 
+         var addr = sockaddr_un()
+         addr.sun_family = sa_family_t(AF_UNIX)
+@@ -134,7 +152,7 @@
+ 
+         let connectResult = withUnsafePointer(to: &addr) { ptr in
+             ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+-                Darwin.connect(fd, sockPtr, socklen_t(MemoryLayout<sockaddr_un>.size))
++                sysConnect(fd, sockPtr, socklen_t(MemoryLayout<sockaddr_un>.size))
+             }
+         }
+         if connectResult != 0 {
+@@ -240,7 +258,7 @@
+         while written < bytes.count {
+             let n = bytes.withUnsafeBytes { raw -> Int in
+                 guard let base = raw.bindMemory(to: UInt8.self).baseAddress else { return -1 }
+-                return Darwin.send(fd, base.advanced(by: written), bytes.count - written, 0)
++                return sysSend(fd, base.advanced(by: written), bytes.count - written, sendFlags)
+             }
+             if n < 0 {
+                 if errno == EINTR { continue }
+@@ -267,7 +285,7 @@
+             let capacity = tmp.count
+             let n = tmp.withUnsafeMutableBytes { raw -> Int in
+                 guard let base = raw.bindMemory(to: UInt8.self).baseAddress else { return -1 }
+-                return Darwin.recv(fd, base, capacity, 0)
++                return sysRecv(fd, base, capacity, 0)
+             }
+             if n > 0 {
+                 ingest(data: Data(tmp[0..<n]))
+diff -ruN opte-pristine/Sources/MorrowCore/BridgeLog.swift opte/Sources/MorrowCore/BridgeLog.swift
+--- opte-pristine/Sources/MorrowCore/BridgeLog.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/BridgeLog.swift	2026-11-19 13:30:14
+@@ -1,5 +1,9 @@
+ import Foundation
++#if canImport(Darwin)
+ import Darwin
++#elseif canImport(Glibc)
++import Glibc
++#endif
+ 
+ /// The bridge's log, /tmp/codeisland-bridge.log (`CODEISLAND_BRIDGE_LOG`
+ /// moves it: the tests that run the bridge point it at a file of theirs).
+diff -ruN opte-pristine/Sources/MorrowCore/ChatMessageTextFormatter.swift opte/Sources/MorrowCore/ChatMessageTextFormatter.swift
+--- opte-pristine/Sources/MorrowCore/ChatMessageTextFormatter.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/ChatMessageTextFormatter.swift	2026-11-19 13:34:19
+@@ -97,6 +97,11 @@
+ 
+     /// `*`, `_` and `~` inside a word stay literal — see MarkdownInlineLiterals.
+     private static func renderInlineOnly(_ text: String) -> AttributedString {
++        #if os(Linux)
++        // TODO(#85) BLOCKER: no AttributedString(markdown:) in swift-foundation
++        // on Linux. Stub returns the raw text; inline markdown is not rendered.
++        return AttributedString(text)
++        #else
+         if let attr = try? AttributedString(
+             markdown: MarkdownInlineLiterals.escapingWordDelimiters(text),
+             options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+@@ -104,5 +109,6 @@
+             return attr
+         }
+         return AttributedString(text)
++        #endif
+     }
+ }
+diff -ruN opte-pristine/Sources/MorrowCore/ClaudeQuotaClient.swift opte/Sources/MorrowCore/ClaudeQuotaClient.swift
+--- opte-pristine/Sources/MorrowCore/ClaudeQuotaClient.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/ClaudeQuotaClient.swift	2026-11-19 13:30:14
+@@ -1,4 +1,7 @@
+ import Foundation
++#if canImport(FoundationNetworking)
++import FoundationNetworking
++#endif
+ 
+ /// The Claude Code OAuth login, as Claude Code itself stores it.
+ public struct ClaudeOAuthCredential: Equatable, Sendable {
+diff -ruN opte-pristine/Sources/MorrowCore/CodexAppServerClient.swift opte/Sources/MorrowCore/CodexAppServerClient.swift
+--- opte-pristine/Sources/MorrowCore/CodexAppServerClient.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/CodexAppServerClient.swift	2026-11-19 13:34:19
+@@ -62,7 +62,13 @@
+         case let v as Int: return .int(Int64(v))
+         case let v as Int64: return .int(v)
+         case let v as NSNumber:
++            #if canImport(Darwin)
+             if CFNumberIsFloatType(v) { return .double(v.doubleValue) }
++            #else
++            // Option E shim: no CFNumberIsFloatType; objCType "f"/"d" is the same test.
++            let type = v.objCType.pointee
++            if type == CChar(UInt8(ascii: "d")) || type == CChar(UInt8(ascii: "f")) { return .double(v.doubleValue) }
++            #endif
+             return .int(v.int64Value)
+         case let v as Double: return .double(v)
+         case let v as String: return .string(v)
+diff -ruN opte-pristine/Sources/MorrowCore/CursorHookPayload.swift opte/Sources/MorrowCore/CursorHookPayload.swift
+--- opte-pristine/Sources/MorrowCore/CursorHookPayload.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/CursorHookPayload.swift	2026-11-19 13:30:14
+@@ -1,4 +1,8 @@
++#if canImport(CryptoKit)
+ import CryptoKit
++#else
++import Crypto
++#endif
+ import Foundation
+ 
+ /// A hook Cursor ran, whichever config it came from.
+diff -ruN opte-pristine/Sources/MorrowCore/HermesSessionStore.swift opte/Sources/MorrowCore/HermesSessionStore.swift
+--- opte-pristine/Sources/MorrowCore/HermesSessionStore.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/HermesSessionStore.swift	2026-11-19 13:30:14
+@@ -1,5 +1,9 @@
+ import Foundation
++#if canImport(SQLite3)
+ import SQLite3
++#else
++import CSQLite
++#endif
+ 
+ /// A Hermes Agent session as Hermes itself stores it: `$HERMES_HOME/state.db`
+ /// (SQLite in WAL mode; tables `sessions` and `messages`, hermes_state_common.py).
+diff -ruN opte-pristine/Sources/MorrowCore/HookOrigin.swift opte/Sources/MorrowCore/HookOrigin.swift
+--- opte-pristine/Sources/MorrowCore/HookOrigin.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/HookOrigin.swift	2026-11-19 13:30:14
+@@ -1,4 +1,8 @@
++#if canImport(Darwin)
+ import Darwin
++#elseif canImport(Glibc)
++import Glibc
++#endif
+ import Foundation
+ 
+ /// Which machine a hook request comes from — decided by the socket it
+diff -ruN opte-pristine/Sources/MorrowCore/JSONLTailer.swift opte/Sources/MorrowCore/JSONLTailer.swift
+--- opte-pristine/Sources/MorrowCore/JSONLTailer.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/JSONLTailer.swift	2026-11-19 13:34:36
+@@ -1,6 +1,29 @@
+ import Foundation
++#if canImport(Darwin)
+ import Darwin
++#elseif canImport(Glibc)
++import Glibc
++#endif
+ 
++#if os(Linux)
++// TODO(#85) BLOCKER: libdispatch on Linux has no vnode sources
++// (DispatchSource.makeFileSystemObjectSource). Stand-in: a 250 ms timer that
++// reports `.extend`. delete/rename/revoke are never reported, so a replaced or
++// rotated transcript is not detected. A real port needs inotify.
++private typealias FileWatchSource = DispatchSourceTimer
++private struct FileSystemEvent: OptionSet {
++    let rawValue: UInt
++    static let extend = FileSystemEvent(rawValue: 1 << 0)
++    static let write = FileSystemEvent(rawValue: 1 << 1)
++    static let delete = FileSystemEvent(rawValue: 1 << 2)
++    static let rename = FileSystemEvent(rawValue: 1 << 3)
++    static let revoke = FileSystemEvent(rawValue: 1 << 4)
++}
++#else
++private typealias FileWatchSource = DispatchSourceFileSystemObject
++private typealias FileSystemEvent = DispatchSource.FileSystemEvent
++#endif
++
+ public enum ConversationTurnStatus: Equatable, Sendable {
+     case processing
+     case idle
+@@ -115,7 +138,7 @@
+         var offset: off_t
+         var inode: ino_t
+         var pendingFragment: Data
+-        var source: DispatchSourceFileSystemObject
++        var source: FileWatchSource
+         let generation: UInt64
+         let attachmentToken: UUID
+         /// The next read re-reads a replaced file from its start.
+@@ -127,7 +150,7 @@
+             fd: Int32,
+             offset: off_t,
+             inode: ino_t,
+-            source: DispatchSourceFileSystemObject,
++            source: FileWatchSource,
+             generation: UInt64,
+             attachmentToken: UUID,
+             replayPending: Bool
+@@ -252,11 +275,16 @@
+         }
+ 
+         let offset = initialOffset ?? fileStat.st_size
++        #if os(Linux)
++        let source = DispatchSource.makeTimerSource(queue: queue)
++        source.schedule(deadline: .now() + .milliseconds(250), repeating: .milliseconds(250))
++        #else
+         let source = DispatchSource.makeFileSystemObjectSource(
+             fileDescriptor: fd,
+             eventMask: [.extend, .write, .delete, .rename, .revoke],
+             queue: queue
+         )
++        #endif
+         let watch = Watch(
+             sessionId: sessionId,
+             filePath: filePath,
+@@ -272,7 +300,11 @@
+ 
+         source.setEventHandler { [weak self] in
+             guard let self else { return }
++            #if os(Linux)
++            let events: FileSystemEvent = .extend
++            #else
+             let events = source.data
++            #endif
+             self.handleEvents(events, watch: watch)
+         }
+         source.setCancelHandler {
+@@ -298,7 +330,7 @@
+ 
+     // MARK: - Event handling
+ 
+-    private func handleEvents(_ events: DispatchSource.FileSystemEvent, watch: Watch) {
++    private func handleEvents(_ events: FileSystemEvent, watch: Watch) {
+         guard watches[watch.sessionId] === watch,
+               desiredFilePaths[watch.sessionId] == watch.filePath,
+               generations[watch.sessionId] == watch.generation else {
+diff -ruN opte-pristine/Sources/MorrowCore/MarkdownPreviewText.swift opte/Sources/MorrowCore/MarkdownPreviewText.swift
+--- opte-pristine/Sources/MorrowCore/MarkdownPreviewText.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/MarkdownPreviewText.swift	2026-11-19 13:34:36
+@@ -90,10 +90,12 @@
+             case .heading(_, let text):
+                 var heading = inline(text, singleLine: true)
+                 // Keep a heading recognisable once its `#` is gone.
++                #if !os(Linux)
+                 let runs = heading.runs.map { ($0.range, $0.inlinePresentationIntent ?? []) }
+                 for (range, intent) in runs {
+                     heading[range].inlinePresentationIntent = intent.union(.stronglyEmphasized)
+                 }
++                #endif
+                 result.append(heading)
+             case .paragraph(let text):
+                 result.append(inline(text, singleLine: singleLine))
+@@ -141,7 +143,11 @@
+             .filter { !$0.isEmpty }
+         guard let first = lines.first else { return AttributedString() }
+         var summary = AttributedString(first)
++        #if !os(Linux)
++        // TODO(#85) BLOCKER: inlinePresentationIntent is Darwin-Foundation only;
++        // headings/code lose their styling on Linux.
+         summary.inlinePresentationIntent = .code
++        #endif
+         if lines.count > 1 {
+             summary += AttributedString(" …")
+         }
+diff -ruN opte-pristine/Sources/MorrowCore/PrivateFiles.swift opte/Sources/MorrowCore/PrivateFiles.swift
+--- opte-pristine/Sources/MorrowCore/PrivateFiles.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/PrivateFiles.swift	2026-11-19 13:34:19
+@@ -1,5 +1,9 @@
+ import Foundation
++#if canImport(Darwin)
+ import Darwin
++#elseif canImport(Glibc)
++import Glibc
++#endif
+ 
+ /// Files kept from the other accounts on this Mac.
+ ///
+@@ -70,7 +74,11 @@
+             failure = data.withUnsafeBytes { buffer -> POSIXError? in
+                 var offset = 0
+                 while offset < buffer.count {
++                    #if canImport(Darwin)
+                     let n = Darwin.write(fd, buffer.baseAddress! + offset, buffer.count - offset)
++                    #else
++                    let n = Glibc.write(fd, buffer.baseAddress! + offset, buffer.count - offset)
++                    #endif
+                     if n < 0 {
+                         if errno == EINTR { continue }
+                         return posixError()
+diff -ruN opte-pristine/Sources/MorrowCore/PushChannel.swift opte/Sources/MorrowCore/PushChannel.swift
+--- opte-pristine/Sources/MorrowCore/PushChannel.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/PushChannel.swift	2026-11-19 13:30:14
+@@ -1,5 +1,12 @@
+ import Foundation
++#if canImport(FoundationNetworking)
++import FoundationNetworking
++#endif
++#if canImport(CryptoKit)
+ import CryptoKit
++#else
++import Crypto
++#endif
+ 
+ // MARK: - Channels
+ 
+diff -ruN opte-pristine/Sources/MorrowCore/PushTransport.swift opte/Sources/MorrowCore/PushTransport.swift
+--- opte-pristine/Sources/MorrowCore/PushTransport.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/PushTransport.swift	2026-11-19 13:34:19
+@@ -1,4 +1,7 @@
+ import Foundation
++#if canImport(FoundationNetworking)
++import FoundationNetworking
++#endif
+ 
+ /// Raw outcome of one HTTP exchange, before the channel interprets the body.
+ public struct PushTransportResponse: Equatable, Sendable {
+@@ -179,7 +182,9 @@
+         config.requestCachePolicy = .reloadIgnoringLocalCacheData
+         config.timeoutIntervalForRequest = timeout
+         config.timeoutIntervalForResource = timeout + 2
++        #if !os(Linux)
+         config.waitsForConnectivity = false
++        #endif
+         self.session = URLSession(configuration: config)
+     }
+ 
+diff -ruN opte-pristine/Sources/MorrowCore/SocketPath.swift opte/Sources/MorrowCore/SocketPath.swift
+--- opte-pristine/Sources/MorrowCore/SocketPath.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/SocketPath.swift	2026-11-19 13:34:56
+@@ -1,5 +1,9 @@
+ import Foundation
++#if canImport(Darwin)
+ import Darwin
++#elseif canImport(Glibc)
++import Glibc
++#endif
+ 
+ public enum SocketPath {
+     public static var path: String {
+@@ -56,7 +60,11 @@
+     /// symlink there points to. Nil when it cannot be read.
+     public static func lstat(_ path: String) -> stat? {
+         var info = stat()
++        #if canImport(Darwin)
+         return Darwin.lstat(path, &info) == 0 ? info : nil
++        #else
++        return Glibc.lstat(path, &info) == 0 ? info : nil
++        #endif
+     }
+ 
+     /// Whether the listener at the other end of a connected Unix socket ran
+@@ -64,9 +72,20 @@
+     /// checked may have been swapped by the time a hook connects where the
+     /// folder is not sticky; the listener's credentials cannot be.
+     public static func peerIsUser(_ socket: Int32, uid: uid_t = getuid()) -> Bool {
++        #if os(Linux)
++        // Option E shim: Linux has no getpeereid(3); SO_PEERCRED gives the
++        // same credentials of the peer at connect()/listen() time.
++        // struct ucred needs _GNU_SOURCE, so Glibc does not export it; same layout.
++        struct ucred { var pid: pid_t = 0; var uid: uid_t = 0; var gid: gid_t = 0 }
++        var cred = ucred()
++        var length = socklen_t(MemoryLayout<ucred>.size)
++        guard getsockopt(socket, SOL_SOCKET, SO_PEERCRED, &cred, &length) == 0 else { return false }
++        return cred.uid == uid
++        #else
+         var peerUID: uid_t = 0
+         var peerGID: gid_t = 0
+         guard getpeereid(socket, &peerUID, &peerGID) == 0 else { return false }
+         return peerUID == uid
++        #endif
+     }
+ }
+diff -ruN opte-pristine/Sources/MorrowCore/WarpPaneResolver.swift opte/Sources/MorrowCore/WarpPaneResolver.swift
+--- opte-pristine/Sources/MorrowCore/WarpPaneResolver.swift	2026-11-19 13:28:55
++++ opte/Sources/MorrowCore/WarpPaneResolver.swift	2026-11-19 13:30:14
+@@ -1,5 +1,9 @@
+ import Foundation
++#if canImport(SQLite3)
+ import SQLite3
++#else
++import CSQLite
++#endif
+ 
+ /// A single Warp pane that matches a working directory query.
+ public struct WarpPaneMatch: Equatable {
+diff -ruN opte-pristine/Sources/opte-probe/main.swift opte/Sources/opte-probe/main.swift
+--- opte-pristine/Sources/opte-probe/main.swift	1970-01-01 08:00:00
++++ opte/Sources/opte-probe/main.swift	2026-11-19 13:31:18
+@@ -0,0 +1,7 @@
++import Foundation
++import MorrowCore
++
++// Option E probe (#85): proves a static Linux binary can link and run MorrowCore.
++let blocks = MarkdownBlockParser.parse("# Morrow\n\n- one\n- two\n")
++let branch = GitBranchReader.read(cwd: FileManager.default.currentDirectoryPath)
++print("markdown blocks: \(blocks.count); git branch: \(branch.map { "\($0)" } ?? "none")")
+diff -ruN opte-pristine/Tests/MorrowCoreTests/BridgeGoldenHarness.swift opte/Tests/MorrowCoreTests/BridgeGoldenHarness.swift
+--- opte-pristine/Tests/MorrowCoreTests/BridgeGoldenHarness.swift	2026-11-19 13:28:55
++++ opte/Tests/MorrowCoreTests/BridgeGoldenHarness.swift	2026-11-19 13:37:10
+@@ -1,6 +1,16 @@
+ import Foundation
+ import XCTest
+ 
++#if canImport(Glibc)
++// Option E shim: Glibc imports SOCK_STREAM as an enum; there is no
++// CFBooleanGetTypeID, and a JSON boolean NSNumber reports objCType "c".
++private let streamSocketType = Int32(SOCK_STREAM.rawValue)
++private func isBoolean(_ number: NSNumber) -> Bool { number.objCType.pointee == CChar(UInt8(ascii: "c")) }
++#else
++private let streamSocketType = SOCK_STREAM
++private func isBoolean(_ number: NSNumber) -> Bool { CFGetTypeID(number) == CFBooleanGetTypeID() }
++#endif
++
+ /// One hook invocation codeisland-bridge serves: what its agent hands it and
+ /// the process tree it runs in. See ``BridgeGoldenRunner``.
+ struct BridgeGoldenFixture {
+@@ -142,7 +152,7 @@
+         if let array = value as? [Any] {
+             return array.map { normalize($0, key: nil) }
+         }
+-        if let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(),
++        if let number = value as? NSNumber, !isBoolean(number),
+            key == "_ppid" || key == "_hook_ppid", let token = pidToken(number.intValue) {
+             return token
+         }
+@@ -391,7 +401,7 @@
+         // sun_path is 104 bytes; NSTemporaryDirectory() can be too long for it.
+         let path = "/tmp/ci-gold-\(UUID().uuidString.prefix(8)).sock"
+         self.path = path
+-        let listener = socket(AF_UNIX, SOCK_STREAM, 0)
++        let listener = socket(AF_UNIX, streamSocketType, 0)
+         guard listener >= 0 else { return nil }
+         var addr = sockaddr_un()
+         addr.sun_family = sa_family_t(AF_UNIX)
+@@ -418,8 +428,10 @@
+                 let client = accept(state.listener, nil, nil)
+                 guard client >= 0 else { return }
+                 // The bridge may be gone before the answer: no SIGPIPE for it.
++                #if !os(Linux)
+                 var on: Int32 = 1
+                 setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
++                #endif
+                 state.accepted.signal()
+                 var buffer = [UInt8](repeating: 0, count: 4096)
+                 var data = Data()
+diff -ruN opte-pristine/Tests/MorrowCoreTests/BridgeLogTests.swift opte/Tests/MorrowCoreTests/BridgeLogTests.swift
+--- opte-pristine/Tests/MorrowCoreTests/BridgeLogTests.swift	2026-11-19 13:28:55
++++ opte/Tests/MorrowCoreTests/BridgeLogTests.swift	2026-11-19 13:36:03
+@@ -1,4 +1,8 @@
++#if canImport(Darwin)
+ import Darwin
++#elseif canImport(Glibc)
++import Glibc
++#endif
+ import XCTest
+ @testable import MorrowCore
+ 
+diff -ruN opte-pristine/Tests/MorrowCoreTests/ClaudeQuotaTests.swift opte/Tests/MorrowCoreTests/ClaudeQuotaTests.swift
+--- opte-pristine/Tests/MorrowCoreTests/ClaudeQuotaTests.swift	2026-11-19 13:28:55
++++ opte/Tests/MorrowCoreTests/ClaudeQuotaTests.swift	2026-11-19 13:37:10
+@@ -1,3 +1,6 @@
++#if canImport(FoundationNetworking)
++import FoundationNetworking
++#endif
+ import XCTest
+ @testable import MorrowCore
+ 
+diff -ruN opte-pristine/Tests/MorrowCoreTests/HermesSessionStoreTests.swift opte/Tests/MorrowCoreTests/HermesSessionStoreTests.swift
+--- opte-pristine/Tests/MorrowCoreTests/HermesSessionStoreTests.swift	2026-11-19 13:28:55
++++ opte/Tests/MorrowCoreTests/HermesSessionStoreTests.swift	2026-11-19 13:36:03
+@@ -1,5 +1,9 @@
+ import XCTest
++#if canImport(SQLite3)
+ import SQLite3
++#else
++import CSQLite
++#endif
+ @testable import MorrowCore
+ 
+ /// Hermes keeps every session in `$HERMES_HOME/state.db`; the island reads the
+diff -ruN opte-pristine/Tests/MorrowCoreTests/PerformanceBenchmarks.swift opte/Tests/MorrowCoreTests/PerformanceBenchmarks.swift
+--- opte-pristine/Tests/MorrowCoreTests/PerformanceBenchmarks.swift	2026-11-19 13:28:55
++++ opte/Tests/MorrowCoreTests/PerformanceBenchmarks.swift	2026-11-19 13:36:03
+@@ -1,5 +1,9 @@
+ import XCTest
++#if canImport(SQLite3)
+ import SQLite3
++#else
++import CSQLite
++#endif
+ @testable import MorrowCore
+ 
+ /// Micro-benchmarks measuring per-call cost of hot-path helpers I added in
+diff -ruN opte-pristine/Tests/MorrowCoreTests/PrivateFilesTests.swift opte/Tests/MorrowCoreTests/PrivateFilesTests.swift
+--- opte-pristine/Tests/MorrowCoreTests/PrivateFilesTests.swift	2026-11-19 13:28:55
++++ opte/Tests/MorrowCoreTests/PrivateFilesTests.swift	2026-11-19 13:36:03
+@@ -1,4 +1,8 @@
++#if canImport(Darwin)
+ import Darwin
++#elseif canImport(Glibc)
++import Glibc
++#endif
+ import XCTest
+ @testable import MorrowCore
+ 
+diff -ruN opte-pristine/Tests/MorrowCoreTests/PushSigningAndResponseTests.swift opte/Tests/MorrowCoreTests/PushSigningAndResponseTests.swift
+--- opte-pristine/Tests/MorrowCoreTests/PushSigningAndResponseTests.swift	2026-11-19 13:28:55
++++ opte/Tests/MorrowCoreTests/PushSigningAndResponseTests.swift	2026-11-19 13:37:10
+@@ -1,3 +1,6 @@
++#if canImport(FoundationNetworking)
++import FoundationNetworking
++#endif
+ import XCTest
+ @testable import MorrowCore
+ 
+diff -ruN opte-pristine/Tests/MorrowCoreTests/SocketPathHolderTests.swift opte/Tests/MorrowCoreTests/SocketPathHolderTests.swift
+--- opte-pristine/Tests/MorrowCoreTests/SocketPathHolderTests.swift	2026-11-19 13:28:55
++++ opte/Tests/MorrowCoreTests/SocketPathHolderTests.swift	2026-11-19 13:37:41
+@@ -1,4 +1,20 @@
++#if canImport(Darwin)
+ import Darwin
++#elseif canImport(Glibc)
++import Glibc
++#endif
++
++#if canImport(Glibc)
++private let streamSocketType = Int32(SOCK_STREAM.rawValue)
++private func sysBind(_ fd: Int32, _ a: UnsafePointer<sockaddr>, _ l: socklen_t) -> Int32 { Glibc.bind(fd, a, l) }
++private func sysListen(_ fd: Int32, _ n: Int32) -> Int32 { Glibc.listen(fd, n) }
++private func sysConnect(_ fd: Int32, _ a: UnsafePointer<sockaddr>, _ l: socklen_t) -> Int32 { Glibc.connect(fd, a, l) }
++#else
++private let streamSocketType = SOCK_STREAM
++private func sysBind(_ fd: Int32, _ a: UnsafePointer<sockaddr>, _ l: socklen_t) -> Int32 { Darwin.bind(fd, a, l) }
++private func sysListen(_ fd: Int32, _ n: Int32) -> Int32 { Darwin.listen(fd, n) }
++private func sysConnect(_ fd: Int32, _ a: UnsafePointer<sockaddr>, _ l: socklen_t) -> Int32 { Darwin.connect(fd, a, l) }
++#endif
+ import XCTest
+ @testable import MorrowCore
+ 
+@@ -41,16 +57,16 @@
+     /// A socket listening at `path`, closed at teardown.
+     @discardableResult
+     private func listen(at path: String) throws -> Int32 {
+-        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
++        let fd = socket(AF_UNIX, streamSocketType, 0)
+         XCTAssertGreaterThanOrEqual(fd, 0)
+         descriptors.append(fd)
+         var address = Self.address(path)
+         let bound = withUnsafePointer(to: &address) {
+             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+-                Darwin.bind(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
++                sysBind(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+             }
+         }
+-        guard bound == 0, Darwin.listen(fd, 4) == 0 else {
++        guard bound == 0, sysListen(fd, 4) == 0 else {
+             throw XCTSkip("cannot listen at \(path): \(String(cString: strerror(errno)))")
+         }
+         return fd
+@@ -58,13 +74,13 @@
+ 
+     /// A socket connected to `path`, closed at teardown; nil when it cannot connect.
+     private func connect(to path: String) -> Int32? {
+-        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
++        let fd = socket(AF_UNIX, streamSocketType, 0)
+         guard fd >= 0 else { return nil }
+         descriptors.append(fd)
+         var address = Self.address(path)
+         let connected = withUnsafePointer(to: &address) {
+             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+-                Darwin.connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
++                sysConnect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+             }
+         }
+         return connected == 0 ? fd : nil
+@@ -124,7 +140,7 @@
+ 
+     func testAListenerThisUserRunsIsTheirs() throws {
+         var pair: [Int32] = [-1, -1]
+-        XCTAssertEqual(socketpair(AF_UNIX, SOCK_STREAM, 0, &pair), 0)
++        XCTAssertEqual(socketpair(AF_UNIX, streamSocketType, 0, &pair), 0)
+         descriptors += pair
+         XCTAssertTrue(SocketPath.peerIsUser(pair[0]))
+         XCTAssertFalse(SocketPath.peerIsUser(pair[0], uid: getuid() + 1))
+@@ -137,7 +153,7 @@
+ 
+     func testWhatIsNoConnectedSocketFailsClosed() {
+         XCTAssertFalse(SocketPath.peerIsUser(-1))
+-        let unconnected = socket(AF_UNIX, SOCK_STREAM, 0)
++        let unconnected = socket(AF_UNIX, streamSocketType, 0)
+         descriptors.append(unconnected)
+         XCTAssertFalse(SocketPath.peerIsUser(unconnected))
+     }
+diff -ruN opte-pristine/Tests/MorrowCoreTests/WarpPaneResolverTests.swift opte/Tests/MorrowCoreTests/WarpPaneResolverTests.swift
+--- opte-pristine/Tests/MorrowCoreTests/WarpPaneResolverTests.swift	2026-11-19 13:28:55
++++ opte/Tests/MorrowCoreTests/WarpPaneResolverTests.swift	2026-11-19 13:36:03
+@@ -1,5 +1,9 @@
+ import XCTest
++#if canImport(SQLite3)
+ import SQLite3
++#else
++import CSQLite
++#endif
+ @testable import MorrowCore
+ 
+ final class WarpPaneResolverTests: XCTestCase {
+diff -ruN opte-pristine/Tests/TestDefaultsReset/TestDefaultsReset.c opte/Tests/TestDefaultsReset/TestDefaultsReset.c
+--- opte-pristine/Tests/TestDefaultsReset/TestDefaultsReset.c	2026-11-19 13:28:55
++++ opte/Tests/TestDefaultsReset/TestDefaultsReset.c	2026-11-19 13:35:53
+@@ -1,3 +1,6 @@
++// Option E shim: CFPreferences is Darwin-only. On Linux each --rm
++// container starts with an empty defaults domain, so no reset is needed.
++#ifdef __APPLE__
+ #include <CoreFoundation/CoreFoundation.h>
+ 
+ // Every `swift test` run, in every checkout on this Mac, reads and writes
+@@ -26,3 +29,4 @@
+     CFPreferencesAppSynchronize(kCFPreferencesCurrentApplication);
+     CFRelease(keys);
+ }
++#endif

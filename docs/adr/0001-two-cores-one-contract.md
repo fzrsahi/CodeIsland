@@ -1,6 +1,6 @@
 # Two cores, one contract
 
-Status: accepted (2026-11-16), amended 2026-11-18 — core language for Windows/Linux confirmed by experiment before the Rust workspace PR.
+Status: accepted (2026-11-16), amended 2026-11-18, **core language decided 2026-11-19: Rust** (see the last section).
 
 macOS keeps its Swift core (`Sources/MorrowCore`, 21.699 LOC in 73 files) and SwiftUI shell. Windows and Linux share a second shell. The cores never share code — they share a frozen contract: the hook-event schema, the envelope schema, the golden fixtures exported to JSON, and the IPC endpoint rules (`docs/plan-windows-linux.md` §3.1).
 
@@ -28,3 +28,19 @@ Until the experiment runs, Rust is the default and no Rust code beyond Phase 1's
 - Two implementations of the reducer and attention policy (if Rust) must be kept in step by fixtures, not by review. Every provider fix updates the fixture first.
 - The contract, including endpoint rules, becomes the highest-value artifact in the repo. The plugin socket regression after the rebrand (plan §12) shows what happens when an edge is outside the contract.
 - A third core is the failure mode to watch for, not the starting point.
+
+## Decision after the experiment (2026-11-19)
+
+The #85 experiment met the decision rule: `MorrowCore` built on Linux and 96.8% of pure-logic tests passed ([`docs/experiments/option-e-linux.md`](../experiments/option-e-linux.md), ADR-0003). The maintainers nevertheless chose **option B, a Rust core**, in PR #117. The rule was written as a trigger for reconsidering, and it was reconsidered; it does not bind the outcome.
+
+The trade-offs weighed (PR #117):
+
+- **For Rust:** one language and one process with the Tauri shell, a small binary without a Swift/ICU runtime, mature Windows crates, and no dependency on Foundation-on-Windows, which the experiment did not measure.
+- **Accepted costs:** two cores kept in step by fixtures forever, and re-implementing ~37–40K LOC of behaviour, which adds an estimated 4–6 weeks to Phases 2–3.
+
+Consequences:
+
+- Tickets #93–#97 (core port) stay as written. The reducer/attention fixture export (#92) is mandatory before #94; a port without it is guesswork.
+- Every provider fix lands in Swift and Rust, fixture first. A PR that changes reducer or attention behaviour in Swift without re-exporting fixtures fails CI.
+- The experiment's shims (`docs/experiments/option-e/`) are not maintained.
+
