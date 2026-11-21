@@ -21,7 +21,7 @@ pub const PLUGIN_SOURCE: &str =
 
 /// Bumped when the plugin changes: an older copy on disk is rewritten
 /// (`opencodePluginVersion`).
-pub const PLUGIN_VERSION: &str = "v11";
+pub const PLUGIN_VERSION: &str = "v12";
 
 /// Where OpenCode keeps everything, and which of its config files exists.
 pub struct Site {

@@ -4,7 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use morrow_platform::opencode::{Site, Status, install, status, uninstall};
+use morrow_platform::opencode::{self, Site, Status, install, status, uninstall};
 
 struct Home {
     root: PathBuf,
@@ -69,7 +69,10 @@ fn install_writes_the_plugin_and_registers_it() {
     install(&site, STAMP).expect("install").expect("a result");
 
     let plugin = home.read(&site.plugin);
-    assert!(plugin.contains("// version: v11"), "the version marker");
+    assert!(
+        plugin.contains(&format!("// version: {}", opencode::PLUGIN_VERSION)),
+        "the version marker"
+    );
     assert!(plugin.contains("codeisland"), "the plugin's own name");
 
     let config = home.read(&site.config);
@@ -173,5 +176,22 @@ fn status_reports_a_stale_plugin_file() {
     assert!(!status.plugin_installed);
     // And installing again rewrites it.
     install(&site, STAMP).expect("repair");
-    assert!(home.read(&site.plugin).contains("// version: v11"));
+    assert!(
+        home.read(&site.plugin)
+            .contains(&format!("// version: {}", opencode::PLUGIN_VERSION))
+    );
+}
+
+/// The marker in the shipped plugin and the constant the installer compares
+/// against must be the same string: when they drifted (#161 bumped the resource
+/// and not the constant) every install read as stale for ever, and two tests
+/// failed on `main`.
+#[test]
+fn the_shipped_plugin_carries_the_versions_the_installer_expects() {
+    let resource = include_str!("../../../../Sources/Morrow/Resources/morrow-opencode.js");
+    assert!(
+        resource.contains(&format!("// version: {}", opencode::PLUGIN_VERSION)),
+        "the resource says something else than PLUGIN_VERSION ({})",
+        opencode::PLUGIN_VERSION
+    );
 }
