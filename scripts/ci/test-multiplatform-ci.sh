@@ -109,15 +109,21 @@ print(f'DOCS_COUNT={len(docs)}')
 p1 = docs[0]
 p1_platform = p1.get('labels', {}).get('platform', '')
 p1_steps = [s.get('name') for s in p1.get('steps', [])]
+p1_when = p1.get('when', [])
+p1_push_has_path = any('path' in c for c in p1_when if c.get('event') == 'push' or ('push' in c.get('event', []) if isinstance(c.get('event'), list) else False))
 print(f'P1_PLATFORM={p1_platform}')
 print(f'P1_STEPS={\",\".join(p1_steps)}')
+print(f'P1_PUSH_PATH_FILTER={\"YES\" if p1_push_has_path else \"NO\"}')
 
 # Pipeline 2: macOS
 p2 = docs[1]
 p2_platform = p2.get('labels', {}).get('platform', '')
 p2_steps = [s.get('name') for s in p2.get('steps', [])]
+p2_when = p2.get('when', [])
+p2_push_has_path = any('path' in c for c in p2_when if c.get('event') == 'push' or ('push' in c.get('event', []) if isinstance(c.get('event'), list) else False))
 print(f'P2_PLATFORM={p2_platform}')
 print(f'P2_STEPS={\",\".join(p2_steps)}')
+print(f'P2_PUSH_PATH_FILTER={\"YES\" if p2_push_has_path else \"NO\"}')
 
 # Pipeline 3: Release
 p3 = docs[2]
@@ -132,6 +138,8 @@ print(f'P3_STEPS={\",\".join(p3_steps)}')
     assert_contains "Pipeline 1 targets linux/amd64" "P1_PLATFORM=linux/amd64" "$YAML_REPORT"
     assert_contains "Pipeline 1 has test-linux step" "test-linux" "$YAML_REPORT"
     assert_contains "Pipeline 1 has check-windows step" "check-windows" "$YAML_REPORT"
+    assert_contains "Pipeline 1 push event has no path constraint" "P1_PUSH_PATH_FILTER=NO" "$YAML_REPORT"
+    assert_contains "Pipeline 2 push event has no path constraint" "P2_PUSH_PATH_FILTER=NO" "$YAML_REPORT"
     assert_contains "Pipeline 2 targets darwin/amd64" "P2_PLATFORM=darwin/amd64" "$YAML_REPORT"
     assert_contains "Pipeline 2 has test step" "test" "$YAML_REPORT"
     assert_contains "Pipeline 3 targets darwin/amd64" "P3_PLATFORM=darwin/amd64" "$YAML_REPORT"

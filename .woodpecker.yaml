@@ -20,16 +20,6 @@ when:
         - ".woodpecker.yaml"
   - event: push
     branch: [dev, main]
-    path:
-      include:
-        - "crates/**"
-        - "shared/**"
-        - "Cargo.*"
-        - "rust-toolchain.toml"
-        - "scripts/ci/linux*"
-        - "scripts/ci/windows*"
-        - "scripts/ci/rust*"
-        - ".woodpecker.yaml"
 
 labels:
   platform: linux/amd64
@@ -73,15 +63,6 @@ when:
         - ".woodpecker.yaml"
   - event: push
     branch: [dev, main]
-    path:
-      include:
-        - "Sources/**"
-        - "Tests/**"
-        - "Package.*"
-        - "Info.plist"
-        - "scripts/*macos*"
-        - "scripts/run-xctest-runner.py"
-        - ".woodpecker.yaml"
 
 labels:
   platform: darwin/amd64
