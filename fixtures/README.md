@@ -2,7 +2,7 @@
 
 Exported from [`Tests/MorrowCoreTests/BridgeGoldenFixtures.swift`](../Tests/MorrowCoreTests/BridgeGoldenFixtures.swift) and [`Tests/MorrowCoreTests/BridgeGoldenExpectations.swift`](../Tests/MorrowCoreTests/BridgeGoldenExpectations.swift) by [`BridgeGoldenJSONExporter.swift`](../Tests/MorrowCoreTests/BridgeGoldenJSONExporter.swift) as one `bridge-golden.json` bundle per scope.
 
-These bundles cover the bridge (`morrow-bridge`) only; reducer and `AttentionPolicy` fixtures come in Phase 2.
+The bridge bundles cover `morrow-bridge`. The core contract (reducer and `AttentionPolicy`) is in [`core/`](#core-contract-core).
 
 ## Layout
 
@@ -19,11 +19,31 @@ These bundles cover the bridge (`morrow-bridge`) only; reducer and `AttentionPol
 
 `_ppid` and `_hook_ppid` are neutral: their values are already tokens (`$PID0`), and every hook edge carries `_ppid`. Projecting any OS bundle through the neutral `omitted_keys` yields the neutral expectation exactly.
 
+## Core Contract (`core/`)
+
+Exported from [`CoreContractCases.swift`](../Tests/MorrowCoreTests/CoreContractCases.swift) by [`CoreContractJSONExporter.swift`](../Tests/MorrowCoreTests/CoreContractJSONExporter.swift), which runs every case through Swift. `CoreContractTests` runs them again and fails when Swift no longer produces the files.
+
+- `core/reducer.json`: per case, the initial `sessions` and ordered `steps`. Each step is a raw hook `event` (as the bridge forwards it) and what `reduceHookEvent` left: every session, the lifecycle `effects`, the `facts`, and the `AttentionPolicy.intents` for those facts with the event's session as `subject`. Case inputs: `max_history`, `reply_complete_placeholder`, `custom_sources`.
+- `core/attention.json`: `AttentionPolicyTests`' intent rows, each a `moment` and `subject` with the `intents` Swift returns.
+
+A port reproduces both. The reducer's effects never include `playSound` or `enqueueCompletion`: those are the policy's intents.
+
+| Rule | |
+|---|---|
+| Clock | `$T0` is the time the initial sessions were built, `$Tk` the time step k (1-based) was applied: every clock read during step k returns `$Tk`. A fixed seeded instant is ISO 8601. |
+| Configuration | A case's `custom_sources` are the user's custom CLI sources (`custom_cli_configs_v1`) for that case; custom agent commands are none. |
+| Sessions | `SessionSnapshot` in snake_case. `status`, `source`, `start_time` and `last_activity` are always present; any other field is absent while nil, false, zero or empty. `projection_omits` lists the state left out (set outside the reducer, or generated per value). |
+| Tags | Enums (`status`, effect and moment `type`, push kinds) use the Swift case names. |
+
+Bridge golden payloads are reused as events with `$PIDn` as pid 4242+n and `$ROOT` as `/tmp/golden`.
+
 ## Regenerating and Validating
 
 ```bash
 CODEISLAND_GOLDEN_EXPORT_JSON="$(pwd)/fixtures" swift test --filter BridgeGoldenTests/testExportedJSONFixturesMatchSwiftGoldenSuite
 swift test --filter BridgeGoldenTests
+CODEISLAND_CORE_EXPORT_JSON="$(pwd)/fixtures" swift test --filter CoreContractTests/testExportedCoreFixturesMatchSwift
+swift test --filter CoreContractTests
 pip install -r scripts/requirements-fixtures.txt
 python3 scripts/validate-fixtures.py
 ```
