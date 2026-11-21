@@ -1,3 +1,10 @@
 # Global Code Owners
 # Otomatis meminta review ke semua kolaborator utama untuk setiap perubahan di repositori:
 * @aazhrt @agungdunggio @amaldevice @fzrsahi
+
+# CI/CD and runner infrastructure (exclusive DevOps ownership)
+.woodpecker.yaml @aazhrt
+.github/workflows/ @aazhrt
+scripts/ci/verify-local.sh @aazhrt
+scripts/setup-macos-runner.sh @aazhrt
+scripts/run-macos-builder.sh @aazhrt

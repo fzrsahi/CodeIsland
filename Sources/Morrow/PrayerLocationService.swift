@@ -14,6 +14,17 @@ public final class PrayerLocationService: NSObject, ObservableObject, CLLocation
     @Published public private(set) var preciseElevation: Double?
     @Published public private(set) var resolvedNativeCityName: String?
     @Published public private(set) var authorizationStatus: CLAuthorizationStatus
+    @Published public private(set) var isLocating: Bool = false
+    @Published public private(set) var locationError: String?
+
+    /// CoreLocation permission prompts and Info.plist usage descriptions require a `.app` bundle.
+    public static var canUseCoreLocation: Bool {
+        Bundle.main.bundleURL.pathExtension == "app" && Bundle.main.bundleIdentifier != nil
+    }
+
+    public var hasResolvedAutomaticLocation: Bool {
+        preciseCoordinates != nil
+    }
 
     private let locationManager = CLLocationManager()
     private var lastFetchTimestamp: Date?
@@ -62,19 +73,45 @@ public final class PrayerLocationService: NSObject, ObservableObject, CLLocation
 
     /// Triggers location permission request from the user.
     public func requestAuthorization() {
+        guard Self.canUseCoreLocation else {
+            isLocating = false
+            locationError = "Location Services requires running Morrow.app."
+            return
+        }
+        locationError = nil
+        isLocating = true
         locationManager.requestWhenInUseAuthorization()
+        // On macOS, calling requestLocation() prompts the authorization dialog when status is .notDetermined.
+        locationManager.requestLocation()
+    }
+
+    /// Opens macOS System Settings > Privacy & Security > Location Services.
+    public func openSystemLocationSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     /// Triggers a location update if automatic mode is active.
     public func requestCurrentLocation(force: Bool = false) {
         let mode = UserDefaults.standard.string(forKey: SettingsKey.prayerLocationMode) ?? SettingsDefaults.prayerLocationMode
         if mode == "manual" {
+            isLocating = false
+            locationError = nil
             let manualId = UserDefaults.standard.string(forKey: SettingsKey.prayerManualCityId) ?? SettingsDefaults.prayerManualCityId
             if let city = OfflineCityDatabase.city(byId: manualId) {
                 self.activeCity = city
                 self.preciseCoordinates = nil
                 self.preciseElevation = nil
                 self.resolvedNativeCityName = city.name
+            }
+            return
+        }
+
+        guard Self.canUseCoreLocation else {
+            isLocating = false
+            if force {
+                locationError = "Location Services requires running Morrow.app."
             }
             return
         }
@@ -86,13 +123,19 @@ public final class PrayerLocationService: NSObject, ObservableObject, CLLocation
 
         switch locationManager.authorizationStatus {
         case .notDetermined:
-            locationManager.requestWhenInUseAuthorization()
+            requestAuthorization()
         case .authorizedAlways, .authorized:
+            locationError = nil
+            isLocating = true
             lastFetchTimestamp = Date()
             locationManager.requestLocation()
-        default:
-            // Denied or restricted: fallback to last saved or default city
-            break
+        case .denied, .restricted:
+            isLocating = false
+            if force {
+                locationError = "Location access is denied in System Settings."
+            }
+        @unknown default:
+            isLocating = false
         }
     }
 
@@ -131,6 +174,8 @@ public final class PrayerLocationService: NSObject, ObservableObject, CLLocation
         let matched = OfflineCityDatabase.closestCity(to: exactCoords)
 
         Task { @MainActor in
+            self.isLocating = false
+            self.locationError = nil
             self.activeCity = matched
             self.preciseCoordinates = exactCoords
             self.preciseElevation = altitude.map { max(0, $0) }
@@ -162,7 +207,17 @@ public final class PrayerLocationService: NSObject, ObservableObject, CLLocation
     }
 
     nonisolated public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        // Silent failure; offline database fallback remains active
+        let nsError = error as NSError
+        let message: String
+        if nsError.domain == kCLErrorDomain, nsError.code == CLError.denied.rawValue {
+            message = "Location access denied. Enable Morrow in System Settings > Privacy & Security > Location Services."
+        } else {
+            message = "Unable to determine current location: \(error.localizedDescription)"
+        }
+        Task { @MainActor in
+            self.isLocating = false
+            self.locationError = message
+        }
     }
 
     // MARK: - Private Helpers

@@ -571,11 +571,11 @@ struct CyberMusicWingView: View {
 
     var body: some View {
         let narrow = isCompactNarrow
-        let matchedArtSize = min(24, max(20, mascotSize - 2))
-        let artSize: CGFloat = isEnlarged ? 24 : (narrow ? 15 : (isDynamicIslandCompact ? 20 : matchedArtSize))
-        let spectrumMaxH: CGFloat = isEnlarged ? 15.5 : (narrow ? 10.5 : (isDynamicIslandCompact ? 13.0 : 15.5))
-        let itemSpacing: CGFloat = isDynamicIslandCompact ? 7 : (isEnlarged ? 5 : (narrow ? 3 : 5))
-        let barWidth: CGFloat = isEnlarged ? 2.4 : (narrow ? 1.9 : 2.4)
+        let matchedArtSize = min(21, max(18, mascotSize - 5))
+        let artSize: CGFloat = isEnlarged ? 22 : (narrow ? 15 : (isDynamicIslandCompact ? 18 : matchedArtSize))
+        let spectrumMaxH: CGFloat = isEnlarged ? 14.5 : (narrow ? 10.5 : (isDynamicIslandCompact ? 12.0 : 13.5))
+        let itemSpacing: CGFloat = isDynamicIslandCompact ? 6 : (isEnlarged ? 5 : (narrow ? 3 : 4.5))
+        let barWidth: CGFloat = isEnlarged ? 2.2 : (narrow ? 1.9 : 2.1)
         let horizPadding: CGFloat = (narrow || isDynamicIslandCompact) ? 0 : 2
         let titleMaxWidth = resolvedTitleMaxWidth(artSize: artSize, spacing: itemSpacing)
 
