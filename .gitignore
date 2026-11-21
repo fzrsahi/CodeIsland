@@ -1,6 +1,7 @@
 # Build artifacts
 .build/
 .swiftpm/
+dist/
 
 # Superpowers artifacts
 .superpowers/
@@ -71,7 +72,6 @@ skills-lock.json
 .impeccable/
 .github/agents/
 .github/hooks/
-CLAUDE.md
 build-dir/
 
 # Python bytecode from local syntax checks

@@ -557,23 +557,11 @@ struct NotchPanelView: View {
         return max(148, mascotSize + chipWidth + 32)
     }
 
-    /// Whether the collapsed notched bar should size left and right wings independently.
-    /// Scoped to idle states (Git standby, idle Music, Prayer) where the left wing only holds the mascot,
-    /// while active/thinking/waiting/quota states preserve symmetric centering around the notch.
+    /// Strict symmetric wings invariant: across idle, thinking, and HUD/expanded states,
+    /// left and right wings must keep identical widths so the hardware notch stays centered
+    /// without horizontal shifting.
     private var usesAsymmetricNotchWings: Bool {
-        let isToolActive = showToolStatus && showAgentDetails && appState.currentTool != nil
-        return hasNotch
-            && appState.status == .idle
-            && !isThinking
-            && !isToolActive
-            && !hasQuotaChip
-            && !shouldShowExpanded
-            && !isBilateralWingsLyricActive
-            && !isDynamicIslandInlineLyrics
-            && !isBalancedTwinNonNotch
-            && !isToastOnly
-            && !(signals.showChargingBanner && !appState.surface.isExpanded)
-            && !(signals.showMiniPeekBanner && !appState.surface.isExpanded)
+        false
     }
 
     private var collapsedWidthScaleFactor: CGFloat {
@@ -632,7 +620,11 @@ struct NotchPanelView: View {
             }
             return min(musicBaseline, cap)
         }
-        // Standby / Minimal Git-only right wing:
+        // Standby / Git right wing:
+        // Strict width lock during Thinking: never expand the notch beyond the left wing's Thinking width.
+        if isThinking {
+            return effectiveNaturalLeftWidth + badgeReserve
+        }
         let standbyBaseline = min(
             CompactGitStatusModel.estimatedBaselineWidth(
                 isGitRepo: workspaceManager.isGitRepo,
@@ -757,14 +749,9 @@ struct NotchPanelView: View {
         return min(hoveredWidth, maxWing)
     }
 
-    /// Idle-indicator left wing stays snug around the mascot on notched displays instead of stretching for Prayer.
+    /// Idle-indicator left wing strictly matches the right wing width so notched displays remain symmetric.
     private var idleLeftIndicatorWingWidth: CGFloat {
-        let canAsymmetricIdle = hasNotch
-            && !isToastOnly
-            && !mailManager.showMailArrivalAnimation
-            && !(signals.showChargingBanner && !appState.surface.isExpanded)
-            && !(signals.showMiniPeekBanner && !appState.surface.isExpanded)
-        return canAsymmetricIdle ? idleBaseMascotWingWidth : idleIndicatorWingWidth
+        idleIndicatorWingWidth
     }
 
     /// Idle-indicator wing width that scales across 0%–200% Island Width when no sessions are active.
@@ -2709,10 +2696,15 @@ private struct CompactRightWing: View {
 
     @ViewBuilder
     private var standbyPill: some View {
+        let wideMaxWidth: CGFloat? = (!expanded && wingWidth > 0)
+            ? max(0, collapsedMaxInnerWidth - totalRightInnerPadding - badgeReserve)
+            : nil
         CompactGitStandbyWingView(
             workspaceManager: workspaceManager,
             appState: appState,
             isDynamicIslandCompact: isDynamicIslandCompact,
+            isWideMode: isThinking && (!isDynamicIslandCompact || hasNotch),
+            maxContentWidth: wideMaxWidth,
             onTap: {
                 withAnimation(NotchAnimation.open) {
                     expandedTab = workspaceManager.isGitRepo ? .workspace : .agents
@@ -6508,6 +6500,26 @@ private struct UsageSparkline: View {
     }
 }
 
+/// Routes horizontal trackpad swipes out of `NSScrollView` so tab navigation works anywhere over the Agents list.
+enum ThinScrollSwipePolicy {
+    static func decision(
+        deltaX: CGFloat,
+        deltaY: CGFloat,
+        isForwardingHorizontal: Bool,
+        isPhaseBegin: Bool,
+        isPhaseEnd: Bool
+    ) -> (forward: Bool, nextForwardingState: Bool) {
+        let isHorizontal = abs(deltaX) > abs(deltaY) && abs(deltaX) > 0.4
+        if isPhaseBegin {
+            return (isHorizontal, isHorizontal && !isPhaseEnd)
+        }
+        if isHorizontal || isForwardingHorizontal {
+            return (true, !isPhaseEnd)
+        }
+        return (false, false)
+    }
+}
+
 /// Thin overlay scrollbar via NSScrollView — ignores system "show scrollbar" preference.
 private struct ThinScrollView<Content: View>: NSViewRepresentable {
     let maxHeight: CGFloat
@@ -6517,9 +6529,31 @@ private struct ThinScrollView<Content: View>: NSViewRepresentable {
     /// attached or "Show scroll bars: Always") on its own schedule; a legacy
     /// scroller took 13pt off the session list's width until the next update.
     private final class OverlayScrollView: NSScrollView {
+        private var forwardingHorizontalSwipe = false
+
         override var scrollerStyle: NSScroller.Style {
             get { super.scrollerStyle }
             set { super.scrollerStyle = .overlay }
+        }
+
+        override func scrollWheel(with event: NSEvent) {
+            let isPhaseEnd = event.phase == .ended
+                || event.phase == .cancelled
+                || event.momentumPhase == .ended
+                || event.momentumPhase == .cancelled
+            let result = ThinScrollSwipePolicy.decision(
+                deltaX: event.scrollingDeltaX,
+                deltaY: event.scrollingDeltaY,
+                isForwardingHorizontal: forwardingHorizontalSwipe,
+                isPhaseBegin: event.phase == .began,
+                isPhaseEnd: isPhaseEnd
+            )
+            forwardingHorizontalSwipe = result.nextForwardingState
+            if result.forward {
+                nextResponder?.scrollWheel(with: event)
+                return
+            }
+            super.scrollWheel(with: event)
         }
     }
 

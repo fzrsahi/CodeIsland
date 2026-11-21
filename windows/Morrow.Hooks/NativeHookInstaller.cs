@@ -26,10 +26,11 @@ public sealed class NativeHookInstaller
             hooks[eventName] = entries;
             RemoveMorrowEntries(entries, registration.Id);
             var source = tool.SourceTag ?? tool.Agent.ToString().ToLowerInvariant();
+            var sourceArgument = tool.DeclaresSource ? $" --source {source}" : string.Empty;
             var commandHook = new JsonObject
             {
                 ["type"] = "command",
-                ["command"] = $"{registration.Command} --source {source} --event {eventName}",
+                ["command"] = $"{registration.Command}{sourceArgument} --event {eventName}",
                 ["timeout"] = KnownTools.TimeoutFor(tool, eventName)
             };
             entries.Add(tool.Format is HookConfigurationFormat.Claude or HookConfigurationFormat.Cursor
