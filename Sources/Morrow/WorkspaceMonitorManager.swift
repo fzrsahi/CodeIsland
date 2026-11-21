@@ -59,6 +59,12 @@ public struct GitCommitItem: Identifiable, Equatable, Sendable {
 
 // MARK: - Workspace Monitor Manager
 
+public enum RightWingPreviewMode: Equatable, Sendable {
+    case nonGitIdle
+    case nonGitThinking
+    case emptyIdle
+}
+
 @MainActor
 public final class WorkspaceMonitorManager: ObservableObject {
     public static let shared = WorkspaceMonitorManager()
@@ -79,9 +85,11 @@ public final class WorkspaceMonitorManager: ObservableObject {
     @Published public var isCommitting: Bool = false
     @Published public var commitStatusMessage: String? = nil
     @Published public var isUserPinned: Bool = UserDefaults.standard.bool(forKey: "workspaceIsUserPinned")
+    @Published public private(set) var testWingPreview: RightWingPreviewMode? = nil
 
     private var lastRefreshTime: Date = .distantPast
     private var refreshTask: Task<Void, Never>? = nil
+    private var testWingPreviewWorkItem: DispatchWorkItem? = nil
 
     private init() {
         if let saved = UserDefaults.standard.string(forKey: "lastWorkspaceCwd"),
@@ -90,6 +98,20 @@ public final class WorkspaceMonitorManager: ObservableObject {
             self.projectName = (saved as NSString).lastPathComponent
             refresh(force: true)
         }
+    }
+
+    public func triggerRightWingPreview(_ mode: RightWingPreviewMode) {
+        testWingPreviewWorkItem?.cancel()
+        testWingPreview = mode
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+
+        let item = DispatchWorkItem { [weak self] in
+            Task { @MainActor in
+                self?.testWingPreview = nil
+            }
+        }
+        testWingPreviewWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0, execute: item)
     }
 
     public func updateCwdIfNeeded(_ cwd: String?, forceUserPinned: Bool = false) {
