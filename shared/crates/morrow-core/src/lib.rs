@@ -3,7 +3,7 @@
 //! environment; whatever the OS knows comes in as values and closures.
 //!
 //! - [`intake`]: what one hook invocation means (`HookIntake` in
-//!   `Sources/MorrowCore`), from the facts an edge observed.
+//!   `macos/Sources/MorrowCore`), from the facts an edge observed.
 //! - [`reduce`]: what a hook event does to the sessions (`reduceHookEvent`),
 //!   with the clock and the custom sources handed in.
 //! - [`attention`]: what a moment calls for (`AttentionPolicy.intents`) — a

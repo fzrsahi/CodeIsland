@@ -1,4 +1,4 @@
-//! The **endpoint** of Morrow's contract (`docs/endpoint-contract.md`) and
+//! The **endpoint** of Morrow's contract (`shared/contract/endpoint-contract.md`) and
 //! the local transport to it.
 //!
 //! - [`resolve`]: the endpoint rule for macOS, Linux and Windows, pure.

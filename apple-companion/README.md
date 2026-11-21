@@ -17,11 +17,11 @@ Code Island Buddy 是 Code Island 的 Apple 设备端，包括 iPhone、Dynamic 
 | `ios/MorrowCompanion/MorrowWatchWidget/` | watchOS Widget / Smart Stack 展示 |
 | `ios/MorrowCompanion/Shared/` | ActivityKit、Watch、iPhone 共用模型与 mascot 视图 |
 | `ios/MorrowCompanion/project.yml` | XcodeGen 工程定义 |
-| `Sources/Morrow/AppleCompanionPublisher.swift` | Mac 端 iPhone Buddy 状态发布 |
-| `Sources/Morrow/AppleCompanionBluetoothPeripheral.swift` | Mac 端 BLE 后台摘要通道 |
-| `Sources/MorrowCore/AppleCompanionPayload.swift` | Mac / iPhone / Watch 共用协议模型 |
-| `scripts/smoke-companion-ui.sh` | iPhone UI smoke 截图测试 |
-| `scripts/smoke-companion-watch-ui.sh` | Apple Watch UI smoke 截图测试 |
+| `macos/Sources/Morrow/AppleCompanionPublisher.swift` | Mac 端 iPhone Buddy 状态发布 |
+| `macos/Sources/Morrow/AppleCompanionBluetoothPeripheral.swift` | Mac 端 BLE 后台摘要通道 |
+| `macos/Sources/MorrowCore/AppleCompanionPayload.swift` | Mac / iPhone / Watch 共用协议模型 |
+| `macos/scripts/smoke-companion-ui.sh` | iPhone UI smoke 截图测试 |
+| `macos/scripts/smoke-companion-watch-ui.sh` | Apple Watch UI smoke 截图测试 |
 
 ## 发布资料
 
@@ -190,16 +190,16 @@ iPhone app 首屏提供 `进入演示模式`。它用于 App Store 审核、截�
 
 ```bash
 # iPhone 页面 smoke 截图
-scripts/smoke-companion-ui.sh
+macos/scripts/smoke-companion-ui.sh
 
 # Watch 页面 smoke 截图
-scripts/smoke-companion-watch-ui.sh
+macos/scripts/smoke-companion-watch-ui.sh
 
 # 协议和 UI 回归检查
-scripts/check-companion-ui-regressions.sh
+macos/scripts/check-companion-ui-regressions.sh
 
 # Swift 单元测试
-swift test
+swift test --package-path macos
 ```
 
 截图会输出到 `.build/`。如果要更新本文档中的产品图，可以先跑 smoke 脚本，再把对应 PNG 覆盖到 `apple-companion/images/`。

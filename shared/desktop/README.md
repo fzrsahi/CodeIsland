@@ -68,7 +68,7 @@ and `linux/ci/e2e1.sh`, and changes nothing else.
 
 - `cargo test -p morrow-app`: the reduction (`sessions.rs`), the held
   requests: approve, deny, a gone hook, the replies against
-  `Sources/Morrow/AppState.swift` (`permissions.rs`).
+  `macos/Sources/Morrow/AppState.swift` (`permissions.rs`).
 - `linux/ci/test-desktop.sh`: fmt, clippy `-D warnings`, test, in the image.
 - `linux/ci/smoke-x11.sh`: Xvfb + Openbox, the release bridge, `xdotool`,
   `xprop`; prints an Evidence block.

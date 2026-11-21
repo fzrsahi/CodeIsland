@@ -1,5 +1,5 @@
 //! Claude Code's "while you were away" recap (`SessionRecap`,
-//! `Sources/MorrowCore/SessionRecap.swift`).
+//! `macos/Sources/MorrowCore/SessionRecap.swift`).
 //!
 //! A few minutes after a turn goes idle Claude Code appends
 //! `{"type":"system","subtype":"away_summary","content":"…","timestamp":"…"}`

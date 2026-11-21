@@ -1,7 +1,7 @@
 //! What a hook says about where its session runs: `extractMetadata`,
 //! `fillMissingParentMetadataFromSubagentEvent` and the private helpers they
 //! share (`applyEnvMetadata`, `applyHerdrRoute`, `applyHookProcessId`, …) of
-//! `Sources/MorrowCore/SessionSnapshot.swift`.
+//! `macos/Sources/MorrowCore/SessionSnapshot.swift`.
 
 use super::ReduceContext;
 use super::hermes;

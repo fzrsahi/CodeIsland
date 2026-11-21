@@ -2,7 +2,7 @@
 //! (no process, no socket), must produce what the Swift bridge recorded:
 //! the forwarded payload, stdout and exit status of the neutral bundle
 //! (every input, every source) and of the linux bundle. The port of
-//! `Tests/MorrowCoreTests/HookIntakeGoldenTests.swift`.
+//! `macos/Tests/MorrowCoreTests/HookIntakeGoldenTests.swift`.
 
 mod golden;
 

@@ -2,18 +2,18 @@
 
 The **core** (`GLOSSARY.md`) in Rust: pure domain code the Linux and
 Windows shells share. No OS crate, no unsafe code, no environment, file,
-process or clock read (`scripts/ci/rust-purity.sh` checks the dependencies).
+process or clock read (`shared/ci/rust-purity.sh` checks the dependencies).
 What the OS knows comes in as values and closures.
 
 ## `intake`: HookIntake
 
-What one hook invocation means (`docs/hook-edge-protocol.md`, *What the
+What one hook invocation means (`shared/contract/hook-edge-protocol.md`, *What the
 island derives*): source, session, event, whether it waits for the answer,
 terminal context, the answer's stdout. A faithful port of
-`Sources/MorrowCore/HookIntake.swift` and the Swift types it calls, one
+`macos/Sources/MorrowCore/HookIntake.swift` and the Swift types it calls, one
 file per type, the same names in snake_case:
 
-| Swift (`Sources/MorrowCore/`) | Rust (`src/intake/`) |
+| Swift (`macos/Sources/MorrowCore/`) | Rust (`src/intake/`) |
 |---|---|
 | `HookIntake` (`Facts`, `Ancestor`, `EdgeHost`, `AnswerFormat`, `environmentKeys`, `admits`, `immediateStdout`, `stdinObject`, `init`, `addTerminalContext`, `stdout(forAnswer:)`) | `mod.rs` (`Facts`, `Ancestor`, `EdgeHost`, `AnswerFormat`, `ENVIRONMENT_KEYS`, `admits`, `immediate_stdout`, `stdin_object`, `HookIntake::new`, `add_terminal_context`, `stdout_for_answer`) |
 | `HookEdgeFacts` (`delivery(in:)`, `facts(from:)`, `mayCarryFacts`) | `hook_edge_facts.rs` (`delivery`, `facts`, `may_carry_facts`) |
@@ -57,7 +57,7 @@ back where the reducer used to return them (`PlaySound` at the sound slot,
 
 What a moment calls for before the user's settings and the room have their
 say — a sound, a completion card, a push, a follow-up reminder. A faithful
-port of `Sources/MorrowCore/AttentionPolicy.swift` and
+port of `macos/Sources/MorrowCore/AttentionPolicy.swift` and
 `EventSoundRouting.swift`:
 
 | Swift | Rust (`src/attention.rs`) |
@@ -77,7 +77,7 @@ then.
 
 ## `markdown`: MarkdownBlockParser
 
-The block structure of an assistant reply (`Sources/MorrowCore/MarkdownBlockParser.swift`):
+The block structure of an assistant reply (`macos/Sources/MorrowCore/MarkdownBlockParser.swift`):
 headings, paragraphs, lists and task items, fenced code, GFM tables, quotes
 and thematic breaks, lenient enough for a reply that streams in. Inline spans
 stay raw Markdown in the block; nothing here writes HTML — the frontend draws
@@ -91,7 +91,7 @@ the port counts and splits `char`s (scalar values).
 ## `git`: GitBranchReader
 
 The checked-out branch of a session's `cwd`, read from `.git` rather than by
-spawning `git` (`Sources/MorrowCore/GitBranchReader.swift`): `GitBranchInfo`,
+spawning `git` (`macos/Sources/MorrowCore/GitBranchReader.swift`): `GitBranchInfo`,
 `read`, `parse_head`, `parse_gitdir_pointer`, `standardize`. Core opens
 nothing, so the disk arrives as a `git::Disk` the shell implements; paths go
 through `Path`/`PathBuf`, joined and split by segment, so the same walk works
@@ -100,7 +100,7 @@ on Windows. Linked worktrees are told apart from submodules by segment
 
 ## `transcript`: JSONLTailer
 
-The live transcript (`Sources/MorrowCore/JSONLTailer.swift`): `scan_lines`
+The live transcript (`macos/Sources/MorrowCore/JSONLTailer.swift`): `scan_lines`
 splits a chunk of JSONL on newlines and reports the newest `last_user_prompt`,
 `last_assistant_message`, `turn_status`, whether the chunk was activity at all,
 and the trailing `CursorQuestionSignal`; the bytes after the last newline come
@@ -223,16 +223,16 @@ nothing is re-serialised, so nothing can be reformatted.
 ## Tests
 
 `tests/conformance.rs` (the port of `HookIntakeGoldenTests.swift`) runs every
-fixture of `fixtures/neutral/bridge-golden.json` and of
-`fixtures/linux/bridge-golden.json` through HookIntake on injected facts:
+fixture of `shared/contract/fixtures/neutral/bridge-golden.json` and of
+`shared/contract/fixtures/linux/bridge-golden.json` through HookIntake on injected facts:
 the forwarded payload (normalized and projected as the bundles define),
 stdout and exit status must match, 84 of 84 in each. `tests/golden/mod.rs`
 reads the bundles; morrow-bridge's conformance test shares it.
 
 `tests/attention_conformance.rs` runs the 56 policy cases of
-`fixtures/core/attention.json` (a moment and a subject, the intents Swift
+`shared/contract/fixtures/core/attention.json` (a moment and a subject, the intents Swift
 returns), and `tests/reducer_conformance.rs` checks the intents of all 161
-reducer steps against `fixtures/core/reducer.json` besides the sessions, the
+reducer steps against `shared/contract/fixtures/core/reducer.json` besides the sessions, the
 effects and the facts. `tests/contracts/mod.rs` holds the projection both
 read.
 

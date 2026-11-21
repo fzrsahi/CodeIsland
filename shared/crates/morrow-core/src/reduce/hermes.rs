@@ -1,5 +1,5 @@
 //! Hermes Agent, as the reducer reads it: `HermesHookPayload`
-//! (`Sources/MorrowCore/HermesHookPayload.swift`) and the store snapshot a
+//! (`macos/Sources/MorrowCore/HermesHookPayload.swift`) and the store snapshot a
 //! remote hook attaches (`HermesSessionStore.Snapshot`, `applyHermesStore`
 //! in `HermesSessionStore.swift`).
 

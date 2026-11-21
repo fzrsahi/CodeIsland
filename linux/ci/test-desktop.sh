@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Lints and tests the desktop shell (`morrow-app`, shared/desktop), which
 # needs GTK3 / WebKitGTK dev libraries: run it in the image of
-# linux/ci/Dockerfile. scripts/ci/linux-test.sh covers every other crate and
+# linux/ci/Dockerfile. linux/ci/test.sh covers every other crate and
 # needs no GTK.
 #
 #   (cd shared/desktop && bun install && bun run build)   # on the host
@@ -28,7 +28,7 @@ fi
 summary=()
 failed=0
 
-# step <label> <command…>: as in scripts/ci/linux-test.sh.
+# step <label> <command…>: as in linux/ci/test.sh.
 step() {
   local label="$1"
   shift

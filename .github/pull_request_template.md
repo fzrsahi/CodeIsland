@@ -12,8 +12,8 @@ along with a brief high-signal explanation.
 ```
 
 ### Affected Components
-- `Sources/...`
-- `Tests/...`
+- `macos/Sources/...`
+- `macos/Tests/...`
 
 ---
 

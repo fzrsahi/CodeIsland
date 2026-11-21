@@ -1,5 +1,5 @@
 //! How Morrow answers Google Antigravity's (`agy`) `PreToolUse` hook
-//! (`Sources/MorrowCore/AntigravityHookContract.swift`, #339): Antigravity
+//! (`macos/Sources/MorrowCore/AntigravityHookContract.swift`, #339): Antigravity
 //! refuses the tool call when the hook prints no decision, so the bridge
 //! prints `ask` at once, which hands the call back to Antigravity's own
 //! permission engine.

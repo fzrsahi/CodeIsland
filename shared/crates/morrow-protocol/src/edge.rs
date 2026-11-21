@@ -1,5 +1,5 @@
 //! Edge facts (`$defs/edgeFacts` and `$defs/edgePayload` of
-//! hook-envelope.schema.json; `_edge` fields in docs/hook-edge-protocol.md).
+//! hook-envelope.schema.json; `_edge` fields in shared/contract/hook-edge-protocol.md).
 
 use std::collections::BTreeMap;
 

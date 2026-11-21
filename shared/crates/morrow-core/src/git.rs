@@ -1,5 +1,5 @@
 //! The checked-out branch of a session's `cwd` (`GitBranchReader`,
-//! `Sources/MorrowCore/GitBranchReader.swift`), read from the `.git` metadata
+//! `macos/Sources/MorrowCore/GitBranchReader.swift`), read from the `.git` metadata
 //! rather than by spawning `git`: sessions fire hooks many times a minute and
 //! a sandboxed `cwd` makes subprocesses costly.
 //!

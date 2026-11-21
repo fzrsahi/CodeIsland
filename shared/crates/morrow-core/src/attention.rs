@@ -1,4 +1,4 @@
-//! The attention policy (`AttentionPolicy`, `Sources/MorrowCore/AttentionPolicy.swift`)
+//! The attention policy (`AttentionPolicy`, `macos/Sources/MorrowCore/AttentionPolicy.swift`)
 //! and the sound routing it reads (`EventSoundRouting.swift`): what a moment
 //! calls for on its own — a sound, a completion card, a push, a follow-up
 //! reminder — given the session it happened to.

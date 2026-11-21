@@ -1,5 +1,5 @@
 //! The Claude Code slice of `ConfigInstallerTests`
-//! (`Tests/MorrowTests/ConfigInstallerTests.swift`), and the install/repair/
+//! (`macos/Tests/MorrowTests/ConfigInstallerTests.swift`), and the install/repair/
 //! uninstall properties #98 asks for, checked over text instead of a file
 //! system.
 

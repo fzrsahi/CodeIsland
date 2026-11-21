@@ -1,4 +1,4 @@
-//! The core contract's projections, as `Tests/MorrowCoreTests/CoreContractJSONExporter.swift`
+//! The core contract's projections, as `macos/Tests/MorrowCoreTests/CoreContractJSONExporter.swift`
 //! writes them: what the policy's intents look like in
 //! `fixtures/core/attention.json` and in a reducer step of
 //! `fixtures/core/reducer.json`.

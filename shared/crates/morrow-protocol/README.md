@@ -3,13 +3,13 @@
 The wire shapes of the **contract** (`GLOSSARY.md`) in Rust: the forwarded
 hook payload, an edge's `_edge` facts, and the versioned **envelope** that
 reaches the **endpoint**. Part of the **core**: no OS crate, no unsafe code
-(`scripts/ci/rust-purity.sh` enforces the first).
+(`shared/ci/rust-purity.sh` enforces the first).
 
 | Item | Schema |
 |---|---|
-| `HookPayload`, `decode_payload`, `encode_payload` | `schemas/hook-payload.schema.json` |
-| `EdgeFacts`, `EdgeHost`, `EdgePayload` | `$defs/edgeFacts`, `$defs/edgePayload` in `schemas/hook-envelope.schema.json` |
-| `Envelope`, `decode_envelope`, `encode_envelope` | `schemas/hook-envelope.schema.json` (`ipcEnvelopeV1` or `edgePayload`) |
+| `HookPayload`, `decode_payload`, `encode_payload` | `shared/contract/schemas/hook-payload.schema.json` |
+| `EdgeFacts`, `EdgeHost`, `EdgePayload` | `$defs/edgeFacts`, `$defs/edgePayload` in `shared/contract/schemas/hook-envelope.schema.json` |
+| `Envelope`, `decode_envelope`, `encode_envelope` | `shared/contract/schemas/hook-envelope.schema.json` (`ipcEnvelopeV1` or `edgePayload`) |
 | `ProtocolError` | why bytes are none of these |
 
 ## Owns
@@ -19,7 +19,7 @@ reaches the **endpoint**. Part of the **core**: no OS crate, no unsafe code
   but `v` and `payload` in an IPC envelope.
 - Versioning: an IPC envelope with `v` other than `1` is
   `ProtocolError::UnsupportedVersion`; `_edge` facts of any `v >= 1` are read
-  for the fields this build knows (`docs/hook-edge-protocol.md`,
+  for the fields this build knows (`shared/contract/hook-edge-protocol.md`,
   *Compatibility*).
 - Lossless encoding: every key, known or not, written back in the order it
   arrived (`serde_json` with `preserve_order`).
@@ -33,7 +33,7 @@ reaches the **endpoint**. Part of the **core**: no OS crate, no unsafe code
 
 ## Tests
 
-`tests/conformance.rs` runs every golden fixture (`fixtures/*/bridge-golden.json`,
+`tests/conformance.rs` runs every golden fixture (`shared/contract/fixtures/*/bridge-golden.json`,
 exported from the Swift suite) through decode and encode and compares the
 bytes. The fixture root is the `FIXTURE_ROOT` constant there, the one place
 to change when #86 moves the fixtures to `shared/contract/fixtures`.

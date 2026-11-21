@@ -1,6 +1,6 @@
 //! The golden bundles (`fixtures/*/bridge-golden.json`, exported from the
 //! Swift suite) as HookIntake's conformance test reads them, after
-//! `Tests/MorrowCoreTests/HookIntakeGoldenTests.swift`: each fixture's
+//! `macos/Tests/MorrowCoreTests/HookIntakeGoldenTests.swift`: each fixture's
 //! process tree under a fixed root, the payload normalized as the Swift
 //! golden normalizer writes it (`$PID<n>`, `$ROOT`, `$HOME`), and projected
 //! through the bundle's `omitted_keys` / `omitted_values`.
@@ -29,7 +29,7 @@ pub const FIRST_PID: i32 = 1001;
 
 /// `fixtures/` at the repository root. #86 moves it to `shared/contract/`.
 pub fn fixtures_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../fixtures")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../shared/contract/fixtures")
 }
 
 fn read_bundle(scope: &str) -> Value {

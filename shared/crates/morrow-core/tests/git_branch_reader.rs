@@ -1,4 +1,4 @@
-//! `GitBranchReaderTests` (`Tests/MorrowCoreTests/GitBranchReaderTests.swift`),
+//! `GitBranchReaderTests` (`macos/Tests/MorrowCoreTests/GitBranchReaderTests.swift`),
 //! ported one test to one test. The Swift suite writes a temporary tree and
 //! lets `FileManager` read it; morrow-core opens nothing, so the same tree is
 //! an in-memory [`Disk`] handed to the walk.

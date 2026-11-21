@@ -2,7 +2,7 @@
 //! around it (`ensureSubagent`, `recordSubagentModel`,
 //! `recordFoldedSubsession`, `shouldReopenSubagentOnPrompt`,
 //! `shouldSurfaceCursorSubagentChat`) in
-//! `Sources/MorrowCore/SessionSnapshot.swift`.
+//! `macos/Sources/MorrowCore/SessionSnapshot.swift`.
 
 use super::hook_event::HookEvent;
 use super::metadata::is_codex_subagent_event;

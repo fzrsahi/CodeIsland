@@ -125,14 +125,14 @@
 <td align="center"><img src="docs/images/mascots/pi.gif" width="48" alt=""><br><sub><b>Pi / Oh My Pi</b></sub></td>
 <td align="center"><img src="docs/images/mascots/hermes.gif" width="48" alt=""><br><sub><b>Hermes</b></sub></td>
 <td align="center"><img src="docs/images/mascots/openclaw.gif" width="48" alt=""><br><sub><b>OpenClaw</b></sub></td>
-<td align="center"><img src="Sources/Morrow/Resources/cli-icons/antigravity.png" width="40" alt=""><br><sub><b>Google Antigravity</b></sub></td>
+<td align="center"><img src="macos/Sources/Morrow/Resources/cli-icons/antigravity.png" width="40" alt=""><br><sub><b>Google Antigravity</b></sub></td>
 </tr>
 <tr>
 <td align="center"><img src="docs/images/mascots/kiro.gif" width="48" alt=""><br><sub><b>Kiro CLI</b></sub></td>
 <td align="center"><img src="docs/images/mascots/stepfun.gif" width="48" alt=""><br><sub><b>StepFun</b></sub></td>
 <td align="center"><img src="docs/images/mascots/workbuddy.gif" width="48" alt=""><br><sub><b>WorkBuddy</b></sub></td>
-<td align="center"><img src="Sources/Morrow/Resources/cli-icons/minimax.png" width="40" alt=""><br><sub><b>MiniMax Code CLI</b></sub></td>
-<td align="center"><img src="Sources/Morrow/Resources/cli-icons/dsh.png" width="40" alt=""><br><sub><b>DeepSeek Harness</b></sub></td>
+<td align="center"><img src="macos/Sources/Morrow/Resources/cli-icons/minimax.png" width="40" alt=""><br><sub><b>MiniMax Code CLI</b></sub></td>
+<td align="center"><img src="macos/Sources/Morrow/Resources/cli-icons/dsh.png" width="40" alt=""><br><sub><b>DeepSeek Harness</b></sub></td>
 <td align="center"><img src="docs/images/mascots/aiwork.gif" width="48" alt=""><br><sub><b>AiWork</b></sub></td>
 </tr>
 <tr>
@@ -359,7 +359,7 @@ Morrow 往每个工具自己的配置里装一个轻量 hook。工具触发事�
 
 ```bash
 git clone https://github.com/fzrsahi/morrow.git
-cd morrow
+cd morrow/macos
 
 # 开发：debug 构建并启动（Buddy 蓝牙需要用下面打包出的 .app）
 swift build && ./.build/debug/Morrow

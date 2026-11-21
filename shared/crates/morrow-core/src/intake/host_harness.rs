@@ -1,4 +1,4 @@
-//! Path helpers of `Sources/MorrowCore/HostHarness.swift` that intake uses.
+//! Path helpers of `macos/Sources/MorrowCore/HostHarness.swift` that intake uses.
 
 /// `HostHarnessResolver.outermostAppBundlePath(forExecutable:)`: the path
 /// up to the first component ending in `.app`, any case.

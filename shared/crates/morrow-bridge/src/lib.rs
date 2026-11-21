@@ -1,5 +1,5 @@
 //! `morrow-bridge`: the hook command agents run on Linux
-//! (`docs/hook-edge-protocol.md`). It gathers the facts of one invocation
+//! (`shared/contract/hook-edge-protocol.md`). It gathers the facts of one invocation
 //! ([`facts`]: argv, environment, stdin, what the OS says about its
 //! process), has HookIntake (`morrow_core::intake`) interpret them, sends
 //! the payload to the island at the endpoint (`morrow-ipc`), and prints

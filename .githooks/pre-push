@@ -11,12 +11,15 @@ if ! command -v swift >/dev/null 2>&1; then
     exit 0
 fi
 
+# The Swift package lives in macos/ (hooks run from the repo root).
+cd "$(git rev-parse --show-toplevel)/macos" || exit 1
+
 echo "==> [Pre-Push Hook] Verifying build & unit tests locally..."
 if ! swift build --build-tests -q; then
     echo ""
     echo "❌ [Pre-Push Error] Build or unit tests failed!"
     echo "👉 Please fix compilation or test failures locally before pushing to remote."
-    echo "💡 Run 'swift build --build-tests' to view full compiler logs."
+    echo "💡 Run 'cd macos && swift build --build-tests' to view full compiler logs."
     exit 1
 fi
 

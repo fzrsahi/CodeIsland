@@ -1,4 +1,4 @@
-//! `JSONLTailerTests` and `JSONLTailerCursorQuestionTests` (`Tests/MorrowCoreTests/`),
+//! `JSONLTailerTests` and `JSONLTailerCursorQuestionTests` (`macos/Tests/MorrowCoreTests/`),
 //! ported one test to one test as far as a pure core can carry them: the
 //! parsing tests run as they are, and the attach/detach tests drive
 //! [`TailState`] with the bytes a watcher would have read.

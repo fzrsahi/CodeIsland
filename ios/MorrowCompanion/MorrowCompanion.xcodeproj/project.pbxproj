@@ -368,7 +368,7 @@
 				4F91D3F784C8F89A31E63158 /* WorkBuddyView.swift */,
 			);
 			name = Morrow;
-			path = ../../Sources/Morrow;
+			path = ../../macos/Sources/Morrow;
 			sourceTree = "<group>";
 		};
 		B7C74B58379C162633B0AB71 /* Products */ = {

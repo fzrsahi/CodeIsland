@@ -34,7 +34,7 @@ public static class KnownTools
     [
         // Installed without --source, as on macOS: Cursor imports and runs Claude Code's hooks,
         // and only an undeclared hook lets cursor_version mark the event as Cursor's
-        // (docs/hook-edge-protocol.md, rule 2).
+        // (shared/contract/hook-edge-protocol.md, rule 2).
         new(AgentKind.Claude, "Claude Code", ["claude.exe", "claude.cmd", "claude"],
             [@".claude\settings.json", @".claude.json"], "morrow-claude",
             ["SessionStart", "PreToolUse", "PostToolUse", "PermissionRequest", "Stop"], HookConfigurationFormat.Claude, 5, HookTimeoutUnit.Seconds,

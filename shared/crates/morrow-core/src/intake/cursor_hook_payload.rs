@@ -1,5 +1,5 @@
 //! A hook Cursor ran, whichever config it came from
-//! (`Sources/MorrowCore/CursorHookPayload.swift`). Cursor also runs the
+//! (`macos/Sources/MorrowCore/CursorHookPayload.swift`). Cursor also runs the
 //! Claude Code hooks it imports, with its own payload; `cursor_version` is
 //! the only sign that Cursor, not Claude Code, fired it (#377).
 

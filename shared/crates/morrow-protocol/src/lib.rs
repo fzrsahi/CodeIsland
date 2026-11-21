@@ -1,5 +1,5 @@
 //! The wire shapes of Morrow's contract (`schemas/hook-payload.schema.json`,
-//! `schemas/hook-envelope.schema.json`, `docs/hook-edge-protocol.md`):
+//! `schemas/hook-envelope.schema.json`, `shared/contract/hook-edge-protocol.md`):
 //!
 //! - [`HookPayload`]: the JSON object a bridge forwards to the island.
 //! - [`EdgeFacts`]: the `_edge` object an edge that cannot run HookIntake

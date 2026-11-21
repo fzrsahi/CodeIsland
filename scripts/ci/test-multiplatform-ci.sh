@@ -3,7 +3,7 @@
 # TDD Test Suite for Multiplatform CI/CD Pipeline & Runner Configuration
 # Tests:
 #   1. scripts/setup-linux-runner.sh syntax, flags, and dry-run configuration
-#   2. scripts/ci/windows-check.sh syntax, flags, and dry-run output
+#   2. windows/ci/check.sh syntax, flags, and dry-run output
 #   3. .woodpecker.yaml multi-pipeline YAML structure and routing labels
 #   4. scripts/ci/verify-local.sh cleanliness
 # ==============================================================================
@@ -72,8 +72,8 @@ fi
 # ------------------------------------------------------------------------------
 # Test Suite 2: Windows Check Script
 # ------------------------------------------------------------------------------
-echo "--- Suite 2: scripts/ci/windows-check.sh ---"
-WIN_CHECK_SCRIPT="$ROOT/scripts/ci/windows-check.sh"
+echo "--- Suite 2: windows/ci/check.sh ---"
+WIN_CHECK_SCRIPT="$ROOT/windows/ci/check.sh"
 
 if [ -f "$WIN_CHECK_SCRIPT" ]; then
     assert_eq "windows-check.sh is executable" "true" "$([ -x "$WIN_CHECK_SCRIPT" ] && echo true || echo false)"

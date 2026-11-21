@@ -17,7 +17,7 @@ use crate::hooks::{Error, back_up, read_text};
 /// The plugin as macOS ships it. One file, so the two cores cannot drift — the
 /// path is into the shared tree, and #118's layout change moves it once.
 pub const PLUGIN_SOURCE: &str =
-    include_str!("../../../../Sources/Morrow/Resources/morrow-opencode.js");
+    include_str!("../../../../macos/Sources/Morrow/Resources/morrow-opencode.js");
 
 /// Bumped when the plugin changes: an older copy on disk is rewritten
 /// (`opencodePluginVersion`).

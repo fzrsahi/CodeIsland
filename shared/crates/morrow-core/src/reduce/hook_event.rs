@@ -1,5 +1,5 @@
 //! A hook event as the island reads it (`HookEvent`,
-//! `Sources/MorrowCore/Models.swift`): the fields the reducer routes on,
+//! `macos/Sources/MorrowCore/Models.swift`): the fields the reducer routes on,
 //! the tool's label and description, over the raw payload.
 
 use std::sync::LazyLock;

@@ -3,8 +3,8 @@
 The **endpoint** (`GLOSSARY.md`) and the local transport to it: where a
 bridge or plugin sends an envelope, and a Unix socket that only talks to a
 peer of the same user. The rule and the checks are
-`docs/endpoint-contract.md`. Not part of the core: this crate reaches the OS
-(`libc`, `socket2`), so it is not in `scripts/ci/rust-pure-crates.txt`.
+`shared/contract/endpoint-contract.md`. Not part of the core: this crate reaches the OS
+(`libc`, `socket2`), so it is not in `shared/ci/rust-pure-crates.txt`.
 
 | Item | Contract |
 |---|---|
@@ -20,7 +20,7 @@ peer of the same user. The rule and the checks are
 
 - The endpoint rule for every OS, as a function of what it reads (environment,
   uid or SID, whether a path exists). The case table
-  `fixtures/endpoint/cases.json` is the test.
+  `shared/contract/fixtures/endpoint/cases.json` is the test.
 - Trusting a Unix socket endpoint: the path is a socket this user owns (never a
   symlink), `$XDG_RUNTIME_DIR/morrow` is a real `0700` folder of this user's,
   and the kernel says the process at the other end is this user
@@ -49,7 +49,7 @@ peer of the same user. The rule and the checks are
 - Named pipes beyond the transport above. Windows resolution is here because it
   is pure; the pipe server and client, with first-instance, reject-remote, DACL
   and the server-SID check, are `windows` and are compile-checked by
-  `scripts/ci/windows-check.sh`. W-001 runs them on a real Windows host: the
+  `windows/ci/check.sh`. W-001 runs them on a real Windows host: the
   compile lane cannot prove a descriptor actually refuses another user.
 - An async runtime. Calls block; the app runs `Server::accept` on a thread
   of its own until a tokio transport is needed.

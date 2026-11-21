@@ -1,5 +1,5 @@
 //! What a routed hook says about its card's family: `SubsessionRouter`'s
-//! reading half (`Sources/MorrowCore/SubsessionRouter.swift`),
+//! reading half (`macos/Sources/MorrowCore/SubsessionRouter.swift`),
 //! `DeclaredSubsession.parentSessionId`, and `CursorSessionFolding` /
 //! `CursorSubsessionRouter` (`CursorSessionFolding.swift`).
 

@@ -1,5 +1,5 @@
 //! A minimal-diff editor for JSON / JSONC config files
-//! (`Sources/Morrow/JSONMinimalEditor.swift`).
+//! (`macos/Sources/Morrow/JSONMinimalEditor.swift`).
 //!
 //! `serde_json` round-tripping rewrites a whole document: comments go, key
 //! order changes, a trailing newline disappears. A user's `settings.json` is

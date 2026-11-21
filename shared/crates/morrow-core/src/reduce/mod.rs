@@ -1,4 +1,4 @@
-//! The reducer (`reduceHookEvent`, `Sources/MorrowCore/SessionSnapshot.swift`):
+//! The reducer (`reduceHookEvent`, `macos/Sources/MorrowCore/SessionSnapshot.swift`):
 //! one hook event applied to the sessions, the lifecycle effects for the
 //! shell to run, and what the event did ([`HookEventFacts`]) for the
 //! attention policy to read.

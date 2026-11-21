@@ -1,5 +1,5 @@
 //! The model tag on a session card (`ModelObservation`, `ModelLabel`,
-//! `Sources/MorrowCore/ModelLabel.swift`): the model and reasoning effort a
+//! `macos/Sources/MorrowCore/ModelLabel.swift`): the model and reasoning effort a
 //! transcript line reported, and the friendly name the card shows
 //! ("Opus 5.5 · xhigh", "Opus 5.5 1M").
 //!

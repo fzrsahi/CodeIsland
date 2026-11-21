@@ -1,4 +1,4 @@
-//! Custom agent commands (`Sources/MorrowCore/CustomAgentCommand.swift`):
+//! Custom agent commands (`macos/Sources/MorrowCore/CustomAgentCommand.swift`):
 //! the parts HookIntake reads, over a [`SourceCatalog`] instead of
 //! `UserDefaults`.
 

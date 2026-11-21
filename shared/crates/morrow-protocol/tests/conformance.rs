@@ -12,10 +12,9 @@ use morrow_protocol::{
 use serde_json::Value;
 use serde_json::value::RawValue;
 
-/// Where the golden fixtures live, from the repository root. The monorepo
-/// move (#86) changes this to `shared/contract/fixtures`; nothing else
-/// names the path.
-const FIXTURE_ROOT: &str = "fixtures";
+/// Where the golden fixtures live, from the repository root (#86 moved them
+/// under shared/). Nothing else names the path.
+const FIXTURE_ROOT: &str = "shared/contract/fixtures";
 
 const SCOPES: &[&str] = &["neutral", "macos", "linux", "windows"];
 
@@ -179,7 +178,7 @@ fn forwarded_payloads_round_trip_in_ipc_envelope() {
     }
 }
 
-/// `docs/hook-edge-protocol.md`'s example facts.
+/// `shared/contract/hook-edge-protocol.md`'s example facts.
 const EDGE: &str = r#"{"v":1,"source":"claude","cwd":"/home/dev/project","tty":"/dev/pts/3","host":{"id":"devbox","name":"Dev Box"},"stdin_sha256":"9f2c00aa","waits":true}"#;
 
 #[test]

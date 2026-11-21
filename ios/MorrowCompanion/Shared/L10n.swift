@@ -4,7 +4,7 @@ import Foundation
 ///
 /// The companion targets never had any localization infrastructure — every string was
 /// a hardcoded Chinese literal. Rather than introducing a full key/dictionary catalog
-/// (see the Mac app's `Sources/Morrow/L10n.swift` for that heavier 7-language
+/// (see the Mac app's `macos/Sources/Morrow/L10n.swift` for that heavier 7-language
 /// pattern), this keeps translations colocated with their call site and just chooses
 /// between the original Chinese and a new English string based on the system
 /// language: Chinese systems keep seeing Chinese, every other language now sees

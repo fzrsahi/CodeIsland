@@ -1,5 +1,5 @@
 //! Editing a CLI's config file without disturbing the user's own bytes
-//! (`Sources/Morrow/JSONMinimalEditor.swift`, `ConfigInstaller.swift`).
+//! (`macos/Sources/Morrow/JSONMinimalEditor.swift`, `ConfigInstaller.swift`).
 //!
 //! The config *files* belong to the user: comments, key order and the trailing
 //! newline matter. [`json_editor`] replaces the text range of one top-level

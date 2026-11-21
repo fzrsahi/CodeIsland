@@ -7,10 +7,8 @@ use std::path::PathBuf;
 use morrow_ipc::{Platform, resolve};
 use serde_json::Value;
 
-/// The case table, from the repository root. The monorepo move (#86)
-/// changes this to `shared/contract/fixtures/endpoint/cases.json`; nothing
-/// else names the path.
-const CASES_PATH: &str = "fixtures/endpoint/cases.json";
+/// The case table, from the repository root (#86 moved it under shared/).
+const CASES_PATH: &str = "shared/contract/fixtures/endpoint/cases.json";
 
 /// How many symlinks `exists` follows before it gives up (a loop).
 const MAX_SYMLINKS: usize = 8;
