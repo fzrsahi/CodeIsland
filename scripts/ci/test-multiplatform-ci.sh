@@ -128,8 +128,10 @@ print(f'P1_TEST_LINUX_IMAGE={p1_test_linux.get("image", "")}')
 print(f'P1_PR_PATHS={",".join(p1_pr_paths)}')
 print(f'P1_LINUX_HARNESS_CONTEXT={"YES" if "Morrow / Linux & Rust Harness" in p1_test_linux_cmds else "NO"}')
 print(f'P1_LINUX_DISPATCH={"YES" if "linux/ci/test.sh" in p1_test_linux_cmds else "NO"}')
+print(f'P1_TEST_LINUX_POSIX={"YES" if "set -e" in p1_test_linux_cmds and "set -eo pipefail" not in p1_test_linux_cmds else "NO"}')
 print(f'P1_WINDOWS_HARNESS_CONTEXT={"YES" if "Morrow / Windows MSVC Check" in p1_check_win_cmds else "NO"}')
 print(f'P1_WINDOWS_DISPATCH={"YES" if "windows/ci/check.sh" in p1_check_win_cmds else "NO"}')
+print(f'P1_CHECK_WIN_POSIX={"YES" if "set -e" in p1_check_win_cmds and "set -eo pipefail" not in p1_check_win_cmds else "NO"}')
 
 # Pipeline 2: macOS
 p2 = docs[1]
@@ -152,9 +154,14 @@ print(f'P2_MACOS_DISPATCH={"YES" if "macos/ci/test.sh" in p2_test_cmds else "NO"
 # Pipeline 3: Release
 p3 = docs[2]
 p3_platform = p3.get('labels', {}).get('platform', '')
-p3_steps = [s.get('name') for s in p3.get('steps', [])]
+p3_steps = {s.get('name'): s for s in p3.get('steps', [])}
+p3_step_names = list(p3_steps.keys())
+p3_build_dev = p3_steps.get('build-dev-dmg', {})
+p3_dev_cmds = "\n".join(str(c) for c in p3_build_dev.get('commands', []))
 print(f'P3_PLATFORM={p3_platform}')
-print(f'P3_STEPS={",".join(p3_steps)}')
+print(f'P3_STEPS={",".join(p3_step_names)}')
+print(f'P3_MANIFEST_DISPATCH={"YES" if "shared/ci/manifest.sh" in p3_dev_cmds else "NO"}')
+print(f'P3_INFO_PLIST={"YES" if "macos/Info.plist" in p3_dev_cmds else "NO"}')
 EOF
 )
     
@@ -171,6 +178,8 @@ EOF
     assert_contains "Pipeline 1 dispatches to linux/ci/test.sh" "P1_LINUX_DISPATCH=YES" "$YAML_REPORT"
     assert_contains "Pipeline 1 reports Windows MSVC Check context" "P1_WINDOWS_HARNESS_CONTEXT=YES" "$YAML_REPORT"
     assert_contains "Pipeline 1 dispatches to windows/ci/check.sh" "P1_WINDOWS_DISPATCH=YES" "$YAML_REPORT"
+    assert_contains "Pipeline 1 test-linux complies with POSIX set -e" "P1_TEST_LINUX_POSIX=YES" "$YAML_REPORT"
+    assert_contains "Pipeline 1 check-windows complies with POSIX set -e" "P1_CHECK_WIN_POSIX=YES" "$YAML_REPORT"
     assert_contains "Pipeline 2 push event has no path constraint" "P2_PUSH_PATH_FILTER=NO" "$YAML_REPORT"
     assert_contains "Pipeline 2 targets darwin/amd64" "P2_PLATFORM=darwin/amd64" "$YAML_REPORT"
     assert_contains "Pipeline 2 has test step" "test" "$YAML_REPORT"
@@ -179,6 +188,8 @@ EOF
     assert_contains "Pipeline 3 targets darwin/amd64" "P3_PLATFORM=darwin/amd64" "$YAML_REPORT"
     assert_contains "Pipeline 3 has build-dev-dmg step" "build-dev-dmg" "$YAML_REPORT"
     assert_contains "Pipeline 3 has build-release-dmg step" "build-release-dmg" "$YAML_REPORT"
+    assert_contains "Pipeline 3 dispatches to shared/ci/manifest.sh" "P3_MANIFEST_DISPATCH=YES" "$YAML_REPORT"
+    assert_contains "Pipeline 3 reads macos/Info.plist" "P3_INFO_PLIST=YES" "$YAML_REPORT"
 else
     echo "  [FAIL] .woodpecker.yaml does not exist"
     FAILED=$((FAILED + 1))

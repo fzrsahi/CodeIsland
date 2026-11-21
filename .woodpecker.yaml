@@ -31,7 +31,7 @@ steps:
       GITHUB_TOKEN:
         from_secret: github_token
     commands:
-      - set -eo pipefail
+      - set -e
       - |
         report() {
           python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Linux & Rust Harness" --state "$1" --description "$2" || true
@@ -59,7 +59,7 @@ steps:
       GITHUB_TOKEN:
         from_secret: github_token
     commands:
-      - set -eo pipefail
+      - set -e
       - |
         report() {
           python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Windows MSVC Check" --state "$1" --description "$2" || true
@@ -182,7 +182,7 @@ steps:
         from_secret: github_token
     commands:
       - 'echo "==> Dev build triggered on branch dev (commit: ${CI_COMMIT_SHA:0:7})"'
-      - BASE_VER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist 2>/dev/null || echo "1.0.42")
+      - BASE_VER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' macos/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist 2>/dev/null || echo "1.0.42")
       - DEV_VERSION="${BASE_VER}-dev.${CI_PIPELINE_NUMBER}"
       - 'echo "==> Building Morrow Beta version: $DEV_VERSION"'
       - |
@@ -195,7 +195,9 @@ steps:
         SIZE=$(stat -f%z dist/macos/Morrow.dmg 2>/dev/null || stat -c%s dist/macos/Morrow.dmg)
         python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
       - |
-        if [ -f "./macos/ci/manifest.sh" ]; then
+        if [ -f "./shared/ci/manifest.sh" ]; then
+          ./shared/ci/manifest.sh "$DEV_VERSION" --channel dev
+        elif [ -f "./macos/ci/manifest.sh" ]; then
           ./macos/ci/manifest.sh "$DEV_VERSION" --channel dev
         elif [ -f "./scripts/ci/manifest.sh" ]; then
           ./scripts/ci/manifest.sh "$DEV_VERSION" --channel dev
@@ -247,7 +249,9 @@ steps:
         SIZE=$(stat -f%z dist/macos/Morrow.dmg 2>/dev/null || stat -c%s dist/macos/Morrow.dmg)
         python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
       - |
-        if [ -f "./macos/ci/manifest.sh" ]; then
+        if [ -f "./shared/ci/manifest.sh" ]; then
+          ./shared/ci/manifest.sh "$VERSION" --channel stable
+        elif [ -f "./macos/ci/manifest.sh" ]; then
           ./macos/ci/manifest.sh "$VERSION" --channel stable
         elif [ -f "./scripts/ci/manifest.sh" ]; then
           ./scripts/ci/manifest.sh "$VERSION" --channel stable
