@@ -1,20 +1,90 @@
 # ==============================================================================
-# Woodpecker CI Pipeline for Morrow
-# Dual-Track: Development (dev) & Production Stable (main)
-# Runs natively on macOS Sonoma KVM runner via 'local' backend
+# Woodpecker CI Multi-Pipeline for Morrow
+# Hybrid Multiplatform Orchestration (Linux, Windows Check, & macOS)
 # ==============================================================================
 
-clone:
-  git:
-    image: bash
-    settings:
-      lfs: false
-
+# ==============================================================================
+# Pipeline 1: Linux & Windows Fast Lane (Docker Runner on Host)
+# ==============================================================================
 when:
-  - event: pull_request
+  - event: [pull_request, tag]
+    path:
+      include:
+        - "crates/**"
+        - "shared/**"
+        - "Cargo.*"
+        - "rust-toolchain.toml"
+        - "scripts/ci/linux*"
+        - "scripts/ci/windows*"
+        - "scripts/ci/rust*"
+        - ".woodpecker.yaml"
   - event: push
     branch: [dev, main]
-  - event: tag
+    path:
+      include:
+        - "crates/**"
+        - "shared/**"
+        - "Cargo.*"
+        - "rust-toolchain.toml"
+        - "scripts/ci/linux*"
+        - "scripts/ci/windows*"
+        - "scripts/ci/rust*"
+        - ".woodpecker.yaml"
+
+labels:
+  platform: linux/amd64
+
+steps:
+  - name: test-linux
+    image: rust:1.80-bookworm
+    commands:
+      - |
+        if [ -f "./scripts/ci/linux-test.sh" ]; then
+          ./scripts/ci/linux-test.sh
+        else
+          echo "Notice: linux-test.sh not yet present in this commit. Skipping."
+        fi
+
+  - name: check-windows
+    image: rust:1.80-bookworm
+    commands:
+      - |
+        if [ -f "./Cargo.toml" ]; then
+          rustup target add x86_64-pc-windows-msvc
+          ./scripts/ci/windows-check.sh
+        else
+          echo "Notice: Cargo.toml not yet present in this commit. Skipping."
+        fi
+
+---
+# ==============================================================================
+# Pipeline 2: macOS Native Test Suite (macOS Sonoma KVM Runner via local backend)
+# ==============================================================================
+when:
+  - event: [pull_request, tag]
+    path:
+      include:
+        - "Sources/**"
+        - "Tests/**"
+        - "Package.*"
+        - "Info.plist"
+        - "scripts/*macos*"
+        - "scripts/run-xctest-runner.py"
+        - ".woodpecker.yaml"
+  - event: push
+    branch: [dev, main]
+    path:
+      include:
+        - "Sources/**"
+        - "Tests/**"
+        - "Package.*"
+        - "Info.plist"
+        - "scripts/*macos*"
+        - "scripts/run-xctest-runner.py"
+        - ".woodpecker.yaml"
+
+labels:
+  platform: darwin/amd64
 
 steps:
   # --------------------------------------------------------------------------
@@ -31,12 +101,8 @@ steps:
       - swift --version
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Syntax & Git Hygiene Guard" --state success --description "Pre-commit syntax and git hygiene clean" || true
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state pending --description "Running unit tests on macOS Sonoma..." || true
-      - python3 ./scripts/run-xctest-runner.py --target core 2>&1 | tee /tmp/test-output.log
+      - ./scripts/ci/macos-test.sh || { touch .xctest-failed; exit 1; }
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state success --description "Unit tests passed (0 failures)" || true
-    when:
-      - event: [pull_request, tag]
-      - event: push
-        branch: [dev, main]
 
   # --------------------------------------------------------------------------
   # 1b. Failure Notification: Report test failures directly to GitHub PR
@@ -47,12 +113,30 @@ steps:
       GITHUB_TOKEN:
         from_secret: github_token
     commands:
+      - |
+        if [ ! -f .xctest-failed ]; then
+          echo "XCTest did not fail; the failure came from another step."
+          exit 0
+        fi
       - python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / XCTest Core Harness" --state failure --description "XCTest execution failed. See PR details." || true
-      - python3 ./scripts/report-pr-failure.py /tmp/test-output.log
+      - python3 ./scripts/report-pr-failure.py dist/macos/test.log
     when:
       - event: pull_request
         status: failure
 
+---
+# ==============================================================================
+# Pipeline 3: Deployment & Artifact Distribution to EC2 Mirror and GitHub
+# ==============================================================================
+when:
+  - event: tag
+  - event: push
+    branch: dev
+
+labels:
+  platform: darwin/amd64
+
+steps:
   # --------------------------------------------------------------------------
   # 2. Development Track: Auto-build beta DMG & deploy to dev mirror via SCP
   # --------------------------------------------------------------------------
@@ -68,21 +152,11 @@ steps:
       - BASE_VER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist 2>/dev/null || echo "1.0.42")
       - DEV_VERSION="${BASE_VER}-dev.${CI_PIPELINE_NUMBER}"
       - 'echo "==> Building Morrow Beta version: $DEV_VERSION"'
-      - SKIP_SIGN=1 SKIP_NOTARIZE=1 BUILD_ARCH=arm64 ./scripts/build-dmg.sh "$DEV_VERSION"
+      - ./scripts/ci/macos-package.sh "$DEV_VERSION"
       - |
-        echo "==> Verifying dev DMG artifact integrity..."
-        [ -f .build/Morrow.dmg ] || { echo "ERROR: .build/Morrow.dmg not found!"; exit 1; }
-        SIZE=$(stat -f%z .build/Morrow.dmg 2>/dev/null || stat -c%s .build/Morrow.dmg)
-        [ "$SIZE" -gt 1048576 ] || { echo "ERROR: DMG size ($SIZE bytes) is suspiciously small (< 1MB)!"; exit 1; }
-        echo "Artifact verified: .build/Morrow.dmg ($SIZE bytes)"
+        SIZE=$(stat -f%z dist/macos/Morrow.dmg 2>/dev/null || stat -c%s dist/macos/Morrow.dmg)
         python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
-      - |
-        echo "==> Updating appcast-dev.xml and signing with Sparkle Ed25519 key..."
-        ./scripts/update-appcast.sh "$DEV_VERSION" .build/Morrow.dmg appcast-dev.xml
-      - |
-        echo "==> Generating SHA256SUMS.txt for dev build..."
-        shasum -a 256 .build/Morrow.dmg > .build/SHA256SUMS.txt
-        cat .build/SHA256SUMS.txt
+      - ./scripts/ci/manifest.sh "$DEV_VERSION" --channel dev
       - |
         echo "==> Deploying artifacts to EC2 distribution node via SSH..."
         SSH_KEY="$HOME/.ssh/codeisland_deploy"
@@ -93,9 +167,9 @@ steps:
         # 1. Create target release folder
         ssh $SSH_OPTS "$EC2_HOST" "mkdir -p $EC2_DATA/releases/$DEV_VERSION"
         # 2. Upload binary DMG
-        scp -i "$SSH_KEY" -o StrictHostKeyChecking=no -o BatchMode=yes .build/Morrow.dmg "$EC2_HOST:$EC2_DATA/releases/$DEV_VERSION/Morrow.dmg"
+        scp -i "$SSH_KEY" -o StrictHostKeyChecking=no -o BatchMode=yes dist/macos/Morrow.dmg "$EC2_HOST:$EC2_DATA/releases/$DEV_VERSION/Morrow.dmg"
         # 3. Upload signed appcast-dev.xml atomically
-        scp -i "$SSH_KEY" -o StrictHostKeyChecking=no -o BatchMode=yes appcast-dev.xml "$EC2_HOST:$EC2_DATA/appcast-dev.xml.tmp"
+        scp -i "$SSH_KEY" -o StrictHostKeyChecking=no -o BatchMode=yes dist/appcast-dev.xml "$EC2_HOST:$EC2_DATA/appcast-dev.xml.tmp"
         ssh $SSH_OPTS "$EC2_HOST" "mv -f $EC2_DATA/appcast-dev.xml.tmp $EC2_DATA/appcast-dev.xml && chmod 644 $EC2_DATA/appcast-dev.xml"
         # 4. Release retention: retain last 3 dev builds to preserve EC2 disk space
         ssh $SSH_OPTS "$EC2_HOST" "cd $EC2_DATA/releases && ls -dt *-dev.* 2>/dev/null | tail -n +4 | xargs -r rm -rf"
@@ -120,30 +194,21 @@ steps:
       - 'echo "==> Production release tag detected: $CI_COMMIT_TAG"'
       - VERSION="${CI_COMMIT_TAG#[vV]}"
       - 'echo "==> Building Morrow Production DMG version: $VERSION"'
-      - SKIP_SIGN=1 SKIP_NOTARIZE=1 BUILD_ARCH=arm64 ./scripts/build-dmg.sh "$VERSION"
+      - ./scripts/ci/macos-package.sh "$VERSION"
       - |
-        echo "==> Verifying release DMG artifact integrity..."
-        [ -f .build/Morrow.dmg ] || { echo "ERROR: .build/Morrow.dmg not found!"; exit 1; }
-        SIZE=$(stat -f%z .build/Morrow.dmg 2>/dev/null || stat -c%s .build/Morrow.dmg)
-        [ "$SIZE" -gt 1048576 ] || { echo "ERROR: DMG size ($SIZE bytes) is suspiciously small (< 1MB)!"; exit 1; }
-        echo "Artifact verified: .build/Morrow.dmg ($SIZE bytes)"
+        SIZE=$(stat -f%z dist/macos/Morrow.dmg 2>/dev/null || stat -c%s dist/macos/Morrow.dmg)
         python3 ./scripts/report-status.py --repo "fzrsahi/Morrow" --context "Morrow / Artifact Integrity Smoke Test" --state success --description "DMG verified ($((SIZE/1024/1024))MB)" || true
-      - |
-        echo "==> Updating appcast.xml and signing with Sparkle Ed25519 key..."
-        ./scripts/update-appcast.sh "$VERSION" .build/Morrow.dmg appcast.xml
-      - |
-        echo "==> Generating SHA256SUMS.txt..."
-        shasum -a 256 .build/Morrow.dmg > .build/SHA256SUMS.txt
-        cat .build/SHA256SUMS.txt
+      - ./scripts/ci/manifest.sh "$VERSION" --channel stable
       - |
         echo "==> Uploading release artifacts to GitHub Release..."
+        cp dist/macos/SHA256SUMS dist/macos/SHA256SUMS.txt
         python3 ./scripts/upload-github-release.py \
           --repo "fzrsahi/Morrow" \
           --tag "$CI_COMMIT_TAG" \
-          --files .build/Morrow.dmg .build/SHA256SUMS.txt appcast.xml || true
+          --files dist/macos/Morrow.dmg dist/macos/SHA256SUMS.txt dist/appcast.xml || true
       - |
         echo "==> Triggering production deployment webhook..."
-        SHA=$(awk '{print $1}' .build/SHA256SUMS.txt)
+        SHA=$(awk '{print $1}' dist/macos/SHA256SUMS)
         curl -f -X POST \
           -H "Content-Type: application/json" \
           -H "X-Webhook-Secret: $CODEISLAND_WEBHOOK_SECRET" \

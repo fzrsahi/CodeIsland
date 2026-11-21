@@ -16,10 +16,11 @@ public static class RawAgentEventNormalizer
             ?? NestedString(root, "payload", "session_id", "sessionId", "thread_id")
             ?? NestedString(root, "data", "session_id", "sessionId", "thread_id");
         var cwd = FirstString(root, "cwd", "working_directory", "workingDirectory") ?? Environment.CurrentDirectory;
+        var resolvedSource = ResolveSource(root, sourceTag);
         if (string.IsNullOrWhiteSpace(sessionId))
-            sessionId = $"{sourceTag ?? "agent"}-cwd-{StableHash(cwd):x8}";
+            sessionId = $"{resolvedSource ?? "agent"}-cwd-{StableHash(cwd):x8}";
 
-        var agent = ParseAgent(sourceTag ?? FirstString(root, "_source", "source", "agent"));
+        var agent = ParseAgent(resolvedSource);
         var type = ParseEventType(eventName, root);
         var eventId = FirstString(root, "event_id", "eventId", "tool_use_id", "toolUseId", "call_id", "callId")
             ?? $"{sessionId}:{eventName ?? type.ToString()}:{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
@@ -51,10 +52,32 @@ public static class RawAgentEventNormalizer
         };
     }
 
-    private static AgentKind ParseAgent(string? value) => value?.ToLowerInvariant() switch
+    // Same precedence as the Swift bridge (MorrowCore Models.swift bridgeSource): a declared
+    // --source wins, then a supported `_source` in the payload, then a non-blank cursor_version
+    // marks a hook Cursor ran (docs/hook-edge-protocol.md, rule 2). The Claude Code hook is
+    // installed without --source so that Cursor running it can be told apart.
+    private static string? ResolveSource(JsonElement root, string? sourceTag)
+    {
+        var declaredSource = string.IsNullOrWhiteSpace(sourceTag) ? null : sourceTag.Trim();
+        if (declaredSource is not null) return declaredSource;
+
+        var payloadSource = FirstString(root, "_source");
+        if (payloadSource is not null && ParseAgent(payloadSource) is not AgentKind.Unknown)
+            return payloadSource;
+
+        if (FirstString(root, "cursor_version") is not null) return "cursor";
+
+        // Like the macOS island, a hook that names no known source is Claude Code's:
+        // it is the one hook installed without --source.
+        var namedSource = FirstString(root, "_source", "source", "agent");
+        return namedSource is not null && ParseAgent(namedSource) is not AgentKind.Unknown ? namedSource : "claude";
+    }
+
+    private static AgentKind ParseAgent(string? value) => value?.Trim().ToLowerInvariant() switch
     {
         "claude" => AgentKind.Claude, "codex" => AgentKind.Codex, "gemini" => AgentKind.Gemini,
-        "cursor" => AgentKind.Cursor, "copilot" => AgentKind.Copilot, "trae" => AgentKind.Trae,
+        "cursor" or "cursor-cli" or "cursor-agent" or "cursorcli" or "cursoragent" => AgentKind.Cursor,
+        "copilot" => AgentKind.Copilot, "trae" => AgentKind.Trae,
         "qoder" => AgentKind.Qoder, "factory" or "droid" => AgentKind.Factory,
         "codebuddy" => AgentKind.CodeBuddy, "opencode" => AgentKind.OpenCode, "kimi" => AgentKind.Kimi,
         "cline" => AgentKind.Cline, "pi" => AgentKind.Pi, _ => AgentKind.Unknown
