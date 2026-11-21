@@ -228,6 +228,71 @@ SHARED_MACOS_MATCH=$(echo "$SHARED_FILES" | grep -Eq "$MACOS_REGEX" && echo "YES
 assert_eq ".woodpecker.yaml change runs on Linux (YES run)" "YES" "$SHARED_LINUX_MATCH"
 assert_eq ".woodpecker.yaml change runs on macOS (YES run)" "YES" "$SHARED_MACOS_MATCH"
 
+# ------------------------------------------------------------------------------
+# Test Suite 5: macOS Standalone XCTest Runner & Toolchain Resolution (#173)
+# ------------------------------------------------------------------------------
+echo "--- Suite 5: macOS Standalone XCTest Runner & Toolchain Resolution (#173) ---"
+
+XCTEST_RUNNER="$ROOT/macos/scripts/run-xctest-runner.py"
+if [ -f "$XCTEST_RUNNER" ]; then
+    # 1. Syntax check
+    SYNTAX_STATUS=0
+    python3 -m py_compile "$XCTEST_RUNNER" >/dev/null 2>&1 || SYNTAX_STATUS=$?
+    assert_eq "run-xctest-runner.py is valid Python syntax" "0" "$SYNTAX_STATUS"
+
+    # 2. --help flag
+    HELP_OUT=$(python3 "$XCTEST_RUNNER" --help 2>&1 || true)
+    assert_contains "run-xctest-runner.py supports --help" "Standalone XCTest Runner" "$HELP_OUT"
+    assert_contains "run-xctest-runner.py supports --target" "--target" "$HELP_OUT"
+
+    # 3. Dynamic locate_frameworks_dir function exists
+    LOCATE_FUNC=$(grep -c "def locate_frameworks_dir" "$XCTEST_RUNNER" || true)
+    assert_eq "run-xctest-runner.py defines locate_frameworks_dir()" "1" "$LOCATE_FUNC"
+
+    # 4. Native build system flag pinned
+    NATIVE_FLAG=$(grep -c -- "--build-system" "$XCTEST_RUNNER" || true)
+    NATIVE_PINNED="NO"
+    if [ "$NATIVE_FLAG" -ge 1 ]; then
+        NATIVE_PINNED="YES"
+    fi
+    assert_eq "run-xctest-runner.py pins --build-system native" "YES" "$NATIVE_PINNED"
+
+    # 5. Dynamic resolution via mock XCTEST_FRAMEWORK_DIR
+    MOCK_DIR=$(mktemp -d)
+    mkdir -p "$MOCK_DIR/XCTest.framework"
+    RESOLVED_FW=$(XCTEST_FRAMEWORK_DIR="$MOCK_DIR" python3 -c '
+import sys, os
+sys.path.insert(0, "'"$ROOT"'/macos/scripts")
+import importlib.util
+spec = importlib.util.spec_from_file_location("runner", "'"$XCTEST_RUNNER"'")
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+fw_dir, _ = mod.locate_frameworks_dir()
+print(fw_dir)
+' 2>/dev/null || echo "FAILED")
+    rm -rf "$MOCK_DIR"
+    assert_eq "locate_frameworks_dir resolves \$XCTEST_FRAMEWORK_DIR override" "$MOCK_DIR" "$RESOLVED_FW"
+
+    # 6. Actionable diagnostic error on missing toolchain
+    DIAG_OUT=$(XCTEST_FRAMEWORK_DIR="/tmp/nonexistent_fw_test_$$" python3 -c '
+import sys, os
+sys.path.insert(0, "'"$ROOT"'/macos/scripts")
+import importlib.util
+spec = importlib.util.spec_from_file_location("runner", "'"$XCTEST_RUNNER"'")
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+# Overwrite candidates to guarantee failure
+os.environ["PATH"] = ""
+fw_dir, checked = mod.locate_frameworks_dir()
+if not fw_dir:
+    print("CHECKED_PATHS=" + str(len(checked) > 0))
+' 2>/dev/null || true)
+    assert_contains "locate_frameworks_dir returns checked paths list for diagnostics" "CHECKED_PATHS=True" "$DIAG_OUT"
+else
+    echo "  [FAIL] $XCTEST_RUNNER does not exist"
+    FAILED=$((FAILED + 1))
+fi
+
 echo "======================================================================"
 echo "TDD Test Results: $PASSED passed, $FAILED failed"
 echo "======================================================================"
