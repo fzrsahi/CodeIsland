@@ -50,7 +50,7 @@ final class L10n: ObservableObject {
         "appearance": "Appearance",
         "mascots": "Mascots",
         "sound": "Sound",
-        "prayer": "Sholat & Adhan",
+        "prayer": "Prayer Times",
         "agents": "Agents",
         "workspace": "Workspace",
         "music": "Music",
