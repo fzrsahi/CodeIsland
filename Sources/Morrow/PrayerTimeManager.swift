@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 import Combine
-@preconcurrency import UserNotifications
 import MorrowCore
 
 public enum DayPhase: String, CaseIterable, Sendable {
@@ -83,7 +82,10 @@ public final class PrayerTimeManager: ObservableObject {
     @Published public var showMiniPeekBanner: Bool = false
     @Published public private(set) var miniPeekBannerTitle: String = ""
     @Published public private(set) var miniPeekBannerSubtitle: String = ""
+    @Published public private(set) var testWingPrayer: PrayerType? = nil
+    @Published public private(set) var testWingThinking: Bool = false
     public var simulatedDate: Date? = nil
+    private var testWingWorkItem: DispatchWorkItem? = nil
 
     weak var appState: AppState?
 
@@ -91,12 +93,12 @@ public final class PrayerTimeManager: ObservableObject {
         UserDefaults.standard.bool(forKey: SettingsKey.prayerEnabled)
     }
 
-    /// Smart Priority: Takes over the compact right wing when a prayer is within <= 15 minutes.
+    /// Smart Priority: Takes over the compact right wing when a prayer is within 1...30 minutes (or during live preview test).
     public var isPrayerPrioritized: Bool {
+        if testWingPrayer != nil { return true }
         guard isEnabled, let next = upcomingPrayer else { return false }
         let timeRemaining = next.date.timeIntervalSince(Date())
-        // Active when within 15 mins before prayer, or up to 5 mins after prayer entry
-        return timeRemaining <= 15 * 60 && timeRemaining >= -5 * 60
+        return timeRemaining > 0 && timeRemaining <= Double(PrayerWakePolicy.priorityLeadMinutes) * 60
     }
 
     public var formattedCountdown: String {
@@ -267,7 +269,6 @@ public final class PrayerTimeManager: ObservableObject {
     static func settingsSnapshot(defaults: UserDefaults = .standard) -> [String] {
         [
             SettingsKey.prayerEnabled,
-            SettingsKey.prayerAlertBeforeMinutes,
             SettingsKey.prayerCalculationMethod,
             SettingsKey.prayerHijriCalendarSource,
             SettingsKey.prayerHijriDayOffset,
@@ -328,7 +329,7 @@ public final class PrayerTimeManager: ObservableObject {
             now: now,
             schedule: todaySchedule,
             tomorrowSubuh: tomorrowSubuh,
-            alertMinutes: UserDefaults.standard.integer(forKey: SettingsKey.prayerAlertBeforeMinutes),
+            alertMinutes: 0,
             timeZone: locationService.activeCity.timeZone
         ) else { return }
         let timer = Timer.scheduledTimer(withTimeInterval: max(0.05, wake.timeIntervalSince(now)), repeats: false) { [weak self] _ in
@@ -400,7 +401,7 @@ public final class PrayerTimeManager: ObservableObject {
     // MARK: - Per-Second Tick
 
     internal func tick(now: Date = Date()) {
-        guard isEnabled else { return }
+        guard isEnabled, testWingPrayer == nil else { return }
         PerfCounters.shared?.bump(.prayerTick)
 
         let now = simulatedDate ?? now
@@ -493,25 +494,13 @@ public final class PrayerTimeManager: ObservableObject {
     }
 
     /// Evaluates if banner should pop up, deferring if an agent approval or question dialog is currently visible.
+    /// Pre-prayer countdown (T-30m..T-1m) lives in the compact right wing; the below-notch banner fires at prayer entry (T-0m).
     func evaluateBannerTriggers(appState: AppState?) {
         guard isEnabled, let next = upcomingPrayer else { return }
 
-        let alertBeforeMinutes = UserDefaults.standard.integer(forKey: SettingsKey.prayerAlertBeforeMinutes)
         let diffMins = minutesUntilNextPrayer
 
-        // Trigger 1: Approaching prayer (e.g. T-10m). A lead-in whose moment
-        // passed while the Mac slept is not replayed on wake.
-        if !suppressStaleLeadInBanner && alertBeforeMinutes > 0 && diffMins == alertBeforeMinutes {
-            let key = "\(next.prayer.rawValue)-\(alertBeforeMinutes)"
-            if !triggeredAlerts.contains(key) {
-                triggeredAlerts.insert(key)
-                let title = "\(alertBeforeMinutes) Minutes to \(next.prayer.displayName)"
-                let subtitle = "\(currentTimeString) · \(locationService.displayName)"
-                enqueueOrPresentBanner(title: title, subtitle: subtitle, appState: appState)
-            }
-        }
-
-        // Trigger 2: Prayer entry (T-0m)
+        // Trigger at prayer entry (T-0m)
         if diffMins == 0 {
             let key = "\(next.prayer.rawValue)-0"
             if !triggeredAlerts.contains(key) {
@@ -568,6 +557,36 @@ public final class PrayerTimeManager: ObservableObject {
         NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
     }
 
+    /// Cycles through the 5 Fardh prayers in the live compact notch right wing for 10 seconds.
+    public func triggerTestCompactWing(thinking: Bool = false) {
+        let cycle: [PrayerType] = [.subuh, .dzuhur, .ashar, .maghrib, .isya]
+        let nextPrayer: PrayerType = {
+            guard let current = testWingPrayer, let idx = cycle.firstIndex(of: current) else {
+                return cycle[0]
+            }
+            return cycle[(idx + 1) % cycle.count]
+        }()
+
+        testWingWorkItem?.cancel()
+        testWingPrayer = nextPrayer
+        testWingThinking = thinking
+        upcomingPrayer = (nextPrayer, Date().addingTimeInterval(12 * 60))
+        minutesUntilNextPrayer = 12
+        IslandSignals.shared.setPrayerPrioritized(true)
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+
+        let item = DispatchWorkItem { [weak self] in
+            Task { @MainActor in
+                self?.testWingPrayer = nil
+                self?.testWingThinking = false
+                self?.tick(now: Date())
+                IslandSignals.shared.setPrayerPrioritized(self?.isPrayerPrioritized ?? false)
+            }
+        }
+        testWingWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0, execute: item)
+    }
+
     private func presentBanner(title: String, subtitle: String) {
         miniPeekBannerTitle = title
         miniPeekBannerSubtitle = subtitle
@@ -576,7 +595,10 @@ public final class PrayerTimeManager: ObservableObject {
         }
         scheduleBannerAutoDismiss()
         playChimeIfConfigured()
-        sendSystemNotificationIfConfigured(title: title, subtitle: subtitle)
+    }
+
+    public func previewChime() {
+        NSSound(named: "Glass")?.play()
     }
 
     private func playChimeIfConfigured() {
@@ -591,32 +613,5 @@ public final class PrayerTimeManager: ObservableObject {
             }
         }
         NSSound(named: "Glass")?.play()
-    }
-
-    private func sendSystemNotificationIfConfigured(title: String, subtitle: String) {
-        guard UserDefaults.standard.bool(forKey: SettingsKey.prayerSystemNotificationEnabled) else { return }
-
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
-                return
-            }
-            let content = UNMutableNotificationContent()
-            content.title = title
-            content.body = subtitle
-            if UserDefaults.standard.bool(forKey: SettingsKey.prayerSoundEnabled) {
-                content.sound = .default
-            }
-
-            let request = UNNotificationRequest(
-                identifier: "prayer-\(UUID().uuidString)",
-                content: content,
-                trigger: nil
-            )
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("Failed to deliver prayer notification: \(error)")
-                }
-            }
-        }
     }
 }
