@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 # Replayable monorepo move for #86: macos/ shared/ linux/ windows/
+#
+# Replayed on 2026-11-21 and merged as 35017d1 (#171). The pipeline half is NOT
+# produced by this script any more: `.woodpecker.yaml` follows the move in its own
+# PR, because CODEOWNERS gives that file to @aazhrt. Rerunning this script on a
+# tree where the move has happened fails at the first check, by design.
 # (docs/plan-windows-linux.md §4, spec #82).
 #
 # Usage (from a clean checkout of a fresh main):
